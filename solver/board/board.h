@@ -19,4 +19,5 @@ void place_piece(Board &board, const RotatedPiece &piece, int x, int y);
 void remove_piece(Board &board, int x, int y);
 std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<PIECE> &pieces, int x, int y);
 void log_board(const Board &board, const std::string &description);
+void solve_board(Board &board, std::vector<PIECE> &pieces);
 #endif //ETERNITY2_BOARD_H

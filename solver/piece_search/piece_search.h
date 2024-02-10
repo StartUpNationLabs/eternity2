@@ -26,4 +26,6 @@ bool match_piece_mask_internal(PIECE piece_data, PIECE piece_mask, PIECE rotated
 
 std::vector<RotatedPiece> match_piece_mask(const std::vector<Query> &query, const std::vector<PIECE> &pieces);
 
+PIECE apply_rotation(RotatedPiece piece);
+
 #endif //ETERNITY2_PIECE_SEARCH_H

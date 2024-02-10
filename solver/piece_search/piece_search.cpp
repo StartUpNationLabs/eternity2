@@ -32,9 +32,15 @@ bool match_piece_mask_internal(PIECE piece_data, PIECE piece_mask, PIECE rotated
     PIECE XOR = piece_data ^ rotated_piece;
     log_piece(rotated_piece, "rotated piece");
     log_piece(XOR, "XOR");
+    log_piece((XOR & piece_mask), "XOR & mask");
     if ((XOR & piece_mask) == 0) {
-        log_piece((XOR & piece_mask), "XOR & mask");
+
         return true;
     }
     return false;
+}
+
+
+PIECE apply_rotation(RotatedPiece piece) {
+    return rotate_piece_right(piece.piece, piece.rotation);
 }
