@@ -107,7 +107,7 @@ void log_board(const Board &board, const std::string &description) {
     }
 }
 
-bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x,int y){
+bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x, int y) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
@@ -124,8 +124,7 @@ bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x,int y
         return solve_board_recursive(board, pieces, x + 1, y);
     }
 
-    auto possible = possible_pieces(board, pieces, x, y);
-    for (auto const &rotated_piece: possible) {
+    for (auto possible = possible_pieces(board, pieces, x, y); auto const &rotated_piece: possible) {
         place_piece(board, rotated_piece, x, y);
         // remove placed piece from pieces
         long index = std::distance(pieces.begin(), std::find(pieces.begin(), pieces.end(), rotated_piece.piece));
@@ -136,6 +135,7 @@ bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x,int y
         }
         // add placed piece back to pieces
         pieces.push_back(rotated_piece.piece);
+        spdlog::info("Backtracking");
         remove_piece(board, x, y);
     }
 
