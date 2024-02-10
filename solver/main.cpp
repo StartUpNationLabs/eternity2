@@ -7,7 +7,7 @@
 
 
 
-//std::vector<PieceResult> match_piece(PIECE piece1, const std::vector<PIECE> &pieces, int n) {
+//std::vector<RotatedPiece> match_piece(PIECE piece1, const std::vector<PIECE> &pieces, int n) {
 //    std::cout << "matching piece:" << std::endl;
 //    log_piece(piece1);
 //    // rotate piece1 to get desired "nth" side to match
