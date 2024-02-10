@@ -3,36 +3,34 @@
 #include <csv.h>
 #include "piece/piece.h"
 #include "piece_loader/piece_loader.h"
-
-
-
-
-//std::vector<RotatedPiece> match_piece(PIECE piece1, const std::vector<PIECE> &pieces, int n) {
-//    std::cout << "matching piece:" << std::endl;
-//    log_piece(piece1);
-//    // rotate piece1 to get desired "nth" side to match
-//    PIECE piece1_rotated = rotate_piece_right(piece1, n + 2);
-//    std::cout << "rotated piece " << n << std::endl;
-//    log_piece(piece1_rotated);
-//    // make a mask to keep only the side n
-//    PIECE mask = get_mask(n);
-//    PIECE piece1_masked = piece1_rotated & mask;
-//    std::cout << "masked piece " << n << std::endl;
-//    log_piece(piece1_masked);
-//    return match_piece_mask(piece1_masked, pieces);
-//}
+#include "board/board.h"
+#include "spdlog/spdlog.h"
 
 
 int main() {
-    std::vector<PIECE> pieces = load_from_csv("file.csv");
+    // disable logging
+    spdlog::set_level(spdlog::level::off);
+    Board board = create_board(3);
+    std::vector<PIECE> pieces = {
+            rotate_piece_right(make_piece(WALL, 2, 1, WALL), 1),
+            rotate_piece_right(make_piece(WALL, 5, 1, 2), 2),
+            rotate_piece_right(make_piece(WALL, WALL, 1, 5), 3),
 
-    PIECE start = pieces[0];
-//    const PIECE test = pieces[0];
-//    log_piece(test);
-//    auto result = match_piece_mask(test, LEFT_MASK, pieces);
-//    for (auto r: result) {
-//        log_piece(r.piece);
-//        std::cout << "rotation: " << r.rotation << std::endl;
-//    }
-//    return 0;
+            rotate_piece_right(make_piece(1, 2, 3, WALL), 1),
+            rotate_piece_right(make_piece(1, 3, 1, 2), 0),
+            rotate_piece_right(make_piece(1, WALL, 1, 3), 1),
+
+            rotate_piece_right(make_piece(3, 4, WALL, WALL), 2),
+            rotate_piece_right(make_piece(1, 1, WALL, 4), 1),
+            rotate_piece_right(make_piece(1, WALL, WALL, 1), 1),
+
+
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+    solve_board(board, pieces);
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    log_board(board, fmt::format("3x3 board solved in {} seconds", elapsed.count()));
+    std::cout << "3x3 board solved in " << elapsed.count() << " seconds" << std::endl;
 }
