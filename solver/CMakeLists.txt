@@ -7,6 +7,8 @@ add_executable(Solver main.cpp
         piece_loader/piece_loader.h
         piece_search/piece_search.cpp
         piece_search/piece_search.h
+        board/board.cpp
+        board/board.h
 )
 target_link_libraries(Solver spdlog csv)
 # add Wall flag
@@ -21,7 +23,9 @@ add_library(solver_lib STATIC
         piece_loader/piece_loader.cpp
         piece_loader/piece_loader.h
         piece_search/piece_search.cpp
-        piece_search/piece_search.h)
+        piece_search/piece_search.h
+        board/board.cpp
+        board/board.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

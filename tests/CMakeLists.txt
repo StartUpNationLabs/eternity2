@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(tests
         test_piece.cpp
         test_piece_search.cpp
+        test_board.cpp
 )
 target_link_libraries(tests Catch2::Catch2WithMain solver_lib)
 include(CTest)
