@@ -13,13 +13,13 @@ Board create_board(int size) {
     return board;
 }
 
-void place_piece(Board board, const RotatedPiece &piece, int x, int y) {
+void place_piece(Board &board, const RotatedPiece &piece, int x, int y) {
     // function to place a piece on the board at the given position
     // the piece is rotated and placed on the board
     board[y][x] = piece;
 }
 
-void remove_piece(Board board, int x, int y) {
+void remove_piece(Board &board, int x, int y) {
     // function to remove a piece from the board at the given position
     // the piece is replaced with an empty piece
     board[y][x] = RotatedPiece();
