@@ -5,7 +5,6 @@
 
 #include "board.h"
 #include "spdlog/spdlog.h"
-
 Board create_board(int size) {
     // function to create an empty board with the given size and fill it with empty pieces
     // a board is a 2D array of pieces
@@ -100,11 +99,13 @@ std::vector<std::string> board_to_string(const Board &board) {
 }
 
 void log_board(const Board &board, const std::string &description) {
+#if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
     // function to log the board to the console
     spdlog::info(description);
     for (auto const &line: board_to_string(board)) {
         spdlog::info(line);
     }
+#endif
 }
 
 bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x, int y) {

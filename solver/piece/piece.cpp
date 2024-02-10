@@ -5,8 +5,6 @@
 #include "piece.h"
 #include "spdlog/spdlog.h"
 
-
-
 PIECE make_piece(PIECE_PART top, PIECE_PART right, PIECE_PART down, PIECE_PART left) {
     // concatenate the 4 parts into left single 64-bit integer
     // look at the MASKs to understand the order of the parts
@@ -30,7 +28,6 @@ PIECE rotate_piece_left(PIECE piece, int n) {
 }
 
 
-
 std::vector<std::string> piece_to_string(PIECE piece) {
     std::bitset<64> bits(piece);
 
@@ -47,19 +44,21 @@ std::vector<std::string> piece_to_string(PIECE piece) {
     const std::string s2 = s.substr(32, 16);
     const std::string s3 = s.substr(48, 16);
     return {
-        fmt::format("-----------------------------------------------------"),
-        fmt::format("|                 {}                  |", s0),
-        fmt::format("|  {}               {}  |", s3, s1),
-        fmt::format("|                 {}                  |", s2),
-        fmt::format("-----------------------------------------------------")
+            fmt::format("-----------------------------------------------------"),
+            fmt::format("|                 {}                  |", s0),
+            fmt::format("|  {}               {}  |", s3, s1),
+            fmt::format("|                 {}                  |", s2),
+            fmt::format("-----------------------------------------------------")
     };
 }
 
-void log_piece(PIECE piece, const std::string& description) {
+void log_piece(PIECE piece, const std::string &description) {
+#if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
     spdlog::info(description);
-    for (auto &line: piece_to_string(piece)) {
+    for (auto const &line: piece_to_string(piece)) {
         spdlog::info(line);
     }
+#endif
 
 }
 
