@@ -26,7 +26,7 @@ match_piece_mask(const std::vector<Query> &query, const std::vector<PieceWAvaila
                 }
             }
             if (keep) {
-                results.push_back({piece, i, pieceIndex});
+                results.emplace_back(piece, i, pieceIndex);
             }
 
         }

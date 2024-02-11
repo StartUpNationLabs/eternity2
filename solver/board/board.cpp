@@ -91,10 +91,10 @@ std::vector<std::string> board_to_string(const Board &board) {
     std::vector<std::string> board_lines;
     for (const auto &row: board) {
         std::vector<std::string> row_lines = piece_to_string(rotate_piece_right(row[0].piece, row[0].rotation));
-        for (int i = 1; i < row.size(); i++) {
+        for (size_t i = 1; i < row.size(); i++) {
             const auto &piece = row[i].piece;
             const auto &piece_lines = piece_to_string(rotate_piece_right(piece, row[i].rotation));
-            for (int j = 0; j < row_lines.size(); j++) {
+            for (size_t j = 0; j < row_lines.size(); j++) {
                 row_lines[j] += piece_lines[j];
             }
         }
@@ -113,7 +113,7 @@ void log_board(const Board &board, const std::string &description) {
 #endif
 }
 
-bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, int x, int y) {
+bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, size_t x, size_t y) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
@@ -140,7 +140,7 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         }
         // add placed piece back to pieces
         pieces[rotated_piece.index].available = true;
-        spdlog::info("Backtracking");
+        SPDLOG_INFO("Backtracking");
         remove_piece(board, x, y);
     }
 
