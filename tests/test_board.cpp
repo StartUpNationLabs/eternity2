@@ -118,7 +118,11 @@ TEST_CASE("Solve Board") {
                 make_piece(WALL, WALL, 1, 1),
                 make_piece(1, 1, WALL, WALL)
         };
-        solve_board(board, pieces);
+        //solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_board, int &max_count, std::mutex &mutex)
+        int max_count = 0;
+        Board max_board = create_board(2);
+        std::mutex mutex;
+        solve_board(board, pieces, max_board, max_count, mutex);
         log_board(board, "2x2 board solved");
         for (auto const &row: board) {
             for (auto const &piece: row) {
@@ -145,7 +149,10 @@ TEST_CASE("Solve Board") {
 
 
         };
-        solve_board(board, pieces);
+        int max_count = 0;
+        Board max_board = create_board(3);
+        std::mutex mutex;
+        solve_board(board, pieces, max_board, max_count, mutex);
         log_board(board, "3x3 board solved");
         for (auto const &row: board) {
             for (auto const &piece: row) {
@@ -190,7 +197,10 @@ TEST_CASE("Solve Board") {
 
         };
         auto start = std::chrono::high_resolution_clock::now();
-        solve_board(board, pieces);
+        int max_count = 0;
+        Board max_board = create_board(3);
+        std::mutex mutex;
+        solve_board(board, pieces, max_board, max_count, mutex);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         log_board(board, fmt::format("3x3 board solved in {} seconds", elapsed.count()));

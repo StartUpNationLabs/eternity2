@@ -75,7 +75,7 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         mask |= DOWN_MASK;
     }
 
-    if (y  >= 1) {
+    if (y >= 1) {
         top = get_piece_part(apply_rotation(board[y - 1][x]), DOWN_MASK);
         if (top != EMPTY) {
             mask |= UP_MASK;
@@ -124,21 +124,28 @@ void log_board(const Board &board, const std::string &description) {
 #endif
 }
 
-bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, size_t x, size_t y) {
+bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, size_t x, size_t y, int placed_pieces,
+                           Board &max_board, int &max_count, std::mutex &mutex) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
     log_board(board, fmt::format("Solving board at x: {}, y: {}", x, y));
+    if (placed_pieces > max_count) {
+        std::scoped_lock lock(mutex);
+        max_count = placed_pieces;
+        max_board = board;
+    }
+
     if (y == board.size()) {
         return true;
     }
 
     if (x == board.size()) {
-        return solve_board_recursive(board, pieces, 0, y + 1);
+        return solve_board_recursive(board, pieces, 0, y + 1, placed_pieces, max_board, max_count, mutex);
     }
 
     if (board[y][x].piece != EMPTY) {
-        return solve_board_recursive(board, pieces, x + 1, y);
+        return solve_board_recursive(board, pieces, x + 1, y, placed_pieces, max_board, max_count, mutex);
     }
 
     for (auto possible = possible_pieces(board, pieces, x, y); auto const &rotated_piece: possible) {
@@ -146,7 +153,7 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         // remove placed piece from pieces
         pieces[rotated_piece.index].available = false;
 
-        if (solve_board_recursive(board, pieces, x + 1, y)) {
+        if (solve_board_recursive(board, pieces, x + 1, y, placed_pieces + 1, max_board, max_count, mutex)) {
             return true;
         }
         // add placed piece back to pieces
@@ -179,7 +186,7 @@ void solve_board_iterative(Board &board, std::vector<PieceWAvailability> &pieces
         }
         auto possible = possible_pieces(board, pieces, x, y);
         if (possible_piece_index < possible.size()) {
-            auto const& rotated_piece = possible[possible_piece_index];
+            auto const &rotated_piece = possible[possible_piece_index];
             place_piece(board, rotated_piece, x, y);
             // remove placed piece from pieces
             pieces[rotated_piece.index].available = false;
@@ -200,10 +207,10 @@ void solve_board_iterative(Board &board, std::vector<PieceWAvailability> &pieces
     }
 }
 
-void solve_board(Board &board, const std::vector<PIECE> &pieces) {
+void solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_board, int &max_count, std::mutex &mutex) {
     // function to solve the board
     // the function calls the recursive function to solve the board
     std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
 //    solve_board_iterative(board, pieces_with_availability);
-    solve_board_recursive(board, pieces_with_availability, 0, 0);
+    solve_board_recursive(board, pieces_with_availability, 0, 0, 0,max_board, max_count, mutex);
 }
