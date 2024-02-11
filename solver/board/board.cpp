@@ -4,8 +4,10 @@
 
 
 #include <stack>
+#include <random>
 #include "board.h"
 #include "spdlog/spdlog.h"
+auto rng = std::default_random_engine {};
 
 Board create_board(int size) {
     // function to create an empty board with the given size and fill it with empty pieces
@@ -92,7 +94,7 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
     log_piece(piece, "Query piece");
     const auto positive_query = Query(piece, mask);
     queries.push_back(positive_query);
-    possible = match_piece_mask({positive_query}, pieces);
+    possible = match_piece_mask({queries}, pieces);
     return possible;
 }
 
@@ -136,19 +138,24 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         max_board = board;
     }
 
+
+    if (x == board.size()) {
+        x = 0;
+        y++;
+    }
     if (y == board.size()) {
         return true;
     }
+//    if (board[y][x].piece != EMPTY) {
+//        return solve_board_recursive(board, pieces, x + 1, y, placed_pieces, max_board, max_count, mutex);
+//    }
 
-    if (x == board.size()) {
-        return solve_board_recursive(board, pieces, 0, y + 1, placed_pieces, max_board, max_count, mutex);
-    }
+    auto possible = possible_pieces(board, pieces, x, y);
+    // random for loop
+    std::shuffle(possible.begin(), possible.end(), rng);
+    // shuffle possible
 
-    if (board[y][x].piece != EMPTY) {
-        return solve_board_recursive(board, pieces, x + 1, y, placed_pieces, max_board, max_count, mutex);
-    }
-
-    for (auto possible = possible_pieces(board, pieces, x, y); auto const &rotated_piece: possible) {
+    for (auto const &rotated_piece: possible) {
         place_piece(board, rotated_piece, x, y);
         // remove placed piece from pieces
         pieces[rotated_piece.index].available = false;
@@ -212,5 +219,5 @@ void solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_boar
     // the function calls the recursive function to solve the board
     std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
 //    solve_board_iterative(board, pieces_with_availability);
-    solve_board_recursive(board, pieces_with_availability, 0, 0, 0,max_board, max_count, mutex);
+    solve_board_recursive(board, pieces_with_availability, 0, 0, 0, max_board, max_count, mutex);
 }

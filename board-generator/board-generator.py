@@ -3,7 +3,7 @@ import numpy as np
 
 # Paramètres du plateau
 size = 8  # Taille du plateau
-number_of_symbols = 10  # Nombre de symboles différents
+number_of_symbols = 5  # Nombre de symboles différents
 
 def generate_inner_symbols(size, number_of_symbols):
     vertical_symbols = np.random.randint(1, number_of_symbols, size=(size, size - 1))
