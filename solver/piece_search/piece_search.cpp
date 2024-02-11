@@ -4,9 +4,15 @@
 
 #include "piece_search.h"
 
-std::vector<RotatedPiece> match_piece_mask(const std::vector<Query> &query, const std::vector<PIECE> &pieces) {
+std::vector<RotatedPiece>
+match_piece_mask(const std::vector<Query> &query, const std::vector<PieceWAvailability> &piecesWAvailability) {
     std::vector<RotatedPiece> results;
-    for (auto piece: pieces) {
+    for (size_t pieceIndex = 0; pieceIndex < piecesWAvailability.size(); pieceIndex++) {
+        const PieceWAvailability pieceWAvailability = piecesWAvailability[pieceIndex];
+        if (!pieceWAvailability.available) {
+            continue;
+        }
+        const PIECE piece = pieceWAvailability.piece;
         for (int i = 0; i < 4; i++) {
             PIECE rotated_piece = rotate_piece_right(piece, i);
             bool keep = true;
@@ -20,7 +26,7 @@ std::vector<RotatedPiece> match_piece_mask(const std::vector<Query> &query, cons
                 }
             }
             if (keep) {
-                results.push_back({piece, i});
+                results.push_back({piece, i, pieceIndex});
             }
 
         }
@@ -43,4 +49,13 @@ bool match_piece_mask_internal(PIECE piece_data, PIECE piece_mask, PIECE rotated
 
 PIECE apply_rotation(RotatedPiece piece) {
     return rotate_piece_right(piece.piece, piece.rotation);
+}
+
+std::vector<PieceWAvailability> create_pieces_with_availability(const std::vector<PIECE> &pieces) {
+    std::vector<PieceWAvailability> piecesWAvailability;
+    piecesWAvailability.reserve(pieces.size());
+    for (auto piece: pieces) {
+        piecesWAvailability.push_back({piece, true});
+    }
+    return piecesWAvailability;
 }

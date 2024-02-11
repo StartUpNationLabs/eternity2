@@ -97,7 +97,7 @@ TEST_CASE("Possible pieces") {
         Board board = create_board(2);
         PIECE piece = make_piece(1, 2, WALL, WALL);
         log_board(board, "2x2 board with piece");
-        std::vector<RotatedPiece> possible = possible_pieces(board, {piece}, 1, 1);
+        std::vector<RotatedPiece> possible = possible_pieces(board, create_pieces_with_availability({piece}), 1, 1);
         REQUIRE(possible.size() == 1);
         REQUIRE(possible[0].piece == piece);
         REQUIRE(possible[0].rotation == 3);
@@ -120,8 +120,8 @@ TEST_CASE("Solve Board") {
         };
         solve_board(board, pieces);
         log_board(board, "2x2 board solved");
-        for (auto &row : board) {
-            for (auto &piece : row) {
+        for (auto const &row: board) {
+            for (auto const &piece: row) {
                 REQUIRE(piece.piece != 0);
             }
         }
@@ -147,8 +147,8 @@ TEST_CASE("Solve Board") {
         };
         solve_board(board, pieces);
         log_board(board, "3x3 board solved");
-        for (auto &row : board) {
-            for (auto &piece : row) {
+        for (auto const &row: board) {
+            for (auto const &piece: row) {
                 REQUIRE(piece.piece != 0);
             }
         }
@@ -175,17 +175,17 @@ TEST_CASE("Solve Board") {
          */
         Board board = create_board(3);
         std::vector<PIECE> pieces = {
-                rotate_piece_right( make_piece(WALL, 2, 1, WALL),1),
-                rotate_piece_right( make_piece(WALL, 5, 1, 2),2),
-                rotate_piece_right( make_piece(WALL, WALL, 1, 5),3),
+                rotate_piece_right(make_piece(WALL, 2, 1, WALL), 1),
+                rotate_piece_right(make_piece(WALL, 5, 1, 2), 2),
+                rotate_piece_right(make_piece(WALL, WALL, 1, 5), 3),
 
-                rotate_piece_right( make_piece(1, 2, 3, WALL),1),
-                rotate_piece_right( make_piece(1, 3, 1, 2),0),
-                rotate_piece_right( make_piece(1, WALL, 1, 3),1),
+                rotate_piece_right(make_piece(1, 2, 3, WALL), 1),
+                rotate_piece_right(make_piece(1, 3, 1, 2), 0),
+                rotate_piece_right(make_piece(1, WALL, 1, 3), 1),
 
-                rotate_piece_right( make_piece(3, 4, WALL, WALL),2),
-                rotate_piece_right( make_piece(1, 1, WALL, 4),1),
-                rotate_piece_right( make_piece(1, WALL, WALL, 1),1),
+                rotate_piece_right(make_piece(3, 4, WALL, WALL), 2),
+                rotate_piece_right(make_piece(1, 1, WALL, 4), 1),
+                rotate_piece_right(make_piece(1, WALL, WALL, 1), 1),
 
 
         };
@@ -194,8 +194,8 @@ TEST_CASE("Solve Board") {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         log_board(board, fmt::format("3x3 board solved in {} seconds", elapsed.count()));
-        for (auto const &row : board) {
-            for (auto const &piece : row) {
+        for (auto const &row: board) {
+            for (auto const &piece: row) {
                 REQUIRE(piece.piece != 0);
             }
         }

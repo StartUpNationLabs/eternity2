@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "spdlog/spdlog.h"
+
 Board create_board(int size) {
     // function to create an empty board with the given size and fill it with empty pieces
     // a board is a 2D array of pieces
@@ -24,7 +25,8 @@ void remove_piece(Board &board, int x, int y) {
     board[y][x] = RotatedPiece();
 }
 
-std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<PIECE> &pieces, int x, int y) {
+std::vector<RotatedPiece>
+possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, size_t xpos, size_t ypos) {
     // function to get the possible pieces that can be placed at the given position on the board
     // a piece is possible if it does not conflict with the pieces already on the board
     std::vector<RotatedPiece> possible;
@@ -33,6 +35,9 @@ std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<
     PIECE_PART bottom;
     PIECE_PART left;
     PIECE mask = EMPTY;
+    //TODO: fix this
+    auto x = static_cast<signed int>(xpos);
+    auto y = static_cast<signed int>(ypos);
 
     if (x + 1 < board.size()) {
         right = get_piece_part(apply_rotation(board[y][x + 1]), LEFT_MASK);
@@ -43,7 +48,7 @@ std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<
         right = WALL;
         mask |= RIGHT_MASK;
     }
-    if (x - 1 >= 0) {
+    if ((x - 1) >= 0) {
         left = get_piece_part(apply_rotation(board[y][x - 1]), RIGHT_MASK);
         if (left != EMPTY) {
             mask |= LEFT_MASK;
@@ -108,7 +113,7 @@ void log_board(const Board &board, const std::string &description) {
 #endif
 }
 
-bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x, int y) {
+bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, int x, int y) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
@@ -128,14 +133,13 @@ bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x, int 
     for (auto possible = possible_pieces(board, pieces, x, y); auto const &rotated_piece: possible) {
         place_piece(board, rotated_piece, x, y);
         // remove placed piece from pieces
-        long index = std::distance(pieces.begin(), std::find(pieces.begin(), pieces.end(), rotated_piece.piece));
-        pieces.erase(pieces.begin() + index);
+        pieces[rotated_piece.index].available = false;
 
         if (solve_board_recursive(board, pieces, x + 1, y)) {
             return true;
         }
         // add placed piece back to pieces
-        pieces.push_back(rotated_piece.piece);
+        pieces[rotated_piece.index].available = true;
         spdlog::info("Backtracking");
         remove_piece(board, x, y);
     }
@@ -144,8 +148,9 @@ bool solve_board_recursive(Board &board, std::vector<PIECE> &pieces, int x, int 
 
 }
 
-void solve_board(Board &board, std::vector<PIECE> &pieces) {
+void solve_board(Board &board, const std::vector<PIECE> &pieces) {
     // function to solve the board
     // the function calls the recursive function to solve the board
-    solve_board_recursive(board, pieces, 0, 0);
+    std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
+    solve_board_recursive(board, pieces_with_availability, 0, 0);
 }

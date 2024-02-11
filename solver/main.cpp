@@ -13,7 +13,7 @@ int main() {
     // disable logging
     spdlog::set_level(spdlog::level::off);
     auto start = std::chrono::high_resolution_clock::now();
-//    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++) {
         auto board = Board();
         board = create_board(3);
         std::vector<PIECE> pieces = {
@@ -33,7 +33,7 @@ int main() {
         };
 
         solve_board(board, pieces);
-//    }
+    }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 //    log_board(board, fmt::format("3x3 board solved in {} seconds", elapsed.count()));
