@@ -13,13 +13,13 @@ Board create_board(int size) {
     return board;
 }
 
-void place_piece(Board &board, const RotatedPiece &piece, int x, int y) {
+void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y) {
     // function to place a piece on the board at the given position
     // the piece is rotated and placed on the board
     board[y][x] = piece;
 }
 
-void remove_piece(Board &board, int x, int y) {
+void remove_piece(Board &board, size_t x, size_t y) {
     // function to remove a piece from the board at the given position
     // the piece is replaced with an empty piece
     board[y][x] = RotatedPiece();
@@ -35,7 +35,7 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
     PIECE_PART bottom;
     PIECE_PART left;
     PIECE mask = EMPTY;
-    //TODO: fix this
+    //TODO: fix this to use size_t instead of signed int. This is a temporary fix to make the code work. There may be undefined behavior here.
     auto x = static_cast<signed int>(xpos);
     auto y = static_cast<signed int>(ypos);
 

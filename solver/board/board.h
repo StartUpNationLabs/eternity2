@@ -15,8 +15,8 @@ using Board = std::vector<std::vector<RotatedPiece>>;
 
 Board create_board(int size);
 std::vector<std::string> board_to_string(const Board &board);
-void place_piece(Board &board, const RotatedPiece &piece, int x, int y);
-void remove_piece(Board &board, int x, int y);
+void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y);
+void remove_piece(Board &board, size_t x, size_t y);
 std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, size_t x, size_t y);
 void log_board(const Board &board, const std::string &description);
 void solve_board(Board &board, const std::vector<PIECE> &pieces);
