@@ -19,21 +19,6 @@ std::vector<PIECE> load_from_csv(const std::string &filename) {
         auto bs = (PIECE_PART) strtol(b, nullptr, 2);
         auto cs = (PIECE_PART) strtol(c, nullptr, 2);
         auto ds = (PIECE_PART) strtol(d, nullptr, 2);
-        if (as == 0) {
-            as = WALL;
-        }
-
-        if (bs == 0) {
-            bs = WALL;
-        }
-
-        if (cs == 0) {
-            cs = WALL;
-        }
-
-        if (ds == 0) {
-            ds = WALL;
-        }
 
         PIECE piece = make_piece(as, bs, cs, ds);
         pieces.push_back(piece);

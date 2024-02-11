@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 //    thread_function(board_size, pieces, max_board, max_count, mutex);
     int max_count = 0;
     std::vector<std::jthread> threads;
-    for (int i = 0; i < 128; i++) {
+    for (int i = 0; i < 16; i++) {
         threads.emplace_back(thread_function, board_size, pieces, std::ref(max_board), std::ref(max_count),
                              std::ref(mutex));
     }
