@@ -4,6 +4,7 @@
 
 #include "piece.h"
 #include "spdlog/spdlog.h"
+#include "../piece_search/piece_search.h"
 
 PIECE make_piece(PIECE_PART top, PIECE_PART right, PIECE_PART down, PIECE_PART left) {
     // concatenate the 4 parts into left single 64-bit integer
@@ -67,5 +68,13 @@ PIECE_PART get_piece_part(PIECE piece, PIECE mask) {
     // use the MASKs to extract the part from the piece and shift it to the right position
     return (PIECE_PART) ((piece & mask)
             >> (mask == UP_MASK ? 48 : mask == RIGHT_MASK ? 32 : (mask == DOWN_MASK ? 16 : 0)));
+}
+
+std::string csv_piece(RotatedPiece piece) {
+    // convert the piece to a csv string like this <first 16 bits>,<second 16 bits>,<third 16 bits>,<fourth 16 bits>
+    PIECE rpiece = apply_rotation(piece);
+    std::bitset<64> bits(rpiece);
+    return fmt::format("{},{},{},{}", bits.to_string().substr(0, 16), bits.to_string().substr(16, 16),
+                       bits.to_string().substr(32, 16), bits.to_string().substr(48, 16));
 }
 

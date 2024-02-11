@@ -56,4 +56,6 @@ int main(int argc, char *argv[]) {
 //            }
 //        }
 //    }
+    export_board(max_board);
+    return 0;
 }

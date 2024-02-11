@@ -11,6 +11,7 @@
 #include <vector>
 #include <mutex>
 #include "../piece_search/piece_search.h"
+#include "../piece/piece.h"
 
 using Board = std::vector<std::vector<RotatedPiece>>;
 
@@ -21,4 +22,5 @@ void remove_piece(Board &board, size_t x, size_t y);
 std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, size_t x, size_t y);
 void log_board(const Board &board, const std::string &description);
 void solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_board, int &max_count, std::mutex &mutex);
+void export_board(const Board &board);
 #endif //ETERNITY2_BOARD_H
