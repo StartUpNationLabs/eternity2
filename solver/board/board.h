@@ -11,7 +11,7 @@
 #include <vector>
 #include <mutex>
 #include "../piece_search/piece_search.h"
-#include "../piece/piece.h"
+//#include "../piece/piece.h"
 
 using Board = std::vector<std::vector<RotatedPiece>>;
 

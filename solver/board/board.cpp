@@ -229,7 +229,7 @@ void export_board(const Board &board) {
 
     for (const auto &row: board) {
         for (const auto &piece: row) {
-            file << csv_piece(piece.piece) << std::endl;
+            file << csv_piece(piece) << std::endl;
         }
     }
 }

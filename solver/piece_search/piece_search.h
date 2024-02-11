@@ -34,5 +34,6 @@ std::vector<RotatedPiece> match_piece_mask(const std::vector<Query> &query, cons
 
 std::vector<PieceWAvailability> create_pieces_with_availability(const std::vector<PIECE> &pieces);
 PIECE apply_rotation(RotatedPiece piece);
+std::string csv_piece(RotatedPiece piece);
 
 #endif //ETERNITY2_PIECE_SEARCH_H

@@ -3,6 +3,7 @@
 //
 
 #include "piece_search.h"
+#include "spdlog/spdlog.h"
 
 std::vector<RotatedPiece>
 match_piece_mask(const std::vector<Query> &query, const std::vector<PieceWAvailability> &piecesWAvailability) {
@@ -59,4 +60,12 @@ std::vector<PieceWAvailability> create_pieces_with_availability(const std::vecto
         piecesWAvailability.push_back({piece, true});
     }
     return piecesWAvailability;
+}
+
+std::string csv_piece(RotatedPiece piece) {
+    // convert the piece to a csv string like this <first 16 bits>,<second 16 bits>,<third 16 bits>,<fourth 16 bits>
+    PIECE rpiece = apply_rotation(piece);
+    std::bitset<64> bits(rpiece);
+    return fmt::format("{},{},{},{}", bits.to_string().substr(0, 16), bits.to_string().substr(16, 16),
+                       bits.to_string().substr(32, 16), bits.to_string().substr(48, 16));
 }

@@ -14,10 +14,11 @@ std::vector<PIECE> load_from_csv(const std::string &filename) {
     char *c;
     char *d;
     while (in.read_row(a, b, c, d)) {
-        auto as = (PIECE_PART) atoi(a);
-        auto bs = (PIECE_PART) atoi(b);
-        auto cs = (PIECE_PART) atoi(c);
-        auto ds = (PIECE_PART) atoi(d);
+        // read bit strings from csv and convert them to PIECE
+        auto as = (PIECE_PART) strtol(a, nullptr, 2);
+        auto bs = (PIECE_PART) strtol(b, nullptr, 2);
+        auto cs = (PIECE_PART) strtol(c, nullptr, 2);
+        auto ds = (PIECE_PART) strtol(d, nullptr, 2);
         if (as == 0) {
             as = WALL;
         }

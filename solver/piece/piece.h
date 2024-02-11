@@ -8,7 +8,7 @@
 #include <bitset>
 #include <iostream>
 #include <vector>
-#include "../piece_search/piece_search.h"
+
 
 using PIECE = unsigned long long;
 using PIECE_PART = unsigned short;
@@ -33,6 +33,5 @@ PIECE rotate_piece_left(PIECE piece, int n);
 
 void log_piece(PIECE piece, const std::string &description);
 
-std::string csv_piece(RotatedPiece piece);
 
 #endif //ETERNITY2_PIECE_H
