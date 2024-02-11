@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 # Paramètres du plateau
-size = 10  # Taille du plateau
+size = 8  # Taille du plateau
 number_of_symbols = 16  # Nombre de symboles différents
 
 def generate_inner_symbols(size, number_of_symbols):
