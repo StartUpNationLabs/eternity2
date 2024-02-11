@@ -35,6 +35,7 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
     PIECE_PART bottom;
     PIECE_PART left;
     PIECE mask = EMPTY;
+    std::vector<Query> queries= {};
     //TODO: fix this to use size_t instead of signed int. This is a temporary fix to make the code work. There may be undefined behavior here.
     auto x = static_cast<signed int>(xpos);
     auto y = static_cast<signed int>(ypos);
@@ -44,6 +45,9 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         if (right != EMPTY) {
             mask |= RIGHT_MASK;
         }
+        // if there is a piece to the right, There can't be a wall to the right
+        // add a negative wall query to the queries that removes pieces with walls to the right
+        queries.push_back(Query(FULLWALL, RIGHT_MASK, QueryType::NEGATIVE));
     } else {
         right = WALL;
         mask |= RIGHT_MASK;
@@ -53,6 +57,9 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         if (left != EMPTY) {
             mask |= LEFT_MASK;
         }
+        // if there is a piece to the left, There can't be a wall to the left
+        // add a negative wall query to the queries that removes pieces with walls to the left
+        queries.push_back(Query(FULLWALL, LEFT_MASK, QueryType::NEGATIVE));
     } else {
         left = WALL;
         mask |= LEFT_MASK;
@@ -63,6 +70,9 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         if (bottom != EMPTY) {
             mask |= DOWN_MASK;
         }
+        // if there is a piece below, There can't be a wall below
+        // add a negative wall query to the queries that removes pieces with walls below
+        queries.push_back(Query(FULLWALL, DOWN_MASK, QueryType::NEGATIVE));
     } else {
         bottom = WALL;
         mask |= DOWN_MASK;
@@ -73,6 +83,9 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         if (top != EMPTY) {
             mask |= UP_MASK;
         }
+        // if there is a piece above, There can't be a wall above
+        // add a negative wall query to the queries that removes pieces with walls above
+        queries.push_back(Query(FULLWALL, UP_MASK, QueryType::NEGATIVE));
     } else {
         top = WALL;
         mask |= UP_MASK;
@@ -80,8 +93,9 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
 
     PIECE piece = make_piece(top, right, bottom, left);
     log_piece(piece, "Query piece");
-    const auto query = Query(piece, mask);
-    possible = match_piece_mask({query}, pieces);
+    const auto positive_query = Query(piece, mask);
+    queries.push_back(positive_query);
+    possible = match_piece_mask(queries, pieces);
     return possible;
 }
 

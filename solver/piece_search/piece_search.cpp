@@ -17,13 +17,14 @@ match_piece_mask(const std::vector<Query> &query, const std::vector<PieceWAvaila
             PIECE rotated_piece = rotate_piece_right(piece, i);
             bool keep = true;
             for (auto const &q: query) {
-                if (q.type == QueryType::POSITIVE && !match_piece_mask_internal(q.piece, q.mask, rotated_piece)) {
+                const auto match =  match_piece_mask_internal(q.piece, q.mask, rotated_piece);
+                if (q.type == QueryType::POSITIVE && !match) {
                     keep = false;
-                } else {
-                    if (q.type == QueryType::NEGATIVE && match_piece_mask_internal(q.piece, q.mask, rotated_piece)) {
-                        keep = false;
-                    }
                 }
+                if (q.type == QueryType::NEGATIVE && match) {
+                    keep = false;
+                }
+
             }
             if (keep) {
                 results.emplace_back(piece, i, pieceIndex);

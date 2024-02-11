@@ -17,7 +17,7 @@ target_compile_definitions(Solver PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF)
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # build release
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 
 # add library
 add_library(solver_lib STATIC
@@ -33,4 +33,5 @@ add_library(solver_lib STATIC
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(solver_lib spdlog csv OpenMP::OpenMP_CXX)
+target_compile_definitions(solver_lib PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)

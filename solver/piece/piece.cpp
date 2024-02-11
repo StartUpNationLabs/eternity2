@@ -54,10 +54,10 @@ std::vector<std::string> piece_to_string(PIECE piece) {
 
 void log_piece(PIECE piece, const std::string &description) {
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
-    spdlog::info(description);
-    for (auto const &line: piece_to_string(piece)) {
-        spdlog::info(line);
-    }
+//    spdlog::info(description);
+//    for (auto const &line: piece_to_string(piece)) {
+//        spdlog::info(line);
+//    }
 #endif
 
 }
