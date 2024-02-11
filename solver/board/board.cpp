@@ -3,6 +3,7 @@
 //
 
 
+#include <stack>
 #include "board.h"
 #include "spdlog/spdlog.h"
 
@@ -35,7 +36,7 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
     PIECE_PART bottom;
     PIECE_PART left;
     PIECE mask = EMPTY;
-    std::vector<Query> queries= {};
+    std::vector<Query> queries = {};
     //TODO: fix this to use size_t instead of signed int. This is a temporary fix to make the code work. There may be undefined behavior here.
     auto x = static_cast<signed int>(xpos);
     auto y = static_cast<signed int>(ypos);
