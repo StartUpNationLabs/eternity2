@@ -213,3 +213,27 @@ TEST_CASE("Solve Board") {
 
 }
 
+TEST_CASE("Solve & Export Board") {
+    SECTION("Solve 2x2 board") {
+        Board board = create_board(2);
+        std::vector<PIECE> pieces = {
+                make_piece(1, 1, WALL, WALL),
+                make_piece(1, WALL, WALL, 1),
+                make_piece(WALL, WALL, 1, 1),
+                make_piece(1, 1, WALL, WALL)
+        };
+
+        int max_count = 0;
+        Board max_board = create_board(2);
+        std::mutex mutex;
+        solve_board(board, pieces, max_board, max_count, mutex);
+        log_board(board, "2x2 board solved");
+        for (auto const &row: board) {
+            for (auto const &piece: row) {
+                REQUIRE(piece.piece != 0);
+            }
+        }
+
+        export_board(max_board);
+    }
+}

@@ -5,6 +5,7 @@
 
 #include <stack>
 #include <random>
+#include <fstream>
 #include "board.h"
 #include "spdlog/spdlog.h"
 auto rng = std::default_random_engine {};
@@ -220,4 +221,15 @@ void solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_boar
     std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
 //    solve_board_iterative(board, pieces_with_availability);
     solve_board_recursive(board, pieces_with_availability, 0, 0, 0, max_board, max_count, mutex);
+}
+
+void export_board(const Board &board) {
+    // function to export the board to a csv file
+    std::ofstream file("board.csv");
+
+    for (const auto &row: board) {
+        for (const auto &piece: row) {
+            file << csv_piece(piece.piece) << std::endl;
+        }
+    }
 }
