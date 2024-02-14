@@ -36,13 +36,16 @@ int main(int argc, char *argv[]) {
     auto board_size = (int) sqrt((int) pieces.size());
     std::mutex mutex;
     Board max_board = create_board(board_size);
-//    int max_count = 0;
-//    thread_function(board_size, pieces, max_board, max_count, mutex);
     int max_count = 0;
     std::vector<std::jthread> threads;
     for (int i = 0; i < 16; i++) {
-        threads.emplace_back(thread_function, board_size, pieces, std::ref(max_board), std::ref(max_count),
-                             std::ref(mutex));
+        threads.emplace_back(thread_function,
+                             board_size,
+                             pieces,
+                             std::ref(max_board),
+                             std::ref(max_count),
+                             std::ref(mutex)
+                             );
     }
     // every 2 seconds, print the current max count
     bool stop = false;
