@@ -1,9 +1,11 @@
 import random
+
 import numpy as np
 
 # Paramètres du plateau
-size = 12  # Taille du plateau
+size = 13  # Taille du plateau
 number_of_symbols = 22  # Nombre de symboles différents
+
 
 def generate_inner_symbols(size, number_of_symbols):
     vertical_symbols = np.random.randint(1, number_of_symbols, size=(size, size - 1))
@@ -32,12 +34,14 @@ def print_board(board):
         for piece in row:
             print(f"{', '.join(piece)}")
 
+
 def format_board(board):
     formatted_board = f"{size}, {number_of_symbols}\n"
     for row in board:
         for piece in row:
             formatted_board += f"{', '.join(piece)}\n"
     return formatted_board
+
 
 def shuffle_board(board):
     for row in board:
@@ -46,6 +50,7 @@ def shuffle_board(board):
                 piece.append(piece.pop(0))
     np.random.shuffle(board)
     return board
+
 
 board = create_board(size, number_of_symbols)
 print(print_board(board))
