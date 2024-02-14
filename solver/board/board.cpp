@@ -8,7 +8,8 @@
 #include <fstream>
 #include "board.h"
 #include "spdlog/spdlog.h"
-auto rng = std::default_random_engine {};
+
+auto rng = std::default_random_engine{};
 
 Board create_board(int size) {
     // function to create an empty board with the given size and fill it with empty pieces
@@ -232,4 +233,17 @@ void export_board(const Board &board) {
             file << csv_piece(piece) << std::endl;
         }
     }
+}
+
+
+unsigned long long int hash_board(const Board &board) {
+    // function to hash the board
+    // the function uses the hash of the pieces on the board to create a unique hash for the board
+    unsigned long long int hash = 0;
+    for (const auto &row: board) {
+        for (const auto &piece: row) {
+            hash = hash * 31 + (piece.index + piece.rotation)
+        }
+    }
+    return hash;
 }
