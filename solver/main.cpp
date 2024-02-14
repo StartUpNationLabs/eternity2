@@ -51,13 +51,13 @@ int main(int argc, char *argv[]) {
     while (!stop) {
         std::this_thread::sleep_for(std::chrono::seconds(2));
         std::cout << "Max count: " << max_count << std::endl;
-        export_board(max_board);
         std::vector<std::string> board_lines = board_to_string(max_board);
         for ( auto const &line: board_lines) {
             std::cout << line << std::endl;
         }
         // if board is solved, stop the threads
         if (max_count == board_size * board_size) {
+            export_board(max_board);
             return 0;
         }
     }
