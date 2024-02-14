@@ -9,10 +9,12 @@
 #include "../piece/piece.h"
 
 struct RotatedPiece {
+
     PIECE piece;
     int rotation;
     size_t index;
 };
+
 enum class QueryType {
     POSITIVE,
     NEGATIVE

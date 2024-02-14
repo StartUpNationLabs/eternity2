@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     std::mutex mutex;
     Board max_board = create_board(board_size);
     int max_count = 0;
-    std::vector<std::jthread> threads;
+    std::vector<std::thread> threads;
     for (int i = 0; i < 16; i++) {
         threads.emplace_back(thread_function,
                              board_size,
@@ -52,7 +52,8 @@ int main(int argc, char *argv[]) {
     while (!stop) {
         std::this_thread::sleep_for(std::chrono::seconds(2));
         std::cout << "Max count: " << max_count << std::endl;
-        for (std::vector<std::string> board_lines = board_to_string(max_board); auto const &line: board_lines) {
+        std::vector<std::string> board_lines = board_to_string(max_board);
+        for ( auto const &line: board_lines) {
             std::cout << line << std::endl;
         }
         // if board is solved, stop the threads

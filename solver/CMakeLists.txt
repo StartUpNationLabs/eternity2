@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 
 if(APPLE)
@@ -20,7 +20,7 @@ if(APPLE)
 
 endif()
 
-find_package(OpenMP)
+#find_package(OpenMP)
 add_executable(Solver main.cpp
         piece/piece.cpp
         piece/piece.h
