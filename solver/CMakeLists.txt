@@ -31,7 +31,7 @@ add_executable(Solver main.cpp
         board/board.cpp
         board/board.h
 )
-target_link_libraries(Solver spdlog )
+target_link_libraries(Solver spdlog pthread)
 target_compile_definitions(Solver PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF)
 
 # add Wall flag
