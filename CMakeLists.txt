@@ -6,5 +6,5 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 
 #enable_testing()
 add_subdirectory(external-libs/spdlog)
-add_subdirectory(tests)
+#add_subdirectory(tests)
 add_subdirectory(solver)

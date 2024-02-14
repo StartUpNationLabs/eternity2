@@ -242,7 +242,7 @@ unsigned long long int hash_board(const Board &board) {
     unsigned long long int hash = 0;
     for (const auto &row: board) {
         for (const auto &piece: row) {
-            hash = hash * 31 + (piece.index + piece.rotation)
+            hash = hash * 31 + (piece.index + piece.rotation);
         }
     }
     return hash;
