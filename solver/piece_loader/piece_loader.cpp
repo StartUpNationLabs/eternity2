@@ -2,23 +2,42 @@
 // Created by appad on 10/02/2024.
 //
 
+#include <fstream>
 #include "piece_loader.h"
 
 std::vector<PIECE> load_from_csv(const std::string &filename) {
-    io::CSVReader<4> in(filename);
+    // function to load pieces from a csv file
+    // the csv file should contain the bit strings of the pieces
+    // the bit strings are converted to PIECE and returned as a vector
 
+    std::ifstream in(filename);
 
     std::vector<PIECE> pieces = {};
-    char *a;
-    char *b;
-    char *c;
-    char *d;
-    while (in.read_row(a, b, c, d)) {
+    while (in.good()) {
+        std::string line;
+        std::getline(in, line);
+        if (line.empty()) {
+            continue;
+        }
+        std::string a;
+        std::string b;
+        std::string c;
+        std::string d;
+        // split the line by comma
+        a = line.substr(0, line.find(','));
+        line = line.substr(line.find(',') + 1);
+        b = line.substr(0, line.find(','));
+        line = line.substr(line.find(',') + 1);
+        c = line.substr(0, line.find(','));
+        line = line.substr(line.find(',') + 1);
+        d = line;
+
+
         // read bit strings from csv and convert them to PIECE
-        auto as = (PIECE_PART) strtol(a, nullptr, 2);
-        auto bs = (PIECE_PART) strtol(b, nullptr, 2);
-        auto cs = (PIECE_PART) strtol(c, nullptr, 2);
-        auto ds = (PIECE_PART) strtol(d, nullptr, 2);
+        auto as = (PIECE_PART) strtol(a.c_str(), nullptr, 2);
+        auto bs = (PIECE_PART) strtol(b.c_str(), nullptr, 2);
+        auto cs = (PIECE_PART) strtol(c.c_str(), nullptr, 2);
+        auto ds = (PIECE_PART) strtol(d.c_str(), nullptr, 2);
 
         PIECE piece = make_piece(as, bs, cs, ds);
         pieces.push_back(piece);
