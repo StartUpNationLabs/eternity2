@@ -66,6 +66,6 @@ std::string csv_piece(RotatedPiece piece) {
     // convert the piece to a csv string like this <first 16 bits>,<second 16 bits>,<third 16 bits>,<fourth 16 bits>
     PIECE rpiece = apply_rotation(piece);
     std::bitset<64> bits(rpiece);
-    return format("{},{},{},{}", bits.to_string().substr(0, 16), bits.to_string().substr(16, 16),
-                       bits.to_string().substr(32, 16), bits.to_string().substr(48, 16));
+    return format("{},{},{},{},{},{}", bits.to_string().substr(0, 16), bits.to_string().substr(16, 16),
+                       bits.to_string().substr(32, 16), bits.to_string().substr(48, 16), piece.index, piece.rotation);
 }
