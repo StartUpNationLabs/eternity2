@@ -169,7 +169,7 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         // add placed piece back to pieces
         pieces[rotated_piece.index].available = true;
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
-        log_board(board, fmt::format("Backtracking at x: {}, y: {}", x, y));
+        log_board(board, format("Backtracking at x: {}, y: {}", x, y));
 #endif
         remove_piece(board, x, y);
     }
