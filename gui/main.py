@@ -3,6 +3,7 @@ from pathlib import Path
 import gradio as gr
 
 from eternitylib.board import Board
+from solverlib.solver import Solver
 
 
 def board_to_image(text, file) -> (str, Path):
@@ -50,4 +51,6 @@ board_gen = gr.Interface(
 interface = gr.TabbedInterface([board_gen, image_gen], ["Generate Board", "Generate Image"])
 
 if __name__ == "__main__":
-    interface.launch(share=True)
+    solver = Solver()
+    solver.link_solver()
+    # interface.launch(share=True)
