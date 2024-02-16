@@ -70,7 +70,6 @@ class Board:
             set(pattern for line in csv.split("\n") if line.strip() for pattern in line.split(","))
         )
 
-
         for i, line in enumerate(csv.split("\n")):
             if line.strip() == "":
                 continue

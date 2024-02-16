@@ -9,12 +9,19 @@ class Solver:
         # exe is in the same dir as this file
         self.exe_path = Path(__file__).parent / "e2solver"
 
-    def link_solver(self, exe_path: Path = Path(__file__).parent.parent.parent / "cmake-build-debug/solver/Solver"):
-        subprocess.run(["ln", "-s", str(exe_path), str(self.exe_path)])
+    def link_solver(self, path: Path = Path(__file__).parent.parent.parent / "cmake-build-debug/solver/Solver"):
+        # If file does not exist, raise an error
+        if not path.exists():
+            raise FileNotFoundError(f"Solver executable not found at {path}")
+
+        if self.exe_path.exists():
+            self.exe_path.unlink()
+
+        self.exe_path.symlink_to(path)
 
     def solve(self, board: Board, timeout: int = 60) -> str:
         # Write the board to a file
-        board_path = Path(__file__).parent / f"board.{board.hash()}.txt"
+        board_path = Path(__file__).parent.parent / f"tmp/board.{board.hash()}.txt"
         board_path.write_text(board.to_csv())
 
         # Run the solver

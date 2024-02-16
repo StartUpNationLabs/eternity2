@@ -53,4 +53,10 @@ interface = gr.TabbedInterface([board_gen, image_gen], ["Generate Board", "Gener
 if __name__ == "__main__":
     solver = Solver()
     solver.link_solver()
+
+    board = Board()
+    board.generate(10, 22)
+
+    print(solver.solve(board))
+
     # interface.launch(share=True)
