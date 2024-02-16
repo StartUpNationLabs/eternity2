@@ -48,4 +48,3 @@ set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(Solver main.cpp
 )
 target_link_libraries(Solver solver_lib)
-target_compile_definitions(Solver PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF)

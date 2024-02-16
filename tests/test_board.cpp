@@ -2,7 +2,7 @@
 
 #include <catch2/catch_all.hpp>
 #include "board/board.h"
-#include "spdlog/spdlog.h"
+#include "format/format.h"
 
 
 TEST_CASE("Board Creation", "[create]") {
@@ -203,7 +203,7 @@ TEST_CASE("Solve Board") {
         solve_board(board, pieces, max_board, max_count, mutex);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
-        log_board(board, fmt::format("3x3 board solved in {} seconds", elapsed.count()));
+        log_board(board, format("3x3 board solved in {} seconds", elapsed.count()));
         for (auto const &row: board) {
             for (auto const &piece: row) {
                 REQUIRE(piece.piece != 0);

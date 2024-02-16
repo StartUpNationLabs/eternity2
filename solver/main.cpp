@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     int max_count = 0;
     std::vector<std::thread> threads;
     threads.reserve(16);
-for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++) {
         threads.emplace_back(thread_function,
                              board_size,
                              pieces,
