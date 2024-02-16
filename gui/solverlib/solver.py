@@ -21,7 +21,7 @@ class Solver:
 
     def solve(self, board: Board, timeout: int = 60) -> str:
         # Write the board to a file
-        board_path = Path(__file__).parent / f"board.{board.hash()}.txt"
+        board_path = Path(__file__).parent.parent / f"tmp/board.{board.hash()}.txt"
         board_path.write_text(board.to_csv())
 
         # Run the solver
