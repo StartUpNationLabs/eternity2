@@ -43,9 +43,6 @@ std::vector<PIECE> load_from_csv(const std::string &filename) {
         PIECE piece = make_piece(as, bs, cs, ds);
         pieces.push_back(piece);
     }
-    for (auto piece: pieces) {
-        log_piece(piece, "Loaded piece");
-    }
     return pieces;
 }
 
@@ -85,9 +82,5 @@ std::vector<PIECE> load_from_csv_string( std::string &csv_string) {
         pieces.push_back(piece);
         csv_string.erase(0, pos + delimiter.length());
     }
-    for (auto piece: pieces) {
-        log_piece(piece, "Loaded piece");
-    }
-
     return pieces;
 }
