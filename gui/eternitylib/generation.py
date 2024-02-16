@@ -50,8 +50,3 @@ def shuffle_board(board):
                 piece.append(piece.pop(0))
     np.random.shuffle(board)
     return board
-
-
-board = create_board(size, number_of_symbols)
-print(print_board(board))
-print(format_board(shuffle_board(board)))
