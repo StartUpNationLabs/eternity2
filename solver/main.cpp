@@ -39,21 +39,28 @@ int main(int argc, char *argv[]) {
                              );
     }
     // every 2 seconds, print the current max count
+    long long int last_max_count = 0;
     while (true) {
-        std::this_thread::sleep_for(std::chrono::nanoseconds(20000000));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(200000));
+        if (last_max_count == max_count) {
+            continue;
+        }
+        last_max_count = max_count;
         std::cout << "Max count: " << max_count << std::endl;
         std::string board_lines = export_board_to_csv_string(max_board);
         std::cout << board_lines;
         // if board is solved, stop the threads
         if (max_count == board_size * board_size) {
             auto end = std::chrono::high_resolution_clock::now();
+            // export the board
+            std::chrono::duration<double> elapsed = end - start;
+            std::cout << board_size << "x" << board_size << " board solved in " << elapsed.count() << " seconds" << std::endl;
+            std::cout << "Stopping threads" << std::endl;
             // stop threads
             for (auto &thread: threads) {
                 thread.join();
             }
-            // export the board
-            std::chrono::duration<double> elapsed = end - start;
-            std::cout << board_size << "x" << board_size << " board solved in " << elapsed.count() << " seconds" << std::endl;
+
             export_board(max_board);
             return 0;
         }
