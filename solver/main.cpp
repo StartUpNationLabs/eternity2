@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     int max_count = 0;
     std::vector<std::thread> threads;
     unsigned long thread_count = 16;
-    if (std::thread::hardware_concurrency() > 0) {
+    if (std::thread::hardware_concurrency() != 0) {
         thread_count = std::thread::hardware_concurrency();
     }
     threads.reserve(thread_count);
