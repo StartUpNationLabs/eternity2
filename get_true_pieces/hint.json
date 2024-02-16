@@ -1,0 +1,39 @@
+{
+  "hints": {
+    "1": {
+      "coordinate": [
+        8,
+        8
+      ],
+      "piece_id": 139
+    },
+    "2": {
+      "coordinate": [
+        3,
+        3
+      ],
+      "piece_id": 208
+    },
+    "3": {
+      "coordinate": [
+        14,
+        3
+      ],
+      "piece_id": 255
+    },
+    "4": {
+      "coordinate": [
+        14,
+        14
+      ],
+      "piece_id": 249
+    },
+    "5": {
+      "coordinate": [
+        3,
+        14
+      ],
+      "piece_id": 181
+    }
+  }
+}
