@@ -23,9 +23,13 @@ int main(int argc, char *argv[]) {
     Board max_board = create_board(board_size);
     int max_count = 0;
     std::vector<std::thread> threads;
-    threads.reserve(16);
+    unsigned long thread_count = 16;
+    if (std::thread::hardware_concurrency() > 0) {
+        thread_count = std::thread::hardware_concurrency();
+    }
+    threads.reserve(thread_count);
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < thread_count; i++) {
         threads.emplace_back(thread_function,
                              board_size,
                              pieces,
