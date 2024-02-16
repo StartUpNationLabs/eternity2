@@ -20,19 +20,6 @@ if(APPLE)
 
 endif()
 
-#find_package(OpenMP)
-add_executable(Solver main.cpp
-        piece/piece.cpp
-        piece/piece.h
-        piece_loader/piece_loader.cpp
-        piece_loader/piece_loader.h
-        piece_search/piece_search.cpp
-        piece_search/piece_search.h
-        board/board.cpp
-        board/board.h
-)
-target_link_libraries(Solver spdlog pthread)
-target_compile_definitions(Solver PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF)
 
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
@@ -48,10 +35,17 @@ add_library(solver_lib STATIC
         piece_search/piece_search.cpp
         piece_search/piece_search.h
         board/board.cpp
-        board/board.h)
+        board/board.h
+        format/format.cpp
+        format/format.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(solver_lib spdlog )
 target_compile_definitions(solver_lib PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
+
+#find_package(OpenMP)
+add_executable(Solver main.cpp
+)
+target_link_libraries(Solver solver_lib)
+target_compile_definitions(Solver PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF)

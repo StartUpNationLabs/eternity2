@@ -3,7 +3,7 @@
 //
 
 #include "piece.h"
-#include "spdlog/spdlog.h"
+#include "../format/format.h"
 
 PIECE make_piece(PIECE_PART top, PIECE_PART right, PIECE_PART down, PIECE_PART left) {
     // concatenate the 4 parts into left single 64-bit integer
@@ -44,11 +44,11 @@ std::vector<std::string> piece_to_string(PIECE piece) {
     const std::string s2 = s.substr(32, 16);
     const std::string s3 = s.substr(48, 16);
     return {
-            fmt::format("-----------------------------------------------------"),
-            fmt::format("|                 {}                  |", s0),
-            fmt::format("|  {}               {}  |", s3, s1),
-            fmt::format("|                 {}                  |", s2),
-            fmt::format("-----------------------------------------------------")
+            format("-----------------------------------------------------"),
+            format("|                 {}                  |", s0),
+            format("|  {}               {}  |", s3, s1),
+            format("|                 {}                  |", s2),
+            format("-----------------------------------------------------")
     };
 }
 

@@ -1,8 +1,9 @@
 #include <iostream>
+#include <valarray>
+#include <thread>
 
 #include "piece/piece.h"
 #include "board/board.h"
-#include "spdlog/spdlog.h"
 #include "piece_loader/piece_loader.h"
 
 void thread_function(int board_size, std::vector<PIECE> pieces, Board &max_board, int &max_count, std::mutex &mutex) {
@@ -37,7 +38,8 @@ int main(int argc, char *argv[]) {
     Board max_board = create_board(board_size);
     int max_count = 0;
     std::vector<std::thread> threads;
-    for (int i = 0; i < 16; i++) {
+    threads.reserve(16);
+for (int i = 0; i < 16; i++) {
         threads.emplace_back(thread_function,
                              board_size,
                              pieces,

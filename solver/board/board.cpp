@@ -6,8 +6,9 @@
 #include <stack>
 #include <random>
 #include <fstream>
+#include <algorithm>
 #include "board.h"
-#include "spdlog/spdlog.h"
+#include "../format/format.h"
 
 auto rng = std::default_random_engine{};
 
@@ -133,7 +134,7 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
-    log_board(board, fmt::format("Solving board at x: {}, y: {}", x, y));
+    log_board(board, format("Solving board at x: {}, y: {}", x, y));
     if (placed_pieces > max_count) {
         std::scoped_lock lock(mutex);
         max_count = placed_pieces;
@@ -167,7 +168,9 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         }
         // add placed piece back to pieces
         pieces[rotated_piece.index].available = true;
-        SPDLOG_INFO("Backtracking");
+#if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
+        log_board(board, fmt::format("Backtracking at x: {}, y: {}", x, y));
+#endif
         remove_piece(board, x, y);
     }
 

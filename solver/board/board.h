@@ -10,11 +10,18 @@
 
 #include <vector>
 #include <mutex>
+#include <unordered_set>
 #include "../piece_search/piece_search.h"
 //#include "../piece/piece.h"
 
 using Board = std::vector<std::vector<RotatedPiece>>;
-
+using BoardHash = unsigned long long;
+struct SharedData {
+    Board *max_board;
+    int *max_count;
+    std::mutex *mutex;
+    std::unordered_set<BoardHash> *hashes;
+};
 Board create_board(int size);
 std::vector<std::string> board_to_string(const Board &board);
 void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y);
