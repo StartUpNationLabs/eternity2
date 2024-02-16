@@ -17,7 +17,7 @@ class Solver:
         if self.exe_path.exists():
             self.exe_path.unlink()
 
-        path.symlink_to(self.exe_path)
+        self.exe_path.symlink_to(path)
 
     def solve(self, board: Board, timeout: int = 60) -> str:
         # Write the board to a file
