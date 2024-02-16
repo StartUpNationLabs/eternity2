@@ -30,4 +30,5 @@ std::vector<RotatedPiece> possible_pieces(const Board &board, const std::vector<
 void log_board(const Board &board, const std::string &description);
 void solve_board(Board &board, const std::vector<PIECE> &pieces, Board &max_board, int &max_count, std::mutex &mutex);
 void export_board(const Board &board);
+std::string export_board_to_csv_string(const Board &board);
 #endif //ETERNITY2_BOARD_H

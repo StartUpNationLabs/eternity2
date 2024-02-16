@@ -238,6 +238,17 @@ void export_board(const Board &board) {
     }
 }
 
+std::string export_board_to_csv_string(const Board &board) {
+    // function to export the board to a csv string
+    std::string csv_string;
+    for (const auto &row: board) {
+        for (const auto &piece: row) {
+            csv_string += csv_piece(piece) + "\n";
+        }
+    }
+    return csv_string;
+}
+
 
 unsigned long long int hash_board(const Board &board) {
     // function to hash the board
