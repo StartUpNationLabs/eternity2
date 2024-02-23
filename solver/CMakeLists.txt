@@ -43,7 +43,7 @@ add_library(solver_lib STATIC
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-#target_compile_definitions(solver_lib PUBLIC DISABLE_LOGGING)
+target_compile_definitions(solver_lib PUBLIC DISABLE_LOGGING)
 set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 #find_package(OpenMP)

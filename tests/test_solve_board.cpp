@@ -11,7 +11,7 @@ TEST_CASE("Possible pieces") {
         Board board = create_board(2);
         Piece piece = make_piece(1, 2, WALL, WALL);
         log_board(board, "2x2 board with piece");
-        std::vector<RotatedPiece> possible = possible_pieces(board, create_pieces_with_availability({piece}), 1, 1);
+        std::vector<RotatedPiece> possible = possible_pieces(board, create_pieces_with_availability({piece}), {1,1});
         REQUIRE(possible.size() == 1);
         REQUIRE(possible[0].piece == piece);
         REQUIRE(possible[0].rotation == 3);

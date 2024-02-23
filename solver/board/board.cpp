@@ -22,12 +22,44 @@ void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y) {
     board[y][x] = piece;
 }
 
+void place_piece(Board &board, const RotatedPiece &piece, Index index) {
+    // function to place a piece on the board at the given position
+    // the piece is rotated and placed on the board
+    board[index.second][index.first] = piece;
+}
+
 void remove_piece(Board &board, size_t x, size_t y) {
     // function to remove a piece from the board at the given position
     // the piece is replaced with an empty piece
     board[y][x] = {EMPTY, 0, 0};
 }
 
+void remove_piece(Board &board, Index index) {
+    // function to remove a piece from the board at the given position
+    // the piece is replaced with an empty piece
+    board[index.second][index.first] = {EMPTY, 0, 0};
+}
+
+Index get_next(const Board &board, Index index) {
+    // function to get the next position on the board
+    // the function updates the index to the next position
+    index.first++;
+    if (index.first == board.size()) {
+        index.first = 0;
+        index.second++;
+    }
+    return index;
+}
+
+bool is_end(const Board &board, Index index) {
+    // function to check if the index is at the end of the board
+    return index.second == board.size();
+}
+
+std::string index_to_string(Index index) {
+    // function to convert the index to a string
+    return format("x: {}, y: {}", index.first, index.second);
+}
 
 std::vector<std::string> board_to_string(const Board &board) {
     // function to print the board to the console
