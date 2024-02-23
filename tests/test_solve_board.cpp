@@ -15,7 +15,7 @@ TEST_CASE("Possible pieces") {
         REQUIRE(possible.size() == 1);
         REQUIRE(possible[0].piece == piece);
         REQUIRE(possible[0].rotation == 3);
-        place_piece(board, possible[0], 1, 1);
+        place_piece(board, possible[0], {1, 1});
         log_board(board, "2x2 board with piece placed");
 
     }
@@ -32,11 +32,12 @@ TEST_CASE("Solve Board") {
                 make_piece(WALL, WALL, 1, 1),
                 make_piece(1, 1, WALL, WALL)
         };
-        //solve_board(Board &board, const std::vector<Piece> &pieces, Board &max_board, int &max_count, std::mutex &mutex)
+        Board max_board = create_board(0);
         int max_count = 0;
-        Board max_board = create_board(2);
-        std::mutex mutex;
-        solve_board(board, pieces, max_board, max_count, mutex);
+        auto mutex = std::mutex();
+        auto hashes = std::unordered_set<BoardHash>();
+        SharedData shared_data = {max_board, max_count, mutex, hashes};
+        solve_board(board, pieces, shared_data);
         log_board(board, "2x2 board solved");
         for (auto const &row: board) {
             for (auto const &piece: row) {
@@ -63,10 +64,12 @@ TEST_CASE("Solve Board") {
 
 
         };
+        Board max_board = create_board(0);
         int max_count = 0;
-        Board max_board = create_board(3);
-        std::mutex mutex;
-        solve_board(board, pieces, max_board, max_count, mutex);
+        auto mutex = std::mutex();
+        auto hashes = std::unordered_set<BoardHash>();
+        SharedData shared_data = {max_board, max_count, mutex, hashes};
+        solve_board(board, pieces,  shared_data);
         log_board(board, "3x3 board solved");
         for (auto const &row: board) {
             for (auto const &piece: row) {
@@ -111,10 +114,12 @@ TEST_CASE("Solve Board") {
 
         };
         auto start = std::chrono::high_resolution_clock::now();
+        Board max_board = create_board(0);
         int max_count = 0;
-        Board max_board = create_board(3);
-        std::mutex mutex;
-        solve_board(board, pieces, max_board, max_count, mutex);
+        auto mutex = std::mutex();
+        auto hashes = std::unordered_set<BoardHash>();
+        SharedData shared_data = {max_board, max_count, mutex, hashes};
+        solve_board(board, pieces, shared_data);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         log_board(board, format("3x3 board solved in {} seconds", elapsed.count()));
@@ -137,10 +142,12 @@ TEST_CASE("Solve & Export Board") {
                 make_piece(1, 1, WALL, WALL)
         };
 
+        Board max_board = create_board(0);
         int max_count = 0;
-        Board max_board = create_board(2);
-        std::mutex mutex;
-        solve_board(board, pieces, max_board, max_count, mutex);
+        auto mutex = std::mutex();
+        auto hashes = std::unordered_set<BoardHash>();
+        SharedData shared_data = {max_board, max_count, mutex, hashes};
+        solve_board(board, pieces, shared_data);
         log_board(board, "2x2 board solved");
         for (auto const &row: board) {
             for (auto const &piece: row) {
@@ -148,6 +155,6 @@ TEST_CASE("Solve & Export Board") {
             }
         }
 
-        export_board(max_board);
+        export_board(shared_data.max_board);
     }
 }

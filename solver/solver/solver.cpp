@@ -11,16 +11,15 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
     // function to get the possible pieces that can be placed at the given position on the board
     // a piece is possible if it does not conflict with the pieces already on the board
     std::vector<RotatedPiece> possible;
-    const auto x = index.first;
-    const auto y = index.second;
+    Neighbor neighbors = get_neighbors(board, index);
     PiecePart top;
     PiecePart right;
     PiecePart bottom;
     PiecePart left;
     Piece mask = EMPTY;
     std::vector<Query> queries = {};
-    if (x + 1 < board.size()) {
-        right = get_piece_part(apply_rotation(board[y][x + 1]), LEFT_MASK);
+    if (neighbors.right != nullptr) {
+        right = get_piece_part(apply_rotation(*neighbors.right), LEFT_MASK);
         if (right != EMPTY) {
             mask |= RIGHT_MASK;
         }
@@ -31,8 +30,8 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         right = WALL;
         mask |= RIGHT_MASK;
     }
-    if (x >= 1) {
-        left = get_piece_part(apply_rotation(board[y][x - 1]), RIGHT_MASK);
+    if (neighbors.left != nullptr) {
+        left = get_piece_part(apply_rotation(*neighbors.left), RIGHT_MASK);
         if (left != EMPTY) {
             mask |= LEFT_MASK;
         }
@@ -44,8 +43,8 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         mask |= LEFT_MASK;
     }
 
-    if (y + 1 < board.size()) {
-        bottom = get_piece_part(apply_rotation(board[y + 1][x]), UP_MASK);
+    if (neighbors.down != nullptr) {
+        bottom = get_piece_part(apply_rotation(*neighbors.down), UP_MASK);
         if (bottom != EMPTY) {
             mask |= DOWN_MASK;
         }
@@ -57,8 +56,8 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
         mask |= DOWN_MASK;
     }
 
-    if (y >= 1) {
-        top = get_piece_part(apply_rotation(board[y - 1][x]), DOWN_MASK);
+    if (neighbors.up != nullptr) {
+        top = get_piece_part(apply_rotation(*neighbors.up), DOWN_MASK);
         if (top != EMPTY) {
             mask |= UP_MASK;
         }
@@ -79,16 +78,15 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
 }
 
 
-bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, Index index, int placed_pieces,
-                           Board &max_board, int &max_count, std::mutex &mutex) {
+bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, Index index, int placed_pieces, SharedData &shared_data) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
     log_board(board, format("Solving board at index: {}", index_to_string(index)));
-    if (placed_pieces > max_count) {
-        std::scoped_lock lock(mutex);
-        max_count = placed_pieces;
-        max_board = board;
+    if (placed_pieces > shared_data.max_count) {
+        std::scoped_lock lock(shared_data.mutex);
+        shared_data.max_count = placed_pieces;
+        shared_data.max_board = board;
     }
     if (is_end(board, index)) {
         return true;
@@ -108,8 +106,7 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         place_piece(board, rotated_piece, index);
         // remove placed piece from pieces
         pieces[rotated_piece.index].available = false;
-        Index next_index = get_next(board, index);
-        if (solve_board_recursive(board, pieces, next_index, placed_pieces + 1, max_board, max_count, mutex)) {
+        if (Index next_index = get_next(board, index); solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data)) {
             return true;
         }
         // add placed piece back to pieces
@@ -124,9 +121,20 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
 
 }
 
-void solve_board(Board &board, const std::vector<Piece> &pieces, Board &max_board, int &max_count, std::mutex &mutex) {
+void solve_board(Board &board, const std::vector<Piece> &pieces, SharedData &shared_data) {
     // function to solve the board
     // the function calls the recursive function to solve the board
     std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
-    solve_board_recursive(board, pieces_with_availability, {0, 0}, 0, max_board, max_count, mutex);
+    solve_board_recursive(board, pieces_with_availability, {0, 0}, 0, shared_data);
+}
+
+SharedData create_shared_data() {
+    // function to create shared data for the solver
+    // the shared data contains the maximum board, the maximum count, a mutex and a set of hashes
+    Board max_board = create_board(0);
+    int max_count = 0;
+    auto mutex = std::mutex();
+    auto hashes = std::unordered_set<BoardHash>();
+    SharedData shared_data = {max_board, max_count, mutex, hashes};
+    return shared_data;
 }

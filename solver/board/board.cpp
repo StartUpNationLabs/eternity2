@@ -16,11 +16,6 @@ Board create_board(int size) {
     return board;
 }
 
-void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y) {
-    // function to place a piece on the board at the given position
-    // the piece is rotated and placed on the board
-    board[y][x] = piece;
-}
 
 void place_piece(Board &board, const RotatedPiece &piece, Index index) {
     // function to place a piece on the board at the given position
@@ -28,11 +23,7 @@ void place_piece(Board &board, const RotatedPiece &piece, Index index) {
     board[index.second][index.first] = piece;
 }
 
-void remove_piece(Board &board, size_t x, size_t y) {
-    // function to remove a piece from the board at the given position
-    // the piece is replaced with an empty piece
-    board[y][x] = {EMPTY, 0, 0};
-}
+
 
 void remove_piece(Board &board, Index index) {
     // function to remove a piece from the board at the given position
@@ -122,4 +113,32 @@ unsigned long long int hash_board(const Board &board) {
         }
     }
     return hash;
+}
+
+
+Neighbor get_neighbors(const Board &board, Index index) {
+    // function to get the neighbors of a piece on the board
+    // the function returns the pieces above, to the right, below, and to the left of the given piece
+    Neighbor neighbor{};
+    if (index.second > 0) {
+        neighbor.up = &board[index.second - 1][index.first];
+    } else {
+        neighbor.up = nullptr;
+    }
+    if (index.first < board.size() - 1) {
+        neighbor.right = &board[index.second][index.first + 1];
+    } else {
+        neighbor.right = nullptr;
+    }
+    if (index.second < board.size() - 1) {
+        neighbor.down = &board[index.second + 1][index.first];
+    } else {
+        neighbor.down = nullptr;
+    }
+    if (index.first > 0) {
+        neighbor.left = &board[index.second][index.first - 1];
+    } else {
+        neighbor.left = nullptr;
+    }
+    return neighbor;
 }

@@ -12,28 +12,44 @@
 #include <mutex>
 #include <unordered_set>
 #include "../piece_search/piece_search.h"
-//#include "../piece/piece.h"
 
 using Board = std::vector<std::vector<RotatedPiece>>;
 using BoardHash = unsigned long long;
 using Index = std::pair<size_t, size_t>;
-struct SharedData {
-    Board *max_board;
-    int *max_count;
-    std::mutex *mutex;
-    std::unordered_set<BoardHash> *hashes;
+
+
+struct Neighbor {
+    const RotatedPiece *up;
+    const RotatedPiece *right;
+    const RotatedPiece *down;
+    const RotatedPiece *left;
+
 };
+
 Board create_board(int size);
+
 std::vector<std::string> board_to_string(const Board &board);
-void place_piece(Board &board, const RotatedPiece &piece, size_t x, size_t y);
+
+
 void place_piece(Board &board, const RotatedPiece &piece, Index index);
+
 void remove_piece(Board &board, Index index);
-void remove_piece(Board &board, size_t x, size_t y);
+
+
 Index get_next(const Board &board, Index index);
+
 std::string index_to_string(Index index);
+
 bool is_end(const Board &board, Index index);
-RotatedPiece* get_piece(const Board &board, Index index);
+
+RotatedPiece *get_piece(const Board &board, Index index);
+
+Neighbor get_neighbors(const Board &board, Index index);
+
 void log_board(const Board &board, const std::string &description);
+
 void export_board(const Board &board);
+
 std::string export_board_to_csv_string(const Board &board);
+
 #endif //ETERNITY2_BOARD_H

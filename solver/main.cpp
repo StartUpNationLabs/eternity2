@@ -7,9 +7,9 @@
 #include "piece_loader/piece_loader.h"
 #include "solver/solver.h"
 
-void thread_function(int board_size, std::vector<Piece> pieces, Board &max_board, int &max_count, std::mutex &mutex) {
+void thread_function(int board_size, std::vector<Piece> pieces, SharedData &shared_data) {
     Board board = create_board(board_size);
-    solve_board(board, pieces, max_board, max_count, mutex);
+    solve_board(board, pieces, shared_data);
 }
 
 
@@ -29,14 +29,14 @@ int main(int argc, char *argv[]) {
         thread_count = std::thread::hardware_concurrency();
     }
     threads.reserve(thread_count);
+    std::unordered_set<BoardHash> hashes;
+    SharedData shared_data = {max_board, max_count, mutex, hashes};
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < thread_count; i++) {
         threads.emplace_back(thread_function,
                              board_size,
                              pieces,
-                             std::ref(max_board),
-                             std::ref(max_count),
-                             std::ref(mutex)
+                             std::ref(shared_data)
         );
     }
     // every 2 seconds, print the current max count
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
             auto end = std::chrono::high_resolution_clock::now();
             // export the board
             std::chrono::duration<double> elapsed = end - start;
-            std::cout << "=time=" <<  elapsed.count() << std::endl;
+            std::cout << "=time=" << elapsed.count() << std::endl;
             std::cout << "=" << "Stopping threads" << std::endl;
             // stop threads
             for (auto &thread: threads) {
