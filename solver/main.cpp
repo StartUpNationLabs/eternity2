@@ -5,8 +5,9 @@
 #include "piece/piece.h"
 #include "board/board.h"
 #include "piece_loader/piece_loader.h"
+#include "solver/solver.h"
 
-void thread_function(int board_size, std::vector<PIECE> pieces, Board &max_board, int &max_count, std::mutex &mutex) {
+void thread_function(int board_size, std::vector<Piece> pieces, Board &max_board, int &max_count, std::mutex &mutex) {
     Board board = create_board(board_size);
     solve_board(board, pieces, max_board, max_count, mutex);
 }

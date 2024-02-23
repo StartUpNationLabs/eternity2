@@ -37,11 +37,13 @@ add_library(solver_lib STATIC
         board/board.cpp
         board/board.h
         format/format.cpp
-        format/format.h)
+        format/format.h
+        solver/solver.h
+        solver/solver.cpp)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_compile_definitions(solver_lib PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+#target_compile_definitions(solver_lib PUBLIC DISABLE_LOGGING)
 set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 #find_package(OpenMP)

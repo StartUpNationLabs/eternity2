@@ -8,7 +8,7 @@
 #include <vector>
 #include "../piece/piece.h"
 
-std::vector<PIECE> load_from_csv(const std::string& filename);
-std::vector<PIECE> load_from_csv_string( std::string &csv_string);
+std::vector<Piece> load_from_csv(const std::string& filename);
+std::vector<Piece> load_from_csv_string(std::string &csv_string);
 
 #endif //ETERNITY2_PIECE_LOADER_H

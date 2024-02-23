@@ -6,14 +6,14 @@
 #include "piece_loader.h"
 
 
-std::vector<PIECE> load_from_csv(const std::string &filename) {
+std::vector<Piece> load_from_csv(const std::string &filename) {
     // function to load pieces from a csv file
     // the csv file should contain the bit strings of the pieces
-    // the bit strings are converted to PIECE and returned as a vector
+    // the bit strings are converted to Piece and returned as a vector
 
     std::ifstream in(filename);
 
-    std::vector<PIECE> pieces = {};
+    std::vector<Piece> pieces = {};
     while (in.good()) {
         std::string line;
         std::getline(in, line);
@@ -34,25 +34,25 @@ std::vector<PIECE> load_from_csv(const std::string &filename) {
         d = line;
 
 
-        // read bit strings from csv and convert them to PIECE
-        auto as = (PIECE_PART) strtol(a.c_str(), nullptr, 2);
-        auto bs = (PIECE_PART) strtol(b.c_str(), nullptr, 2);
-        auto cs = (PIECE_PART) strtol(c.c_str(), nullptr, 2);
-        auto ds = (PIECE_PART) strtol(d.c_str(), nullptr, 2);
+        // read bit strings from csv and convert them to Piece
+        auto as = (PiecePart) strtol(a.c_str(), nullptr, 2);
+        auto bs = (PiecePart) strtol(b.c_str(), nullptr, 2);
+        auto cs = (PiecePart) strtol(c.c_str(), nullptr, 2);
+        auto ds = (PiecePart) strtol(d.c_str(), nullptr, 2);
 
-        PIECE piece = make_piece(as, bs, cs, ds);
+        Piece piece = make_piece(as, bs, cs, ds);
         pieces.push_back(piece);
     }
     return pieces;
 }
 
-std::vector<PIECE> load_from_csv_string( std::string &csv_string) {
+std::vector<Piece> load_from_csv_string(std::string &csv_string) {
     // function to load pieces from a csv string
     // the csv string should contain the bit strings of the pieces
-    // the bit strings are converted to PIECE and returned as a vector
+    // the bit strings are converted to Piece and returned as a vector
 
     // iterate over the lines of the csv string
-    std::vector<PIECE> pieces;
+    std::vector<Piece> pieces;
     std::string delimiter = "\n";
     size_t pos = 0;
     std::string token;
@@ -72,13 +72,13 @@ std::vector<PIECE> load_from_csv_string( std::string &csv_string) {
         token = token.substr(token.find(',') + 1);
         d = token;
 
-        // read bit strings from csv and convert them to PIECE
-        auto as = (PIECE_PART) strtol(a.c_str(), nullptr, 2);
-        auto bs = (PIECE_PART) strtol(b.c_str(), nullptr, 2);
-        auto cs = (PIECE_PART) strtol(c.c_str(), nullptr, 2);
-        auto ds = (PIECE_PART) strtol(d.c_str(), nullptr, 2);
+        // read bit strings from csv and convert them to Piece
+        auto as = (PiecePart) strtol(a.c_str(), nullptr, 2);
+        auto bs = (PiecePart) strtol(b.c_str(), nullptr, 2);
+        auto cs = (PiecePart) strtol(c.c_str(), nullptr, 2);
+        auto ds = (PiecePart) strtol(d.c_str(), nullptr, 2);
 
-        PIECE piece = make_piece(as, bs, cs, ds);
+        Piece piece = make_piece(as, bs, cs, ds);
         pieces.push_back(piece);
         csv_string.erase(0, pos + delimiter.length());
     }

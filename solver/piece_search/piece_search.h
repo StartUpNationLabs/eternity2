@@ -10,7 +10,7 @@
 
 struct RotatedPiece {
 
-    PIECE piece;
+    Piece piece;
     int rotation;
     size_t index;
 };
@@ -20,22 +20,22 @@ enum class QueryType {
     NEGATIVE
 };
 struct Query {
-    PIECE piece;
-    PIECE mask;
+    Piece piece;
+    Piece mask;
     QueryType type;
 };
 
 struct PieceWAvailability {
-    PIECE piece;
+    Piece piece;
     bool available;
 };
 
-bool match_piece_mask_internal(PIECE piece_data, PIECE piece_mask, PIECE rotated_piece);
+bool match_piece_mask_internal(Piece piece_data, Piece piece_mask, Piece rotated_piece);
 
 std::vector<RotatedPiece> match_piece_mask(const std::vector<Query> &query, const std::vector<PieceWAvailability> &piecesWAvability);
 
-std::vector<PieceWAvailability> create_pieces_with_availability(const std::vector<PIECE> &pieces);
-PIECE apply_rotation(RotatedPiece piece);
+std::vector<PieceWAvailability> create_pieces_with_availability(const std::vector<Piece> &pieces);
+Piece apply_rotation(RotatedPiece piece);
 std::string csv_piece(RotatedPiece piece);
 
 #endif //ETERNITY2_PIECE_SEARCH_H

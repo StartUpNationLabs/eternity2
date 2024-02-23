@@ -5,30 +5,30 @@
 #include "piece.h"
 #include "../format/format.h"
 
-PIECE make_piece(PIECE_PART top, PIECE_PART right, PIECE_PART down, PIECE_PART left) {
+Piece make_piece(PiecePart top, PiecePart right, PiecePart down, PiecePart left) {
     // concatenate the 4 parts into left single 64-bit integer
     // look at the MASKs to understand the order of the parts
-    return (PIECE) left | ((PIECE) down << 16) | ((PIECE) right << 32) | ((PIECE) top << 48);
+    return (Piece) left | ((Piece) down << 16) | ((Piece) right << 32) | ((Piece) top << 48);
 }
 
-PIECE rotate_piece_right(PIECE piece, int n) {
+Piece rotate_piece_right(Piece piece, int n) {
     // rotate the piece n times
-    PIECE rotated_piece = piece >> (16 * n);
+    Piece rotated_piece = piece >> (16 * n);
     // add the bits that were shifted out to the beginning
     rotated_piece |= piece << (64 - 16 * n);
     return rotated_piece;
 }
 
-PIECE rotate_piece_left(PIECE piece, int n) {
+Piece rotate_piece_left(Piece piece, int n) {
     // rotate the piece n times
-    PIECE rotated_piece = piece << (16 * n);
+    Piece rotated_piece = piece << (16 * n);
     // add the bits that were shifted out to the end
     rotated_piece |= piece >> (64 - 16 * n);
     return rotated_piece;
 }
 
 
-std::vector<std::string> piece_to_string(PIECE piece) {
+std::vector<std::string> piece_to_string(Piece piece) {
     std::bitset<64> bits(piece);
 
     // print ascii art of the piece to the console with 4 corners
@@ -52,7 +52,7 @@ std::vector<std::string> piece_to_string(PIECE piece) {
     };
 }
 
-void log_piece(PIECE piece, const std::string &description) {
+void log_piece(Piece piece, const std::string &description) {
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
 //    spdlog::info(description);
 //    for (auto const &line: piece_to_string(piece)) {
@@ -62,10 +62,10 @@ void log_piece(PIECE piece, const std::string &description) {
 
 }
 
-PIECE_PART get_piece_part(PIECE piece, PIECE mask) {
+PiecePart get_piece_part(Piece piece, Piece mask) {
     // get the part of the piece
     // use the MASKs to extract the part from the piece and shift it to the right position
-    return (PIECE_PART) ((piece & mask)
+    return (PiecePart) ((piece & mask)
             >> (mask == UP_MASK ? 48 : mask == RIGHT_MASK ? 32 : (mask == DOWN_MASK ? 16 : 0)));
 }
 
