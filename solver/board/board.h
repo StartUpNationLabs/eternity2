@@ -13,7 +13,11 @@
 #include <unordered_set>
 #include "../piece_search/piece_search.h"
 
-using Board = std::vector<std::vector<RotatedPiece>>;
+struct Board {
+    std::vector<RotatedPiece> board;
+    size_t size;
+};
+
 using BoardHash = unsigned long long;
 using Index = std::pair<size_t, size_t>;
 
@@ -51,5 +55,6 @@ void log_board(const Board &board, const std::string &description);
 void export_board(const Board &board);
 
 std::string export_board_to_csv_string(const Board &board);
-
+size_t get_1d_board_index(const Board &board, Index index);
+Index get_2d_board_index(const Board &board, int index);
 #endif //ETERNITY2_BOARD_H

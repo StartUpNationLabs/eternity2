@@ -39,11 +39,10 @@ TEST_CASE("Solve Board") {
         SharedData shared_data = {max_board, max_count, mutex, hashes};
         solve_board(board, pieces, shared_data);
         log_board(board, "2x2 board solved");
-        for (auto const &row: board) {
-            for (auto const &piece: row) {
-                REQUIRE(piece.piece != 0);
-            }
+        for (auto const &piece: board.board) {
+            REQUIRE(piece.piece != 0);
         }
+
     }
 
     SECTION("Solve 3x3 board") {
@@ -71,11 +70,10 @@ TEST_CASE("Solve Board") {
         SharedData shared_data = {max_board, max_count, mutex, hashes};
         solve_board(board, pieces,  shared_data);
         log_board(board, "3x3 board solved");
-        for (auto const &row: board) {
-            for (auto const &piece: row) {
-                REQUIRE(piece.piece != 0);
-            }
+        for (auto const &piece: board.board) {
+            REQUIRE(piece.piece != 0);
         }
+
     }
 
     SECTION("3x3 Complex") {
@@ -123,11 +121,10 @@ TEST_CASE("Solve Board") {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         log_board(board, format("3x3 board solved in {} seconds", elapsed.count()));
-        for (auto const &row: board) {
-            for (auto const &piece: row) {
-                REQUIRE(piece.piece != 0);
-            }
+        for (auto const &piece: board.board) {
+            REQUIRE(piece.piece != 0);
         }
+
     }
 
 }
@@ -149,12 +146,11 @@ TEST_CASE("Solve & Export Board") {
         SharedData shared_data = {max_board, max_count, mutex, hashes};
         solve_board(board, pieces, shared_data);
         log_board(board, "2x2 board solved");
-        for (auto const &row: board) {
-            for (auto const &piece: row) {
+        for (auto const &piece: board.board) {
                 REQUIRE(piece.piece != 0);
             }
-        }
 
-        export_board(shared_data.max_board);
+        export_board(max_board);
+
     }
 }
