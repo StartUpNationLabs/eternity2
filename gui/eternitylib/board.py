@@ -42,6 +42,7 @@ class Board:
             for piece in line:
                 self.add_piece(Piece([Pattern(pattern, pattern_count) for pattern in piece]))
 
+        return self
 
     def shuffle(self):
         # Return shuffled list if pieces
@@ -109,3 +110,6 @@ class Board:
 
         img.save(Path(f"./tmp/{self.hash()}.png"))
         return Path(f"./tmp/{self.hash()}.png")
+
+    def __repr__(self):
+        return f"Board: {self.size}x{self.size}, {self.pattern_count} patterns"

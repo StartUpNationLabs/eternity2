@@ -3,7 +3,8 @@ from pathlib import Path
 import gradio as gr
 
 from eternitylib.board import Board
-from solverlib.solver import Solver
+from statiscticslib.grapher import Grapher
+from statiscticslib.runner import Runner
 
 
 def board_to_image(text, file) -> (str, Path):
@@ -51,12 +52,10 @@ board_gen = gr.Interface(
 interface = gr.TabbedInterface([board_gen, image_gen], ["Generate Board", "Generate Image"])
 
 if __name__ == "__main__":
-    solver = Solver()
-    solver.link_solver()
+    runner = Runner((8, 8), (2, 22))
 
-    board = Board()
-    board.generate(10, 22)
-
-    print(solver.solve(board))
+    results = runner.solve_boards()
+    grapher = Grapher(results)
+    grapher.plot_time_over_pattern_count()
 
     # interface.launch(share=True)
