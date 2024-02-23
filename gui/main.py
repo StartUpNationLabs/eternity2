@@ -33,6 +33,15 @@ def generate_board(size: int, pattern_count: int) -> (str, Path, Path):
     return board.to_csv(), unsorted_board, board.image
 
 
+def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, progress=gr.Progress(track_tqdm=True)) -> Path:
+    runner = Runner((start_size, end_size), (start_pattern_count, end_pattern_count), timeout=timeout)
+
+    results = runner.solve_boards(progress)
+
+    grapher = Grapher(results)
+    return grapher.plot_time_over_size_and_pattern_count_plotly()
+
+
 image_gen = gr.Interface(
     fn=board_to_image,
     inputs=["text", "file"],
@@ -44,18 +53,26 @@ board_gen = gr.Interface(
     inputs=[
         gr.Slider(2, 32, 12, step=1, label="Puzzle Size"),
         gr.Slider(1, 128, 22, step=1, label="Pattern count"),
-        # gr.Dataset(components=["slider"], samples=[["4x4 (2)", "8x8 (4)", "14x14 (22)", "15x15 (22)", "16x16 (22)", "Eternity II (16x16 22)"]])
     ],
     outputs=[gr.Textbox(label="Board Data", show_copy_button=True), "image", "image"]
 )
 
-interface = gr.TabbedInterface([board_gen, image_gen], ["Generate Board", "Generate Image"])
+statistics_gen = gr.Interface(
+    fn=generate_statistics,
+    inputs=[
+        gr.Slider(2, 32, 2, step=1, label="Minimum Size"),
+        gr.Slider(2, 32, 4, step=1, label="Maximum Size"),
+        gr.Slider(2, 32, 2, step=1, label="Minimum Pattern Count"),
+        gr.Slider(2, 32, 10, step=1, label="Maximum Pattern Count"),
+        gr.Slider(0.1, 60, 4, label="Timeout (seconds)")
+    ],
+    outputs=[
+        gr.Plot(label="Time over Size and Pattern Count")
+    ]
+)
+
+interface = gr.TabbedInterface([board_gen, image_gen, statistics_gen],
+                               ["Generate Board", "Generate Image", "Generate Statistics"])
 
 if __name__ == "__main__":
-    runner = Runner((8, 8), (2, 22))
-
-    results = runner.solve_boards()
-    grapher = Grapher(results)
-    grapher.plot_time_over_pattern_count()
-
-    # interface.launch(share=True)
+    interface.launch(share=True)
