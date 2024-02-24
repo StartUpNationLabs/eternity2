@@ -15,36 +15,49 @@ def convert_2d_to_1d(board_size: int, index: tuple[int, int]) -> int:
 def spiral_order(matrix, start_index):
     """
     Compute the spiral order starting from a given index and return the next index mapping in a 1D flattened format.
+
+    Parameters:
+    matrix (list): 2D list representing the matrix.
+    start_index (tuple): Tuple representing the starting index.
+
+    Returns:
+    list: List of next indices in 1D flattened format.
     """
     if not matrix:
         return []
 
-    m, n = len(matrix), len(matrix[0])
-    seen = [[False] * n for _ in range(m)]
-    dr, dc = [0, 1, 0, -1], [1, 0, -1, 0]  # Direction vectors
-    x, y, di = start_index[0], start_index[1], 0
-    if start_index == (0, n - 1):
-        di = 1
-    elif start_index == (m - 1, 0):
-        di = 3
-    elif start_index == (m - 1, n - 1):
-        di = 2
+    num_rows, num_cols = len(matrix), len(matrix[0])
+    visited = [[False] * num_cols for _ in range(num_rows)]
+    row_direction, col_direction = [0, 1, 0, -1], [1, 0, -1, 0]  # Direction vectors
+    current_row, current_col = start_index[0], start_index[1]
 
-    next_indices_1d = [-1] * (m * n)  # Initialize with -1s to indicate the end
+    # Direction index: 0 - right, 1 - down, 2 - left, 3 - up
+    direction_index = 0
+
+    # Adjust the initial direction based on the start index
+    if start_index == (0, num_cols - 1):
+        direction_index = 1
+    elif start_index == (num_rows - 1, 0):
+        direction_index = 3
+    elif start_index == (num_rows - 1, num_cols - 1):
+        direction_index = 2
+
+    next_indices_1d = [-1] * (num_rows * num_cols)  # Initialize with -1s to indicate the end
     last_index_1d = None
-    for _ in range(m * n):
-        curr_index_1d = convert_2d_to_1d(n, (x, y))
+    for _ in range(num_rows * num_cols):
+        curr_index_1d = convert_2d_to_1d(num_cols, (current_row, current_col))
         if last_index_1d is not None:
             next_indices_1d[last_index_1d] = curr_index_1d
         last_index_1d = curr_index_1d
 
-        seen[x][y] = True
-        cr, cc = x + dr[di], y + dc[di]
-        if 0 <= cr < m and 0 <= cc < n and not seen[cr][cc]:
-            x, y = cr, cc
+        visited[current_row][current_col] = True
+        next_row, next_col = current_row + row_direction[direction_index], current_col + col_direction[direction_index]
+        if 0 <= next_row < num_rows and 0 <= next_col < num_cols and not visited[next_row][next_col]:
+            current_row, current_col = next_row, next_col
         else:
-            di = (di + 1) % 4
-            x, y = x + dr[di], y + dc[di]
+            direction_index = (direction_index + 1) % 4
+            current_row, current_col = current_row + row_direction[direction_index], current_col + col_direction[
+                direction_index]
 
     return next_indices_1d
 
@@ -64,4 +77,4 @@ def main(board_side_length: int = 3):
 
 
 if __name__ == "__main__":
-    main(2)
+    main(3)
