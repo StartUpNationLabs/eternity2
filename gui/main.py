@@ -29,6 +29,7 @@ def generate_board(size: int, pattern_count: int) -> (str, Path, Path):
     board = Board()
     board.generate(size, pattern_count)
     unsorted_board = board.image
+    board.generate_hints()
     board.shuffle()
     return board.to_csv(), unsorted_board, board.image
 
