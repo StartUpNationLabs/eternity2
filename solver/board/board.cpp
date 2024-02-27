@@ -37,8 +37,6 @@ void place_piece(Board &board, const RotatedPiece &piece, Index index) {
 }
 
 
-
-
 void remove_piece(Board &board, Index index) {
     // function to remove a piece from the board at the given position
     // the piece is replaced with an empty piece
@@ -70,13 +68,14 @@ std::vector<std::string> board_to_string(const Board &board) {
     // function to print the board to the console
     std::vector<std::string> board_lines;
     for (int y = 0; y < board.size; ++y) {
-        std::vector<std::string> row_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {0,y})]) );
-        for (int x = 1; x <board.size; ++x) {
-            const auto &piece_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {x,y})]) );
+        std::vector<std::string> row_lines = piece_to_string(
+                apply_rotation(board.board[get_1d_board_index(board, {0, y})]));
+        for (int x = 1; x < board.size; ++x) {
+            const auto &piece_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {x, y})]));
             for (size_t j = 0; j < row_lines.size(); j++) {
                 row_lines[j] += piece_lines[j];
             }
-    }
+        }
         board_lines.insert(board_lines.end(), row_lines.begin(), row_lines.end());
     }
     return board_lines;
@@ -98,7 +97,7 @@ void export_board(const Board &board) {
     std::ofstream file("board.csv");
 
     for (const auto &piece: board.board) {
-            file << csv_piece(piece) << std::endl;
+        file << csv_piece(piece) << std::endl;
     }
 }
 
@@ -106,7 +105,7 @@ std::string export_board_to_csv_string(const Board &board) {
     // function to export the board to a csv string
     std::string csv_string;
     for (const auto &piece: board.board) {
-            csv_string += csv_piece(piece) + "\n";
+        csv_string += csv_piece(piece) + "\n";
     }
     return csv_string;
 }

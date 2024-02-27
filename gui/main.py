@@ -64,7 +64,7 @@ statistics_gen = gr.Interface(
         gr.Slider(2, 32, 4, step=1, label="Maximum Size"),
         gr.Slider(2, 32, 2, step=1, label="Minimum Pattern Count"),
         gr.Slider(2, 32, 10, step=1, label="Maximum Pattern Count"),
-        gr.Slider(0.1, 60, 4, label="Timeout (seconds)")
+        gr.Slider(0.1, 600, 4, label="Timeout (seconds)")
     ],
     outputs=[
         gr.Plot(label="Time over Size and Pattern Count")

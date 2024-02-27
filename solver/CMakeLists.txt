@@ -39,7 +39,7 @@ add_library(solver_lib STATIC
         format/format.cpp
         format/format.h
         solver/solver.h
-        solver/solver.cpp)
+        solver/solver.cpp board/scan_row.cpp board/scan_row.h board/spiral.cpp board/spiral.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
