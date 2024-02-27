@@ -28,11 +28,11 @@ def board_to_image(text, file) -> (str, Path):
 def generate_board(size: int, pattern_count: int, generate_hints: bool) -> (str, Path, Path):
     board = Board()
     board.generate(size, pattern_count)
-    unsorted_board = board.image
+    unsorted_board = board.copy()
     if generate_hints:
         board.generate_hints()
     board.shuffle()
-    return board.to_csv(), unsorted_board, board.image
+    return board.to_csv(), unsorted_board.to_csv(), unsorted_board.image, board.image
 
 
 def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, progress=gr.Progress(track_tqdm=True)) -> Path:
@@ -57,7 +57,11 @@ board_gen = gr.Interface(
         gr.Slider(1, 128, 22, step=1, label="Pattern count"),
         gr.Checkbox(label="Generate Hints")
     ],
-    outputs=[gr.Textbox(label="Board Data", show_copy_button=True), "image", "image"]
+    outputs=[
+        gr.Textbox(label="Board Data", show_copy_button=True),
+        gr.Textbox(label="Solved Board Data", show_copy_button=True),
+        "image",
+        "image"]
 )
 
 statistics_gen = gr.Interface(
