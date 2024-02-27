@@ -12,7 +12,8 @@ class Solver:
         self.logger = Logger(self)
         self.exe_path = Path(__file__).parent / "e2solver"
 
-    def link_solver(self, path: Path = Path(__file__).parent.parent.parent / "cmake-build-debug/solver/Solver"):
+    def link_solver(self, path: Path = Path(
+        __file__).parent.parent.parent / "cmake-build-debug/solver/Solver -DSCAN_METHOD_SPIRAL='SPIRAL'"):
         # If file does not exist, raise an error
         if not path.exists():
             self.logger.error(f"Solver executable not found at {path}")

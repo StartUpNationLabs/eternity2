@@ -1,12 +1,11 @@
 import itertools
 
 import gradio as gr
-from tqdm import tqdm
-
 from eternitylib.board import Board
 from logger import Logger
 from solverlib.solver import Solver
 from statiscticslib.result import Result
+from tqdm import tqdm
 
 
 class Runner:

@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <cmath>
+#include "../board/board.h"
+#include "../piece/piece.h"
 
 class Spiral {
 public:
@@ -19,9 +21,11 @@ public:
         return index.first * board_size + index.second;
     }
 
-    std::vector<int> spiral_order_1d(const std::vector<int> &matrix_1d, int start_index_1d);
+    static std::vector<int> spiral_order_1d(const std::vector<int> &matrix_1d, int start_index_1d);
 
-    std::vector<int> spiral_order_from_board_size(int board_size);
+    static std::vector<int> spiral_order_from_board_size(int board_size);
+
+    Index get_next(const Board &board, Index index);
 };
 
 #endif //ETERNITY2_SPIRAL_H

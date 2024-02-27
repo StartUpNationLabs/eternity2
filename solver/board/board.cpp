@@ -7,15 +7,29 @@
 #include <algorithm>
 #include "board.h"
 #include "../format/format.h"
+#include "spiral.h"
 
 
 Board create_board(int size) {
-    // function to create an empty board with the given size and fill it with empty pieces
-    // a board is a 2D array of pieces
+    if (size <= 0) {
+        // handle error
+    }
+
     Board board = {
             std::vector<RotatedPiece>(size * size, {EMPTY, 0, 0}),
-            static_cast<size_t>(size)
+            static_cast<size_t>(size),
+            std::vector<int>(size * size, 0)
     };
+
+#ifdef SCAN_METHOD_SPIRAL
+    board.next_index_cache = Spiral::spiral_order_from_board_size(size);
+#elif defined(SCAN_METHOD_ROW)
+    for (int i = 0; i < size * size; ++i) {
+            board.next[i] = i + 1;
+        }
+        board.next[size * size - 1] = 0; // loop back to the start
+#endif
+
     return board;
 }
 
