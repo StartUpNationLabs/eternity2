@@ -25,11 +25,12 @@ def board_to_image(text, file) -> (str, Path):
     return f"Board: {board.size}x{board.size}, {board.pattern_count} patterns", board.image
 
 
-def generate_board(size: int, pattern_count: int) -> (str, Path, Path):
+def generate_board(size: int, pattern_count: int, generate_hints: bool) -> (str, Path, Path):
     board = Board()
     board.generate(size, pattern_count)
     unsorted_board = board.image
-    board.generate_hints()
+    if generate_hints:
+        board.generate_hints()
     board.shuffle()
     return board.to_csv(), unsorted_board, board.image
 
@@ -54,6 +55,7 @@ board_gen = gr.Interface(
     inputs=[
         gr.Slider(2, 32, 12, step=1, label="Puzzle Size"),
         gr.Slider(1, 128, 22, step=1, label="Pattern count"),
+        gr.Checkbox(label="Generate Hints")
     ],
     outputs=[gr.Textbox(label="Board Data", show_copy_button=True), "image", "image"]
 )

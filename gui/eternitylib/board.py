@@ -49,22 +49,13 @@ class Board:
         if self.size < 5:
             raise ValueError("Board too small for hints")
 
-        indexes = []
-
-        # Center
-        indexes.append((self.size // 2, self.size // 2))
-
-        # Top Left
-        indexes.append((self.size // 4, self.size // 4))
-
-        # Top Right
-        indexes.append((self.size // 4, self.size - self.size // 4))
-
-        # Bottom Left
-        indexes.append((self.size - self.size // 4, self.size // 4))
-
-        # Bottom Right
-        indexes.append((self.size - self.size // 4, self.size - self.size // 4))
+        indexes = [
+            (self.size // 2, self.size // 2),                           # Center
+            (self.size // 4, self.size // 4),                           # Top Left
+            (self.size // 4, self.size - self.size // 4),               # Top Right
+            (self.size - self.size // 4, self.size // 4),               # Bottom Left
+            (self.size - self.size // 4, self.size - self.size // 4)    # Bottom Right
+        ]
 
         self.hints = [(index, self.pieces[index[0] * self.size + index[1]]) for index in indexes]
 
