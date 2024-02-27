@@ -102,7 +102,7 @@ class Board:
             self.add_piece(Piece([Pattern(pattern, self.pattern_count) for pattern in line.split(",")]))
 
     def to_csv(self):
-        out = ""
+        out = f"{self.size}\n"
         for i, piece in enumerate(self.pieces):
             out += f"{','.join(pattern.pattern_code for pattern in piece.patterns)}"
             if self.hints:
