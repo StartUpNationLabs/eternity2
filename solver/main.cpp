@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
             std::cout << "=time=" << elapsed.count() << std::endl;
             std::cout << "=" << "Stopping threads" << std::endl;
             // stop threads
+            return 0;
             for (auto &thread: threads) {
                 thread.join();
             }
-            return 0;
         }
         if (last_max_count == max_count) {
             continue;

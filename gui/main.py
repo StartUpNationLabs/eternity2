@@ -34,8 +34,8 @@ def generate_board(size: int, pattern_count: int) -> (str, Path, Path):
     return board.to_csv(), unsorted_board, board.image
 
 
-def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, progress=gr.Progress(track_tqdm=True)) -> Path:
-    runner = Runner((start_size, end_size), (start_pattern_count, end_pattern_count), timeout=timeout)
+def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, num_samples: int = 10, progress=gr.Progress(track_tqdm=True)) -> Path:
+    runner = Runner((start_size, end_size), (start_pattern_count, end_pattern_count), timeout=timeout, num_samples=num_samples)
 
     results = runner.solve_boards(progress)
 
@@ -65,7 +65,8 @@ statistics_gen = gr.Interface(
         gr.Slider(2, 32, 4, step=1, label="Maximum Size"),
         gr.Slider(2, 32, 2, step=1, label="Minimum Pattern Count"),
         gr.Slider(2, 32, 10, step=1, label="Maximum Pattern Count"),
-        gr.Slider(0.1, 600, 4, label="Timeout (seconds)")
+        gr.Slider(0.1, 600, 4, label="Timeout (seconds)"),
+        gr.Slider(1, 100, 10, step=1, label="Number of samples")
     ],
     outputs=[
         gr.Plot(label="Time over Size and Pattern Count")

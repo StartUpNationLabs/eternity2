@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-
 from eternitylib.pattern import Pattern
 from eternitylib.piece import Piece
 
