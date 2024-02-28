@@ -106,8 +106,8 @@ class Board:
                 if piece in [hint[1] for hint in self.hints]:
                     hint = [hint for hint in self.hints if hint[1] == piece][0]
                     out += f",1,{hint[0][0]},{hint[0][1]}"
-                else:
-                    out += ",0,0,0"
+            else:
+                out += ",0,0,0"
             out += "\n" if i != len(self.pieces) - 1 else ""
 
         return out
