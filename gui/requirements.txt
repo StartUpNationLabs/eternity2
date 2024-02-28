@@ -2,3 +2,5 @@ numpy
 colour
 Pillow
 gradio
+plotly
+kaleido

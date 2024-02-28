@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 import gradio as gr
@@ -25,16 +26,19 @@ def board_to_image(text, file) -> (str, Path):
     return f"Board: {board.size}x{board.size}, {board.pattern_count} patterns", board.image
 
 
-def generate_board(size: int, pattern_count: int) -> (str, Path, Path):
+def generate_board(size: int, pattern_count: int, generate_hints: bool) -> (str, Path, Path):
     board = Board()
     board.generate(size, pattern_count)
-    unsorted_board = board.image
+    unsorted_board = copy.copy(board)
+    if generate_hints:
+        board.generate_hints()
+        unsorted_board.generate_hints()
     board.shuffle()
-    return board.to_csv(), unsorted_board, board.image
+    return board.to_csv(), unsorted_board.to_csv(), unsorted_board.image, board.image
 
 
-def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, progress=gr.Progress(track_tqdm=True)) -> Path:
-    runner = Runner((start_size, end_size), (start_pattern_count, end_pattern_count), timeout=timeout)
+def generate_statistics(start_size: int, end_size: int, start_pattern_count: int, end_pattern_count: int, timeout: float = 4, num_samples: int = 10, progress=gr.Progress(track_tqdm=True)) -> Path:
+    runner = Runner((start_size, end_size), (start_pattern_count, end_pattern_count), timeout=timeout, num_samples=num_samples)
 
     results = runner.solve_boards(progress)
 
@@ -53,8 +57,13 @@ board_gen = gr.Interface(
     inputs=[
         gr.Slider(2, 32, 12, step=1, label="Puzzle Size"),
         gr.Slider(1, 128, 22, step=1, label="Pattern count"),
+        gr.Checkbox(label="Generate Hints")
     ],
-    outputs=[gr.Textbox(label="Board Data", show_copy_button=True), "image", "image"]
+    outputs=[
+        gr.Textbox(label="Board Data", show_copy_button=True),
+        gr.Textbox(label="Solved Board Data", show_copy_button=True),
+        "image",
+        "image"]
 )
 
 statistics_gen = gr.Interface(
@@ -64,7 +73,8 @@ statistics_gen = gr.Interface(
         gr.Slider(2, 32, 4, step=1, label="Maximum Size"),
         gr.Slider(2, 32, 2, step=1, label="Minimum Pattern Count"),
         gr.Slider(2, 32, 10, step=1, label="Maximum Pattern Count"),
-        gr.Slider(0.1, 60, 4, label="Timeout (seconds)")
+        gr.Slider(0.1, 600, 4, label="Timeout (seconds)"),
+        gr.Slider(1, 100, 10, step=1, label="Number of samples")
     ],
     outputs=[
         gr.Plot(label="Time over Size and Pattern Count")

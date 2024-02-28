@@ -16,6 +16,7 @@
 struct Board {
     std::vector<RotatedPiece> board;
     size_t size;
+    std::vector<int> next_index_cache;
 };
 
 using BoardHash = unsigned long long;

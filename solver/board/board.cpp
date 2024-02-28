@@ -7,15 +7,29 @@
 #include <algorithm>
 #include "board.h"
 #include "../format/format.h"
+#include "spiral.h"
 
 
 Board create_board(int size) {
-    // function to create an empty board with the given size and fill it with empty pieces
-    // a board is a 2D array of pieces
+    if (size <= 0) {
+        // handle error
+    }
+
     Board board = {
             std::vector<RotatedPiece>(size * size, {EMPTY, 0, 0}),
-            static_cast<size_t>(size)
+            static_cast<size_t>(size),
+            std::vector<int>(size * size, 0)
     };
+
+#ifdef SCAN_METHOD_SPIRAL
+    board.next_index_cache = Spiral::spiral_order_from_board_size(size);
+#elif defined(SCAN_METHOD_ROW)
+    for (int i = 0; i < size * size; ++i) {
+            board.next[i] = i + 1;
+        }
+        board.next[size * size - 1] = 0; // loop back to the start
+#endif
+
     return board;
 }
 
@@ -35,8 +49,6 @@ void place_piece(Board &board, const RotatedPiece &piece, Index index) {
     // the piece is rotated and placed on the board
     board.board[get_1d_board_index(board, index)] = piece;
 }
-
-
 
 
 void remove_piece(Board &board, Index index) {
@@ -70,13 +82,14 @@ std::vector<std::string> board_to_string(const Board &board) {
     // function to print the board to the console
     std::vector<std::string> board_lines;
     for (int y = 0; y < board.size; ++y) {
-        std::vector<std::string> row_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {0,y})]) );
-        for (int x = 1; x <board.size; ++x) {
-            const auto &piece_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {x,y})]) );
+        std::vector<std::string> row_lines = piece_to_string(
+                apply_rotation(board.board[get_1d_board_index(board, {0, y})]));
+        for (int x = 1; x < board.size; ++x) {
+            const auto &piece_lines = piece_to_string(apply_rotation(board.board[get_1d_board_index(board, {x, y})]));
             for (size_t j = 0; j < row_lines.size(); j++) {
                 row_lines[j] += piece_lines[j];
             }
-    }
+        }
         board_lines.insert(board_lines.end(), row_lines.begin(), row_lines.end());
     }
     return board_lines;
@@ -98,7 +111,7 @@ void export_board(const Board &board) {
     std::ofstream file("board.csv");
 
     for (const auto &piece: board.board) {
-            file << csv_piece(piece) << std::endl;
+        file << csv_piece(piece) << std::endl;
     }
 }
 
@@ -106,7 +119,7 @@ std::string export_board_to_csv_string(const Board &board) {
     // function to export the board to a csv string
     std::string csv_string;
     for (const auto &piece: board.board) {
-            csv_string += csv_piece(piece) + "\n";
+        csv_string += csv_piece(piece) + "\n";
     }
     return csv_string;
 }

@@ -1,12 +1,11 @@
 import itertools
 
 import gradio as gr
-from tqdm import tqdm
-
 from eternitylib.board import Board
 from logger import Logger
 from solverlib.solver import Solver
 from statiscticslib.result import Result
+from tqdm import tqdm
 
 
 class Runner:
@@ -16,13 +15,15 @@ class Runner:
     boards: list[Board]
     results: list[Result]
     logger: Logger
+    num_samples: int
 
-    def __init__(self, size_range=(4, 8), pattern_count_range=(2, 22), timeout: float = 60):
+    def __init__(self, size_range=(4, 8), pattern_count_range=(2, 22), timeout: float = 60, num_samples=10):
         self.logger = Logger(self)
         self.solver = Solver()
         self.boards = []
         self.results = []
         self.timeout = timeout
+        self.num_samples = num_samples
 
         self.set_size_range(*size_range)
         self.set_pattern_count_range(*pattern_count_range)
@@ -32,8 +33,9 @@ class Runner:
     def generate_boards(self):
         self.logger.info(f"Generating {len(list(itertools.product(self.sizes, self.pattern_counts)))} boards.")
         for size, pattern_count in itertools.product(self.sizes, self.pattern_counts):
-            self.logger.debug(f"Genrating {size}x{size} of {pattern_count} patterns.")
-            self.boards.append(Board().generate(size, pattern_count))
+            for _ in range(self.num_samples):
+                self.logger.debug(f"Genrating {size}x{size} of {pattern_count} patterns.")
+                self.boards.append(Board().generate(size, pattern_count))
 
     def set_size_range(self, size_start, size_end):
         self.logger.info(f"Setting runner size from {size_start} to {size_end}.")
