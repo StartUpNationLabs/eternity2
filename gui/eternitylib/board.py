@@ -66,7 +66,7 @@ class Board:
         # Return shuffled list if pieces
         self.pieces = sorted(self.pieces, key=lambda x: random.random())
         for piece in self.pieces:
-            if not piece.isHint:
+            if not piece.is_hint:
                 piece.rotate90(random.randint(0, 3))
 
     def add_piece(self, piece: Piece):

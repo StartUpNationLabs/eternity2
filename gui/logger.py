@@ -11,7 +11,7 @@ class Logger:
             self.log_folder.mkdir()
 
         self.logger = logging.getLogger(type(clazz).__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.WARNING)
 
         self.formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
