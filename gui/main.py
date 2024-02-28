@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 import gradio as gr
@@ -28,9 +29,10 @@ def board_to_image(text, file) -> (str, Path):
 def generate_board(size: int, pattern_count: int, generate_hints: bool) -> (str, Path, Path):
     board = Board()
     board.generate(size, pattern_count)
-    unsorted_board = board.copy()
+    unsorted_board = copy.copy(board)
     if generate_hints:
         board.generate_hints()
+        unsorted_board.generate_hints()
     board.shuffle()
     return board.to_csv(), unsorted_board.to_csv(), unsorted_board.image, board.image
 

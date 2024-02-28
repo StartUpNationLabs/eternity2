@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import random
 from math import sqrt
@@ -59,11 +60,15 @@ class Board:
 
         self.hints = [(index, self.pieces[index[0] * self.size + index[1]]) for index in indexes]
 
+        for hint in self.hints:
+            hint[1].set_hint()
+
     def shuffle(self):
         # Return shuffled list if pieces
         self.pieces = sorted(self.pieces, key=lambda x: random.random())
         for piece in self.pieces:
-            piece.rotate90(random.randint(0, 3))
+            if not piece.isHint:
+                piece.rotate90(random.randint(0, 3))
 
     def add_piece(self, piece: Piece):
         self.pieces.append(piece)
@@ -138,11 +143,11 @@ class Board:
     def __repr__(self):
         return f"Board: {self.size}x{self.size}, {self.pattern_count} patterns"
 
-    def copy(self):
+    def __copy__(self):
         board = Board()
         board._size = self.size
         board._pattern_count = self.pattern_count
-        board.pieces = self.pieces.copy()
+        board.pieces = [copy.copy(piece) for piece in self.pieces]
         return board
 
 
