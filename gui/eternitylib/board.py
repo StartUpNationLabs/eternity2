@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import random
 from math import sqrt
@@ -48,28 +49,25 @@ class Board:
         if self.size < 5:
             raise ValueError("Board too small for hints")
 
-        indexes = []
-
-        # Center
-        indexes.append((self.size // 2, self.size // 2))
-
-        # Top Left
-        indexes.append((self.size // 4, self.size // 4))
-
-        # Top Right
-        indexes.append((self.size // 4, self.size - self.size // 4))
-
-        # Bottom Left
-        indexes.append((self.size - self.size // 4, self.size // 4))
-
-        # Bottom Right
-        indexes.append((self.size - self.size // 4, self.size - self.size // 4))
+        indexes = [
+            (self.size // 2, self.size // 2),                           # Center
+            (self.size // 4, self.size // 4),                           # Top Left
+            (self.size // 4, self.size - self.size // 4),               # Top Right
+            (self.size - self.size // 4, self.size // 4),               # Bottom Left
+            (self.size - self.size // 4, self.size - self.size // 4)    # Bottom Right
+        ]
 
         self.hints = [(index, self.pieces[index[0] * self.size + index[1]]) for index in indexes]
+
+        for hint in self.hints:
+            hint[1].set_hint()
 
     def shuffle(self):
         # Return shuffled list if pieces
         self.pieces = sorted(self.pieces, key=lambda x: random.random())
+        for piece in self.pieces:
+            if not piece.isHint:
+                piece.rotate90(random.randint(0, 3))
 
     def add_piece(self, piece: Piece):
         self.pieces.append(piece)
@@ -143,6 +141,13 @@ class Board:
 
     def __repr__(self):
         return f"Board: {self.size}x{self.size}, {self.pattern_count} patterns"
+
+    def __copy__(self):
+        board = Board()
+        board._size = self.size
+        board._pattern_count = self.pattern_count
+        board.pieces = [copy.copy(piece) for piece in self.pieces]
+        return board
 
 
 def main():

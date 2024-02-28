@@ -16,6 +16,9 @@ class Pattern:
             get_gradient(pattern_count)[int(pattern_code, 2)]
         self.pattern_code = pattern_code
 
+    def __copy__(self):
+        return Pattern(self.pattern_code)
+
     @property
     def color(self) -> Color:
         return self.pattern_color
