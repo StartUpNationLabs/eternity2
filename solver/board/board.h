@@ -46,7 +46,7 @@ std::string index_to_string(Index index);
 
 bool is_end(const Board &board, Index index);
 
-RotatedPiece *get_piece(const Board &board, Index index);
+const RotatedPiece *get_piece(const Board &board, Index index);
 
 Neighbor get_neighbors(const Board &board, Index index);
 

@@ -92,6 +92,10 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         return true;
     }
 
+    const RotatedPiece* piece = get_piece(board, index);
+    if (piece->index < 0) {
+        return solve_board_recursive(board, pieces, get_next(board, index), placed_pieces +1 , shared_data);
+    }
 
 //    if (board[y][x].piece != EMPTY) {
 //        return solve_board_recursive(board, pieces, x + 1, y, placed_pieces, max_board, max_count, mutex);
@@ -106,7 +110,9 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         place_piece(board, rotated_piece, index);
         // remove placed piece from pieces
         pieces[rotated_piece.index].available = false;
-        if (Index next_index = get_next(board, index); solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data)) {
+        Index next_index = get_next(board, index);
+
+        if ( solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data)) {
             return true;
         }
         // add placed piece back to pieces

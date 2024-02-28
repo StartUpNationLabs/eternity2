@@ -7,8 +7,7 @@
 #include "piece_loader/piece_loader.h"
 #include "solver/solver.h"
 
-void thread_function(int board_size, std::vector<Piece> pieces, SharedData &shared_data) {
-    Board board = create_board(board_size);
+void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data) {
     solve_board(board, pieces, shared_data);
 }
 
@@ -18,8 +17,8 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         filename = argv[1];
     }
-    auto pieces = load_from_csv(filename);
-    auto board_size = (int) sqrt((int) pieces.size());
+    auto board_pieces = load_from_csv(filename);
+    auto board_size = board_pieces.first.size;
     std::mutex mutex;
     Board max_board = create_board(board_size);
     int max_count = 0;
@@ -34,8 +33,8 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < thread_count; i++) {
         threads.emplace_back(thread_function,
-                             board_size,
-                             pieces,
+                             board_pieces.first,
+                             board_pieces.second,
                              std::ref(shared_data)
         );
     }
@@ -48,15 +47,15 @@ int main(int argc, char *argv[]) {
             std::string board_lines = export_board_to_csv_string(max_board);
             std::cout << board_lines;
             auto end = std::chrono::high_resolution_clock::now();
-            // export the board
+            // export the board_pieces
             std::chrono::duration<double> elapsed = end - start;
             std::cout << "=time=" << elapsed.count() << std::endl;
             std::cout << "=" << "Stopping threads" << std::endl;
             // stop threads
+            return 0;
             for (auto &thread: threads) {
                 thread.join();
             }
-            return 0;
         }
         if (last_max_count == max_count) {
             continue;

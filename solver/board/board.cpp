@@ -151,3 +151,8 @@ Neighbor get_neighbors(const Board &board, Index index) {
     }
     return neighbor;
 }
+
+const RotatedPiece *get_piece(const Board &board, Index index) {
+    // function to get the piece at the given position on the board
+    return &board.board[get_1d_board_index(board, index)];
+}

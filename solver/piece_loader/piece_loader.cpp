@@ -4,18 +4,26 @@
 
 #include <fstream>
 #include "piece_loader.h"
+#include "board/board.h"
 
 
-std::vector<Piece> load_from_csv(const std::string &filename) {
+std::pair<Board, std::vector<Piece>> load_from_csv(const std::string &filename) {
     // function to load pieces from a csv file
     // the csv file should contain the bit strings of the pieces
     // the bit strings are converted to Piece and returned as a vector
 
     std::ifstream in(filename);
+    if (!in.is_open()) {
+        throw std::runtime_error("File not found");
+    }
+    std::string line;
+    std::getline(in, line);
 
+    // read the first line of the csv file to get the size of the board
+    int size = std::stoi(line);
+    Board board = create_board(size);
     std::vector<Piece> pieces = {};
-    while (in.good()) {
-        std::string line;
+    for (size_t i = 0; i < size *size; i++) {
         std::getline(in, line);
         if (line.empty()) {
             continue;
@@ -24,15 +32,23 @@ std::vector<Piece> load_from_csv(const std::string &filename) {
         std::string b;
         std::string c;
         std::string d;
-        // split the line by comma
+        int isHint = 0;
+        int x = 0;
+        int y = 0;
+        // split the line by comma a,b,c,d,isHint,x,y
         a = line.substr(0, line.find(','));
         line = line.substr(line.find(',') + 1);
         b = line.substr(0, line.find(','));
         line = line.substr(line.find(',') + 1);
         c = line.substr(0, line.find(','));
         line = line.substr(line.find(',') + 1);
-        d = line;
-
+        d = line.substr(0, line.find(','));
+        line = line.substr(line.find(',') + 1);
+        isHint = std::stoi(line.substr(0, line.find(',')));
+        line = line.substr(line.find(',') + 1);
+        x = std::stoi(line.substr(0, line.find(',')));
+        line = line.substr(line.find(',') + 1);
+        y = std::stoi(line);
 
         // read bit strings from csv and convert them to Piece
         auto as = (PiecePart) strtol(a.c_str(), nullptr, 2);
@@ -41,9 +57,14 @@ std::vector<Piece> load_from_csv(const std::string &filename) {
         auto ds = (PiecePart) strtol(d.c_str(), nullptr, 2);
 
         Piece piece = make_piece(as, bs, cs, ds);
-        pieces.push_back(piece);
+        if (isHint) {
+            place_piece(board, {piece, 0, -i}, {x, y});
+        }else{
+            pieces.push_back(piece);
+        }
     }
-    return pieces;
+    log_board(board, "Loaded board");
+    return {board, pieces};
 }
 
 std::vector<Piece> load_from_csv_string(std::string &csv_string) {

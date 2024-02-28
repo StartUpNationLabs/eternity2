@@ -12,7 +12,7 @@ struct RotatedPiece {
 
     Piece piece;
     int rotation;
-    size_t index;
+    int index;
 };
 
 enum class QueryType {

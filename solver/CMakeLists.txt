@@ -24,7 +24,7 @@ endif()
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # build release
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 
 # add library
 add_library(solver_lib STATIC

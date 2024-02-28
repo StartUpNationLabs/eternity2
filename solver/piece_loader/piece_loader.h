@@ -6,9 +6,10 @@
 #define ETERNITY2_PIECE_LOADER_H
 
 #include <vector>
+#include "../board/board.h"
 #include "../piece/piece.h"
 
-std::vector<Piece> load_from_csv(const std::string& filename);
+std::pair<Board, std::vector<Piece>> load_from_csv(const std::string& filename);
 std::vector<Piece> load_from_csv_string(std::string &csv_string);
 
 #endif //ETERNITY2_PIECE_LOADER_H
