@@ -1,10 +1,13 @@
 #include <vector>
+#include <atomic>
 #include "board/board.h"
 struct SharedData {
     Board &max_board;
     int &max_count;
     std::mutex &mutex;
     std::unordered_set<BoardHash> &hashes;
+    std::atomic_llong board_count;
+    std::atomic_llong hash_hit_count;
 };
 
 

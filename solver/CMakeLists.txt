@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 
 if (APPLE)
@@ -24,7 +24,7 @@ endif ()
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # build release
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
 
 # Define the macro
 set(SCAN_METHOD "SPIRAL" CACHE STRING "Method to scan the board")

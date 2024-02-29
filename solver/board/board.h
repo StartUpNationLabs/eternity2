@@ -19,7 +19,7 @@ struct Board {
     std::vector<int> next_index_cache;
 };
 
-using BoardHash = unsigned long long;
+using BoardHash = std::string;
 using Index = std::pair<size_t, size_t>;
 
 

@@ -5,6 +5,7 @@
 #include "format/format.h"
 
 auto rng = std::default_random_engine{};
+const int HASH_THRESHOLD = 7;
 
 std::vector<RotatedPiece>
 possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index) {
@@ -78,11 +79,22 @@ possible_pieces(const Board &board, const std::vector<PieceWAvailability> &piece
 }
 
 
-bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, Index index, int placed_pieces, SharedData &shared_data) {
+bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces, Index index, int placed_pieces,
+                           SharedData &shared_data, BoardHash &board_hash) {
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
     log_board(board, format("Solving board at index: {}", index_to_string(index)));
+
+    // check if hash is already in the shared data if placed pieces is < HASH_THRESHOLD
+    if (
+            placed_pieces < HASH_THRESHOLD &&
+            shared_data.hashes.find(board_hash) != shared_data.hashes.end()) {
+        shared_data.hash_hit_count++;
+        return false;
+    }
+
+
     if (placed_pieces > shared_data.max_count) {
         std::scoped_lock lock(shared_data.mutex);
         shared_data.max_count = placed_pieces;
@@ -92,14 +104,11 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
         return true;
     }
 
-    const RotatedPiece* piece = get_piece(board, index);
+    const RotatedPiece *piece = get_piece(board, index);
     if (piece->index < 0) {
-        return solve_board_recursive(board, pieces, get_next(board, index), placed_pieces +1 , shared_data);
+        return solve_board_recursive(board, pieces, get_next(board, index), placed_pieces + 1, shared_data, board_hash);
     }
 
-//    if (board[y][x].piece != EMPTY) {
-//        return solve_board_recursive(board, pieces, x + 1, y, placed_pieces, max_board, max_count, mutex);
-//    }
 
     auto possible = possible_pieces(board, pieces, index);
     // random for loop
@@ -108,20 +117,36 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
 
     for (auto const &rotated_piece: possible) {
         place_piece(board, rotated_piece, index);
+        // add placed piece to board hash
+        if (placed_pieces < HASH_THRESHOLD) {
+            board_hash += (char) rotated_piece.index;
+            board_hash += (char) rotated_piece.rotation;
+        }
         // remove placed piece from pieces
         pieces[rotated_piece.index].available = false;
         Index next_index = get_next(board, index);
 
-        if ( solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data)) {
+        if (solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data, board_hash)) {
             return true;
+        }
+        // copy board hash and insert it into the shared data
+        if (placed_pieces < HASH_THRESHOLD) {
+            std::scoped_lock lock(shared_data.mutex);
+            shared_data.hashes.insert(board_hash);
         }
         // add placed piece back to pieces
         pieces[rotated_piece.index].available = true;
+        // remove placed piece from board hash
+        if (placed_pieces < HASH_THRESHOLD) {
+            board_hash.pop_back();
+            board_hash.pop_back();
+        }
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
         log_board(board, format("Backtracking at index: {}", index_to_string(index)));
 #endif
         remove_piece(board, index);
     }
+    shared_data.board_count++;
 
     return false;
 
@@ -131,16 +156,7 @@ void solve_board(Board &board, const std::vector<Piece> &pieces, SharedData &sha
     // function to solve the board
     // the function calls the recursive function to solve the board
     std::vector<PieceWAvailability> pieces_with_availability = create_pieces_with_availability(pieces);
-    solve_board_recursive(board, pieces_with_availability, {0, 0}, 0, shared_data);
-}
-
-SharedData create_shared_data() {
-    // function to create shared data for the solver
-    // the shared data contains the maximum board, the maximum count, a mutex and a set of hashes
-    Board max_board = create_board(0);
-    int max_count = 0;
-    auto mutex = std::mutex();
-    auto hashes = std::unordered_set<BoardHash>();
-    SharedData shared_data = {max_board, max_count, mutex, hashes};
-    return shared_data;
+    auto board_hash = std::string();
+    board_hash.reserve(board.size * board.size * 16);
+    solve_board_recursive(board, pieces_with_availability, {0, 0}, 0, shared_data, board_hash);
 }
