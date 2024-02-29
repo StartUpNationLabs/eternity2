@@ -1,40 +1,29 @@
 #include <cstdio>
+#include <optional>
 
 #include <grpcxx/server.h>
-// mon cmake est casser xD
-m// je regarde
 #include "helloworld/v1/greeter.grpcxx.pb.h"
 
-using namespace helloworld::v1::Greeter;
+
 
 // Implement rpc application logic using template specialisation for generated `ServiceImpl` struct
 template <>
-rpcHello::result_type ServiceImpl::call<rpcHello>(
+helloworld::v1::Greeter::rpcHello::result_type helloworld::v1::Greeter::ServiceImpl::call<helloworld::v1::Greeter::rpcHello>(
         grpcxx::context &, const GreeterHelloRequest &req) {
     GreeterHelloResponse res;
-    res.set_message("Hello `" + req.name() + "` 👋");
+    res.set_message("Hello `" + req.name() + req.language() + "` 👋");
     return {grpcxx::status::code_t::ok, res};
 }
 
-// Application defined struct implementing rpc application logic
-struct GreeterImpl {
-    template <typename T>
-    typename T::result_type call(grpcxx::context &, const typename T::request_type &) {
-        return {grpcxx::status::code_t::unimplemented, std::nullopt};
-    }
-};
-
-template <>
-rpcHello::result_type GreeterImpl::call<rpcHello>(
-        grpcxx::context &, const helloworld::v1::GreeterHelloRequest &req) {
-    helloworld::v1::GreeterHelloResponse res;
-    res.set_message("Hello `" + req.name() + "` 👋");
-    return {grpcxx::status::code_t::ok, res};
+helloworld::v1::Solver::rpcSolve::result_type helloworld::v1::Solver::ServiceImpl::call(grpcxx::context &,
+                                                                                        const typename T::request_type &) {
+    return {grpcxx::status::code_t::ok, typename T::response_type{}};
 }
+
 
 int main() {
-    GreeterImpl greeter;
-    Service     service(greeter);
+    helloworld::v1::Greeter::ServiceImpl greeter;
+    helloworld::v1::Greeter::Service     service(greeter);
 
     grpcxx::server server;
     server.add(service);

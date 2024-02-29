@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.23)
-
+#
 find_package(Protobuf REQUIRED)
-find_package(GRPC REQUIRED)
-
+#find_package(GRPC REQUIRED)
+# sa charge sa charge xD
 #j'ai mis cmake 3.29
 # 3.29? oui
 # mais gcc est 11.4, je sais pas si ça va suffire.Pour cpp 20 oui
@@ -20,22 +20,9 @@ add_executable(${PROJECT_NAME}-grpc
         main.cpp
 )
 
-# jsp pk cmake refait un full rescan a chaque fois
-# oui, c'est bizare
-# peut-être parce que t'as le générateur codeblock, jsp ce que c;est
-# cmake a plein de générateurs : make, jmake, ninja... et ils ont des niveaux de support différents
-# faudrait utiliser ninja idéalement
-# si t'arrive a le faire marcher ici xD
-#language= je oeux essayer mais faut que tu le mettes dans les settigs clion
-# dit ce que je dois faire
-# je regarde c'est a ninja
-# il y a nija dans le path. Essaie de changer le ninja utilisé par clion. comment tu lance ninja normalement de cmd?
-# oui, dans le terminal
-# j'ai ninja la ducop?  oui
-# bon, tant pis, mets make
-# c'est au même endroit dans les settings
-# sa lamce
-# sa telecharge internet
+# add gcc flags -fcoroutines
+target_compile_features(${PROJECT_NAME}-grpc PRIVATE cxx_std_20)
+
 target_link_libraries(${PROJECT_NAME}-grpc
         PRIVATE
         helloworld-proto
