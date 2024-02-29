@@ -1,30 +1,30 @@
 cmake_minimum_required(VERSION 3.23)
 #
+# c++ standard 20
+set(CMAKE_CXX_STANDARD 20)
 find_package(Protobuf REQUIRED)
-#find_package(GRPC REQUIRED)
-# sa charge sa charge xD
-#j'ai mis cmake 3.29
-# 3.29? oui
-# mais gcc est 11.4, je sais pas si ça va suffire.Pour cpp 20 oui
-# peut-être que grpcxx utilise des trucs trop récent, on va voir
-#laisse moi essayer
-# vasy
-FetchContent_Declare(grpcxx
-        URL      https://github.com/uatuko/grpcxx/archive/refs/tags/v0.2.0.tar.gz
-        URL_HASH SHA256=ed0e0c6ccd44aabb9447de9030b9be092bfb97cb654d69c970cbefd7b7bb44da
-)
-FetchContent_MakeAvailable(grpcxx)
+find_package(asio-grpc CONFIG REQUIRED)
+find_package(Boost REQUIRED COMPONENTS coroutine)
+find_package(Threads REQUIRED)
+find_package(unifex CONFIG REQUIRED)
+# example helper
+add_library(asio-grpc-example-helper INTERFACE)
+
+target_include_directories(asio-grpc-example-helper INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/helper")
+# example protos
 add_subdirectory(proto)
 
-add_executable(${PROJECT_NAME}-grpc
-        main.cpp
-)
+# examples
+add_executable(asio-grpc-example)
 
-# add gcc flags -fcoroutines
-target_compile_features(${PROJECT_NAME}-grpc PRIVATE cxx_std_20)
-
-target_link_libraries(${PROJECT_NAME}-grpc
-        PRIVATE
-        helloworld-proto
-        libgrpcxx::grpcxx
+target_sources(asio-grpc-example PRIVATE main.cpp)
+# print found boost
+message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
+target_link_libraries(
+        asio-grpc-example
+        PRIVATE asio-grpc-example-helper
+        asio-grpc-example-protos asio-grpc::asio-grpc Boost::coroutine
+        Threads::Threads
+        asio-grpc::asio-grpc-unifex
+        unifex::unifex
 )

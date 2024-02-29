@@ -1,42 +1,40 @@
-# helloworld-proto
-cmake_path(SET greeter_proto  ${CMAKE_CURRENT_SOURCE_DIR}/helloworld/v1/greeter.proto)
-cmake_path(SET greeter_grpcxx_header ${CMAKE_CURRENT_BINARY_DIR}/helloworld/v1/greeter.grpcxx.pb.h)
-cmake_path(SET greeter_header ${CMAKE_CURRENT_BINARY_DIR}/helloworld/v1/greeter.pb.h)
-cmake_path(SET greeter_source ${CMAKE_CURRENT_BINARY_DIR}/helloworld/v1/greeter.pb.cc)
+# Copyright 2023 Dennis Hezel
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-set(protos
-        ${greeter_proto}
+asio_grpc_protobuf_generate(
+        GENERATE_GRPC GENERATE_MOCK_CODE
+        OUT_VAR "ASIO_GRPC_EXAMPLE_PROTO_SOURCES"
+        OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated"
+        IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}"
+        PROTOS "${CMAKE_CURRENT_LIST_DIR}/grpc/health/v1/health.proto"
+        "${CMAKE_CURRENT_LIST_DIR}/solver/v1/solver.proto"
 )
 
-set(headers
-        ${greeter_header} ${greeter_grpcxx_header}
-)
+function(asio_grpc_add_example_proto_target _asio_grpc_name)
+    add_library(${_asio_grpc_name} OBJECT)
 
-set(sources
-        ${greeter_source}
-)
+    target_sources(${_asio_grpc_name} PRIVATE ${ASIO_GRPC_EXAMPLE_PROTO_SOURCES})
 
-add_custom_command(
-        OUTPUT  ${headers} ${sources}
-        DEPENDS ${protos}
-        COMMAND ${Protobuf_PROTOC_EXECUTABLE}
-        ARGS
-        --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
-        --proto_path=${Protobuf_INCLUDE_DIR}
-        --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
-        --grpcxx_out=${CMAKE_CURRENT_BINARY_DIR}
-        --plugin=protoc-gen-grpcxx=$<TARGET_FILE:libgrpcxx::protoc-gen>
-        ${protos}
-)
+    target_link_libraries(${_asio_grpc_name} PUBLIC protobuf::libprotobuf )
 
-add_library(helloworld-proto
-        ${sources}
-)
+    target_include_directories(${_asio_grpc_name} SYSTEM
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>")
+endfunction()
 
-target_include_directories(helloworld-proto
-        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-)
+asio_grpc_add_example_proto_target(asio-grpc-example-protos)
 
-target_link_libraries(helloworld-proto
-        protobuf::libprotobuf
-)
+if (ASIO_GRPC_BOOST_ASIO_HAS_CO_AWAIT AND ASIO_GRPC_ENABLE_CPP20_TESTS_AND_EXAMPLES)
+    asio_grpc_add_example_proto_target(asio-grpc-example-protos-cpp20)
+    target_link_libraries(asio-grpc-example-protos-cpp20 PUBLIC asio-grpc-compile-options-cpp20)
+endif ()
