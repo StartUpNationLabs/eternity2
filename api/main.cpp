@@ -41,11 +41,6 @@ auto delay(std::chrono::milliseconds ms) {
     return unifex::schedule_after(timer.get_scheduler(), ms);
 }
 
-// begin-snippet: server-side-unifex-server-streaming
-// ---------------------------------------------------
-// A simple server-streaming request handler using coroutines.
-// ---------------------------------------------------
-// end-snippet
 auto handle_server_streaming_request(agrpc::GrpcContext &grpc_context, example::v1::Example::AsyncService &service) {
     return agrpc::register_sender_rpc_handler<ServerStreamingRPC>(
             grpc_context, service,
