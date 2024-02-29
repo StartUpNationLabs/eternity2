@@ -32,7 +32,7 @@ TEST_CASE("Solve Board") {
                 make_piece(WALL, WALL, 1, 1),
                 make_piece(1, 1, WALL, WALL)
         };
-        Board max_board = create_board(0);
+        Board max_board = create_board(2);
         int max_count = 0;
         auto mutex = std::mutex();
         auto hashes = std::unordered_set<BoardHash>();
@@ -63,7 +63,7 @@ TEST_CASE("Solve Board") {
 
 
         };
-        Board max_board = create_board(0);
+        Board max_board = create_board(3);
         int max_count = 0;
         auto mutex = std::mutex();
         auto hashes = std::unordered_set<BoardHash>();
@@ -112,7 +112,7 @@ TEST_CASE("Solve Board") {
 
         };
         auto start = std::chrono::high_resolution_clock::now();
-        Board max_board = create_board(0);
+        Board max_board = create_board(3);
         int max_count = 0;
         auto mutex = std::mutex();
         auto hashes = std::unordered_set<BoardHash>();
@@ -139,7 +139,7 @@ TEST_CASE("Solve & Export Board") {
                 make_piece(1, 1, WALL, WALL)
         };
 
-        Board max_board = create_board(0);
+        Board max_board = create_board(2);
         int max_count = 0;
         auto mutex = std::mutex();
         auto hashes = std::unordered_set<BoardHash>();

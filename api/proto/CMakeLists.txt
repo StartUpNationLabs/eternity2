@@ -32,9 +32,9 @@ function(asio_grpc_add_example_proto_target _asio_grpc_name)
             PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>")
 endfunction()
 
-asio_grpc_add_example_proto_target(asio-grpc-example-protos)
+asio_grpc_add_example_proto_target(asio-grpc-protos)
 
 if (ASIO_GRPC_BOOST_ASIO_HAS_CO_AWAIT AND ASIO_GRPC_ENABLE_CPP20_TESTS_AND_EXAMPLES)
-    asio_grpc_add_example_proto_target(asio-grpc-example-protos-cpp20)
-    target_link_libraries(asio-grpc-example-protos-cpp20 PUBLIC asio-grpc-compile-options-cpp20)
+    asio_grpc_add_example_proto_target(asio-grpc-protos-cpp20)
+    target_link_libraries(asio-grpc-protos-cpp20 PUBLIC asio-grpc-compile-options-cpp20)
 endif ()
