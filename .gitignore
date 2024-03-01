@@ -69,5 +69,8 @@ cmake-build-debug/
 
 .idea/sonarlint/
 .idea/sonarlint.xml
+vcpkg_installed
+build
+build-release
 
 .env

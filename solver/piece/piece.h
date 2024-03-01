@@ -9,29 +9,27 @@
 #include <iostream>
 #include <vector>
 
+using Piece                = unsigned long long;
+using PiecePart            = unsigned short;
+constexpr Piece TRUE       = 0b1111111111111111;
+constexpr Piece UP_MASK    = 0b1111111111111111000000000000000000000000000000000000000000000000;
+constexpr Piece RIGHT_MASK = 0b0000000000000000111111111111111100000000000000000000000000000000;
+constexpr Piece DOWN_MASK  = 0b0000000000000000000000000000000011111111111111110000000000000000;
+constexpr Piece LEFT_MASK  = 0b0000000000000000000000000000000000000000000000001111111111111111;
+constexpr PiecePart WALL   = 0b1111111111111111;
+constexpr Piece EMPTY      = 0b0000000000000000;
+constexpr Piece FULLWALL   = UP_MASK | RIGHT_MASK | DOWN_MASK | LEFT_MASK;
 
-using Piece = unsigned long long;
-using PiecePart = unsigned short;
-const Piece TRUE = 0b1111111111111111;
-const Piece UP_MASK = 0b1111111111111111000000000000000000000000000000000000000000000000;
-const Piece RIGHT_MASK = 0b0000000000000000111111111111111100000000000000000000000000000000;
-const Piece DOWN_MASK = 0b0000000000000000000000000000000011111111111111110000000000000000;
-const Piece LEFT_MASK = 0b0000000000000000000000000000000000000000000000001111111111111111;
-const PiecePart WALL = 0b1111111111111111;
-const Piece EMPTY = 0b0000000000000000;
-const Piece FULLWALL = UP_MASK | RIGHT_MASK | DOWN_MASK | LEFT_MASK;
+auto get_piece_part(Piece piece, Piece mask) -> PiecePart;
 
-PiecePart get_piece_part(Piece piece, Piece mask);
+auto piece_to_string(Piece piece) -> std::vector<std::string>;
 
-std::vector<std::string> piece_to_string(Piece piece);
+auto make_piece(PiecePart top, PiecePart right, PiecePart down, PiecePart left) -> Piece;
 
-Piece make_piece(PiecePart top, PiecePart right, PiecePart down, PiecePart left);
+auto rotate_piece_right(Piece piece, int n) -> Piece;
 
-Piece rotate_piece_right(Piece piece, int n);
-
-Piece rotate_piece_left(Piece piece, int n);
+auto rotate_piece_left(Piece piece, int n) -> Piece;
 
 void log_piece(Piece piece, const std::string &description);
-
 
 #endif //ETERNITY2_PIECE_H

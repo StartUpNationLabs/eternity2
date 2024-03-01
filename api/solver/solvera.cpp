@@ -11,8 +11,8 @@ SolverRPC::Response build_response(const SharedData &shared_data,
     response.set_boards_analyzed(shared_data.board_count);
     response.set_hash_table_size(shared_data.hashes.size());
     response.set_time(elapsed_seconds);
-    response.set_boards_per_second((double ) shared_data.board_count / elapsed_seconds);
-    response.set_hashes_per_second((double ) shared_data.hashes.size() / elapsed_seconds);
+    response.set_boards_per_second(static_cast<double>(shared_data.board_count) / elapsed_seconds);
+    response.set_hashes_per_second(static_cast<double>(shared_data.hashes.size()) / elapsed_seconds);
     response.set_hash_table_hits(shared_data.hash_hit_count);
 
     for (auto &board_piece: shared_data.max_board.board) {

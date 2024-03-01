@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "solver/v1/solver.grpc.pb.h"
 #include "helper.hpp"
 #include "server_shutdown_unifex.hpp"
+#include "solver/solvera.h"
+#include "solver/v1/solver.grpc.pb.h"
 
 #include <agrpc/asio_grpc.hpp>
 #include <agrpc/health_check_service.hpp>
@@ -27,94 +28,88 @@
 #include <unifex/sync_wait.hpp>
 #include <unifex/task.hpp>
 #include <unifex/then.hpp>
+#include <unifex/timed_single_thread_context.hpp>
 #include <unifex/when_all.hpp>
 #include <unifex/with_query_value.hpp>
-#include "solver/solvera.h"
-
-#include <unifex/timed_single_thread_context.hpp>
 
 // Example showing some of the features of using asio-grpc with libunifex.
 unifex::timed_single_thread_context timer;
 
-auto delay(std::chrono::milliseconds ms) {
+auto delay(std::chrono::milliseconds ms)
+{
     return unifex::schedule_after(timer.get_scheduler(), ms);
 }
 
-
 template<class Sender>
-void run_grpc_context_for_sender(agrpc::GrpcContext &grpc_context, Sender &&sender) {
+void run_grpc_context_for_sender(agrpc::GrpcContext &grpc_context, Sender &&sender)
+{
     grpc_context.work_started();
-    unifex::sync_wait(
-            unifex::when_all(unifex::finally(std::forward<Sender>(sender), unifex::just_from(
-                                     [&] {
-                                         grpc_context.work_finished();
-                                     })),
-                             unifex::just_from(
-                                     [&] {
-                                         grpc_context.run();
-                                     })));
+    unifex::sync_wait(unifex::when_all(unifex::finally(std::forward<Sender>(sender), unifex::just_from([&] {
+                                                           grpc_context.work_finished();
+                                                       })),
+                                       unifex::just_from([&] { grpc_context.run(); })));
 }
 
-auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::Solver::AsyncService &service1) {
+auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::Solver::AsyncService &service1)
+{
     return agrpc::register_sender_rpc_handler<SolverRPC>(
-            grpc_context, service1,
-            [&](SolverRPC &rpc, const SolverRPC::Request &request) -> unifex::task<void> {
-                auto [board, pieces] = load_board_pieces_from_request(request);
-                std::mutex mutex;
-                Board max_board = create_board(board.size);
-                int max_count = 0;
-                std::vector<std::thread> threads;
-                unsigned long max_thread_count = 16;
-                if (std::thread::hardware_concurrency() != 0) {
-                    max_thread_count = std::thread::hardware_concurrency();
-                }
-                unsigned long thread_count = request.threads() > max_thread_count ? max_thread_count
-                                                                                      : request.threads();
-                threads.reserve(thread_count);
-                std::unordered_set<BoardHash> hashes;
-                SharedData shared_data = {max_board, max_count, mutex, hashes};
-                auto start = std::chrono::high_resolution_clock::now();
-                for (int i = 0; i < thread_count; i++) {
-                    threads.emplace_back(thread_function,
-                                         board,
-                                         pieces,
-                                         std::ref(shared_data)
-                    );
-                }
-                // every 2 seconds, print the current max count
-                while (true) {
-                    co_await delay(std::chrono::milliseconds{request.wait_time()});
-                    double seconds_since_start = (double) std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::high_resolution_clock::now() - start).count() / 1000.0;
-                    if (max_count == board.size * board.size) {
-                        co_await rpc.write(build_response(shared_data, seconds_since_start));
-                        // stop threads
-                        shared_data.stop = true;
-                        for (auto &thread: threads) {
-                            // force stop
-                            thread.join();
-                        }
-                        co_await rpc.finish(grpc::Status::OK);
-                        co_return;
+        grpc_context, service1, [&](SolverRPC &rpc, const SolverRPC::Request &request) -> unifex::task<void> {
+            auto [board, pieces] = load_board_pieces_from_request(request);
+            std::mutex mutex;
+            Board max_board = create_board(board.size);
+            int max_count   = 0;
+            std::vector<std::thread> threads;
+            unsigned int max_thread_count = std::max(4U, std::thread::hardware_concurrency());
+            int thread_count              = std::min(max_thread_count, request.threads());
+            threads.reserve(thread_count);
+            std::unordered_set<BoardHash> hashes;
+            SharedData shared_data = {max_board, max_count, mutex, hashes};
+            auto start             = std::chrono::high_resolution_clock::now();
+            for (int i = 0; i < thread_count; i++)
+            {
+                threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
+            }
+            // every 2 seconds, print the current max count
+            while (true)
+            {
+                co_await delay(std::chrono::milliseconds{request.wait_time()});
+                double seconds_since_start = static_cast<double>(
+                                                 std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                     std::chrono::high_resolution_clock::now() - start)
+                                                     .count())
+                                             / 1000.0;
+                if (max_count == board.size * board.size)
+                {
+                    co_await rpc.write(build_response(shared_data, seconds_since_start));
+                    // stop threads
+                    shared_data.stop = true;
+                    for (auto &thread : threads)
+                    {
+                        // force stop
+                        thread.join();
                     }
-
-                    if (!co_await rpc.write(build_response(shared_data,
-                                                          seconds_since_start))) {
-                        // stop threads
-                        shared_data.stop = true;
-                        for (auto &thread: threads) {
-                            // force stop
-                            thread.join();
-                        }
-                        co_await rpc.finish(grpc::Status::CANCELLED);
-                        co_return;
-                    }
+                    co_await rpc.finish(grpc::Status::OK);
+                    co_return;
                 }
-            });
 
+                if (!co_await rpc.write(build_response(shared_data, seconds_since_start)))
+                {
+                    // stop threads
+                    shared_data.stop = true;
+                    for (auto &thread : threads)
+                    {
+                        // force stop
+                        thread.join();
+                    }
+                    co_await rpc.finish(grpc::Status::CANCELLED);
+                    co_return;
+                }
+            }
+        });
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, const char **argv)
+{
     const auto port = argc >= 2 ? argv[1] : "50051";
     const auto host = std::string("0.0.0.0:") + port;
 
@@ -132,10 +127,10 @@ int main(int argc, const char **argv) {
 
     example::ServerShutdown server_shutdown{*server};
 
-    run_grpc_context_for_sender(
-            grpc_context, unifex::with_query_value(unifex::when_all(
-                                                           handle_server_solver_request(grpc_context, solverService)
-                                                   ),
-                                                   unifex::get_scheduler, unifex::inline_scheduler{}));
+    run_grpc_context_for_sender(grpc_context,
+                                unifex::with_query_value(unifex::when_all(
+                                                             handle_server_solver_request(grpc_context,
+                                                                                          solverService)),
+                                                         unifex::get_scheduler,
+                                                         unifex::inline_scheduler{}));
 }
-

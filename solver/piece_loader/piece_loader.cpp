@@ -23,7 +23,7 @@ std::pair<Board, std::vector<Piece>> load_from_csv(const std::string &filename) 
     int size = std::stoi(line);
     Board board = create_board(size);
     std::vector<Piece> pieces = {};
-    for (size_t i = 0; i < size *size; i++) {
+    for (int i = 0; i < size *size; i++) {
         std::getline(in, line);
         if (line.empty()) {
             continue;

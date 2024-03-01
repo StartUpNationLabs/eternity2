@@ -1,0 +1,95 @@
+{
+  "configurePresets": [
+    {
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "BUILD_TESTING": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Debug"
+        }
+      },
+      "errors": {
+        "deprecated": true
+      },
+      "hidden": true,
+      "name": "cmake-dev",
+      "warnings": {
+        "deprecated": true,
+        "dev": true
+      }
+    },
+    {
+      "cacheVariables": {
+        "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      },
+      "toolchainFile": "/home/apoorva64/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "hidden": true,
+      "name": "vcpkg"
+    },
+    {
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-fno-sanitize-recover=undefined -fsanitize=address,undefined -pedantic -pedantic-errors -Wall -Wextra --coverage -O3"
+        },
+        "CMAKE_EXE_LINKER_FLAGS": {
+          "type": "STRING",
+          "value": "-fno-sanitize-recover=undefined -fsanitize=address,undefined --coverage"
+        },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "VCPKG_MANIFEST_FEATURES": {
+          "type": "STRING",
+          "value": "tests"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-linux"
+        }
+      },
+      "hidden": true,
+      "name": "linux"
+    },
+    {
+      "generator": "Unix Makefiles",
+      "inherits": [
+        "linux",
+        "vcpkg"
+      ],
+      "name": "ninja-linux"
+    },
+    {
+      "inherits": [
+        "ninja-linux"
+      ],
+      "name": "ninja-linux-release",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "release"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-linux",
+      "configurePreset": "ninja-linux"
+    },
+    {
+      "name": "ninja-linux-release",
+      "configurePreset": "ninja-linux-release"
+    }
+  ],
+  "version": 3
+}

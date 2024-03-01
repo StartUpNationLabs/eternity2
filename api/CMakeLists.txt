@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 20)
 find_package(Protobuf REQUIRED)
 find_package(asio-grpc CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS coroutine)
 find_package(Threads REQUIRED)
 find_package(unifex CONFIG REQUIRED)
 # example helper
@@ -28,7 +27,7 @@ message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 target_link_libraries(
         asio-grpc-server
         PRIVATE asio-grpc-helper
-        asio-grpc-protos asio-grpc::asio-grpc Boost::coroutine
+        asio-grpc-protos
         Threads::Threads
         asio-grpc::asio-grpc-unifex
         unifex::unifex
