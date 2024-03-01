@@ -66,3 +66,4 @@ int main(int argc, char *argv[]) {
         std::cout << board_lines;
     }
 }
+

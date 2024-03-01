@@ -85,11 +85,13 @@ bool solve_board_recursive(Board &board, std::vector<PieceWAvailability> &pieces
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
     log_board(board, format("Solving board at index: {}", index_to_string(index)));
-
+    if (shared_data.stop) {
+        return false;
+    }
     // check if hash is already in the shared data if placed pieces is < HASH_THRESHOLD
     if (
             placed_pieces < HASH_THRESHOLD &&
-            shared_data.hashes.find(board_hash) != shared_data.hashes.end()) {
+                    shared_data.hashes.contains(board_hash)) {
         shared_data.hash_hit_count++;
         return false;
     }

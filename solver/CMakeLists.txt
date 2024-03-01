@@ -58,5 +58,5 @@ set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 #find_package(OpenMP)
 add_executable(Solver main.cpp
-        )
+)
 target_link_libraries(Solver solver_lib)

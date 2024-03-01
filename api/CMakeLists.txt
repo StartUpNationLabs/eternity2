@@ -15,9 +15,14 @@ target_include_directories(asio-grpc-helper INTERFACE "${CMAKE_CURRENT_SOURCE_DI
 add_subdirectory(proto)
 
 # examples
-add_executable(asio-grpc-server)
+add_executable(asio-grpc-server
 
-target_sources(asio-grpc-server PRIVATE main.cpp)
+)
+
+target_sources(asio-grpc-server PRIVATE main.cpp
+        solver/solvera.cpp
+        solver/solvera.h
+)
 # print found boost
 message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 target_link_libraries(
@@ -27,4 +32,8 @@ target_link_libraries(
         Threads::Threads
         asio-grpc::asio-grpc-unifex
         unifex::unifex
+        solver_lib
 )
+
+# set release
+set(CMAKE_BUILD_TYPE Release)

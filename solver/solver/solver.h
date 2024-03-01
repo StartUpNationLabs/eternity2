@@ -6,8 +6,9 @@ struct SharedData {
     int &max_count;
     std::mutex &mutex;
     std::unordered_set<BoardHash> &hashes;
-    std::atomic_llong board_count;
-    std::atomic_llong hash_hit_count;
+    std::atomic_llong board_count {0};
+    std::atomic_llong hash_hit_count {0};
+    std::atomic_bool stop {false};
 };
 
 
