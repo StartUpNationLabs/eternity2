@@ -29,7 +29,7 @@
           "value": "ON"
         }
       },
-      "toolchainFile": "/home/apoorva64/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "hidden": true,
       "name": "vcpkg"
     },
