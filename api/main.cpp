@@ -16,6 +16,7 @@
 #include "server_shutdown_unifex.hpp"
 #include "solver/solvera.h"
 #include "solver/v1/solver.grpc.pb.h"
+#include "sp"
 
 #include <agrpc/asio_grpc.hpp>
 #include <agrpc/health_check_service.hpp>
@@ -31,7 +32,6 @@
 #include <unifex/timed_single_thread_context.hpp>
 #include <unifex/when_all.hpp>
 #include <unifex/with_query_value.hpp>
-
 // Example showing some of the features of using asio-grpc with libunifex.
 unifex::timed_single_thread_context timer;
 
@@ -54,13 +54,14 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
 {
     return agrpc::register_sender_rpc_handler<SolverRPC>(
         grpc_context, service1, [&](SolverRPC &rpc, const SolverRPC::Request &request) -> unifex::task<void> {
+            spdlog::info("Received request");
             auto [board, pieces] = load_board_pieces_from_request(request);
             std::mutex mutex;
             Board max_board = create_board(board.size);
             int max_count   = 0;
             std::vector<std::thread> threads;
-            unsigned int max_thread_count = std::max(4U, std::thread::hardware_concurrency());
-            int thread_count              = std::min(max_thread_count, request.threads());
+            int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
+            int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
             threads.reserve(thread_count);
             std::unordered_set<BoardHash> hashes;
             SharedData shared_data = {max_board, max_count, mutex, hashes};
@@ -108,18 +109,18 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
         });
 }
 
-int main(int argc, const char **argv)
+auto main(int argc, const char **argv) -> int
 {
     const auto port = argc >= 2 ? argv[1] : "50051";
     const auto host = std::string("0.0.0.0:") + port;
 
-    solver::v1::Solver::AsyncService solverService;
+    solver::v1::Solver::AsyncService solver_service;
     std::unique_ptr<grpc::Server> server;
 
     grpc::ServerBuilder builder;
     agrpc::GrpcContext grpc_context{builder.AddCompletionQueue()};
     builder.AddListeningPort(host, grpc::InsecureServerCredentials());
-    builder.RegisterService(&solverService);
+    builder.RegisterService(&solver_service);
     agrpc::add_health_check_service(builder);
     server = builder.BuildAndStart();
     abort_if_not(bool{server});
@@ -130,7 +131,7 @@ int main(int argc, const char **argv)
     run_grpc_context_for_sender(grpc_context,
                                 unifex::with_query_value(unifex::when_all(
                                                              handle_server_solver_request(grpc_context,
-                                                                                          solverService)),
+                                                                                          solver_service)),
                                                          unifex::get_scheduler,
                                                          unifex::inline_scheduler{}));
 }

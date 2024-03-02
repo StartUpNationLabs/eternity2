@@ -2,10 +2,11 @@
 // Created by appad on 29/02/2024.
 //
 
-#include <unifex/timed_single_thread_context.hpp>
 #include "solvera.h"
-SolverRPC::Response build_response(const SharedData &shared_data,
-                                   double elapsed_seconds) {
+
+#include <unifex/timed_single_thread_context.hpp>
+auto build_response(const SharedData &shared_data, double elapsed_seconds) -> SolverRPC::Response
+{
     auto end = std::chrono::system_clock::now();
     SolverRPC::Response response{};
     response.set_boards_analyzed(shared_data.board_count);
@@ -15,7 +16,8 @@ SolverRPC::Response build_response(const SharedData &shared_data,
     response.set_hashes_per_second(static_cast<double>(shared_data.hashes.size()) / elapsed_seconds);
     response.set_hash_table_hits(shared_data.hash_hit_count);
 
-    for (auto &board_piece: shared_data.max_board.board) {
+    for (auto &board_piece : shared_data.max_board.board)
+    {
         auto rotated_piece = response.add_rotated_pieces();
         rotated_piece->set_index(board_piece.index);
         rotated_piece->set_rotation(board_piece.rotation);
@@ -27,25 +29,20 @@ SolverRPC::Response build_response(const SharedData &shared_data,
     }
     return response;
 }
-std::pair<Board, std::vector<Piece>> load_board_pieces_from_request(const SolverRPC::Request &request) {
+auto load_board_pieces_from_request(const SolverRPC::Request &request) -> std::pair<Board, std::vector<Piece>>
+{
     const auto &req_pieces = request.pieces();
-    const auto size = req_pieces.size();
-    Board board = create_board((int )sqrt(size));
+    const auto size        = req_pieces.size();
+    Board board            = create_board(static_cast<int>(sqrt(size)));
     std::vector<Piece> pieces;
     pieces.reserve(size * size);
-    for (const auto &piece: req_pieces) {
-        pieces.push_back(
-                make_piece(
-                        piece.top(),
-                        piece.right(),
-                        piece.bottom(),
-                        piece.left()
-                )
-        );
+    for (const auto &piece : req_pieces)
+    {
+        pieces.push_back(make_piece(piece.top(), piece.right(), piece.bottom(), piece.left()));
     }
     return std::make_pair(board, pieces);
 }
-void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data) {
+void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data)
+{
     solve_board(board, pieces, shared_data);
 }
-

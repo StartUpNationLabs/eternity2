@@ -6,6 +6,7 @@ find_package(Protobuf REQUIRED)
 find_package(asio-grpc CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 find_package(unifex CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 # example helper
 add_library(asio-grpc-helper INTERFACE)
 
@@ -32,6 +33,7 @@ target_link_libraries(
         asio-grpc::asio-grpc-unifex
         unifex::unifex
         solver_lib
+        spdlog::spdlog
 )
 
 # set release
