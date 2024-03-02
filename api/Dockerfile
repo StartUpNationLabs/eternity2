@@ -59,7 +59,7 @@ ENV LC_ALL en_US.UTF-8
 
 # install vcpkg
 RUN git clone https://github.com/microsoft/vcpkg.git
-RUN cd vcpkg && ./bootstrap-vcpkg.sh
+RUN ./vcpkg/bootstrap-vcpkg.sh
 # set the vcpkg environment variable
 ENV VCPKG_ROOT /vcpkg
 ENV PATH $VCPKG_ROOT:$PATH
