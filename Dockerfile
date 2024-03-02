@@ -1,6 +1,4 @@
 FROM debian:bookworm-slim
-LABEL maintainer="melroy@melroy.org"
-
 ENV DEBIAN_FRONTEND noninteractive
 
 # APT Update
