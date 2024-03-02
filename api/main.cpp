@@ -16,12 +16,12 @@
 #include "server_shutdown_unifex.hpp"
 #include "solver/solvera.h"
 #include "solver/v1/solver.grpc.pb.h"
-#include "sp"
 
 #include <agrpc/asio_grpc.hpp>
 #include <agrpc/health_check_service.hpp>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
+#include <spdlog/spdlog.h>
 #include <unifex/finally.hpp>
 #include <unifex/just_from.hpp>
 #include <unifex/just_void_or_done.hpp>
@@ -62,6 +62,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
             std::vector<std::thread> threads;
             int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
             int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
+            spdlog::info("Using {} threads", thread_count);
             threads.reserve(thread_count);
             std::unordered_set<BoardHash> hashes;
             SharedData shared_data = {max_board, max_count, mutex, hashes};
@@ -111,8 +112,9 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
 
 auto main(int argc, const char **argv) -> int
 {
-    const auto port = argc >= 2 ? argv[1] : "50051";
-    const auto host = std::string("0.0.0.0:") + port;
+    const auto *const port = argc >= 2 ? argv[1] : "50051";
+    const auto host        = std::string("0.0.0.0:") + port;
+    spdlog::info("Starting server on {}", host);
 
     solver::v1::Solver::AsyncService solver_service;
     std::unique_ptr<grpc::Server> server;

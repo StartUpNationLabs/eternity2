@@ -34,6 +34,9 @@ target_link_libraries(
         unifex::unifex
         solver_lib
         spdlog::spdlog
+        -static
+        -static-libgcc
+        -static-libstdc++
 )
 
 # set release

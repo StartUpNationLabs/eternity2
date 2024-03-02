@@ -18,10 +18,10 @@ auto build_response(const SharedData &shared_data, double elapsed_seconds) -> So
 
     for (auto &board_piece : shared_data.max_board.board)
     {
-        auto rotated_piece = response.add_rotated_pieces();
+        auto *rotated_piece = response.add_rotated_pieces();
         rotated_piece->set_index(board_piece.index);
         rotated_piece->set_rotation(board_piece.rotation);
-        auto piece = rotated_piece->mutable_piece();
+        auto *piece = rotated_piece->mutable_piece();
         piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
         piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
         piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
