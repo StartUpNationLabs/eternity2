@@ -8,7 +8,7 @@ RUN apt-get --allow-releaseinfo-change update
 RUN apt-get update && apt-get upgrade -y
 
 # APT install (base) packages
-RUN apt-get install -y build-essential cmake libboost-all-dev pkg-config
+RUN apt-get install -y build-essential cmake libboost-all-dev pkg-config curl tar git zip unzip
 RUN apt-get install -y ninja-build doxygen graphviz
 RUN apt-get install -y --no-install-recommends curl wget
 
@@ -58,7 +58,6 @@ RUN echo "en_US.UTF-8 UTF-8" >/etc/locale.gen && \
 ENV LC_ALL en_US.UTF-8
 
 # install vcpkg
-RUN apt install curl zip unzip tar -y
 RUN git clone https://github.com/microsoft/vcpkg.git
 RUN ./vcpkg/bootstrap-vcpkg.sh
 # set the vcpkg environment variable
