@@ -68,5 +68,6 @@ RUN vcpkg install protobuf
 RUN vcpkg install asio-grpc
 RUN vcpkg install libunifex
 RUN vcpkg install catch2
+RUN vcpkg install spdlog
 
 
