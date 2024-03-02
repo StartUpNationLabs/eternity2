@@ -62,7 +62,10 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
             std::vector<std::thread> threads;
             int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
             int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
+            spdlog::info("Starting solver with board size: {}", board.size);
             spdlog::info("Using {} threads", thread_count);
+            spdlog::info("Pieces: {}", pieces.size());
+            spdlog::info("Timebetween: {}", request.wait_time());
             threads.reserve(thread_count);
             std::unordered_set<BoardHash> hashes;
             SharedData shared_data = {max_board, max_count, mutex, hashes};
@@ -75,6 +78,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
             while (true)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
+
                 double seconds_since_start = static_cast<double>(
                                                  std::chrono::duration_cast<std::chrono::milliseconds>(
                                                      std::chrono::high_resolution_clock::now() - start)
@@ -82,20 +86,25 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
                                              / 1000.0;
                 if (max_count == board.size * board.size)
                 {
+                    spdlog::info("Found solution");
                     co_await rpc.write(build_response(shared_data, seconds_since_start));
                     // stop threads
+                    spdlog::info("Stopping threads");
                     shared_data.stop = true;
                     for (auto &thread : threads)
                     {
                         // force stop
                         thread.join();
                     }
+                    spdlog::info("Threads stopped");
                     co_await rpc.finish(grpc::Status::OK);
                     co_return;
                 }
 
                 if (!co_await rpc.write(build_response(shared_data, seconds_since_start)))
                 {
+                    spdlog::info("Client cancelled request");
+                    spdlog::info("Stopping threads");
                     // stop threads
                     shared_data.stop = true;
                     for (auto &thread : threads)
@@ -103,6 +112,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
                         // force stop
                         thread.join();
                     }
+                    spdlog::info("Threads stopped");
                     co_await rpc.finish(grpc::Status::CANCELLED);
                     co_return;
                 }

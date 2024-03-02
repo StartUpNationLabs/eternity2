@@ -32,6 +32,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          file: ./api/Dockerfile
           push: true
-          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/dependencies:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/dependencies:${{ github.sha }}
+          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/api:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/api:${{ github.sha }}
