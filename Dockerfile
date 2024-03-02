@@ -58,12 +58,12 @@ RUN echo "en_US.UTF-8 UTF-8" >/etc/locale.gen && \
 ENV LC_ALL en_US.UTF-8
 
 # install vcpkg
+ENV VCPKG_FORCE_SYSTEM_BINARIES 1
 RUN git clone https://github.com/microsoft/vcpkg.git
 RUN ./vcpkg/bootstrap-vcpkg.sh
 # set the vcpkg environment variable
 ENV VCPKG_ROOT /vcpkg
 ENV PATH $VCPKG_ROOT:$PATH
-ENV VCPKG_FORCE_SYSTEM_BINARIES 1
 
 # install
 RUN vcpkg install protobuf
