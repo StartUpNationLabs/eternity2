@@ -1,4 +1,4 @@
-FROM apoorvapewpew/eternity2-dependencies:latest
+FROM apoorvapewpew/eternity2-dependencies:latest as builder
 
 # Copy
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/
 RUN cmake --build build
 
 
-FROM scratch
+FROM scratch as final
 COPY --from=builder /app/build/api/asio-grpc-server /app/asio-grpc-server
 
 # Run
