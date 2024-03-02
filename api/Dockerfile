@@ -58,6 +58,7 @@ RUN echo "en_US.UTF-8 UTF-8" >/etc/locale.gen && \
 ENV LC_ALL en_US.UTF-8
 
 # install vcpkg
+RUN apt install curl zip unzip tar -y
 RUN git clone https://github.com/microsoft/vcpkg.git
 RUN ./vcpkg/bootstrap-vcpkg.sh
 # set the vcpkg environment variable
