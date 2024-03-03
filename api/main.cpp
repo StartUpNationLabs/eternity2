@@ -32,7 +32,6 @@
 #include <unifex/timed_single_thread_context.hpp>
 #include <unifex/when_all.hpp>
 #include <unifex/with_query_value.hpp>
-// Example showing some of the features of using asio-grpc with libunifex.
 
 template<class Sender>
 void run_grpc_context_for_sender(agrpc::GrpcContext &grpc_context, Sender &&sender)

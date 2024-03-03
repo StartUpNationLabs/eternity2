@@ -16,3 +16,9 @@ COPY --from=builder /app/build/api/asio-grpc-server /app/asio-grpc-server
 CMD ["/app/asio-grpc-server"]
 
 EXPOSE 50051
+
+# Metadata
+LABEL project="eternity2"
+LABEL description="Eternity II Asio gRPC server"
+LABEL version="1.0"
+LABEL repository="https://github.com/Apoorva64/eternity2"

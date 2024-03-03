@@ -17,8 +17,6 @@ struct SharedData
     unsigned int hash_length_threshold                 = 7;
 };
 
-SharedData create_shared_data();
-
 auto possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index)
     -> std::vector<RotatedPiece>;
 

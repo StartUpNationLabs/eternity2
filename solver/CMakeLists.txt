@@ -49,7 +49,9 @@ add_library(solver_lib STATIC
         format/format.cpp
         format/format.h
         solver/solver.h
-        solver/solver.cpp board/scan_row.cpp board/scan_row.h board/spiral.cpp board/spiral.h)
+        solver/solver.cpp board/scan_row.cpp board/scan_row.h board/spiral.cpp board/spiral.h
+        hash_load_store/hash_store_load.cpp
+        hash_load_store/hash_store_load.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

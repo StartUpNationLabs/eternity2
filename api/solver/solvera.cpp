@@ -181,21 +181,19 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             while (!shared_data.stop)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
-                mutex.lock();
+                std::scoped_lock lock(mutex);
                 for (auto &res : responses)
                 {
                     if (!co_await rpc.write(res))
                     {
                         spdlog::info("Client cancelled request");
                         shared_data.stop = true;
-                        mutex.unlock();
                         solver_thread.join();
                         co_await rpc.finish(grpc::Status::CANCELLED);
                         co_return;
                     }
                 }
                 responses.clear();
-                mutex.unlock();
             }
             co_await rpc.finish(grpc::Status::OK);
         });
