@@ -14,6 +14,7 @@ struct SharedData
     std::atomic_bool stop{false};
     // callback that is called when you enter the recursive function, takes in a Board
     std::function<void(const Board &)> on_board_update = [](const Board &board) {};
+    unsigned int hash_length_threshold                 = 7;
 };
 
 SharedData create_shared_data();

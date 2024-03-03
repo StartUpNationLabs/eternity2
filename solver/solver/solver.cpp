@@ -6,8 +6,7 @@
 #include <random>
 #include <stack>
 
-auto rng                   = std::default_random_engine{};
-const int k_hash_threshold = 7;
+auto rng = std::default_random_engine{};
 
 auto possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index)
     -> std::vector<RotatedPiece>
@@ -114,7 +113,7 @@ auto solve_board_recursive(Board &board,
         return false;
     }
     // check if hash is already in the shared data if placed pieces is < HASH_THRESHOLD
-    if (placed_pieces < k_hash_threshold && shared_data.hashes.contains(board_hash))
+    if (placed_pieces < shared_data.hash_length_threshold && shared_data.hashes.contains(board_hash))
     {
         shared_data.hash_hit_count++;
         return false;
@@ -151,7 +150,7 @@ auto solve_board_recursive(Board &board,
     {
         place_piece(board, rotated_piece, index);
         // add placed piece to board hash
-        if (placed_pieces < k_hash_threshold)
+        if (placed_pieces < shared_data.hash_length_threshold)
         {
             board_hash += static_cast<char>(rotated_piece.index);
             board_hash += static_cast<char>(rotated_piece.rotation);
@@ -165,7 +164,7 @@ auto solve_board_recursive(Board &board,
             return true;
         }
         // copy board hash and insert it into the shared data
-        if (placed_pieces < k_hash_threshold)
+        if (placed_pieces < shared_data.hash_length_threshold)
         {
             std::scoped_lock lock(shared_data.mutex);
             shared_data.hashes.insert(board_hash);
@@ -173,7 +172,7 @@ auto solve_board_recursive(Board &board,
         // add placed piece back to pieces
         pieces[rotated_piece.index].available = true;
         // remove placed piece from board hash
-        if (placed_pieces < k_hash_threshold)
+        if (placed_pieces < shared_data.hash_length_threshold)
         {
             board_hash.pop_back();
             board_hash.pop_back();

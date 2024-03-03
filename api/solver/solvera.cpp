@@ -89,10 +89,12 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             spdlog::info("Using {} threads", thread_count);
             spdlog::info("Pieces: {}", pieces.size());
             spdlog::info("Timebetween: {}", request.wait_time());
+            spdlog::info("Hash length threshold: {}", request.hash_threshold());
             threads.reserve(thread_count);
             std::unordered_set<BoardHash> hashes;
-            SharedData shared_data = {max_board, max_count, mutex, hashes};
-            auto start             = std::chrono::high_resolution_clock::now();
+            SharedData shared_data            = {max_board, max_count, mutex, hashes};
+            shared_data.hash_length_threshold = request.hash_threshold();
+            auto start                        = std::chrono::high_resolution_clock::now();
             for (int i = 0; i < thread_count; i++)
             {
                 threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
@@ -166,9 +168,11 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
                 responses.push_back(res);
                 mutex.unlock();
             };
-
+            shared_data.hash_length_threshold = request.hash_threshold();
             spdlog::info("Starting solver with board size: {}", board.size);
             spdlog::info("Pieces: {}", pieces.size());
+            spdlog::info("Timebetween: {}", request.wait_time());
+            spdlog::info("Hash length threshold: {}", request.hash_threshold());
 
             // launch the solver in a new thread
             std::thread solver_thread([&] { solve_board(board, pieces, shared_data); });
