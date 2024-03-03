@@ -1,5 +1,5 @@
 services:
   api:
-    image: ghcr.io/apoorva64/eternity2/api:latest
+    image: apoorvapewpew/eternity2:latest
     ports:
       - 50051:50051
