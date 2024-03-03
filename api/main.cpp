@@ -64,10 +64,11 @@ auto main(int argc, const char **argv) -> int
 
     example::ServerShutdown server_shutdown{*server};
 
-    run_grpc_context_for_sender(grpc_context,
-                                unifex::with_query_value(unifex::when_all(
-                                                             handle_server_solver_request(grpc_context,
-                                                                                          solver_service)),
-                                                         unifex::get_scheduler,
-                                                         unifex::inline_scheduler{}));
+    run_grpc_context_for_sender(
+        grpc_context,
+        unifex::with_query_value(unifex::when_all(handle_server_solver_request_step_by_step(grpc_context,
+                                                                                            solver_service),
+                                                  handle_server_solver_request(grpc_context, solver_service)),
+                                 unifex::get_scheduler,
+                                 unifex::inline_scheduler{}));
 }

@@ -31,7 +31,26 @@ auto build_response(const SharedData &shared_data, double elapsed_seconds) -> So
     }
     return response;
 }
-auto load_board_pieces_from_request(const SolverRPC::Request &request) -> std::pair<Board, std::vector<Piece>>
+
+auto build_response_step_by_step(const Board &board) -> SolverStepByStepRPC::Response
+{
+    SolverStepByStepRPC::Response response{};
+    for (const auto &board_piece : board.board)
+    {
+        auto *rotated_piece = response.add_rotated_pieces();
+        rotated_piece->set_index(board_piece.index);
+        rotated_piece->set_rotation(board_piece.rotation);
+        auto *piece = rotated_piece->mutable_piece();
+        piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
+        piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
+        piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
+        piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
+    }
+    return response;
+}
+
+auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &request)
+    -> std::pair<Board, std::vector<Piece>>
 {
     const auto &req_pieces = request.pieces();
     const auto size        = req_pieces.size();
@@ -122,5 +141,58 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                     co_return;
                 }
             }
+        });
+}
+
+auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
+                                               solver::v1::Solver::AsyncService &service1)
+    -> unifex::any_sender_of<>
+{
+    return agrpc::register_sender_rpc_handler<SolverStepByStepRPC>(
+        grpc_context,
+        service1,
+        [&](SolverStepByStepRPC &rpc, SolverStepByStepRPC::Request &request) -> unifex::task<void> {
+            spdlog::info("Received StepByStep request");
+            auto [board, pieces] = load_board_pieces_from_request(request);
+            std::mutex mutex;
+            Board max_board = create_board(board.size);
+            int max_count   = 0;
+            std::unordered_set<BoardHash> hashes;
+            SharedData shared_data = {max_board, max_count, mutex, hashes};
+            std::vector<SolverStepByStepRPC::Response> responses;
+            shared_data.on_board_update = [&](const Board &board) {
+                mutex.lock();
+                auto res = build_response_step_by_step(board);
+                responses.push_back(res);
+                mutex.unlock();
+            };
+
+            spdlog::info("Starting solver with board size: {}", board.size);
+            spdlog::info("Pieces: {}", pieces.size());
+
+            // launch the solver in a new thread
+            std::thread solver_thread([&] { solve_board(board, pieces, shared_data); });
+
+            // while the solver is running, send the responses to the client
+            while (!shared_data.stop)
+            {
+                co_await delay(std::chrono::milliseconds{request.wait_time()});
+                mutex.lock();
+                for (auto &res : responses)
+                {
+                    if (!co_await rpc.write(res))
+                    {
+                        spdlog::info("Client cancelled request");
+                        shared_data.stop = true;
+                        mutex.unlock();
+                        solver_thread.join();
+                        co_await rpc.finish(grpc::Status::CANCELLED);
+                        co_return;
+                    }
+                }
+                responses.clear();
+                mutex.unlock();
+            }
+            co_await rpc.finish(grpc::Status::OK);
         });
 }

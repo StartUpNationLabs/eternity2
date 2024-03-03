@@ -197,4 +197,5 @@ void solve_board(Board &board, const std::vector<Piece> &pieces, SharedData &sha
     auto board_hash                                          = std::string();
     board_hash.reserve(board.size * board.size * 16);
     solve_board_recursive(board, pieces_with_availability, {0, 0}, 0, shared_data, board_hash);
+    shared_data.stop = true;
 }

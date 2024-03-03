@@ -25,17 +25,22 @@
 
 auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context::_schedule_after_sender<
     std::chrono::duration<long, std::ratio<1, 1000>>>::type;
-using SolverService = solver::v1::Solver::AsyncService;
-using SolverRPC     = agrpc::ServerRPC<&SolverService::RequestSolve>;
+using SolverService       = solver::v1::Solver::AsyncService;
+using SolverRPC           = agrpc::ServerRPC<&SolverService::RequestSolve>;
+using SolverStepByStepRPC = agrpc::ServerRPC<&SolverService::RequestSolveStepByStep>;
 
 void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data);
 
 auto build_response(const SharedData &shared_data, double elapsed_time) -> SolverRPC::Response;
 
-auto load_board_pieces_from_request(const SolverRPC::Request &request)
+auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &request)
     -> std::pair<Board, std::vector<Piece>>;
 
 auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                                   solver::v1::Solver::AsyncService &service1) -> unifex::any_sender_of<>;
+auto build_response_step_by_step(const Board &board) -> SolverStepByStepRPC::Response;
 
+auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
+                                               solver::v1::Solver::AsyncService &service1)
+    -> unifex::any_sender_of<>;
 #endif //ETERNITY2_SOLVERA_H
