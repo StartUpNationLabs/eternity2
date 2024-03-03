@@ -74,6 +74,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context, solver::v1::
             {
                 threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
             }
+
             // every 2 seconds, print the current max count
             while (true)
             {

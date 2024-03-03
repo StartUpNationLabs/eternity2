@@ -1,0 +1,5 @@
+services:
+  api:
+    image: ghcr.io/apoorva64/eternity2/api:7c73e0a55b7904ebe4df5b23bc6686cb91eb3301
+    ports:
+      - 50051:50051

@@ -2,7 +2,6 @@ FROM apoorvapewpew/eternity2-dependencies:latest as builder
 
 # Copy
 WORKDIR /app
-RUN vcpkg install spdlog
 COPY . .
 RUN rm -rf vcpkg.json
 # Build
