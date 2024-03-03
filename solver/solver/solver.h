@@ -18,8 +18,7 @@ struct SharedData
 
 SharedData create_shared_data();
 
-std::vector<RotatedPiece> possible_pieces(const Board &board,
-                                          const std::vector<PieceWAvailability> &pieces,
-                                          Index index);
+auto possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index)
+    -> std::vector<RotatedPiece>;
 
 void solve_board(Board &board, const std::vector<Piece> &pieces, SharedData &shared_data);
