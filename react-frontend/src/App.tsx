@@ -8,7 +8,7 @@ import {Piece} from "./components/piece.tsx";
 function App() {
     const [count, setCount] = useState(0);
     const transport = new GrpcWebFetchTransport({
-        baseUrl: "http://localhost:8080",
+        baseUrl: "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
         format: "binary",
 
     });
