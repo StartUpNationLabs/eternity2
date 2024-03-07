@@ -11,4 +11,4 @@ services:
     build:
       context: envoy
     ports:
-      - '8080:8080'
+      - '50052:8080'
