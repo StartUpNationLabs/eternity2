@@ -195,6 +195,7 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
                 }
                 responses.clear();
             }
+            solver_thread.join();
             co_await rpc.finish(grpc::Status::OK);
         });
 }

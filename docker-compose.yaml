@@ -1,5 +1,14 @@
 services:
-  api:
-    image: ghcr.io/apoorva64/eternity2/api:04b61bbe0c170bb8af37a9863e73df782893e773
+  grpc-server:
+    image: ghcr.io/apoorva64/eternity2/api:latest
     ports:
-      - 50051:50051
+      - "50051:50051"
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+
+  envoy:
+    build:
+      context: envoy
+    ports:
+      - '50052:50052'

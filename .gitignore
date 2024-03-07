@@ -3,6 +3,11 @@
 .idea/inspectionProfiles/Project_Default.xml
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/workspace.xml
+.idea/.gitignore
+.idea/eternity22.iml
+.idea/modules.xml
+gui/logs/
+**/__pycache__/**
 
 # Created by https://www.toptal.com/developers/gitignore/api/cmake,c++
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake,c++
