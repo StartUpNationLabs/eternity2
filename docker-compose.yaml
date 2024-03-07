@@ -1,6 +1,6 @@
 services:
   grpc-server:
-    image: ghcr.io/apoorva64/eternity2/api:713475399e4877a7267588771b4204370eb4ae09
+    image: ghcr.io/apoorva64/eternity2/api:latest
     ports:
       - "50051:50051"
     build:
