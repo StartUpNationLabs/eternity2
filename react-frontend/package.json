@@ -1,0 +1,42 @@
+{
+  "name": "react-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "generate": "npx protoc --ts_out src/proto --proto_path ../api/proto ../api/proto/solver/v1/solver.proto"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.15.12",
+    "@protobuf-ts/grpcweb-transport": "^2.9.3",
+    "@protobuf-ts/plugin": "^2.9.3",
+    "@protobuf-ts/twirp-transport": "^2.9.3",
+    "google-protobuf": "^3.21.2",
+    "grpc-tools": "^1.12.4",
+    "grpc-web": "^1.5.0",
+    "grpc-web-client": "^0.7.0",
+    "protoc-gen-ts": "^0.8.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite-plugin-node-polyfills": "^0.21.0",
+    "vite-plugin-require": "^1.1.14"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.56",
+    "@types/react-dom": "^18.2.19",
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/parser": "^7.0.2",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.4"
+  }
+}
