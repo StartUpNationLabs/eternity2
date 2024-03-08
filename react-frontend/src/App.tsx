@@ -46,7 +46,8 @@ function App() {
             }
         ],
         "threads": 4,
-        "waitTime": 1
+        "waitTime": 1,
+        useCache: true
     }, {});
 
     stream.responses.onMessage((message) => {
