@@ -4,6 +4,7 @@
 
 #include "solvera.h"
 
+#include <sw/redis++/redis++.h>
 #include <unifex/timed_single_thread_context.hpp>
 unifex::timed_single_thread_context timer;
 
@@ -15,7 +16,8 @@ auto build_response(const SharedData &shared_data, double elapsed_seconds) -> So
     response.set_hash_table_size(shared_data.hashes.size());
     response.set_time(elapsed_seconds);
     response.set_boards_per_second(static_cast<double>(shared_data.board_count) / elapsed_seconds);
-    response.set_hashes_per_second(static_cast<double>(shared_data.hashes.size()) / elapsed_seconds);
+    response.set_hashes_per_second(
+        static_cast<double>(shared_data.hashes.size() - shared_data.redis_hash_count) / elapsed_seconds);
     response.set_hash_table_hits(shared_data.hash_hit_count);
 
     for (auto &board_piece : shared_data.max_board.board)
@@ -72,6 +74,24 @@ auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context
 {
     return unifex::schedule_after(timer.get_scheduler(), ms);
 }
+
+auto get_env_var(std::string const &key, std::string const &default_value) -> std::string
+{
+    char const *val = std::getenv(key.c_str());
+    return val == nullptr ? default_value : std::string(val);
+}
+
+auto hash_pieces(const std::vector<Piece> &pieces) -> std::string
+{
+    std::string hash;
+    for (const Piece &piece : pieces)
+    {
+        // zfill this bother piece is a ull
+        hash += std::bitset<64>(piece).to_string();
+    }
+    return hash;
+}
+
 auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                                   solver::v1::Solver::AsyncService &service1) -> unifex::any_sender_of<>
 {
@@ -85,21 +105,35 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             std::vector<std::thread> threads;
             int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
             int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
+
+            auto redis = sw::redis::Redis(get_env_var("REDIS_URL", "redis://localhost:6379"));
             spdlog::info("Starting solver with board size: {}", board.size);
             spdlog::info("Using {} threads", thread_count);
             spdlog::info("Pieces: {}", pieces.size());
             spdlog::info("Timebetween: {}", request.wait_time());
             spdlog::info("Hash length threshold: {}", request.hash_threshold());
+
             threads.reserve(thread_count);
-            std::unordered_set<BoardHash> hashes;
-            SharedData shared_data            = {max_board, max_count, mutex, hashes};
-            shared_data.hash_length_threshold = request.hash_threshold();
-            auto start                        = std::chrono::high_resolution_clock::now();
+            std::unordered_set<BoardHash> hashes = {};
+            SharedData shared_data               = {max_board, max_count, mutex, hashes};
+            shared_data.hash_length_threshold    = request.hash_threshold();
+            auto start                           = std::chrono::high_resolution_clock::now();
+            auto pieces_hash                     = hash_pieces(pieces);
+            // load hashes from redis if they exist
+            auto temp = std::unordered_set<BoardHash>{};
+            redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
+            // copy the temp set into the shared data
+            for (const auto &hash : temp)
+            {
+                shared_data.hashes.insert(hash);
+            }
+            shared_data.redis_hash_count = shared_data.hashes.size();
+            spdlog::info("Loaded {} hashes from redis", shared_data.redis_hash_count);
+
             for (int i = 0; i < thread_count; i++)
             {
                 threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
             }
-
             // every 2 seconds, print the current max count
             while (true)
             {
@@ -110,6 +144,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                                                      std::chrono::high_resolution_clock::now() - start)
                                                      .count())
                                              / 1000.0;
+
                 if (max_count == board.size * board.size)
                 {
                     spdlog::info("Found solution");
@@ -142,6 +177,8 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                     co_await rpc.finish(grpc::Status::CANCELLED);
                     co_return;
                 }
+                //  insert into redis
+                redis.sadd(pieces_hash, shared_data.hashes.begin(), shared_data.hashes.end());
             }
         });
 }
