@@ -8,7 +8,7 @@ import {Piece} from "./components/piece.tsx";
 function App() {
     const [count, setCount] = useState(0);
     const transport = new GrpcWebFetchTransport({
-        baseUrl: "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
+        baseUrl: "http://vmpx15.polytech.hs.ozeliurs.com:50052",
         format: "binary",
 
     });
