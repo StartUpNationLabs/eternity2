@@ -8,7 +8,7 @@ import {Piece} from "./components/piece.tsx";
 function App() {
     const [count, setCount] = useState(0);
     const transport = new GrpcWebFetchTransport({
-        baseUrl: "http://localhost:8080",
+        baseUrl: "http://vmpx15.polytech.hs.ozeliurs.com:50052",
         format: "binary",
 
     });
@@ -45,7 +45,7 @@ function App() {
                 "left": 1
             }
         ],
-        "threads": 16,
+        "threads": 4,
         "waitTime": 1
     }, {});
 
