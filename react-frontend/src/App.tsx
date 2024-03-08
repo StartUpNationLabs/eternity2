@@ -45,7 +45,7 @@ function App() {
                 "left": 1
             }
         ],
-        "threads": 16,
+        "threads": 4,
         "waitTime": 1
     }, {});
 
