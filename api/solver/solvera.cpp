@@ -106,7 +106,6 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
             int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
 
-            auto redis = sw::redis::Redis(get_env_var("REDIS_URL", "redis://localhost:6379"));
             spdlog::info("Starting solver with board size: {}", board.size);
             spdlog::info("Using {} threads", thread_count);
             spdlog::info("Pieces: {}", pieces.size());
@@ -120,15 +119,19 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             auto start                           = std::chrono::high_resolution_clock::now();
             auto pieces_hash                     = hash_pieces(pieces);
             // load hashes from redis if they exist
-            auto temp = std::unordered_set<BoardHash>{};
-            redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
-            // copy the temp set into the shared data
-            for (const auto &hash : temp)
+            sw::redis::Redis redis = sw::redis::Redis(get_env_var("REDIS_URL", "redis://localhost:6379"));
+            if (request.use_cache())
             {
-                shared_data.hashes.insert(hash);
+                auto temp = std::unordered_set<BoardHash>{};
+                redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
+                // copy the temp set into the shared data
+                for (const auto &hash : temp)
+                {
+                    shared_data.hashes.insert(hash);
+                }
+                shared_data.redis_hash_count = shared_data.hashes.size();
+                spdlog::info("Loaded {} hashes from redis", shared_data.redis_hash_count);
             }
-            shared_data.redis_hash_count = shared_data.hashes.size();
-            spdlog::info("Loaded {} hashes from redis", shared_data.redis_hash_count);
 
             for (int i = 0; i < thread_count; i++)
             {
