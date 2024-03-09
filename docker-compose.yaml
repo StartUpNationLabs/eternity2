@@ -6,8 +6,7 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    environment:
-      - REDIS_URL=tcp://node-apoorva2.k3s.hs.ozeliurs.com:50053
+    env_file: .env
 
   envoy:
     build:

@@ -119,7 +119,14 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             auto start                           = std::chrono::high_resolution_clock::now();
             auto pieces_hash                     = hash_pieces(pieces);
             // load hashes from redis if they exist
-            sw::redis::Redis redis = sw::redis::Redis(get_env_var("REDIS_URL", "redis://localhost:6379"));
+
+            sw::redis::ConnectionOptions connection_options;
+            connection_options.host = get_env_var("REDIS_HOST", "localhost");
+            connection_options.port = static_cast<int>(
+                strtol(get_env_var("REDIS_PORT", "6379").c_str(), nullptr, 10));
+            connection_options.password = get_env_var("REDIS_PASSWORD", "");
+            connection_options.db       = 0;
+            sw::redis::Redis redis      = sw::redis::Redis(connection_options);
             if (request.use_cache())
             {
                 auto temp = std::unordered_set<BoardHash>{};
