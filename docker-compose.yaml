@@ -9,6 +9,7 @@ services:
     env_file: .env
 
   envoy:
+    image: ghcr.io/apoorva64/eternity2/envoy:latest
     build:
       context: envoy
     ports:
