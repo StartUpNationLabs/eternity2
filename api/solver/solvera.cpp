@@ -127,6 +127,18 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             connection_options.password = get_env_var("REDIS_PASSWORD", "");
             connection_options.db       = 0;
             sw::redis::Redis redis      = sw::redis::Redis(connection_options);
+
+            // check if connection is working
+            try
+            {
+                redis.ping();
+            }
+            catch (const sw::redis::Error &e)
+            {
+                spdlog::error("Could not connect to redis: {}", e.what());
+                co_return;
+            }
+
             if (request.use_cache())
             {
                 auto temp = std::unordered_set<BoardHash>{};
@@ -159,6 +171,12 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                 {
                     spdlog::info("Found solution");
                     co_await rpc.write(build_response(shared_data, seconds_since_start));
+                    auto step_by_step = build_response_step_by_step(shared_data.max_board);
+                    std::string out   = std::string();
+                    step_by_step.AppendToString(&out);
+
+                    redis.sadd("solutions_" + pieces_hash, out);
+
                     // stop threads
                     spdlog::info("Stopping threads");
                     shared_data.stop = true;
