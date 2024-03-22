@@ -3,7 +3,7 @@ from solve import solve
 from solver.v1 import solver_pb2
 
 servers = [
-    'localhost:50051',
+    # 'localhost:50051',
     'node-apoorva2.k3s.hs.ozeliurs.com:50051',
     'node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50051',
     # 'vmpx15.polytech.hs.ozeliurs.com:50051'
@@ -13,7 +13,7 @@ servers = [
 
 if __name__ == '__main__':
     board = Board()
-    board.generate(16, 22)
+    board.generate(15, 22)
 
     pieces = [piece.to_grpc() for piece in board.pieces]
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     request = solver_pb2.SolverSolveRequest(
         pieces=pieces,
         threads=50,
-        hash_threshold=7,
+        hash_threshold=13,
         wait_time=1000,
         use_cache=True,
         cache_pull_interval=10
