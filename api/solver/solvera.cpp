@@ -7,6 +7,22 @@
 #include <sw/redis++/redis++.h>
 #include <unifex/timed_single_thread_context.hpp>
 unifex::timed_single_thread_context timer;
+void update_cache(std::mutex &mutex,
+                  const std::string &pieces_hash,
+                  sw::redis::Redis &redis,
+                  SharedData &shared_data)
+{
+    std::scoped_lock lock(mutex);
+    auto temp = std::unordered_set<BoardHash>{};
+    redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
+    // copy the temp set into the shared data
+    for (const auto &hash : temp)
+    {
+        shared_data.hashes.insert(hash);
+    }
+    shared_data.redis_hash_count = temp.size();
+    spdlog::info("Loaded {} hashes from redis", shared_data.redis_hash_count);
+}
 
 auto build_response(const SharedData &shared_data, double elapsed_seconds) -> SolverRPC::Response
 {
@@ -138,18 +154,11 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                 spdlog::error("Could not connect to redis: {}", e.what());
                 co_return;
             }
-
+            auto last_cache_pull = std::chrono::high_resolution_clock::now();
             if (request.use_cache())
             {
-                auto temp = std::unordered_set<BoardHash>{};
-                redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
-                // copy the temp set into the shared data
-                for (const auto &hash : temp)
-                {
-                    shared_data.hashes.insert(hash);
-                }
-                shared_data.redis_hash_count = shared_data.hashes.size();
-                spdlog::info("Loaded {} hashes from redis", shared_data.redis_hash_count);
+                update_cache(mutex, pieces_hash, redis, shared_data);
+                last_cache_pull = std::chrono::high_resolution_clock::now();
             }
 
             for (int i = 0; i < thread_count; i++)
@@ -166,6 +175,17 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                                                      std::chrono::high_resolution_clock::now() - start)
                                                      .count())
                                              / 1000.0;
+
+                double seconds_since_last_cache_pull
+                    = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                              std::chrono::high_resolution_clock::now() - last_cache_pull)
+                                              .count())
+                      / 1000.0;
+                if (request.use_cache() && (seconds_since_last_cache_pull > request.cache_pull_interval()))
+                {
+                    update_cache(mutex, pieces_hash, redis, shared_data);
+                    last_cache_pull = std::chrono::high_resolution_clock::now();
+                }
 
                 if (max_count == board.size * board.size)
                 {
