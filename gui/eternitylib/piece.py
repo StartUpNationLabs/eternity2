@@ -8,6 +8,7 @@ from PIL import Image
 from PIL import ImageDraw
 
 from eternitylib.pattern import Pattern
+from scheduler.solver.v1 import solver_pb2
 
 
 class Piece:
@@ -80,3 +81,13 @@ class Piece:
     @property
     def hash(self):
         return hashlib.md5(".".join(pattern.pattern_code for pattern in self.patterns).encode()).hexdigest()
+
+
+    def to_grpc(self):
+        return solver_pb2.Piece(
+            top=int(self.patterns[0].pattern_code, 2),
+            right=int(self.patterns[1].pattern_code, 2),
+            bottom=int(self.patterns[2].pattern_code, 2),
+            left=int(self.patterns[3].pattern_code, 2),
+
+        )
