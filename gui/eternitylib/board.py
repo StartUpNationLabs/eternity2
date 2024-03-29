@@ -19,7 +19,7 @@ def generate_inner_symbols(size, number_of_symbols):
 
 class Board:
     def __init__(self):
-        self.pieces = []
+        self.pieces: list[Piece] = []
         self._size = 0
         self._pattern_count = 0
         self.hints = []

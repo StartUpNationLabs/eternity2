@@ -11,7 +11,7 @@ jobs:
   docker:
     permissions:
       packages: write
-    runs-on: eternity2-runners
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -32,8 +32,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: envoy
           platforms: linux/amd64,linux/arm64
-          file: ./api/Dockerfile
           push: true
-          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/api:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/api:${{ github.sha }}
+          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy:${{ github.sha }}

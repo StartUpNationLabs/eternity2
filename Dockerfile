@@ -69,5 +69,7 @@ RUN vcpkg install asio-grpc
 RUN vcpkg install libunifex
 RUN vcpkg install catch2
 RUN vcpkg install spdlog
+RUN vcpkg install hiredis
+RUN vcpkg install redis-plus-plus
 
 

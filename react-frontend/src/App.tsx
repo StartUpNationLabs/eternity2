@@ -1,6 +1,4 @@
 import React, {useState} from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import {SolverClient} from "./proto/solver/v1/solver.client.ts";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
 import {Piece} from "./components/piece.tsx";
@@ -46,7 +44,8 @@ function App() {
             }
         ],
         "threads": 4,
-        "waitTime": 1
+        "waitTime": 1,
+        useCache: true
     }, {});
 
     stream.responses.onMessage((message) => {
