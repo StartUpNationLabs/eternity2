@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {createBoard, PieceData, shuffleAndRotateBoard} from './logic';
+import {createBoard, PieceData, rotatePiece, shuffleAndRotateBoard} from './logic';
 import { SolverClient } from "./proto/solver/v1/solver.client";
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport";
 import Piece from "./Piece.tsx";
@@ -33,11 +33,13 @@ const Board: React.FC<BoardProps> = ({ size, numberOfSymbols }) => {
         });
         const solverClient = new SolverClient(transport);
 
+        // Convertir les bords de chaque pièce du format binaire au format décimal attendu par l'API
+        // et remplacer '0' par '65535'
         const pieces = shuffledBoard.flat().map(({ top, right, bottom, left }) => ({
-            top: parseInt(top, 2),
-            right: parseInt(right, 2),
-            bottom: parseInt(bottom, 2),
-            left: parseInt(left, 2),
+            top: top === "0".repeat(16) ? 65535 : parseInt(top, 2),
+            right: right === "0".repeat(16) ? 65535 : parseInt(right, 2),
+            bottom: bottom === "0".repeat(16) ? 65535 : parseInt(bottom, 2),
+            left: left === "0".repeat(16) ? 65535 : parseInt(left, 2),
         }));
 
         const stream = solverClient.solveStepByStep({
@@ -48,12 +50,18 @@ const Board: React.FC<BoardProps> = ({ size, numberOfSymbols }) => {
         });
 
         for await (const message of stream.responses) {
-            const resolvedPieces = message.rotatedPieces.map(({ piece }) => ({
-                top: piece.top.toString(2).padStart(16, '0'),
-                right: piece.right.toString(2).padStart(16, '0'),
-                bottom: piece.bottom.toString(2).padStart(16, '0'),
-                left: piece.left.toString(2).padStart(16, '0'),
-            }));
+            const resolvedPieces = message.rotatedPieces.map(({ piece, rotation }) => {
+                let rotatedPiece = {
+                    top: piece.top === 65535 ? "0000000000000000" : piece.top.toString(2).padStart(16, '0'),
+                    right: piece.right === 65535 ? "0000000000000000" : piece.right.toString(2).padStart(16, '0'),
+                    bottom: piece.bottom === 65535 ? "0000000000000000" : piece.bottom.toString(2).padStart(16, '0'),
+                    left: piece.left === 65535 ? "0000000000000000" : piece.left.toString(2).padStart(16, '0'),
+                };
+                rotatedPiece = rotatePiece(rotatedPiece, rotation);
+
+                return rotatedPiece;
+            });
+
             setResolvedBoard(resolvedPieces.reduce((acc, curr, index) => {
                 const row = Math.floor(index / size);
                 if (!acc[row]) acc[row] = [];
@@ -63,6 +71,7 @@ const Board: React.FC<BoardProps> = ({ size, numberOfSymbols }) => {
         }
     };
 
+
     return (
         <div>
             <button onClick={shuffleAndDisplayBoard}>Shuffle and Display Board</button>
@@ -70,7 +79,6 @@ const Board: React.FC<BoardProps> = ({ size, numberOfSymbols }) => {
                 <button onClick={resolveAndDisplayBoard}>Resolve and Display Board</button>
             )}
             <div>
-                {/* Original Board */}
                 <div style={{ marginTop: '20px' }}>
                     <h2>Original Board</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${size}, 1fr)`, gap: '5px' }}>

@@ -39,7 +39,6 @@ export function createBoard(size:number, numberOfSymbols:number) {
 }
 
 export function shuffleAndRotateBoard(board: PieceData[][]): PieceData[][] {
-    // Randomly rotate each piece
     const rotatedBoard = board.map(row =>
         row.map(piece => {
             const rotations = Math.floor(Math.random() * 4); // 0 to 3 rotations
@@ -62,6 +61,18 @@ export function shuffleAndRotateBoard(board: PieceData[][]): PieceData[][] {
     }
 
     return rotatedBoard;
+}
+export function rotatePiece(piece:PieceData, rotations:number) {
+    for (let i = 0; i < rotations; i++) {
+        const {top, right, bottom, left} = piece;
+        piece = {
+            top: left,
+            right: top,
+            bottom: right,
+            left: bottom,
+        };
+    }
+    return piece;
 }
 
 
