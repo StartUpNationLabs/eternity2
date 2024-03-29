@@ -269,11 +269,9 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
                 {
                     std::scoped_lock lock(mutex);
-                    // only copy the first 10 responses
-                    for (int i = 0; i < std::min(10, static_cast<int>(responses.size())); i++)
-                    {
-                        responses_to_send.push_back(responses[i]);
-                    }
+                    // only copy the last 10 responses
+                    responses_to_send = {responses.end() - std::min(static_cast<int>(responses.size()), 10),
+                                         responses.end()};
                     responses.clear();
                 }
                 for (auto const &res : responses_to_send)
