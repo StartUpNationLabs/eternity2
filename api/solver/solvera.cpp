@@ -86,7 +86,7 @@ void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_
     solve_board(board, pieces, shared_data);
 }
 auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context::_schedule_after_sender<
-    std::chrono::duration<long, std::ratio<1, 1000>>>::type
+    std::chrono::duration<long long , std::ratio<1, 1000>>>::type
 {
     return unifex::schedule_after(timer.get_scheduler(), ms);
 }

@@ -16,3 +16,6 @@ class Pattern:
 
     def set_svg_direction(self, direction: Direction):
         self.svg.direction = direction
+
+    def copy(self):
+        return Pattern(self.name, self.binary, self.bucas_letter, self.svg.copy())

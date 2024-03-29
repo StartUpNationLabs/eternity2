@@ -11,3 +11,7 @@ class PatternSvgDefinition:
         self.path_color = path_color
         self.path_stroke = path_stroke
         self.direction = direction
+
+    def copy(self):
+        return PatternSvgDefinition(self.name, self.bg_color, self.bg_stroke, self.path, self.path_color,
+                                    self.path_stroke, self.direction)

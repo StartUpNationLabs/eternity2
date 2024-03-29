@@ -3,3 +3,5 @@ flagged/
 .venv/
 .idea/
 e2solver
+/bucas/official_pieces/
+/bucas/all_patterns/
