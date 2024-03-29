@@ -24,7 +24,7 @@
 #include <thread>
 
 auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context::_schedule_after_sender<
-    std::chrono::duration<long, std::ratio<1, 1000>>>::type;
+    std::chrono::duration<long long, std::ratio<1, 1000>>>::type;
 using SolverService       = solver::v1::Solver::AsyncService;
 using SolverRPC           = agrpc::ServerRPC<&SolverService::RequestSolve>;
 using SolverStepByStepRPC = agrpc::ServerRPC<&SolverService::RequestSolveStepByStep>;

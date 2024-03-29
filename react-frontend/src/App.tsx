@@ -64,7 +64,6 @@ function App() {
             }}
         >
             <Piece
-
                 piece={{
                     "top": 65535,
                     "right": 65535,
