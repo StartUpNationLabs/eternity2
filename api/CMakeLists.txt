@@ -47,4 +47,4 @@ target_link_libraries(
 target_include_directories(asio-grpc-server PRIVATE ${CPP_BASE64_INCLUDE_DIRS})
 
 # set release
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
