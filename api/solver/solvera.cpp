@@ -247,6 +247,7 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             std::unordered_set<BoardHash> hashes;
             SharedData shared_data = {max_board, max_count, mutex, hashes};
             std::vector<SolverStepByStepRPC::Response> responses;
+            std::vector<SolverStepByStepRPC::Response> responses_to_send;
             shared_data.on_board_update = [&](const Board &board) {
                 mutex.lock();
                 auto res = build_response_step_by_step(board);
@@ -260,27 +261,38 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             spdlog::info("Hash length threshold: {}", request.hash_threshold());
 
             // launch the solver in a new thread
-            std::thread solver_thread([&] { solve_board(board, pieces, shared_data); });
+            std::thread solver_thread(thread_function, board, pieces, std::ref(shared_data));
 
             // while the solver is running, send the responses to the client
             while (!shared_data.stop)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
-                std::scoped_lock lock(mutex);
-                for (auto &res : responses)
+                {
+                    std::scoped_lock lock(mutex);
+                    // copy the responses to send
+                    for (auto &res : responses)
+                    {
+                        responses_to_send.push_back(res);
+                    }
+                    responses.clear();
+                }
+                for (auto &res : responses_to_send)
                 {
                     if (!co_await rpc.write(res))
                     {
                         spdlog::info("Client cancelled request");
                         shared_data.stop = true;
+                        spdlog::info("Stopping solver thread");
                         solver_thread.join();
+                        spdlog::info("Solver thread stopped");
                         co_await rpc.finish(grpc::Status::CANCELLED);
                         co_return;
                     }
                 }
-                responses.clear();
+                responses_to_send.clear();
             }
             solver_thread.join();
             co_await rpc.finish(grpc::Status::OK);
+            co_return;
         });
 }
