@@ -86,7 +86,7 @@ void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_
     solve_board(board, pieces, shared_data);
 }
 auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context::_schedule_after_sender<
-    std::chrono::duration<long long , std::ratio<1, 1000>>>::type
+    std::chrono::duration<long, std::ratio<1, 1000>>>::type
 {
     return unifex::schedule_after(timer.get_scheduler(), ms);
 }
@@ -269,14 +269,14 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
                 {
                     std::scoped_lock lock(mutex);
-                    // copy the responses to send
-                    for (auto &res : responses)
+                    // only copy the first 10 responses
+                    for (int i = 0; i < std::min(10, static_cast<int>(responses.size())); i++)
                     {
-                        responses_to_send.push_back(res);
+                        responses_to_send.push_back(responses[i]);
                     }
                     responses.clear();
                 }
-                for (auto &res : responses_to_send)
+                for (auto const &res : responses_to_send)
                 {
                     if (!co_await rpc.write(res))
                     {
