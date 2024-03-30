@@ -1,60 +1,51 @@
-import Container from "@mui/material/Container";
 import {RequestForm} from "../requestForm/RequestForm.tsx";
-import {RotatedPiece} from "../../proto/solver/v1/solver.ts";
+import {Piece} from "../../proto/solver/v1/solver.ts";
 import Board from "../../components/Board.tsx";
+import {Grid} from "@mui/material";
+import {useRecoilValue} from "recoil";
+import {boardState} from "../requestForm/atoms.ts";
 
-const rotatedPiece: RotatedPiece = {
-    piece: {
-        top: 0,
-        right: 1,
-        bottom: 2,
-        left: 3
-    },
-    rotation: 0,
-    index: 0
-}
-
-const gridSize = 4;
-const rotatedPieces: RotatedPiece[] = Array.from({length: gridSize**2}, () => (rotatedPiece));
 
 export const Solver = () => {
+    const board = useRecoilValue(boardState);
 
+    return <Grid container spacing={2}
+                 style={{height: '90vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
 
-    return <Container
-        style={
-        {
-                display: "flex",
-                flexDirection: "row",
-                height: "90vh",
-                width: "100vw"
-            }
-        }
-    >
-
-        <div
-            style={{
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                margin: "auto",
-                marginTop: 20,
-            }}
-        >
-            <RequestForm/>
-        </div>
-        <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100vh',
-            width: '100vw'
-        }}>
-            <div style={{width: "100%" , height: "100%"}}>
-                <Board pieces={rotatedPieces}/>
+        <Grid item xs={5}>
+            <div
+                style={{
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    margin: "auto",
+                    marginTop: 20,
+                }}
+            >
+                <RequestForm/>
             </div>
-        </div>
-    </Container>
+        </Grid>
+        <Grid item xs={4}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
+                aspectRatio: 1,
+            }}>
+                <div style={{width: "100%", height: "100%"}}>
+                    <Board pieces={board.map((piece: Piece) => {
+                        return {
+                            piece: piece,
+                            index: 0,
+                            rotation: 0,
+                        }
+                    })}/>
+                </div>
+            </div>
+        </Grid>
+    </Grid>
 }

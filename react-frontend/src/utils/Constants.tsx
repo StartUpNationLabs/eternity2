@@ -57,7 +57,7 @@ enum Rotation {
 
 const PATTERN_GREY: EternityPattern = {
     name: "GREY",
-    binaryInt: 0,
+    binaryInt: 65535,
     bucasLetter: "A",
     svg: {
         name: "A",
