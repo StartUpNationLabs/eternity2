@@ -35,10 +35,9 @@ function GridSelector() {
         const colDiff = currentCellId % boardSize - lastCellId % boardSize;
 
         if (rowDiff === -1 && colDiff === 0) return Direction.Top;
-        else if (rowDiff === 1 && colDiff === 0) return Direction.Bottom;
-        else if (rowDiff === 0 && colDiff === -1) return Direction.Left;
-        else (rowDiff === 0 && colDiff === 1)
-        return Direction.Right;
+        if (rowDiff === 1 && colDiff === 0) return Direction.Bottom;
+        if (rowDiff === 0 && colDiff === -1) return Direction.Left;
+        if (rowDiff === 0 && colDiff === 1) return Direction.Right;
     };
 
     // Function to handle cell selection
@@ -65,13 +64,24 @@ function GridSelector() {
                 setSelectedCells([id]);
             } else {
                 const direction: Direction = calculateDirection(id, lastSelectedCellId);
+
+                if (direction === undefined) {
+                    return;
+                }
+
                 const selectedRange = [];
 
                 if (direction) {
                     // Calculate cells between lastSelectedCellId and current cell id based on direction
                     let currentId = lastSelectedCellId;
+
+                    if (currentId === null) {
+                        return;
+                    }
+
                     while (currentId !== id) {
                         selectedRange.push(currentId);
+
                         switch (direction) {
                             case Direction.Top:
                                 currentId -= boardSize;
