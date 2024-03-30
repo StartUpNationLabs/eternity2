@@ -3,10 +3,10 @@ import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, Box, Container, Grid, Slider, Button, Typography, AppBar, Toolbar, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import Piece from './Piece';
+import Piece from './Piece.tsx';
 import {createBoard, PieceData, rotatePiece, shuffleAndRotateBoard} from "./logic.tsx";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
-import {SolverClient} from "./proto/solver/v1/solver.client.ts";
+import {SolverClient} from "../proto/solver/v1/solver.client.ts";
 
 const drawerWidth = 240;
 

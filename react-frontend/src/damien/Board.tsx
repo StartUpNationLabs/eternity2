@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {createBoard, PieceData, rotatePiece, shuffleAndRotateBoard} from './logic';
-import { SolverClient } from "./proto/solver/v1/solver.client";
+import {createBoard, PieceData, rotatePiece, shuffleAndRotateBoard} from './logic.tsx';
+import { SolverClient } from "../proto/solver/v1/solver.client.ts";
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport";
 import Piece from "./Piece.tsx";
 
