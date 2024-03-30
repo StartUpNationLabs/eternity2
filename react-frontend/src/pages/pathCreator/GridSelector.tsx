@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from 'react';
-import {Direction} from "../../utils/Constants.tsx";
 
 function GridSelector() {
     const [boardSize, setBoardSize] = useState(5); // Initial grid size
@@ -30,14 +29,16 @@ function GridSelector() {
     }, [isMouseDown, initialCellId, lastSelectedCellId]);
 
     // Function to calculate the direction of selection based on movement
-    const calculateDirection = (currentCellId: number, lastCellId: number) => {
+    const calculateDirection = (currentCellId, lastCellId) => {
         const rowDiff = Math.floor(currentCellId / boardSize) - Math.floor(lastCellId / boardSize);
         const colDiff = currentCellId % boardSize - lastCellId % boardSize;
 
-        if (rowDiff === -1 && colDiff === 0) return Direction.Top;
-        if (rowDiff === 1 && colDiff === 0) return Direction.Bottom;
-        if (rowDiff === 0 && colDiff === -1) return Direction.Left;
-        if (rowDiff === 0 && colDiff === 1) return Direction.Right;
+        if (rowDiff === -1 && colDiff === 0) return 'up';
+        if (rowDiff === 1 && colDiff === 0) return 'down';
+        if (rowDiff === 0 && colDiff === -1) return 'left';
+        if (rowDiff === 0 && colDiff === 1) return 'right';
+
+        return null;
     };
 
     // Function to handle cell selection
@@ -63,36 +64,25 @@ function GridSelector() {
                 setLastSelectedCellId(id);
                 setSelectedCells([id]);
             } else {
-                const direction: Direction = calculateDirection(id, lastSelectedCellId);
-
-                if (direction === undefined) {
-                    return;
-                }
-
+                const direction = calculateDirection(id, lastSelectedCellId);
                 const selectedRange = [];
 
                 if (direction) {
                     // Calculate cells between lastSelectedCellId and current cell id based on direction
                     let currentId = lastSelectedCellId;
-
-                    if (currentId === null) {
-                        return;
-                    }
-
                     while (currentId !== id) {
                         selectedRange.push(currentId);
-
                         switch (direction) {
-                            case Direction.Top:
+                            case 'up':
                                 currentId -= boardSize;
                                 break;
-                            case Direction.Bottom:
+                            case 'down':
                                 currentId += boardSize;
                                 break;
-                            case Direction.Left:
+                            case 'left':
                                 currentId -= 1;
                                 break;
-                            case Direction.Right:
+                            case 'right':
                                 currentId += 1;
                                 break;
                             default:
