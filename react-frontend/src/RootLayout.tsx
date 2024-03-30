@@ -6,7 +6,6 @@ export  const  RootLayout = () => {
         <div>
         <ResponsiveAppBar/>
         <Outlet/>
-
-    </div>
+        </div>
     )
 }

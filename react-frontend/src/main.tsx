@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import {CssBaseline, ThemeProvider} from "@mui/material";
+import {CssBaseline, Paper, ThemeProvider} from "@mui/material";
 import theme from "./theme";
 import Test from "./Test.tsx";
 import {createBrowserRouter, RouterProvider,} from "react-router-dom";
@@ -9,6 +9,7 @@ import GridSelector from "./pages/pathCreator/GridSelector.tsx";
 import {HomePage} from "./pages/homepage/HomePage";
 import {RequestForm} from "./pages/requestForm/RequestForm.tsx";
 import {RecoilRoot} from "recoil";
+import {Solver} from "./pages/solver/Solver.tsx";
 
 
 const router = createBrowserRouter([
@@ -18,20 +19,39 @@ const router = createBrowserRouter([
         children: [
             {
                 path: "test",
-                element: <Test />,
+                element: <Test/>,
             },
             {
-                  index: true,
-                  element: <HomePage/>
+                index: true,
+                element: <HomePage/>
             },
             {
                 path: "path",
-                element: <GridSelector />,
+                element: <GridSelector/>,
             },
             {
                 path: "form",
-                element: <RequestForm />,
+                element: <Paper
+                    style={{
+                        padding: 20,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "50%",
+                        margin: "auto",
+                        marginTop: 20,
+
+                    }
+                    }
+                >
+                    <RequestForm/>
+                </Paper>,
             },
+            {
+                path: "solver",
+                element: <Solver/>,
+            }
         ],
     },
 
@@ -40,11 +60,11 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <RecoilRoot>
-        <ThemeProvider theme={theme}>
-            <CssBaseline/>
+            <ThemeProvider theme={theme}>
+                <CssBaseline/>
 
-            <RouterProvider router={router}/>
-        </ThemeProvider>
+                <RouterProvider router={router}/>
+            </ThemeProvider>
         </RecoilRoot>
     </React.StrictMode>,
 )

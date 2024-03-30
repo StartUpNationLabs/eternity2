@@ -1,31 +1,19 @@
-import {Autocomplete, Checkbox, FormGroup, Paper, Slider, TextField, Typography} from "@mui/material";
+import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {defaultPath, Path, pathsState, settingsState} from "./atoms.ts";
+import {boardState, defaultPath, Path, pathsState, settingsState} from "./atoms.ts";
 import Container from "@mui/material/Container";
+import {convertToBoard, convertToPieces, createBoard, shuffleAndRotateBoard} from "../../damien/logic.tsx";
 
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
     const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
-    console.log(pathOptions);
+    const [board, setBoard] = useRecoilState(boardState);
     return (
-        <Paper
-            style={{
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "50%",
-                margin: "auto",
-                marginTop: 20,
-
-            }
-            }
-        >
+        <>
 
             <FormGroup
                 style={{
@@ -81,8 +69,33 @@ export const RequestForm = () => {
 
 
             </FormGroup>
-            <Button type="submit" color="primary">Generate</Button>
 
+            <FormGroup
+
+                style={{
+                    padding: 20,
+                    width: "100%",
+                    flexDirection: "row",
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 20,
+
+                }}
+            >
+                <Button type="submit" color="primary"
+                        onClick={() => {
+                            const board = convertToPieces(createBoard(settings.boardSize, settings.boardColors));
+                            setBoard(board);
+                        }}
+                >Generate</Button>
+
+                <Button type="submit" color="primary"
+                        onClick={() => {
+                            const b = convertToPieces(shuffleAndRotateBoard(convertToBoard(board)));
+                            setBoard(b);
+                        }}
+                >Shuffle</Button>
+            </FormGroup>
             <FormGroup
                 style={{
                     padding: 20,
@@ -147,9 +160,20 @@ export const RequestForm = () => {
                         }}
                     /></Container>
             </FormGroup>
+            <FormGroup
+                style={{
+                    padding: 20,
+                    width: "100%",
+                    flexDirection: "row",
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 20,
 
-            <Button type="submit" color="primary">Solve</Button>
-            <Button type="submit" color="primary">Step By Step</Button>
-        </Paper>
+                }}
+            >
+                <Button type="submit" color="primary">Solve</Button>
+                <Button type="submit" color="primary">Step By Step</Button>
+            </FormGroup>
+        </>
     )
 }
