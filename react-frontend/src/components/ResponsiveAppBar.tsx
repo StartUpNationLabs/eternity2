@@ -14,7 +14,6 @@ import MenuItem from '@mui/material/MenuItem';
 import ExtensionIcon from '@mui/icons-material/Extension';
 
 
-
 const pages: {
     title: string,
     href: string
@@ -58,7 +57,7 @@ function ResponsiveAppBar() {
     };
 
     return (
-        <AppBar position="static">
+        <AppBar position="sticky" style={{height: '10vh', display: 'flex', justifyContent: 'center'}}>
             <Container maxWidth="xl">
                 <Toolbar disableGutters>
                     <ExtensionIcon sx={{display: {xs: 'none', md: 'flex'}, mr: 1}}/>
@@ -133,7 +132,7 @@ function ResponsiveAppBar() {
                             textDecoration: 'none',
                         }}
                     >
-                        LOGO
+                        Eternity II
                     </Typography>
                     <Box sx={{flexGrow: 1, display: {xs: 'none', md: 'flex'}}}>
                         {pages.map((page) => (
