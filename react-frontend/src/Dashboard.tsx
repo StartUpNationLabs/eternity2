@@ -14,7 +14,6 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import { mainListItems, secondaryListItems } from './listItems';
 import {useEffect, useState} from "react";
 import {createBoard, PieceData, rotatePiece, shuffleAndRotateBoard} from "./logic.tsx";
@@ -205,11 +204,6 @@ export default function Dashboard() {
                         >
                             Résolution pas à pas
                         </Typography>
-                        <IconButton color="inherit">
-                            <Badge badgeContent={4} color="secondary">
-                                <NotificationsIcon />
-                            </Badge>
-                        </IconButton>
                     </Toolbar>
                 </AppBar>
                 <Drawer variant="permanent" open={open}>
