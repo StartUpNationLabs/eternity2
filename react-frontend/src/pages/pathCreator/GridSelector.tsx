@@ -1,4 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
+import {Direction} from "../../utils/Constants.tsx";
 
 function GridSelector() {
     const [boardSize, setBoardSize] = useState(5); // Initial grid size
@@ -7,7 +8,6 @@ function GridSelector() {
     const [isMouseDown, setIsMouseDown] = useState(false); // State to track mouse button press
     const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
     const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
-    const gridRef = useRef(null); // Ref to grid container
 
     useEffect(() => {
         // Add event listeners when component mounts
@@ -30,16 +30,15 @@ function GridSelector() {
     }, [isMouseDown, initialCellId, lastSelectedCellId]);
 
     // Function to calculate the direction of selection based on movement
-    const calculateDirection = (currentCellId, lastCellId) => {
+    const calculateDirection = (currentCellId: number, lastCellId: number) => {
         const rowDiff = Math.floor(currentCellId / boardSize) - Math.floor(lastCellId / boardSize);
         const colDiff = currentCellId % boardSize - lastCellId % boardSize;
 
-        if (rowDiff === -1 && colDiff === 0) return 'up';
-        if (rowDiff === 1 && colDiff === 0) return 'down';
-        if (rowDiff === 0 && colDiff === -1) return 'left';
-        if (rowDiff === 0 && colDiff === 1) return 'right';
-
-        return null;
+        if (rowDiff === -1 && colDiff === 0) return Direction.Top;
+        else if (rowDiff === 1 && colDiff === 0) return Direction.Bottom;
+        else if (rowDiff === 0 && colDiff === -1) return Direction.Left;
+        else (rowDiff === 0 && colDiff === 1)
+        return Direction.Right;
     };
 
     // Function to handle cell selection
@@ -65,7 +64,7 @@ function GridSelector() {
                 setLastSelectedCellId(id);
                 setSelectedCells([id]);
             } else {
-                const direction = calculateDirection(id, lastSelectedCellId);
+                const direction: Direction = calculateDirection(id, lastSelectedCellId);
                 const selectedRange = [];
 
                 if (direction) {
@@ -74,16 +73,16 @@ function GridSelector() {
                     while (currentId !== id) {
                         selectedRange.push(currentId);
                         switch (direction) {
-                            case 'up':
+                            case Direction.Top:
                                 currentId -= boardSize;
                                 break;
-                            case 'down':
+                            case Direction.Bottom:
                                 currentId += boardSize;
                                 break;
-                            case 'left':
+                            case Direction.Left:
                                 currentId -= 1;
                                 break;
-                            case 'right':
+                            case Direction.Right:
                                 currentId += 1;
                                 break;
                             default:
@@ -223,26 +222,17 @@ function GridSelector() {
         );
     };
 
-    const percentage: number = 50;
-
     return (
         <div>
             <div style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                width: '50%',
-                height: '50%',
+                width: '100%',
+                height: '100%',
                 margin: 'auto',
-                marginTop: '20px',
             }}>
-                <div>{renderSlider()}</div>
-                <div ref={gridRef} style={{width: `${percentage}%`, height: `${percentage}%`}}>
-                    {renderGrid()}
-                </div>
-                <div>
-                    <button onClick={handleReset}>Reset</button>
-                </div>
+                {renderGrid()}
             </div>
         </div>
     );

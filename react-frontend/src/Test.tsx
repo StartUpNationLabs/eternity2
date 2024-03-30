@@ -17,7 +17,7 @@ const rotatedPiece: RotatedPiece = {
     index: 0
 }
 
-const gridSize = 20;
+const gridSize = 4;
 const rotatedPieces: RotatedPiece[] = Array.from({length: gridSize**2}, () => (rotatedPiece));
 
 const Test: FC<AppProps> = () => {

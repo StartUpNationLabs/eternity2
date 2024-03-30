@@ -1,11 +1,11 @@
 import ResponsiveAppBar from "./components/ResponsiveAppBar.tsx";
 import {Outlet} from "react-router-dom";
 
-export  const  RootLayout = () => {
+export const RootLayout = () => {
     return (
         <div>
-        <ResponsiveAppBar/>
-        <Outlet/>
+            <ResponsiveAppBar/>
+            <Outlet/>
         </div>
     )
 }

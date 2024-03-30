@@ -2,9 +2,7 @@ import {Card, CardContent, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 
 export const HomePage = () => {
-
     return (
-
         <div>
             <Card>
                 <CardContent>

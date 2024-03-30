@@ -5,11 +5,11 @@ import theme from "./theme";
 import Test from "./Test.tsx";
 import {createBrowserRouter, RouterProvider,} from "react-router-dom";
 import {RootLayout} from "./RootLayout";
-import GridSelector from "./pages/pathCreator/GridSelector.tsx";
 import {HomePage} from "./pages/homepage/HomePage";
 import {RequestForm} from "./pages/requestForm/RequestForm.tsx";
 import {RecoilRoot} from "recoil";
 import {Solver} from "./pages/solver/Solver.tsx";
+import PathCreator from "./pages/pathCreator/PathCreator.tsx";
 
 
 const router = createBrowserRouter([
@@ -27,7 +27,7 @@ const router = createBrowserRouter([
             },
             {
                 path: "path",
-                element: <GridSelector/>,
+                element: <PathCreator/>,
             },
             {
                 path: "form",
@@ -52,10 +52,11 @@ const router = createBrowserRouter([
                 path: "solver",
                 element: <Solver/>,
             }
-        ],
-    },
+        ]
+    }
+])
 
-]);
+
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
