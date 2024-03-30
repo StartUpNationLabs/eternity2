@@ -6,20 +6,22 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class SolverSolveRequest(_message.Message):
-    __slots__ = ("pieces", "threads", "hash_threshold", "wait_time", "use_cache", "cache_pull_interval")
+    __slots__ = ("pieces", "threads", "hash_threshold", "wait_time", "use_cache", "cache_pull_interval", "solve_path")
     PIECES_FIELD_NUMBER: _ClassVar[int]
     THREADS_FIELD_NUMBER: _ClassVar[int]
     HASH_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
     WAIT_TIME_FIELD_NUMBER: _ClassVar[int]
     USE_CACHE_FIELD_NUMBER: _ClassVar[int]
     CACHE_PULL_INTERVAL_FIELD_NUMBER: _ClassVar[int]
+    SOLVE_PATH_FIELD_NUMBER: _ClassVar[int]
     pieces: _containers.RepeatedCompositeFieldContainer[Piece]
     threads: int
     hash_threshold: int
     wait_time: int
     use_cache: bool
     cache_pull_interval: int
-    def __init__(self, pieces: _Optional[_Iterable[_Union[Piece, _Mapping]]] = ..., threads: _Optional[int] = ..., hash_threshold: _Optional[int] = ..., wait_time: _Optional[int] = ..., use_cache: bool = ..., cache_pull_interval: _Optional[int] = ...) -> None: ...
+    solve_path: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, pieces: _Optional[_Iterable[_Union[Piece, _Mapping]]] = ..., threads: _Optional[int] = ..., hash_threshold: _Optional[int] = ..., wait_time: _Optional[int] = ..., use_cache: bool = ..., cache_pull_interval: _Optional[int] = ..., solve_path: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class Piece(_message.Message):
     __slots__ = ("top", "right", "bottom", "left")

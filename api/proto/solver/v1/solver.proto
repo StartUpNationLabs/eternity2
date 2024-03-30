@@ -16,6 +16,7 @@ message SolverSolveRequest {
   uint32 wait_time = 4;
   bool use_cache = 5;
   uint32 cache_pull_interval = 6;
+  repeated uint32 solve_path = 7;
 }
 
 message Piece {

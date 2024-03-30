@@ -4,6 +4,8 @@
 
 #include "solvera.h"
 
+#include "board/scan_utils.h"
+
 #include <sw/redis++/redis++.h>
 #include <unifex/timed_single_thread_context.hpp>
 unifex::timed_single_thread_context timer;
@@ -78,6 +80,23 @@ auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &reques
     for (const auto &piece : req_pieces)
     {
         pieces.push_back(make_piece(piece.top(), piece.right(), piece.bottom(), piece.left()));
+    }
+    std::vector<int> candidate_path = {request.solve_path().begin(), request.solve_path().end()};
+    if (check_path(candidate_path, board.size))
+    {
+        spdlog::info("Using custom solve path");
+        board.next_index_cache = {request.solve_path().begin(), request.solve_path().end()};
+        // log the solve path
+        std::string solve_path = "Solve path: ";
+        for (const auto &index : board.next_index_cache)
+        {
+            solve_path += std::to_string(index) + " ";
+        }
+        spdlog::info(solve_path);
+    }
+    else
+    {
+        spdlog::info("Using default solve path");
     }
     return std::make_pair(board, pieces);
 }
@@ -169,7 +188,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             while (true)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
-
+                spdlog::debug("Max count: {}", shared_data.max_count);
                 double seconds_since_start = static_cast<double>(
                                                  std::chrono::duration_cast<std::chrono::milliseconds>(
                                                      std::chrono::high_resolution_clock::now() - start)
@@ -209,7 +228,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                     co_await rpc.finish(grpc::Status::OK);
                     co_return;
                 }
-
+                spdlog::info("Writing response");
                 if (!co_await rpc.write(build_response(shared_data, seconds_since_start)))
                 {
                     spdlog::info("Client cancelled request");

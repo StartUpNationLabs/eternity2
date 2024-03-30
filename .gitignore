@@ -81,3 +81,5 @@ build-release
 .env
 
 data/
+
+tmp

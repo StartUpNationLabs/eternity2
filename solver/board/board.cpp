@@ -5,6 +5,7 @@
 #include "board.h"
 
 #include "../format/format.h"
+#include "scan_row.h"
 #include "spiral.h"
 
 #include <algorithm>
@@ -21,15 +22,7 @@ auto create_board(int size) -> Board
                    static_cast<size_t>(size),
                    std::vector<int>(size * size, 0)};
 
-#ifdef SCAN_METHOD_SPIRAL
     board.next_index_cache = Spiral::spiral_order_from_board_size(size);
-#elif defined(SCAN_METHOD_ROW)
-    for (int i = 0; i < size * size; ++i)
-    {
-        board.next[i] = i + 1;
-    }
-    board.next[size * size - 1] = 0; // loop back to the start
-#endif
 
     return board;
 }
@@ -60,7 +53,16 @@ void remove_piece(Board &board, Index index)
     board.board[get_1d_board_index(board, index)] = {EMPTY, 0, 0};
 }
 
+auto get_next_using_cache(const Board &board, Index index) -> Index
+{
+    return get_2d_board_index(board, board.next_index_cache[get_1d_board_index(board, index)]);
+}
 auto get_next(const Board &board, Index index) -> Index
+{
+    return get_next_using_cache(board, index);
+}
+
+auto get_next_scan_row(const Board &board, Index index) -> Index
 {
     // function to get the next position on the board
     // the function updates the index to the next position
@@ -76,7 +78,7 @@ auto get_next(const Board &board, Index index) -> Index
 auto is_end(const Board &board, Index index) -> bool
 {
     // function to check if the index is at the end of the board
-    return get_1d_board_index(board, index) == board.board.size();
+    return get_1d_board_index(board, index) == 2147483647;
 }
 
 auto index_to_string(Index index) -> std::string

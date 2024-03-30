@@ -11,16 +11,18 @@ endif ()
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #  -Wall -lstdc++
 # build release
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 
 # Define the macro
-set(SCAN_METHOD "SPIRAL" CACHE STRING "Method to scan the board")
+set(SCAN_METHOD "ROW" CACHE STRING "Method to scan the board")
 
 # Add the macro definition to your compiler flags
-if (SCAN_METHOD STREQUAL "SPIRAL")
-    add_definitions(-DSCAN_METHOD_SPIRAL)
-elseif (SCAN_METHOD STREQUAL "ROW")
+if (SCAN_METHOD STREQUAL "ROW")
     add_definitions(-DSCAN_METHOD_ROW)
+
+elseif (SCAN_METHOD STREQUAL "SPIRAL")
+    add_definitions(-DSCAN_METHOD_SPIRAL)
+
 endif ()
 
 # add library
@@ -38,7 +40,9 @@ add_library(solver_lib STATIC
         solver/solver.h
         solver/solver.cpp board/scan_row.cpp board/scan_row.h board/spiral.cpp board/spiral.h
         hash_load_store/hash_store_load.cpp
-        hash_load_store/hash_store_load.h)
+        hash_load_store/hash_store_load.h
+        board/scan_utils.cpp
+        board/scan_utils.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -47,5 +51,5 @@ set_target_properties(solver_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 #find_package(OpenMP)
 add_executable(Solver main.cpp
-        )
+)
 target_link_libraries(Solver solver_lib)

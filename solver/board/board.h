@@ -4,44 +4,46 @@
 // function to create an empty board with the given size and fill it with empty pieces
 // a board is a 2D array of pieces
 
-
 #ifndef ETERNITY2_BOARD_H
 #define ETERNITY2_BOARD_H
 
-#include <vector>
-#include <mutex>
-#include <unordered_set>
 #include "../piece_search/piece_search.h"
 
-struct Board {
+#include <mutex>
+#include <unordered_set>
+#include <vector>
+int const END_PATH = 2147483647;
+
+struct Board
+{
     std::vector<RotatedPiece> board;
     size_t size;
     std::vector<int> next_index_cache;
 };
 
 using BoardHash = std::string;
-using Index = std::pair<size_t, size_t>;
+using Index     = std::pair<size_t, size_t>;
 
-
-struct Neighbor {
+struct Neighbor
+{
     const RotatedPiece *up;
     const RotatedPiece *right;
     const RotatedPiece *down;
     const RotatedPiece *left;
-
 };
 
 Board create_board(int size);
 
 std::vector<std::string> board_to_string(const Board &board);
 
-
 void place_piece(Board &board, const RotatedPiece &piece, Index index);
 
 void remove_piece(Board &board, Index index);
-
+auto get_next_scan_row(const Board &board, Index index) -> Index;
 
 Index get_next(const Board &board, Index index);
+
+auto get_next_using_cache(const Board &board, Index index) -> Index;
 
 std::string index_to_string(Index index);
 
