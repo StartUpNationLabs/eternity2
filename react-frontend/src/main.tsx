@@ -5,7 +5,7 @@ import theme from "./theme";
 import Test from "./Test.tsx";
 import {createBrowserRouter, RouterProvider,} from "react-router-dom";
 import {RootLayout} from "./RootLayout";
-import GridSelector from "./pages/pathCreator/components/GridSelector";
+import GridSelector from "./pages/pathCreator/GridSelector.tsx";
 import {HomePage} from "./pages/homepage/HomePage";
 import {RequestForm} from "./pages/requestForm/RequestForm.tsx";
 import {RecoilRoot} from "recoil";

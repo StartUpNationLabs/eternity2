@@ -17,11 +17,11 @@ const rotatedPiece: RotatedPiece = {
     index: 0
 }
 
-const gridSize = 2;
+const gridSize = 20;
 const rotatedPieces: RotatedPiece[] = Array.from({length: gridSize**2}, () => (rotatedPiece));
 
 const Test: FC<AppProps> = () => {
-    const percentage: number = 90;
+    const percentage: number = 50;
     return (
         <div style={{
             display: 'flex',

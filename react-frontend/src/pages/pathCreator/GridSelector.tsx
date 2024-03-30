@@ -1,9 +1,7 @@
-import {useEffect, useRef, useState} from 'react';
-import './GridSelector.css';
-import {red} from "@mui/material/colors"; // Style file for the component
+import React, {useEffect, useRef, useState} from 'react';
 
 function GridSelector() {
-    const [gridSize, setGridSize] = useState(5); // Initial grid size
+    const [boardSize, setBoardSize] = useState(5); // Initial grid size
     const [selectedCells, setSelectedCells] = useState([]); // Array to hold selected cells
     const [cellCounter, setCellCounter] = useState(0); // Counter for displaying rank in selected cells
     const [isMouseDown, setIsMouseDown] = useState(false); // State to track mouse button press
@@ -33,8 +31,8 @@ function GridSelector() {
 
     // Function to calculate the direction of selection based on movement
     const calculateDirection = (currentCellId, lastCellId) => {
-        const rowDiff = Math.floor(currentCellId / gridSize) - Math.floor(lastCellId / gridSize);
-        const colDiff = currentCellId % gridSize - lastCellId % gridSize;
+        const rowDiff = Math.floor(currentCellId / boardSize) - Math.floor(lastCellId / boardSize);
+        const colDiff = currentCellId % boardSize - lastCellId % boardSize;
 
         if (rowDiff === -1 && colDiff === 0) return 'up';
         if (rowDiff === 1 && colDiff === 0) return 'down';
@@ -77,10 +75,10 @@ function GridSelector() {
                         selectedRange.push(currentId);
                         switch (direction) {
                             case 'up':
-                                currentId -= gridSize;
+                                currentId -= boardSize;
                                 break;
                             case 'down':
-                                currentId += gridSize;
+                                currentId += boardSize;
                                 break;
                             case 'left':
                                 currentId -= 1;
@@ -109,41 +107,75 @@ function GridSelector() {
         setCellCounter(0);
     };
 
-    // Function to generate grid based on gridSize
     const renderGrid = () => {
-        const grid = [];
-        for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
-                const id = i * gridSize + j; // Calculate cell id
+        const cells = [];
+
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                const id = i * boardSize + j; // Calculate cell id
                 const rank = selectedCells.indexOf(id);
-                const backgroundColor = rank !== -1 ? rankToColor(rank) : 'white';
-                grid.push(
-                    <div
-                        key={id}
-                        className="grid-cell"
-                        style={{backgroundColor}}
-                        onMouseDown={() => {
-                            setIsMouseDown(true);
-                            setInitialCellId(id);
-                            setLastSelectedCellId(id);
-                            handleCellClick(id); // Handle single click
-                        }}
-                        onMouseEnter={() => {
-                            handleCellSelection(id); // Handle click-and-drag selection
-                        }}
-                    >
-                        {rank !== -1 && <span className="cell-rank">{rank}</span>}
-                    </div>
+                cells.push(
+                    {
+                        id: id,
+                        rank: rank,
+                    }
                 );
             }
         }
-        return grid;
-    };
+
+        return (
+            <div style={{width: "100%"}}>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${boardSize}, 1fr)`,
+                        gridTemplateRows: `repeat(${boardSize}, 1fr)`,
+                        gap: '0px',
+                    }}
+                >
+                    {cells.map((cell) => (
+                        <div
+                            key={cell.id}
+                            style={{
+                                backgroundColor: cell.rank !== -1 ? rankToColor(cell.rank) : 'white',
+                                display: 'flex',
+                                position: 'relative',
+                                width: '100%',
+                                height: '100%',
+                                aspectRatio: 1,
+                                boxShadow: "inset 0 0 0 1px black",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                            }}
+                            onMouseDown={() => {
+                                setIsMouseDown(true);
+                                setInitialCellId(cell.id);
+                                setLastSelectedCellId(cell.id);
+                                handleCellClick(cell.id); // Handle single click
+                            }}
+                            onMouseEnter={() => {
+                                handleCellSelection(cell.id); // Handle click-and-drag selection
+                            }}
+                        >
+                            {cell.rank !== -1 && <span style={{
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%)",
+                                userSelect: "none"
+                            }}>{cell.rank}</span>}
+                        </div>
+                    ))}
+                </div>
+
+            </div>
+        );
+    }
 
     // Function to map rank to color gradient between dark blue and light blue (excluding 10% at both ends)
     const rankToColor = (rank) => {
         const limitPercentage = 0.8;
-        const numberOfSteps = gridSize * gridSize;
+        const numberOfSteps = boardSize * boardSize;
         const baseColorR = Math.floor(255 * limitPercentage);
         const baseColorG = 0;
         const baseColorB = 0;
@@ -167,7 +199,7 @@ function GridSelector() {
     // Function to handle slider change
     const handleSliderChange = (event) => {
         const newSize = parseInt(event.target.value);
-        setGridSize(newSize);
+        setBoardSize(newSize);
         setSelectedCells([]); // Clear selected cells when grid size changes
         setCellCounter(0); // Reset cell counter
     };
@@ -175,34 +207,42 @@ function GridSelector() {
     // Function to generate slider for grid size
     const renderSlider = () => {
         return (
-            <div className="slider-container">
+            <div>
                 <label htmlFor="grid-size-slider">Grid Size:</label>
                 <input
                     type="range"
                     id="grid-size-slider"
                     name="grid-size-slider"
-                    min="3"
-                    max="10"
-                    value={gridSize}
+                    min="2"
+                    max="16"
+                    value={boardSize}
                     onChange={handleSliderChange}
                 />
-                <span>{gridSize}</span>
+                <span>{boardSize}</span>
             </div>
         );
     };
 
+    const percentage: number = 50;
+
     return (
-        <div className="grid-container">
-            {renderSlider()}
-            <div className="grid" ref={gridRef} style={{gridTemplateColumns: `repeat(${gridSize}, minmax(30px, 1fr))`}}>
-                {renderGrid()}
-            </div>
-            <div className="controls">
-                <button onClick={handleReset}>Reset</button>
-            </div>
-            <div className="selected-cell-ids">
-                <h3>Selected Cell IDs:</h3>
-                <p>{renderSelectedCellIds().join(', ')}</p>
+        <div>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '50%',
+                height: '50%',
+                margin: 'auto',
+                marginTop: '20px',
+            }}>
+                <div>{renderSlider()}</div>
+                <div ref={gridRef} style={{width: `${percentage}%`, height: `${percentage}%`}}>
+                    {renderGrid()}
+                </div>
+                <div>
+                    <button onClick={handleReset}>Reset</button>
+                </div>
             </div>
         </div>
     );
