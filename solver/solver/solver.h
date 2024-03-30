@@ -15,6 +15,7 @@ struct SharedData
     // callback that is called when you enter the recursive function, takes in a Board
     std::function<void(const Board &)> on_board_update = [](const Board &board) {};
     unsigned int hash_length_threshold                 = 7;
+    unsigned long redis_hash_count                     = 0;
 };
 
 auto possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index)

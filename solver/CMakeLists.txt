@@ -3,37 +3,26 @@ set(CMAKE_CXX_STANDARD 20)
 
 
 if (APPLE)
-    set(CMAKE_C_COMPILER clang)
-    set(CMAKE_CXX_COMPILER clang++)
-
-    if (CMAKE_C_COMPILER_ID MATCHES "Clang\$")
-        set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp")
-        set(OpenMP_C_LIB_NAMES "omp")
-        set(OpenMP_omp_LIBRARY omp)
-    endif ()
-
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang\$")
-        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
-        set(OpenMP_CXX_LIB_NAMES "omp")
-        set(OpenMP_omp_LIBRARY omp)
-    endif ()
-
+    # set(CMAKE_C_COMPILER gcc-12)
+    # set(CMAKE_CXX_COMPILER gcc-12)
 endif ()
 
 
 # add Wall flag
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -lstdc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #  -Wall -lstdc++
 # build release
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 
 # Define the macro
-set(SCAN_METHOD "SPIRAL" CACHE STRING "Method to scan the board")
+set(SCAN_METHOD "ROW" CACHE STRING "Method to scan the board")
 
 # Add the macro definition to your compiler flags
-if (SCAN_METHOD STREQUAL "SPIRAL")
-    add_definitions(-DSCAN_METHOD_SPIRAL)
-elseif (SCAN_METHOD STREQUAL "ROW")
+if (SCAN_METHOD STREQUAL "ROW")
     add_definitions(-DSCAN_METHOD_ROW)
+
+elseif (SCAN_METHOD STREQUAL "SPIRAL")
+    add_definitions(-DSCAN_METHOD_SPIRAL)
+
 endif ()
 
 # add library
@@ -51,7 +40,9 @@ add_library(solver_lib STATIC
         solver/solver.h
         solver/solver.cpp board/scan_row.cpp board/scan_row.h board/spiral.cpp board/spiral.h
         hash_load_store/hash_store_load.cpp
-        hash_load_store/hash_store_load.h)
+        hash_load_store/hash_store_load.h
+        board/scan_utils.cpp
+        board/scan_utils.h)
 
 target_include_directories(solver_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

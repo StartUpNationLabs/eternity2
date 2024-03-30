@@ -1,24 +1,77 @@
-import { useState } from 'react';
-import Board from './Board';
+import React, {useState} from 'react'
+import {SolverClient} from "./proto/solver/v1/solver.client.ts";
+import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
+import {Piece} from "./components/piece.tsx";
 
 function App() {
-    const [size, setSize] = useState(5);
-    const [numberOfSymbols, setNumberOfSymbols] = useState(5);
+    const [count, setCount] = useState(0);
+    const transport = new GrpcWebFetchTransport({
+        baseUrl: "http://vmpx15.polytech.hs.ozeliurs.com:50052",
+        format: "binary",
+
+    });
+    const solverClient = new SolverClient(
+        transport
+    );
+    console.log(solverClient);
+
+    const stream = solverClient.solveStepByStep({
+        "hashThreshold": 4,
+        "pieces": [
+            {
+                "top": 65535,
+                "right": 65535,
+                "bottom": 1,
+                "left": 1
+            },
+            {
+                "top": 65535,
+                "right": 65535,
+                "bottom": 1,
+                "left": 1
+            },
+            {
+                "top": 65535,
+                "right": 65535,
+                "bottom": 1,
+                "left": 1
+            },
+            {
+                "top": 65535,
+                "right": 65535,
+                "bottom": 1,
+                "left": 1
+            }
+        ],
+        "threads": 4,
+        "waitTime": 1,
+        useCache: true
+    }, {});
+
+    stream.responses.onMessage((message) => {
+            console.log(message);
+        }
+    );
+
 
     return (
-        <div>
-            <h1>Eternity II Puzzle Generator</h1>
-            <div>
-                <label>Board Size: {size}x{size}</label>
-                <input type="range" min="3" max="10" value={size} onChange={e => setSize(Number(e.target.value))} />
-            </div>
-            <div>
-                <label>Number of Symbols: {numberOfSymbols}</label>
-                <input type="range" min="1" max="30" value={numberOfSymbols} onChange={e => setNumberOfSymbols(Number(e.target.value))} />
-            </div>
-            <Board size={size} numberOfSymbols={numberOfSymbols} />
+        <div
+            style={{
+                textAlign: 'center',
+                width: '100vw',
+                height: '100vh',
+            }}
+        >
+            <Piece
+                piece={{
+                    "top": 65535,
+                    "right": 65535,
+                    "bottom": 1,
+                    "left": 1
+                }}
+            />
         </div>
-    );
+    )
 }
 
-export default App;
+export default App

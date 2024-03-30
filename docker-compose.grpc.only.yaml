@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: api/Dockerfile
     env_file: .env
+    restart: always
 
   envoy:
     image: ghcr.io/apoorva64/eternity2/envoy:latest
@@ -14,22 +15,4 @@ services:
       context: envoy
     ports:
       - '50052:50052'
-
-  redis:
-    image: redis:7-alpine
     restart: always
-    ports:
-      - "50053:6379"
-    volumes:
-      - redis-data:/data
-  redis-insight:
-    image: redis/redisinsight:latest
-    restart: always
-    ports:
-      - "50054:5540"
-    volumes:
-      - redis-insight:/data
-
-volumes:
-  redis-insight:
-  redis-data:

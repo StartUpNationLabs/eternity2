@@ -29,6 +29,10 @@ class Piece:
         for direction in Direction:
             assert direction in [pattern_top.svg.direction, pattern_right.svg.direction, pattern_bottom.svg.direction,
                                  pattern_left.svg.direction], f"Pattern for direction {direction} is missing"
+            self.pattern_top = pattern_top
+            self.pattern_right = pattern_right
+            self.pattern_bottom = pattern_bottom
+            self.pattern_left = pattern_left
 
         self.set_svg()
 
@@ -57,34 +61,14 @@ class Piece:
 
             for pattern in OfficialPatterns:
                 if pattern.value.bucas_letter == capitalized_letter:
-                    # Change the direction depending on the index
-                    pattern_to_use: Pattern = pattern.value
-                    pattern_to_use.set_svg_direction(Direction(index))
-                    print("Diretion index: ", Direction(index))
+                    direction = Direction(index)
+                    pattern_to_use: Pattern = pattern.value.copy()
+                    pattern_to_use.set_svg_direction(direction)
                     patterns.append(pattern_to_use)
 
-        print(patterns[0].svg.direction)
-        print(patterns[1].svg.direction)
-        print(patterns[2].svg.direction)
-        print(patterns[3].svg.direction)
-
-        patterns[0].set_svg_direction(Direction.TOP)
-        patterns[1].set_svg_direction(Direction.RIGHT)
-        patterns[2].set_svg_direction(Direction.BOTTOM)
-        patterns[3].set_svg_direction(Direction.LEFT)
-
-        print(patterns[0].svg.direction)
-        print(patterns[1].svg.direction)
-        print(patterns[2].svg.direction)
-        print(patterns[3].svg.direction)
-
-        pattern_top = patterns[0]
-        pattern_right = patterns[1]
-        pattern_bottom = patterns[2]
-        pattern_left = patterns[3]
-
-        return Piece(pattern_top=pattern_top,
-                     pattern_right=pattern_right,
-                     pattern_bottom=pattern_bottom,
-                     pattern_left=pattern_left
-                     )
+        return Piece(
+            pattern_top=patterns[0],
+            pattern_right=patterns[1],
+            pattern_bottom=patterns[2],
+            pattern_left=patterns[3]
+        )

@@ -3,6 +3,7 @@ import hashlib
 import random
 from math import sqrt
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 from PIL import Image
@@ -19,7 +20,7 @@ def generate_inner_symbols(size, number_of_symbols):
 
 class Board:
     def __init__(self):
-        self.pieces = []
+        self.pieces: list[Piece] = []
         self._size = 0
         self._pattern_count = 0
         self.hints = []
@@ -136,8 +137,11 @@ class Board:
                 corners,
             )
 
-        img.save(Path(f"./tmp/{self.hash()}.png"))
-        return Path(f"./tmp/{self.hash()}.png")
+        # Create Temporary file
+        file = NamedTemporaryFile(delete=False, suffix=".png")
+        img.save(file.name)
+
+        return Path(file.name)
 
     def __repr__(self):
         return f"Board: {self.size}x{self.size}, {self.pattern_count} patterns"

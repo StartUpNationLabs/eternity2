@@ -1,6 +1,7 @@
 import copy
 import hashlib
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import List
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from PIL import Image
 from PIL import ImageDraw
 
 from eternitylib.pattern import Pattern
+from scheduler.solver.v1 import solver_pb2
 
 
 class Piece:
@@ -20,10 +22,9 @@ class Piece:
 
         self.patterns = patterns
 
-        if not Path("./tmp").exists():
-            Path("./tmp").mkdir()
+        temp = NamedTemporaryFile(delete=False, suffix=".png")
 
-        self.image_path = Path(f"./tmp/tmp.{self.hash}.png")
+        self.image_path = Path(temp.name)
 
     def set_hint(self):
         self.is_hint = True
@@ -80,3 +81,13 @@ class Piece:
     @property
     def hash(self):
         return hashlib.md5(".".join(pattern.pattern_code for pattern in self.patterns).encode()).hexdigest()
+
+
+    def to_grpc(self):
+        return solver_pb2.Piece(
+            top=int(self.patterns[0].pattern_code, 2),
+            right=int(self.patterns[1].pattern_code, 2),
+            bottom=int(self.patterns[2].pattern_code, 2),
+            left=int(self.patterns[3].pattern_code, 2),
+
+        )
