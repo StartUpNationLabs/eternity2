@@ -202,7 +202,7 @@ export default function Dashboard() {
                             noWrap
                             sx={{ flexGrow: 1 }}
                         >
-                            Résolution pas à pas
+                            Eternity puzzle solver
                         </Typography>
                     </Toolbar>
                 </AppBar>
