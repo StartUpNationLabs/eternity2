@@ -1,6 +1,7 @@
 import copy
 import hashlib
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import List
 from uuid import uuid4
 
@@ -21,10 +22,9 @@ class Piece:
 
         self.patterns = patterns
 
-        if not Path("./tmp").exists():
-            Path("./tmp").mkdir()
+        temp = NamedTemporaryFile(delete=False, suffix=".png")
 
-        self.image_path = Path(f"./tmp/tmp.{self.hash}.png")
+        self.image_path = Path(temp.name)
 
     def set_hint(self):
         self.is_hint = True
