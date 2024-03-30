@@ -1,26 +1,15 @@
-import {
-    Autocomplete,
-    Checkbox,
-    FormGroup,
-    InputLabel,
-    Paper,
-    Select,
-    Slider, TextField,
-    Typography
-} from "@mui/material";
+import {Autocomplete, Checkbox, FormGroup, Paper, Slider, TextField, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {pathsState, settingsState} from "./atoms.ts";
+import {defaultPath, Path, pathsState, settingsState} from "./atoms.ts";
 import Container from "@mui/material/Container";
-import {useRef} from "react";
 
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
-    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize);
-    const autocompleteRef = useRef<typeof Autocomplete>(null);
+    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
     console.log(pathOptions);
     return (
         <Paper
@@ -58,7 +47,10 @@ export const RequestForm = () => {
                     }
                     onChange={
                         (_, v) => {
-                            setSettings({...settings, boardSize: v as number})
+                            setSettings({
+                                ...settings, boardSize: v as number, path: defaultPath
+                            })
+
                         }
                     }
                     marks
@@ -108,8 +100,17 @@ export const RequestForm = () => {
                             placeholder="Paths"
                         />}
                         options={pathOptions}
-                        ref={autocompleteRef}
-
+                        value={settings.path}
+                        onChange={(_, v) => {
+                            if (v) {
+                                setSettings({...settings, path: v});
+                            }
+                        }
+                        }
+                        isOptionEqualToValue={(option: Path, value: Path) => {
+                            return option.label === value.label && option.path.length === value.path.length;
+                        }
+                        }
 
                     >
                     </Autocomplete>
