@@ -1,4 +1,4 @@
-import {atom} from "recoil";
+import {atom, RecoilState} from "recoil";
 
 
 export const settingsState = atom({
@@ -12,3 +12,12 @@ export const settingsState = atom({
 });
 
 
+interface Path {
+    name: string;
+    path: number[];
+}
+
+export const pathsState: RecoilState<Path[]> = atom({
+    key: 'pathsState',
+    default: [] as Path[],
+});

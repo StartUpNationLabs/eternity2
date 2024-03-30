@@ -1,14 +1,23 @@
-import {Checkbox, FormGroup, InputLabel, MenuItem, Paper, Select, Slider, Typography} from "@mui/material";
+import {
+    Autocomplete,
+    Checkbox,
+    FormGroup,
+    InputLabel,
+    Paper,
+    Select,
+    Slider,
+    Typography
+} from "@mui/material";
 import Button from "@mui/material/Button";
 
-import {useRecoilState} from "recoil";
-import {settingsState} from "./atoms.ts";
+import {useRecoilState, useRecoilValue} from "recoil";
+import {pathsState, settingsState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
-
+    const paths = useRecoilValue(pathsState);
 
     return (
         <Paper
@@ -50,6 +59,7 @@ export const RequestForm = () => {
                     marks
                     step={1}
                     aria-labelledby={"input-slider-size"}
+                    valueLabelDisplay="on"
                 />
                 <Typography id="input-slider-colors" gutterBottom>
                     Number of Colors
@@ -67,6 +77,7 @@ export const RequestForm = () => {
                     marks
                     step={1}
                     aria-labelledby={"input-slider-colors"}
+                    valueLabelDisplay="on"
                 />
 
 
@@ -82,16 +93,16 @@ export const RequestForm = () => {
                 <h2>Solver</h2>
                 <FormGroup>
                     <InputLabel id="paths-label">Paths</InputLabel>
-                    <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        label="Paths"
+                    <Autocomplete
+                        multiple
+                        id="paths"
+                        options={paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize)}
+                        renderInput={(params) => <Select {...params} />}
+
+
 
                     >
-                        <MenuItem value={10}>Ten</MenuItem>
-                        <MenuItem value={20}>Twenty</MenuItem>
-                        <MenuItem value={30}>Thirty</MenuItem>
-                    </Select>
+                    </Autocomplete>
                 </FormGroup>
 
             </FormGroup>
