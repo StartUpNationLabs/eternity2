@@ -5,7 +5,7 @@ import {
     InputLabel,
     Paper,
     Select,
-    Slider,
+    Slider, TextField,
     Typography
 } from "@mui/material";
 import Button from "@mui/material/Button";
@@ -13,12 +13,15 @@ import Button from "@mui/material/Button";
 import {useRecoilState, useRecoilValue} from "recoil";
 import {pathsState, settingsState} from "./atoms.ts";
 import Container from "@mui/material/Container";
+import {useRef} from "react";
 
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
-
+    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize);
+    const autocompleteRef = useRef<typeof Autocomplete>(null);
+    console.log(pathOptions);
     return (
         <Paper
             style={{
@@ -54,12 +57,16 @@ export const RequestForm = () => {
                         settings.boardSize
                     }
                     onChange={
-                        (_, v) => setSettings({...settings, boardSize: v as number})
+                        (_, v) => {
+                            setSettings({...settings, boardSize: v as number})
+                        }
                     }
                     marks
                     step={1}
                     aria-labelledby={"input-slider-size"}
                     valueLabelDisplay="on"
+
+
                 />
                 <Typography id="input-slider-colors" gutterBottom>
                     Number of Colors
@@ -92,13 +99,16 @@ export const RequestForm = () => {
             >
                 <h2>Solver</h2>
                 <FormGroup>
-                    <InputLabel id="paths-label">Paths</InputLabel>
                     <Autocomplete
-                        multiple
                         id="paths"
-                        options={paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize)}
-                        renderInput={(params) => <Select {...params} />}
-
+                        renderInput={(params) => <TextField
+                            {...params}
+                            variant="standard"
+                            label="Paths"
+                            placeholder="Paths"
+                        />}
+                        options={pathOptions}
+                        ref={autocompleteRef}
 
 
                     >

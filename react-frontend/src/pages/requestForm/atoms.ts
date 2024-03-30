@@ -13,11 +13,24 @@ export const settingsState = atom({
 
 
 interface Path {
-    name: string;
+    label: string;
     path: number[];
 }
 
+
+const defaultPaths: Path[] =  [...Array(16).keys()].map(
+    i => ({
+        label: `Scan Row`,
+        path: [...Array((i + 2) * (i + 2)).keys()].map(j => j + 1)
+        ,
+    })
+);
+
+
+console.log(defaultPaths);
+
 export const pathsState: RecoilState<Path[]> = atom({
     key: 'pathsState',
-    default: [] as Path[],
+    default: defaultPaths,
 });
+
