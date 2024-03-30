@@ -19,6 +19,7 @@
     "@protobuf-ts/grpcweb-transport": "^2.9.3",
     "@protobuf-ts/plugin": "^2.9.3",
     "@protobuf-ts/twirp-transport": "^2.9.3",
+    "formik": "^2.4.5",
     "google-protobuf": "^3.21.2",
     "grpc-tools": "^1.12.4",
     "grpc-web": "^1.5.0",
@@ -26,6 +27,8 @@
     "protoc-gen-ts": "^0.8.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3",
+    "recoil": "^0.7.7",
     "vite-plugin-node-polyfills": "^0.21.0",
     "vite-plugin-require": "^1.1.14"
   },

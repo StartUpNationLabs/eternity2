@@ -1,3 +1,5 @@
+import {Direction} from "./Constants";
+
 export interface SVG {
     name: string;
     bg_color: string;
@@ -5,7 +7,7 @@ export interface SVG {
     path: string;
     path_color: string;
     path_stroke: string;
-    direction: string;
+    direction: Direction;
 }
 
 

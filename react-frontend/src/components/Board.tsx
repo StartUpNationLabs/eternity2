@@ -1,12 +1,30 @@
-import React, { FC } from 'react';
+import React, {FC} from "react";
+import {RotatedPiece} from "../proto/solver/v1/solver";
+import Piece from "./Piece";
 
+interface BoardProps {
+    pieces: RotatedPiece[];
+}
 
-interface BoardProps {}
+const Board: FC<BoardProps> = ({pieces}: BoardProps) => {
+    const boardSize = Math.sqrt(pieces.length);
 
-const Board: FC<BoardProps> = () => (
-  <div>
-    Board Component
-  </div>
-);
+    return (
+        <div>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${boardSize}, 1fr)`,
+                    gridTemplateRows: `repeat(${boardSize}, 1fr)`,
+                }}
+            >
+                {pieces.map((rotatedPiece, index) => (
+                    <Piece key={index} {...rotatedPiece} />
+                ))}
+            </div>
+
+        </div>
+    );
+};
 
 export default Board;

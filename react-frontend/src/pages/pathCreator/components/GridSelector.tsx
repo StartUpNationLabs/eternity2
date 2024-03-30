@@ -1,5 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react';
-import './GridSelector.css'; // Style file for the component
+import {useEffect, useRef, useState} from 'react';
+import './GridSelector.css';
+import {red} from "@mui/material/colors"; // Style file for the component
 
 function GridSelector() {
     const [gridSize, setGridSize] = useState(5); // Initial grid size
@@ -67,7 +68,7 @@ function GridSelector() {
                 setSelectedCells([id]);
             } else {
                 const direction = calculateDirection(id, lastSelectedCellId);
-                let selectedRange = [];
+                const selectedRange = [];
 
                 if (direction) {
                     // Calculate cells between lastSelectedCellId and current cell id based on direction
@@ -141,20 +142,26 @@ function GridSelector() {
 
     // Function to map rank to color gradient between dark blue and light blue (excluding 10% at both ends)
     const rankToColor = (rank) => {
-        const minRank = gridSize * gridSize * 0.2; // Exclude 10% of the darkest colors
-        const maxRank = gridSize * gridSize * 0.8; // Exclude 10% of the lightest colors
-        const adjustedRank = Math.max(minRank, Math.min(maxRank, rank));
-        const ratio = (adjustedRank - minRank) / (maxRank - minRank);
-        const r = Math.round(0 + ratio * (255 - 0)); // Adjust the range for the red component (0 to 255)
-        const g = Math.round(0 + ratio * (255 - 0)); // Adjust the range for the green component (0 to 255)
-        const b = Math.round(139 + ratio * (255 - 139)); // Adjust the range for the blue component (139 to 255)
-        return `rgb(${r}, ${g}, ${b})`;
+        const limitPercentage = 0.8;
+        const numberOfSteps = gridSize * gridSize;
+        const baseColorR = Math.floor(255 * limitPercentage);
+        const baseColorG = 0;
+        const baseColorB = 0;
+
+        // Adjust the range to exclude the extreme 10% colors
+        const adjustedRange = 255 * 0.1 * (numberOfSteps / (numberOfSteps - 2));
+
+        // Only range across blue and red
+        const colorR = Math.floor(baseColorR - (baseColorR * rank / numberOfSteps) - adjustedRange);
+        const colorG = Math.floor(baseColorG + (255 * rank / numberOfSteps) - adjustedRange);
+        const colorB = Math.floor(baseColorB + (255 * rank / numberOfSteps) - adjustedRange);
+
+        return `rgb(${colorR}, ${colorG}, ${colorB})`;
     };
 
     // Function to generate list of selected cell ids ordered by their ranking
     const renderSelectedCellIds = () => {
-        const orderedCellIds = selectedCells.map(id => `[${id % gridSize},${Math.floor(id / gridSize)}]`).sort();
-        return orderedCellIds;
+        return selectedCells;
     };
 
     // Function to handle slider change

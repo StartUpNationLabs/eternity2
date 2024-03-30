@@ -1,4 +1,4 @@
-import {EternityPattern} from "./EternityPattern.tsx";
+import {EternityPattern} from "./EternityPattern";
 
 /**
  * Those are the official pieces for the puzzle
@@ -36,10 +36,17 @@ const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.c
  * Directions for the pieces
  */
 enum Direction {
-    Top = "TOP",
-    Bottom = "BOTTOM",
-    Left = "LEFT",
-    Right = "RIGHT",
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
+enum Rotation {
+    ZERO,
+    NINETY,
+    ONE_EIGHTY,
+    TWO_SEVENTY,
 }
 
 /**
@@ -424,4 +431,5 @@ export {
     SERVER_BASE_URL,
     ETERNITY_PATTERNS,
     Direction,
+    Rotation,
 }
