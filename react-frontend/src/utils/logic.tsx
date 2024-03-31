@@ -1,4 +1,5 @@
 import {Piece} from "../proto/solver/v1/solver.ts";
+import {numberOfColorsThatFitInABoard} from "./utils.tsx";
 
 export interface PieceData {
     top: string;
@@ -19,25 +20,39 @@ export function generateInnerSymbols(size: number, numberOfSymbols: number) {
 }
 
 export function createBoard(size: number, numberOfSymbols: number) {
-    numberOfSymbols += 1; // Add 1 to account for the border symbol
-    const {verticalSymbols, horizontalSymbols} = generateInnerSymbols(size, numberOfSymbols);
-    const board = Array.from({length: size}, () =>
-        Array.from({length: size}, () => ({
-            top: "0000000000000000",
-            right: "0000000000000000",
-            bottom: "0000000000000000",
-            left: "0000000000000000",
-        }))
-    );
-
-    for (let i = 0; i < size; i++) {
-        for (let j = 0; j < size; j++) {
-            if (i > 0) board[i][j].top = horizontalSymbols[i - 1][j].toString(2).padStart(16, '0');
-            if (i < size - 1) board[i][j].bottom = horizontalSymbols[i][j].toString(2).padStart(16, '0');
-            if (j > 0) board[i][j].left = verticalSymbols[i][j - 1].toString(2).padStart(16, '0');
-            if (j < size - 1) board[i][j].right = verticalSymbols[i][j].toString(2).padStart(16, '0');
-        }
+    if (numberOfSymbols > numberOfColorsThatFitInABoard(size)) {
+        throw new Error('Number of symbols cannot be more than 2*(size**2 - 1)');
     }
+
+    numberOfSymbols += 1; // Add 1 to account for the border symbol
+    let board;
+    let uniqueSymbols;
+
+    do {
+        const {verticalSymbols, horizontalSymbols} = generateInnerSymbols(size, numberOfSymbols);
+        board = Array.from({length: size}, () =>
+            Array.from({length: size}, () => ({
+                top: "0000000000000000",
+                right: "0000000000000000",
+                bottom: "0000000000000000",
+                left: "0000000000000000",
+            }))
+        );
+
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                if (i > 0) board[i][j].top = horizontalSymbols[i - 1][j].toString(2).padStart(16, '0');
+                if (i < size - 1) board[i][j].bottom = horizontalSymbols[i][j].toString(2).padStart(16, '0');
+                if (j > 0) board[i][j].left = verticalSymbols[i][j - 1].toString(2).padStart(16, '0');
+                if (j < size - 1) board[i][j].right = verticalSymbols[i][j].toString(2).padStart(16, '0');
+            }
+        }
+
+        // Flatten the board and create a set of all symbols
+        uniqueSymbols = new Set(board.flat().flatMap(piece => Object.values(piece)));
+        console.log(uniqueSymbols.size, numberOfSymbols)
+    } while (uniqueSymbols.size !== numberOfSymbols);
+
     return board;
 }
 

@@ -39,3 +39,7 @@ export function convertBucasBoardToRotatedPieces(bucasBoard: string[]): RotatedP
         };
     });
 }
+
+export function numberOfColorsThatFitInABoard(boardSize: number): number {
+    return 2*(boardSize**2 - boardSize);
+}

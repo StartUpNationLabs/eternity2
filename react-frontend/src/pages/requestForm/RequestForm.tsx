@@ -36,6 +36,7 @@ import {
 } from "../../utils/Constants.tsx";
 import {Piece} from "../../proto/solver/v1/solver.ts";
 import {useEffect, useState} from "react";
+import {numberOfColorsThatFitInABoard} from "../../utils/utils.tsx";
 
 
 export const RequestForm = () => {
@@ -83,6 +84,9 @@ export const RequestForm = () => {
                     value={settings.boardSize}
                     onChange={
                         (_, v) => {
+                            if (settings.boardColors > numberOfColorsThatFitInABoard(v as number)) {
+                                setSettings({...settings, boardColors: numberOfColorsThatFitInABoard(v as number)});
+                            }
 
                             // Update board size and then create a new board
                             const newBoard = convertToPieces(createBoard(v as number, settings.boardColors));
@@ -118,7 +122,7 @@ export const RequestForm = () => {
                 <Slider
                     defaultValue={BOARD_COLOR_DEFAULT}
                     min={BOARD_COLOR_MIN}
-                    max={BOARD_COLOR_MAX}
+                    max={Math.min(numberOfColorsThatFitInABoard(settings.boardSize), BOARD_SIZE_MAX)}
                     value={
                         settings.boardColors
                     }
