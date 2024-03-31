@@ -1,27 +1,18 @@
 import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 
-import {useRecoilState, useRecoilValue} from "recoil";
+import {useRecoilState} from "recoil";
 
 import Container from "@mui/material/Container";
-import {isSolvingState} from "../solver/atoms.ts";
 import {abortController, BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN} from "../../utils/Constants.tsx";
-import {useState} from "react";
-import {Board, boardsState, boardState, pathsState} from "../requestForm/atoms.ts";
-import {generateBoards, settingsStatisticsState} from "./atoms.ts";
+import {generateBoards, generatedBoardsState, isSolvingStatisticsState, settingsStatisticsState} from "./atoms.ts";
 
 
 export const RequestFormStatistics = () => {
     const [settings, setSettings] = useRecoilState(settingsStatisticsState);
-    const paths = useRecoilValue(pathsState);
     const pathOptions = ["Spiral", "Scan Row"]
-    const [, setBoard] = useRecoilState(boardState);
-    const [, setSolving] = useRecoilState(isSolvingState);
-    const boards = useRecoilValue(boardsState);
-    const setSelectedBoard = useState<Board | null>(null)[1];
-
-    const [generatedBoards, setGeneratedBoards] = useState([] as Board[]);
-
+    const [, setSolving] = useRecoilState(isSolvingStatisticsState);
+    const [generatedBoards, setGeneratedBoards] = useRecoilState(generatedBoardsState);
 
     return (
         <>
@@ -199,7 +190,7 @@ export const RequestFormStatistics = () => {
                     </Typography>
                     <Slider
                         defaultValue={1000}
-                        min={50}
+                        min={1}
                         max={2000}
                         value={
                             settings.waitTime

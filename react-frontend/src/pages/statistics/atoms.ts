@@ -27,6 +27,10 @@ export const settingsStatisticsState
     },
 });
 
+export const generatedBoardsState: RecoilState<Board[]> = atom({
+    key: "generatedBoardsState",
+    default: [],
+});
 
 export function generateBoards(minSize: number, maxSize: number, minColors: number, maxColors: number, sampleSize: number): Board[] {
     const boards = [] as Board[];
