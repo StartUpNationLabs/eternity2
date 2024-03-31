@@ -51,5 +51,5 @@ export const boardState: RecoilState<SolverSolveRequest["pieces"]> = atom({
 
 export const solveModeState = atom({
     key: 'solveModeState',
-    default: 'none' as "normal" | "stepByStep" | "none",
+    default: 'none' as "normal" | "stepByStep" | "none" | "multiServer",
 });

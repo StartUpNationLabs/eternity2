@@ -16,3 +16,8 @@ export const isSolvingStepByStepState: RecoilState<boolean> = atom({
     key: "isSolvingStepByStepState",
     default: false,
 });
+
+export const isSolvingMultiServerState: RecoilState<boolean> = atom({
+    key: "isSolvingMultiServerState",
+    default: false,
+});

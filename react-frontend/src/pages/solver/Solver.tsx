@@ -6,6 +6,7 @@ import {useRecoilState, useRecoilValue} from "recoil";
 import {boardState, solveModeState} from "../requestForm/atoms.ts";
 import {Solving} from "./Solving.tsx";
 import {SolvingStepByStep} from "./SolvingStepByStep.tsx";
+import {SolvingMultiServer} from "./SolvingMultiServer.tsx";
 
 
 export const Solver = () => {
@@ -13,7 +14,7 @@ export const Solver = () => {
     const [solveMode, ] = useRecoilState(solveModeState);
     return <>
         <Grid container spacing={2}
-              style={{height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+              style={{minHeight: "90vh", height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
 
             <Grid item xs={5}>
                 <div
@@ -51,5 +52,6 @@ export const Solver = () => {
         </Grid>
         {solveMode === "normal" && <Solving/>}
         {solveMode === "stepByStep" && <SolvingStepByStep/>}
+        {solveMode === "multiServer" && <SolvingMultiServer/>}
     </>
 }

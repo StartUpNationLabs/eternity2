@@ -31,6 +31,14 @@ const ETERNITY_II_PIECES = [
 ]
 
 const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
+export const MULTI_SERVER_BASE_URLS = [{
+    "name": "server1",
+    "url": "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052",
+}, {
+    "name": "server2",
+    "url": "http://localhost:50052",
+}
+]
 
 /**
  * Directions for the pieces
@@ -443,7 +451,7 @@ const ETERNITY_PATTERNS = [
 ]
 
 
-export const abortController ={
+export const abortController = {
     abortController: new AbortController(),
 }
 

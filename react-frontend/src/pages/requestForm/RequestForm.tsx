@@ -5,7 +5,7 @@ import {useRecoilState, useRecoilValue} from "recoil";
 import {boardState, defaultPath, Path, pathsState, settingsState, solveModeState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToBoard, convertToPieces, createBoard, shuffleAndRotateBoard} from "../../damien/logic.tsx";
-import {isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
+import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
 import {abortController} from "../../utils/Constants.tsx";
 
 
@@ -17,6 +17,7 @@ export const RequestForm = () => {
     const [, setSolving] = useRecoilState(isSolvingState);
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
+    const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
 
     return (
         <>
@@ -277,6 +278,17 @@ export const RequestForm = () => {
                         }
                         }
                 >Step By Step</Button>
+                <Button type="submit" color="primary"
+                        onClick={() => {
+                            abortController.abortController.abort();
+                            abortController.abortController = new AbortController();
+                            setsolvingMultiServer(true);
+                            setSolveMode("multiServer");
+                        }
+                        }
+                >
+                    Multi Server
+                </Button>
             </FormGroup>
         </>
     )
