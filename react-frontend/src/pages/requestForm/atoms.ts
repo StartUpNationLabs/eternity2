@@ -31,16 +31,18 @@ export const eternity2OfficialBoard: Board = {
     nbColors: 22,
 }
 
+export const spiralPath = {
+    label: "Spiral",
+    path: [] as number[]
+}
+
 export const settingsState
     = atom({
     key: 'settingsState', // unique ID (with respect to other atoms/selectors)
     default: {
         boardSize: BOARD_SIZE_DEFAULT,
         boardColors: BOARD_COLOR_DEFAULT,
-        path: {
-            label: `Default`,
-            path: [] as number[]
-        },
+        path: spiralPath,
         useCache: false,
         hashThreshold: 4,
         waitTime: 1000,
@@ -57,15 +59,11 @@ const defaultPaths: Path[] = [...Array(16).keys()].map(
         ,
     })
 );
-export const defaultPath = {
-    label: "Default",
-    path: []
-}
 
 
 export const pathsState: RecoilState<Path[]> = atom({
     key: 'pathsState',
-    default: [...defaultPaths, defaultPath],
+    default: [...defaultPaths, spiralPath],
 });
 
 export const boardState: RecoilState<SolverSolveRequest["pieces"]> = atom({

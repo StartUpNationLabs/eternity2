@@ -4,6 +4,7 @@ import Button from "@mui/material/Button";
 import {useRecoilState, useRecoilValue} from "recoil";
 import {
     Board,
+    Path,
     BOARD_COLOR_DEFAULT,
     BOARD_COLOR_MAX,
     BOARD_COLOR_MIN,
@@ -12,14 +13,13 @@ import {
     BOARD_SIZE_MIN,
     boardsState,
     boardState,
-    defaultPath,
-    Path,
+    spiralPath,
     pathsState,
     settingsState,
     solveModeState
 } from "./atoms.ts";
 import Container from "@mui/material/Container";
-import {convertToPieces, createBoard} from "../../damien/logic.tsx";
+import {convertToPieces, createBoard} from "../../utils/logic.tsx";
 import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
 import {abortController} from "../../utils/Constants.tsx";
 import {Piece} from "../../proto/solver/v1/solver.ts";
@@ -29,7 +29,7 @@ import {useEffect, useState} from "react";
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
-    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
+    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == spiralPath);
     const [, setBoard] = useRecoilState(boardState);
     const [, setSolving] = useRecoilState(isSolvingState);
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
@@ -39,7 +39,7 @@ export const RequestForm = () => {
     const setSelectedBoard = useState<Board | null>(null)[1];
 
     useEffect(() => {
-        const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT + 1));
+        const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
         setBoard(newBoard);
     }, [setBoard]);
 
@@ -68,10 +68,10 @@ export const RequestForm = () => {
                     onChange={
                         (_, v) => {
                             setSettings({
-                                ...settings, boardSize: v as number, path: defaultPath
+                                ...settings, boardSize: v as number, path: spiralPath
                             });
                             setSelectedBoard(null);
-                            const newBoard = convertToPieces(createBoard(v as number, settings.boardColors + 1));
+                            const newBoard = convertToPieces(createBoard(v as number, settings.boardColors));
                             setBoard(newBoard);
                         }
                     }
@@ -99,7 +99,7 @@ export const RequestForm = () => {
                     onChange={
                         (_, v) => {
                             setSettings({...settings, boardColors: v as number});
-                            const newBoard = convertToPieces(createBoard(settings.boardSize, v as number + 1));
+                            const newBoard = convertToPieces(createBoard(settings.boardSize, v as number));
                             setBoard(newBoard);
                         }
                     }
@@ -137,7 +137,7 @@ export const RequestForm = () => {
                                 setSelectedBoard(v);
                                 setSettings({
                                     ...settings,
-                                    boardSize: Math.sqrt(pieceList.length),
+                                    boardSize: Math.sqrt(pieceList.length)
                                 });
                             }
                         }}

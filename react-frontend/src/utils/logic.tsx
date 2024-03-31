@@ -19,6 +19,7 @@ export function generateInnerSymbols(size: number, numberOfSymbols: number) {
 }
 
 export function createBoard(size: number, numberOfSymbols: number) {
+    numberOfSymbols += 1; // Add 1 to account for the border symbol
     const {verticalSymbols, horizontalSymbols} = generateInnerSymbols(size, numberOfSymbols);
     const board = Array.from({length: size}, () =>
         Array.from({length: size}, () => ({
