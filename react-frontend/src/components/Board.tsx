@@ -1,4 +1,4 @@
-import React, {FC} from "react";
+import {FC} from "react";
 import {RotatedPiece} from "../proto/solver/v1/solver";
 import Piece from "./Piece";
 
@@ -22,7 +22,6 @@ const Board: FC<BoardProps> = ({pieces}: BoardProps) => {
                     <Piece key={index} {...rotatedPiece} />
                 ))}
             </div>
-
         </div>
     );
 };
