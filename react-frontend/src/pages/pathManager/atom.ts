@@ -1,5 +1,6 @@
 import {atom} from "recoil";
 import {BOARD_SIZE_DEFAULT} from "../../utils/Constants.tsx";
+import {Path} from "../requestForm/atoms.ts";
 
 export const DEFAULT_SELECTED_CELLS = [0] as number[];
 
@@ -20,10 +21,5 @@ export const selectedCellsState = atom({
 
 export const selectedPathState = atom({
     key: 'selectedPathState',
-    default: [] as number[],
-});
-
-export const selectedPathNameState = atom({
-    key: 'selectedPathNameState',
-    default: '',
+    default: null as Path | null,
 });
