@@ -14,6 +14,8 @@ export const RequestForm = () => {
     const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
     const [board, setBoard] = useRecoilState(boardState);
     const [isSolving, setSolving] = useRecoilState(isSolvingState);
+    console.log(pathOptions)
+    console.log(paths)
     return (
         <>
 
@@ -126,7 +128,6 @@ export const RequestForm = () => {
                             return option.label === value.label && option.path.length === value.path.length;
                         }
                         }
-
                     >
                     </Autocomplete>
                 </FormGroup>

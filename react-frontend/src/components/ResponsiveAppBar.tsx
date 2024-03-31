@@ -12,6 +12,7 @@ import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import ExtensionIcon from '@mui/icons-material/Extension';
+import { Link } from 'react-router-dom';
 
 
 const pages: {
@@ -21,10 +22,6 @@ const pages: {
     {
         title: 'Path Creator',
         href: '/path'
-    },
-    {
-        title: 'Step By Step Solver',
-        href: '/step'
     },
     {
         title: 'Solver',
@@ -140,7 +137,8 @@ function ResponsiveAppBar() {
                                 key={page.title}
                                 onClick={handleCloseNavMenu}
                                 sx={{my: 2, color: 'white', display: 'block'}}
-                                href={page.href}
+                                component={Link}
+                                to={page.href}
                             >
                                 {page.title}
                             </Button>
