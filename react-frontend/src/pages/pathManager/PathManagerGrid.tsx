@@ -1,24 +1,28 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useRecoilState} from "recoil";
-import {gridSelectorState} from "./atom.ts";
+import {boardSizeState, displayedCellsState, selectedCellsState} from "./atom.ts";
 
-function GridSelector() {
-    const [gridSelector, setGridSelector] = useRecoilState(gridSelectorState);
-    const [isMouseDown, setIsMouseDown] = useState(false); // State to track mouse button press
-    const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
-    const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
+enum Movement {
+    Up = 'up',
+    Down = 'down',
+    Left = 'left',
+    Right = 'right',
+    UpLeft = 'up-left',
+    UpRight = 'up-right',
+    DownLeft = 'down-left',
+    DownRight = 'down-right'
+}
 
+function PathManagerGrid() {
+    // States used to manage path manager
+    const boardSize = useRecoilState(boardSizeState)[0];
+    const [displayedCells, setDisplayedCells] = useRecoilState(displayedCellsState);
+    const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
 
-    const boardSize = gridSelector.boardSize;
-
-    // ID 0 is the default cell, which should not be selected
-    const selectedCells = gridSelector.selectedCells.length ? gridSelector.selectedCells : [0];
-    const setSelectedCells = useCallback(function (selectedCells: number[]) {
-        setGridSelector({
-            ...gridSelector,
-            selectedCells: selectedCells
-        })
-    }, [gridSelector, setGridSelector])
+    // States used to handle cell selection
+    const [isMouseDown, setIsMouseDown] = useState<boolean>(false); // State to track mouse button press
+    const [initialCellId, setInitialCellId] = useState<number | null>(null); // State to store initial cell id when mouse down
+    const [lastSelectedCellId, setLastSelectedCellId] = useState<number | null>(null);
 
     // Function to handle cell selection
     const handleCellClick = useCallback((id: number) => {
@@ -27,9 +31,11 @@ function GridSelector() {
             if (selectedCells.includes(id) && id !== 0) {
                 // Deselect cell if already selected
                 setSelectedCells(selectedCells.filter(cell => cell !== id));
+                setDisplayedCells(displayedCells.filter(cell => cell !== id));
             } else {
                 if (id !== 0) {
                     setSelectedCells([...selectedCells, id]);
+                    setDisplayedCells([...displayedCells, id]);
                 }
             }
         }
@@ -57,18 +63,20 @@ function GridSelector() {
         };
     }, [isMouseDown, initialCellId, lastSelectedCellId, handleCellClick]);
 
-    // Function to calculate the direction of selection based on movement
-    const calculateDirection = (currentCellId: number, lastCellId: number) => {
+    // Function to calculate direction of selection based on current and last cell id
+    const calculateDirection = (currentCellId: number, lastCellId: number | null): Movement | null => {
+        if (lastCellId === null) return null;
+
         const rowDiff = Math.floor(currentCellId / boardSize) - Math.floor(lastCellId / boardSize);
         const colDiff = currentCellId % boardSize - lastCellId % boardSize;
-        if (rowDiff === -1 && colDiff === 0) return 'up';
-        if (rowDiff === 1 && colDiff === 0) return 'down';
-        if (rowDiff === 0 && colDiff === -1) return 'left';
-        if (rowDiff === 0 && colDiff === 1) return 'right';
-        if (rowDiff === -1 && colDiff === -1) return 'up-left';
-        if (rowDiff === -1 && colDiff === 1) return 'up-right';
-        if (rowDiff === 1 && colDiff === -1) return 'down-left';
-        if (rowDiff === 1 && colDiff === 1) return 'down-right';
+        if (rowDiff === -1 && colDiff === 0) return Movement.Up;
+        if (rowDiff === 1 && colDiff === 0) return Movement.Down;
+        if (rowDiff === 0 && colDiff === -1) return Movement.Left;
+        if (rowDiff === 0 && colDiff === 1) return Movement.Right;
+        if (rowDiff === -1 && colDiff === -1) return Movement.UpLeft;
+        if (rowDiff === -1 && colDiff === 1) return Movement.UpRight;
+        if (rowDiff === 1 && colDiff === -1) return Movement.DownLeft;
+        if (rowDiff === 1 && colDiff === 1) return Movement.DownRight;
 
         return null;
     };
@@ -76,7 +84,6 @@ function GridSelector() {
     const handleCellSelection = (id: number) => {
         if (isMouseDown) {
             if (initialCellId === null) {
-                // Set initial cell id when mouse down
                 setInitialCellId(id);
                 setLastSelectedCellId(id);
                 setSelectedCells([id]);
@@ -85,33 +92,32 @@ function GridSelector() {
                 const selectedRange = [];
 
                 if (direction) {
-                    // Calculate cells between lastSelectedCellId and current cell id based on direction
-                    let currentId = lastSelectedCellId;
-                    while (currentId !== id) {
+                    let currentId: number | null = lastSelectedCellId;
+                    while (currentId !== null && currentId !== id) {
                         selectedRange.push(currentId);
                         switch (direction) {
-                            case 'up':
+                            case Movement.Up:
                                 currentId -= boardSize;
                                 break;
-                            case 'down':
+                            case Movement.Down:
                                 currentId += boardSize;
                                 break;
-                            case 'left':
+                            case Movement.Left:
                                 currentId -= 1;
                                 break;
-                            case 'right':
+                            case Movement.Right:
                                 currentId += 1;
                                 break;
-                            case 'up-left':
+                            case Movement.UpLeft:
                                 currentId -= boardSize + 1;
                                 break;
-                            case 'up-right':
+                            case Movement.UpRight:
                                 currentId -= boardSize - 1;
                                 break;
-                            case 'down-left':
+                            case Movement.DownLeft:
                                 currentId += boardSize - 1;
                                 break;
-                            case 'down-right':
+                            case Movement.DownRight:
                                 currentId += boardSize + 1;
                                 break;
                             default:
@@ -122,7 +128,9 @@ function GridSelector() {
 
                 if (selectedRange.length > 0) {
                     const newSelectedCells = [...selectedCells, ...selectedRange, id];
-                    setSelectedCells(newSelectedCells.filter((cell, index, array) => array.indexOf(cell) === index)); // Remove duplicates
+                    const uniqueSelectedCells = newSelectedCells.filter((cell, index, array) => array.indexOf(cell) === index);
+                    setSelectedCells(uniqueSelectedCells);
+                    setDisplayedCells(uniqueSelectedCells);
                     setLastSelectedCellId(id);
                 }
             }
@@ -135,7 +143,7 @@ function GridSelector() {
         for (let i = 0; i < boardSize; i++) {
             for (let j = 0; j < boardSize; j++) {
                 const id = i * boardSize + j; // Calculate cell id
-                const rank = selectedCells.indexOf(id);
+                const rank = displayedCells.indexOf(id);
                 cells.push(
                     {
                         id: id,
@@ -195,7 +203,7 @@ function GridSelector() {
     }
 
     // Function to map rank to color gradient between dark blue and light blue (excluding 10% at both ends)
-    const rankToColor = (rank) => {
+    const rankToColor = (rank: number) => {
         const limitPercentage = 0.8;
         const numberOfSteps = boardSize * boardSize;
         const baseColorR = Math.floor(255 * limitPercentage);
@@ -229,4 +237,4 @@ function GridSelector() {
     );
 }
 
-export default GridSelector;
+export default PathManagerGrid;
