@@ -24,10 +24,6 @@ const pages: {
         href: '/path'
     },
     {
-        title: 'Step By Step Solver',
-        href: '/step'
-    },
-    {
         title: 'Solver',
         href: '/solver'
     },
