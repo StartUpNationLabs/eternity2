@@ -45,7 +45,7 @@ export const CreatePathForm = () => {
     const isSavePathDisabled = () => {
         return pathName === '' ||
             selectedCells.length !== boardSize ** 2 ||
-            paths.some(path => path.label === pathName);
+            paths.some(path => path.label === pathName && path.path.length === boardSize ** 2);
     };
 
     const handleSavePath = () => {
