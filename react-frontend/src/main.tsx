@@ -9,7 +9,7 @@ import {HomePage} from "./pages/homepage/HomePage";
 import {RequestForm} from "./pages/requestForm/RequestForm.tsx";
 import {RecoilRoot} from "recoil";
 import {Solver} from "./pages/solver/Solver.tsx";
-import PathCreator from "./pages/pathCreator/PathCreator.tsx";
+import PathManager from "./pages/pathManager/PathManager.tsx";
 
 
 const router = createBrowserRouter([
@@ -27,7 +27,7 @@ const router = createBrowserRouter([
             },
             {
                 path: "path",
-                element: <PathCreator/>,
+                element: <PathManager/>,
             },
             {
                 path: "form",
