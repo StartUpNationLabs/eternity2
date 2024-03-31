@@ -14,6 +14,21 @@ export const CreatePathForm = () => {
         setPathName(event.target.value);
     };
 
+    function getNextCells(selectedCells: number[]): number[] {
+        console.log("Get next cells")
+        console.log(selectedCells)
+        const nextCells = selectedCells.map((_, index) => {
+            if (index < selectedCells.length - 1) {
+                return selectedCells[index + 1];
+            } else {
+                return 2147483647;
+            }
+        });
+        console.log(nextCells)
+
+        return nextCells;
+    }
+
     return (
         <div style={{width: '80%'}}>
             <Typography id="input-slider-size" gutterBottom>
@@ -41,7 +56,7 @@ export const CreatePathForm = () => {
             <div style={{marginTop: '20px', marginBottom: '20px'}}>
                 <TextField id="path-name-input" label="Path Name" variant="outlined" style={{width: '100%'}}
                            value={pathName}
-                           onChange={handlePathNameChange}/> {/* Use pathName state and handlePathNameChange function */}
+                           onChange={handlePathNameChange}/>
             </div>
             <div style={{
                 display: 'flex',
@@ -63,14 +78,13 @@ export const CreatePathForm = () => {
                     </Button>
                     <Button variant="contained" color="success"
                             disabled={
-                                pathName === '' ||
-                                gridSelector.selectedCells.length !== gridSelector.boardSize * gridSelector.boardSize ||
+                                pathName === '' || // Check if path name is empty
+                                gridSelector.selectedCells.length !== gridSelector.boardSize * gridSelector.boardSize || // Check if path is complete
                                 paths.some(path => path.label === pathName) // Check if path name already exists
                             }
                             onClick={() => {
-                                // TODO: FIX THE FUCKING CODE IT'S NOT WORKING WRITE IT CORRECTLY YOU DUMB ASS OF RAPHAEL
                                 setPaths([...paths, {
-                                    path: gridSelector.selectedCells,
+                                    path: getNextCells(gridSelector.selectedCells),
                                     label: pathName
                                 }])
                                 setGridSelectorState({

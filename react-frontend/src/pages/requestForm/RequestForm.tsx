@@ -19,7 +19,9 @@ export const RequestForm = () => {
     const [, setSolveMode] = useRecoilState(solveModeState);
     console.log(pathOptions)
 
+    console.log("=================")
     console.log(paths)
+    console.log("=================")
 
     return (
         <>

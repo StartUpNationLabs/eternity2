@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {gridSelectorState} from "../requestForm/atoms.ts";
 import {useRecoilState} from "recoil";
 
@@ -8,16 +8,7 @@ function GridSelector() {
     const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
     const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
 
-    console.log(gridSelector.selectedCells.length)
-    console.log(gridSelector.selectedCells)
-
     const boardSize = gridSelector.boardSize;
-    const setBoardSize = function (boardSize: number) {
-        setGridSelector({
-            ...gridSelector,
-            boardSize: boardSize
-        })
-    }
 
     const selectedCells = gridSelector.selectedCells;
     const setSelectedCells = function (selectedCells: number[]) {
@@ -27,12 +18,26 @@ function GridSelector() {
         })
     }
 
+    // Function to handle cell selection
+    const handleCellClick = useCallback((id: number) => {
+        if (!isMouseDown) {
+            if (selectedCells.includes(id)) {
+                // Deselect cell if already selected
+                setSelectedCells(selectedCells.filter(cell => cell !== id));
+            } else {
+                setSelectedCells([...selectedCells, id]);
+            }
+        }
+    }, [isMouseDown, selectedCells, setSelectedCells]);
+
     useEffect(() => {
         // Add event listeners when component mounts
         const handleMouseUp = () => {
             if (isMouseDown && initialCellId === lastSelectedCellId) {
                 // Treat as single click if mouse didn't move
-                handleCellClick(initialCellId);
+                if (initialCellId !== null) {
+                    handleCellClick(initialCellId);
+                }
             }
             setIsMouseDown(false);
             setInitialCellId(null);
@@ -45,7 +50,7 @@ function GridSelector() {
         return () => {
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isMouseDown, initialCellId, lastSelectedCellId]);
+    }, [isMouseDown, initialCellId, lastSelectedCellId, handleCellClick]);
 
     // Function to calculate the direction of selection based on movement
     const calculateDirection = (currentCellId: number, lastCellId: number) => {
@@ -61,18 +66,6 @@ function GridSelector() {
         if (rowDiff === 1 && colDiff === 1) return 'down-right';
 
         return null;
-    };
-
-    // Function to handle cell selection
-    const handleCellClick = (id: number) => {
-        if (!isMouseDown) {
-            if (selectedCells.includes(id)) {
-                // Deselect cell if already selected
-                setSelectedCells(selectedCells.filter(cell => cell !== id));
-            } else {
-                setSelectedCells([...selectedCells, id]);
-            }
-        }
     };
 
     const handleCellSelection = (id: number) => {
@@ -213,13 +206,6 @@ function GridSelector() {
         const colorB = Math.floor(baseColorB + (255 * rank / numberOfSteps) - adjustedRange);
 
         return `rgb(${colorR}, ${colorG}, ${colorB})`;
-    };
-
-    // Function to handle slider change
-    const handleSliderChange = (event) => {
-        const newSize = parseInt(event.target.value);
-        setBoardSize(newSize);
-        setSelectedCells([]); // Clear selected cells when grid size changes
     };
 
     return (
