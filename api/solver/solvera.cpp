@@ -49,10 +49,11 @@ auto build_response(const SharedData &shared_data, double elapsed_seconds) -> So
         piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
         piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
     }
+    spdlog::info("Response built");
     return response;
 }
 
-auto build_response_step_by_step(const Board &board) -> SolverStepByStepRPC::Response
+auto build_response_step_by_step(const Board &board, SharedData &data) -> SolverStepByStepRPC::Response
 {
     SolverStepByStepRPC::Response response{};
     for (const auto &board_piece : board.board)
@@ -66,6 +67,24 @@ auto build_response_step_by_step(const Board &board) -> SolverStepByStepRPC::Res
         piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
         piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
     }
+    // add max board
+    for (const auto &board_piece : data.max_board.board)
+    {
+        auto *rotated_piece = response.add_max_board();
+        rotated_piece->set_index(board_piece.index);
+        rotated_piece->set_rotation(board_piece.rotation);
+        auto *piece = rotated_piece->mutable_piece();
+        piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
+        piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
+        piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
+        piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
+    }
+    // add stats
+    auto elapsed_seconds = static_cast<double>(data.milliseconds_since_start) / 1000.0;
+    response.set_boards_analyzed(data.board_count);
+    response.set_time(elapsed_seconds);
+    response.set_boards_per_second(static_cast<double>(data.board_count) / elapsed_seconds);
+    response.set_steps(data.pieces_placed);
     return response;
 }
 
@@ -116,13 +135,17 @@ auto get_env_var(std::string const &key, std::string const &default_value) -> st
     return val == nullptr ? default_value : std::string(val);
 }
 
-auto hash_pieces(const std::vector<Piece> &pieces) -> std::string
+auto hash_pieces_board(const std::vector<Piece> &pieces, Board board) -> std::string
 {
     std::string hash;
     for (const Piece &piece : pieces)
     {
         // zfill this bother piece is a ull
         hash += std::bitset<64>(piece).to_string();
+    }
+    for (const auto &next_index_cache : board.next_index_cache)
+    {
+        hash += std::bitset<64>(next_index_cache).to_string();
     }
     return hash;
 }
@@ -152,7 +175,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             SharedData shared_data               = {max_board, max_count, mutex, hashes};
             shared_data.hash_length_threshold    = request.hash_threshold();
             auto start                           = std::chrono::high_resolution_clock::now();
-            auto pieces_hash                     = hash_pieces(pieces);
+            auto pieces_hash                     = hash_pieces_board(pieces, board);
             // load hashes from redis if they exist
 
             sw::redis::ConnectionOptions connection_options;
@@ -210,7 +233,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                 {
                     spdlog::info("Found solution");
                     co_await rpc.write(build_response(shared_data, seconds_since_start));
-                    auto step_by_step = build_response_step_by_step(shared_data.max_board);
+                    auto step_by_step = build_response_step_by_step(shared_data.max_board, shared_data);
                     std::string out   = std::string();
                     step_by_step.AppendToString(&out);
 
@@ -244,8 +267,18 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                     co_await rpc.finish(grpc::Status::CANCELLED);
                     co_return;
                 }
+                spdlog::info("Response written");
+                spdlog::info("Adding {} hashes to redis", shared_data.hashes.size());
                 //  insert into redis
-                redis.sadd(pieces_hash, shared_data.hashes.begin(), shared_data.hashes.end());
+                try
+                {
+                    redis.sadd(pieces_hash, shared_data.hashes.begin(), shared_data.hashes.end());
+                }
+                catch (const sw::redis::Error &e)
+                {
+                    spdlog::error("Could not add hashes to redis: {}", e.what());
+                }
+                spdlog::info("Added hashes to redis");
             }
         });
 }
@@ -269,7 +302,7 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             std::vector<SolverStepByStepRPC::Response> responses_to_send;
             shared_data.on_board_update = [&](const Board &board) {
                 mutex.lock();
-                auto res = build_response_step_by_step(board);
+                auto res = build_response_step_by_step(board, shared_data);
                 responses.push_back(res);
                 mutex.unlock();
             };
@@ -278,7 +311,7 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             spdlog::info("Pieces: {}", pieces.size());
             spdlog::info("Timebetween: {}", request.wait_time());
             spdlog::info("Hash length threshold: {}", request.hash_threshold());
-
+            auto start = std::chrono::high_resolution_clock::now();
             // launch the solver in a new thread
             std::thread solver_thread(thread_function, board, pieces, std::ref(shared_data));
 
@@ -286,6 +319,9 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
             while (!shared_data.stop)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
+                const auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - start);
+                shared_data.milliseconds_since_start = elapsed_milliseconds.count();
                 {
                     std::scoped_lock lock(mutex);
                     // only copy the last 10 responses
