@@ -1,9 +1,9 @@
-import {SolverSolveResponse} from "../../proto/solver/v1/solver.ts";
+import {SolverStepByStepResponse} from "../../proto/solver/v1/solver.ts";
 import Typography from "@mui/material/Typography";
 import {Card, Container} from "@mui/material";
 import CardContent from '@mui/material/CardContent';
 
-export const Stats = (props: { response?: SolverSolveResponse }) => {
+export const StatsStepByStep = (props: { response?: SolverStepByStepResponse }) => {
 
     if (!props.response) {
         return <div>
@@ -39,27 +39,6 @@ export const Stats = (props: { response?: SolverSolveResponse }) => {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardContent>
-                    <Typography
-                        sx={{fontSize: 14}}
-                        color="text.secondary"
-                        gutterBottom
-                    >Hashes</Typography>
-                    <Typography variant="h5">{props.response.hashTableSize}</Typography>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardContent>
-                    <Typography
-                        sx={{fontSize: 14}}
-                        color="text.secondary"
-                        gutterBottom
-                    >Hashes Per Second</Typography>
-                    <Typography variant="h5">{props.response.hashesPerSecond.toFixed(3)}</Typography>
-                </CardContent>
-            </Card>
 
             <Card>
                 <CardContent>
@@ -87,8 +66,8 @@ export const Stats = (props: { response?: SolverSolveResponse }) => {
                         sx={{fontSize: 14}}
                         color="text.secondary"
                         gutterBottom
-                    >Hash Table Hits</Typography>
-                    <Typography variant="h5">{props.response.hashTableHits.toFixed(0)}</Typography>
+                    >Pieces Placed</Typography>
+                    <Typography variant="h5">{props.response.steps}</Typography>
                 </CardContent>
             </Card>
         </Container>

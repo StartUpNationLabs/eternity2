@@ -8,6 +8,7 @@ import {SolverStepByStepResponse} from "../../proto/solver/v1/solver.ts";
 import {SolverClient} from "../../proto/solver/v1/solver.client.ts";
 import {abortController, SERVER_BASE_URL} from "../../utils/Constants.tsx";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
+import {StatsStepByStep} from "./StatsStepByStep.tsx";
 
 
 export const SolvingStepByStep = () => {
@@ -94,22 +95,43 @@ export const SolvingStepByStep = () => {
                 </div>
             </div>
         </Grid>
-        {/*<Grid item xs={4}>*/}
-        {/*    <Typography variant={"h4"}>Max Board*/}
-        {/*    </Typography>*/}
-        {/*    <div style={{*/}
-        {/*        display: 'flex',*/}
-        {/*        justifyContent: 'center',*/}
-        {/*        alignItems: 'center',*/}
-        {/*        height: '100%',*/}
-        {/*        aspectRatio: 1,*/}
-        {/*    }}>*/}
-        {/*        <div style={{width: "100%", height: "100%"}}>*/}
-        {/*            <Board pieces={getMaxBoard(solverSolveResponses) || []}*/}
-        {/*            />*/}
-        {/*        </div>*/}
-        {/*    </div>*/}
-        {/*</Grid>*/}
+        <Grid item xs={3}
+            style={{
+                height: '100%',
+            }}
+        >
+            <div
+                style={{
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    height: "100%",
+                    margin: "auto",
+                    marginTop: 20,
+                }}
+            >
+                <StatsStepByStep response={solverSolveResponse}/>
+            </div>
+        </Grid>
+        <Grid item xs={4}>
+            <Typography variant={"h4"}>Max Board
+            </Typography>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
+                aspectRatio: 1,
+            }}>
+                <div style={{width: "100%", height: "100%"}}>
+                    <Board pieces={solverSolveResponse?.maxBoard || []}
+                    />
+                </div>
+            </div>
+        </Grid>
     </Grid>
 
 }

@@ -163,7 +163,7 @@ export const RequestForm = () => {
                     </Typography>
                     <Slider
                         defaultValue={1000}
-                        min={200}
+                        min={50}
                         max={2000}
                         value={
                             settings.waitTime
@@ -248,6 +248,8 @@ export const RequestForm = () => {
                         style={{
                             padding: 20,
                         }}
+                        checked={settings.useCache}
+                        onChange={(_, v) => setSettings({...settings, useCache: v})}
                     /></Container>
             </FormGroup>
             <FormGroup
