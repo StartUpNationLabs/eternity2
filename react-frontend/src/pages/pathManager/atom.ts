@@ -1,29 +1,12 @@
 import {atom} from "recoil";
+import {BOARD_SIZE_DEFAULT} from "../../utils/Constants.tsx";
 
 export const DEFAULT_SELECTED_CELLS = [0] as number[];
-export const GRID_SIZE_MIN = 2;
-export const GRID_SIZE_MAX = 16;
-export const GRID_SIZE_DEFAULT = 4;
-
-export const pathManagerState = atom({
-    key: 'pathManagerState',
-    default: {
-        // Common
-        boardSize: 4,
-        displayedCells: [] as number[],
-        // Create Path
-        selectedCells: [0] as number[],
-        // Display Path
-        selectedPath: [] as number[],
-        selectedPathName: '',
-    }
-});
 
 export const boardSizeState = atom({
     key: 'boardSizeState',
-    default: 4,
+    default: BOARD_SIZE_DEFAULT as number,
 });
-
 
 export const displayedCellsState = atom({
     key: 'displayedCellsState',

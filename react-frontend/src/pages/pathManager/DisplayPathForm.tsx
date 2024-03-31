@@ -3,16 +3,9 @@ import {Path, pathsState} from "../requestForm/atoms.ts";
 import {Autocomplete, Button, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Box from "@mui/material/Box";
-import {
-    boardSizeState,
-    DEFAULT_SELECTED_CELLS,
-    displayedCellsState,
-    GRID_SIZE_DEFAULT,
-    GRID_SIZE_MAX,
-    GRID_SIZE_MIN,
-    selectedCellsState
-} from "./atom.ts";
+import {boardSizeState, DEFAULT_SELECTED_CELLS, displayedCellsState, selectedCellsState} from "./atom.ts";
 import {convertPathToSelectedCells} from "./utils.ts";
+import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
 
 export const DisplayPathForm = () => {
     const paths = useRecoilState(pathsState)[0];
@@ -45,9 +38,9 @@ export const DisplayPathForm = () => {
                 Select Path
             </Typography>
             <Slider
-                defaultValue={GRID_SIZE_DEFAULT}
-                min={GRID_SIZE_MIN}
-                max={GRID_SIZE_MAX}
+                defaultValue={BOARD_SIZE_DEFAULT}
+                min={BOARD_SIZE_MIN}
+                max={BOARD_SIZE_MAX}
                 value={boardSize}
                 onChange={
                     (_, value) => {
@@ -56,7 +49,7 @@ export const DisplayPathForm = () => {
                     }
                 }
                 marks
-                step={1}
+                step={BOARD_SIZE_STEP}
                 aria-labelledby={"input-slider-path"}
                 valueLabelDisplay="on"
             />
@@ -66,6 +59,7 @@ export const DisplayPathForm = () => {
                 getOptionLabel={(option) => option.label}
                 onChange={handlePathChange}
                 renderInput={(params) => <TextField {...params} label="Available Paths"/>}
+                style={{marginTop: '20px'}}
             />
             <div style={{
                 display: 'flex',
@@ -75,7 +69,7 @@ export const DisplayPathForm = () => {
                 marginTop: '20px',
                 marginBottom: '20px',
             }}>
-                <Box display="flex" justifyContent="space-between" width="80%">
+                <Box display="flex" justifyContent="space-between" width="50%">
                     <Button variant="outlined" color="error" onClick={toBeImplemented}>
                         Delete Path
                     </Button>

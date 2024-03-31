@@ -2,26 +2,38 @@ import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {
-    Board,
-    Path,
-    BOARD_COLOR_DEFAULT,
-    BOARD_COLOR_MAX,
-    BOARD_COLOR_MIN,
-    BOARD_SIZE_DEFAULT,
-    BOARD_SIZE_MAX,
-    BOARD_SIZE_MIN,
-    boardsState,
-    boardState,
-    spiralPath,
-    pathsState,
-    settingsState,
-    solveModeState
-} from "./atoms.ts";
+import {Board, boardsState, boardState, Path, pathsState, settingsState, solveModeState, spiralPath} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToPieces, createBoard} from "../../utils/logic.tsx";
 import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
-import {abortController} from "../../utils/Constants.tsx";
+import {
+    abortController,
+    BOARD_COLOR_DEFAULT,
+    BOARD_COLOR_MAX,
+    BOARD_COLOR_MIN,
+    BOARD_COLOR_STEP,
+    BOARD_SIZE_DEFAULT,
+    BOARD_SIZE_MAX,
+    BOARD_SIZE_MIN,
+    BOARD_SIZE_STEP,
+    CACHE_PULL_INTERVAL_DEFAULT,
+    CACHE_PULL_INTERVAL_MAX,
+    CACHE_PULL_INTERVAL_MIN,
+    CACHE_PULL_INTERVAL_STEP,
+    HASH_THRESHOLD_DEFAULT,
+    HASH_THRESHOLD_MAX,
+    HASH_THRESHOLD_MIN,
+    HASH_THRESHOLD_STEP,
+    SCAN_ROW_PATH_NAME,
+    THREADS_DEFAULT,
+    THREADS_MAX,
+    THREADS_MIN,
+    THREADS_STEP,
+    WAIT_TIME_DEFAULT,
+    WAIT_TIME_MAX,
+    WAIT_TIME_MIN,
+    WAIT_TIME_STEP
+} from "../../utils/Constants.tsx";
 import {Piece} from "../../proto/solver/v1/solver.ts";
 import {useEffect, useState} from "react";
 
@@ -36,7 +48,7 @@ export const RequestForm = () => {
     const [, setSolveMode] = useRecoilState(solveModeState);
     const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
     const boards = useRecoilValue(boardsState);
-    const setSelectedBoard = useState<Board | null>(null)[1];
+    const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
 
     useEffect(() => {
         const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
@@ -67,16 +79,26 @@ export const RequestForm = () => {
                     value={settings.boardSize}
                     onChange={
                         (_, v) => {
-                            setSettings({
-                                ...settings, boardSize: v as number, path: spiralPath
-                            });
-                            setSelectedBoard(null);
+
+                            // Update board size and then create a new board
                             const newBoard = convertToPieces(createBoard(v as number, settings.boardColors));
                             setBoard(newBoard);
+
+                            // Reset the selected board
+                            setSelectedBoard(null);
+
+                            // Filter the current path as the SCAN_ROW_PATH_NAME with the new board size
+                            // Take the value from pathsState
+                            const scanRowPaths = paths.filter((path) => path.label === SCAN_ROW_PATH_NAME);
+
+                            const boardSize = v as number;
+                            const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize**2);
+
+                            setSettings({...settings, boardSize: v as number, path: scanRowPath || spiralPath});
                         }
                     }
                     marks
-                    step={1}
+                    step={BOARD_SIZE_STEP}
                     aria-labelledby={"input-slider-size"}
                     valueLabelDisplay="on"
                     size="small"
@@ -98,13 +120,17 @@ export const RequestForm = () => {
                     }
                     onChange={
                         (_, v) => {
+                            // Update board colors and then create a new board
                             setSettings({...settings, boardColors: v as number});
                             const newBoard = convertToPieces(createBoard(settings.boardSize, v as number));
                             setBoard(newBoard);
+
+                            // Reset the selected board
+                            setSelectedBoard(null);
                         }
                     }
                     marks
-                    step={1}
+                    step={BOARD_COLOR_STEP}
                     aria-labelledby={"input-slider-colors"}
                     valueLabelDisplay="on"
                     size="small"
@@ -129,6 +155,7 @@ export const RequestForm = () => {
                             />
                         )}
                         options={boards}
+                        value={selectedBoard}
                         getOptionLabel={(option) => option.label}
                         onChange={(_, v) => {
                             if (v) {
@@ -137,7 +164,8 @@ export const RequestForm = () => {
                                 setSelectedBoard(v);
                                 setSettings({
                                     ...settings,
-                                    boardSize: Math.sqrt(pieceList.length)
+                                    boardSize: Math.sqrt(pieceList.length),
+                                    boardColors: v.nbColors,
                                 });
                             }
                         }}
@@ -173,15 +201,18 @@ export const RequestForm = () => {
                             return option.label === value.label && option.path.length === value.path.length;
                         }
                         }
+                        style={{
+                            padding: 10,
+                        }}
                     >
                     </Autocomplete>
                     <Typography id="input-slider-hash-threshold" gutterBottom>
                         Hash Threshold
                     </Typography>
                     <Slider
-                        defaultValue={4}
-                        min={1}
-                        max={16}
+                        defaultValue={HASH_THRESHOLD_DEFAULT}
+                        min={HASH_THRESHOLD_MIN}
+                        max={HASH_THRESHOLD_MAX}
                         value={
                             settings.hashThreshold
                         }
@@ -189,7 +220,7 @@ export const RequestForm = () => {
                             (_, v) => setSettings({...settings, hashThreshold: v as number})
                         }
                         marks
-                        step={1}
+                        step={HASH_THRESHOLD_STEP}
                         aria-labelledby={"input-slider-hash-threshold"}
                         valueLabelDisplay="on"
                         size="small"
@@ -198,9 +229,9 @@ export const RequestForm = () => {
                         Wait Time
                     </Typography>
                     <Slider
-                        defaultValue={1000}
-                        min={50}
-                        max={2000}
+                        defaultValue={WAIT_TIME_DEFAULT}
+                        min={WAIT_TIME_MIN}
+                        max={WAIT_TIME_MAX}
                         value={
                             settings.waitTime
                         }
@@ -208,7 +239,7 @@ export const RequestForm = () => {
                             (_, v) => setSettings({...settings, waitTime: v as number})
                         }
                         marks
-                        step={100}
+                        step={WAIT_TIME_STEP}
                         aria-labelledby={"input-slider-wait-time"}
                         valueLabelDisplay="on"
                         size="small"
@@ -217,9 +248,9 @@ export const RequestForm = () => {
                         Cache Pull Interval
                     </Typography>
                     <Slider
-                        defaultValue={10}
-                        min={1}
-                        max={20}
+                        defaultValue={CACHE_PULL_INTERVAL_DEFAULT}
+                        min={CACHE_PULL_INTERVAL_MIN}
+                        max={CACHE_PULL_INTERVAL_MAX}
                         value={
                             settings.cachePullInterval
                         }
@@ -227,7 +258,7 @@ export const RequestForm = () => {
                             (_, v) => setSettings({...settings, cachePullInterval: v as number})
                         }
                         marks
-                        step={1}
+                        step={CACHE_PULL_INTERVAL_STEP}
                         aria-labelledby={"input-slider-cache-pull-interval"}
                         valueLabelDisplay="on"
                         size="small"
@@ -236,9 +267,9 @@ export const RequestForm = () => {
                         Threads
                     </Typography>
                     <Slider
-                        defaultValue={32}
-                        min={1}
-                        max={64}
+                        defaultValue={THREADS_DEFAULT}
+                        min={THREADS_MIN}
+                        max={THREADS_MAX}
                         value={
                             settings.threads
                         }
@@ -246,16 +277,14 @@ export const RequestForm = () => {
                             (_, v) => setSettings({...settings, threads: v as number})
                         }
                         marks
-                        step={1}
+                        step={THREADS_STEP}
                         aria-labelledby={"input-slider-threads"}
                         valueLabelDisplay="on"
                         size="small"
                     />
-
-
                 </FormGroup>
-
             </FormGroup>
+
             <FormGroup
                 style={{
                     padding: 10,

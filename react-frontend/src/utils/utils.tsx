@@ -23,10 +23,10 @@ export function useStateHistory<T>(
 export function convertBucasToPiece(bucas: string): Piece {
     // Convert the bucas string to a Piece object
     return {
-        top: bucas.charCodeAt(0) - 'a'.charCodeAt(0),
-        right: bucas.charCodeAt(1) - 'a'.charCodeAt(0),
-        bottom: bucas.charCodeAt(2) - 'a'.charCodeAt(0),
-        left: bucas.charCodeAt(3) - 'a'.charCodeAt(0),
+        top: bucas.charCodeAt(0) - 'a'.charCodeAt(0) || 65535,
+        right: bucas.charCodeAt(1) - 'a'.charCodeAt(0) || 65535,
+        bottom: bucas.charCodeAt(2) - 'a'.charCodeAt(0) || 65535,
+        left: bucas.charCodeAt(3) - 'a'.charCodeAt(0) || 65535,
     };
 }
 

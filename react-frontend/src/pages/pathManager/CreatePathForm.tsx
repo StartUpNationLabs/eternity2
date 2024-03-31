@@ -4,16 +4,9 @@ import {FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import {
-    boardSizeState,
-    DEFAULT_SELECTED_CELLS,
-    displayedCellsState,
-    GRID_SIZE_DEFAULT,
-    GRID_SIZE_MAX,
-    GRID_SIZE_MIN,
-    selectedCellsState
-} from "./atom.ts";
+import {boardSizeState, DEFAULT_SELECTED_CELLS, displayedCellsState, selectedCellsState} from "./atom.ts";
 import {convertSelectedCellsToPath} from "./utils.ts"
+import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
 
 export const CreatePathForm = () => {
     // Available paths on the website
@@ -76,9 +69,9 @@ export const CreatePathForm = () => {
                 Board size
             </Typography>
             <Slider
-                defaultValue={GRID_SIZE_DEFAULT}
-                min={GRID_SIZE_MIN}
-                max={GRID_SIZE_MAX}
+                defaultValue={BOARD_SIZE_DEFAULT}
+                min={BOARD_SIZE_MIN}
+                max={BOARD_SIZE_MAX}
                 value={
                     boardSize
                 }
@@ -89,7 +82,7 @@ export const CreatePathForm = () => {
                     }
                 }
                 marks
-                step={1}
+                step={BOARD_SIZE_STEP}
                 aria-labelledby={"input-slider-size"}
                 valueLabelDisplay="on"
             />

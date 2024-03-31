@@ -167,7 +167,7 @@ function PathManagerGrid() {
                         <div
                             key={cell.id}
                             style={{
-                                backgroundColor: cell.rank !== -1 ? rankToColor(cell.rank) : '#bbbbbb',
+                                backgroundColor: cell.rank !== -1 ? rankToColor(cell.rank) : '#9a9a9a',
                                 display: 'flex',
                                 position: 'relative',
                                 width: '100%',
