@@ -149,6 +149,7 @@ auto solve_board_recursive(Board &board,
     for (auto const &rotated_piece : possible)
     {
         place_piece(board, rotated_piece, index);
+        shared_data.pieces_placed++;
         // add placed piece to board hash
         if (placed_pieces < shared_data.hash_length_threshold)
         {

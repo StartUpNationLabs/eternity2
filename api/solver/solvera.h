@@ -38,7 +38,7 @@ auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &reques
 
 auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                                   solver::v1::Solver::AsyncService &service1) -> unifex::any_sender_of<>;
-auto build_response_step_by_step(const Board &board) -> SolverStepByStepRPC::Response;
+auto build_response_step_by_step(const Board &board, SharedData &data) -> SolverStepByStepRPC::Response;
 
 auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
                                                solver::v1::Solver::AsyncService &service1)

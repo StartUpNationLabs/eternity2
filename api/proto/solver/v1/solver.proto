@@ -40,6 +40,11 @@ message RotatedPiece {
 
 message SolverStepByStepResponse {
   repeated RotatedPiece rotated_pieces = 1 ;
+  repeated RotatedPiece max_board = 2;
+  uint32 steps = 3;
+  double time = 4;
+  uint32 boards_analyzed = 5;
+  double boards_per_second = 6;
 }
 
 message SolverSolveResponse {

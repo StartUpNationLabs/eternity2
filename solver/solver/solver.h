@@ -16,6 +16,8 @@ struct SharedData
     std::function<void(const Board &)> on_board_update = [](const Board &board) {};
     unsigned int hash_length_threshold                 = 7;
     unsigned long redis_hash_count                     = 0;
+    std::atomic_llong pieces_placed{0};
+    std::atomic_llong milliseconds_since_start{1};
 };
 
 auto possible_pieces(const Board &board, const std::vector<PieceWAvailability> &pieces, Index index)

@@ -11,7 +11,7 @@ endif ()
 # add Wall flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") #  -Wall -lstdc++
 # build release
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
 
 # Define the macro
 set(SCAN_METHOD "ROW" CACHE STRING "Method to scan the board")
