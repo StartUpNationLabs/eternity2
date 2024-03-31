@@ -43,14 +43,14 @@ export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.oze
 /**
  * Directions for the pieces
  */
-enum Direction {
+export enum Direction {
     Top,
     Right,
     Bottom,
     Left,
 }
 
-enum Rotation {
+export enum Rotation {
     ZERO,
     NINETY,
     ONE_EIGHTY,
