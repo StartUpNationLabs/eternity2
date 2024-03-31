@@ -65,5 +65,5 @@ export const solveModeState = atom({
 export const eternity2OfficialBoard: Board = {
     label: "Eternity II Official",
     gridSideSize: 16,
-    pieces: RotatedPiece[] = convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES),
+    pieces: convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES),
 }
