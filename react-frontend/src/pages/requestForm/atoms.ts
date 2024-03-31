@@ -15,7 +15,7 @@ export const settingsState
         path: {
             label: `Default`,
             path: [] as number[]
-        } ,
+        },
         useCache: false,
     }, // default value (aka initial value)
 });
@@ -34,7 +34,6 @@ export const defaultPath = {
 }
 
 
-
 export const pathsState: RecoilState<Path[]> = atom({
     key: 'pathsState',
     default: [...defaultPaths, defaultPath],
@@ -43,4 +42,12 @@ export const pathsState: RecoilState<Path[]> = atom({
 export const boardState: RecoilState<SolverSolveRequest["pieces"]> = atom({
     key: 'boardState',
     default: [] as SolverSolveRequest["pieces"],
+});
+
+export const gridSelectorState = atom({
+    key: 'gridSelectorState',
+    default: {
+        boardSize: 4,
+        selectedCells: [] as number[],
+    }
 });

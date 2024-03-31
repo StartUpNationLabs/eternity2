@@ -1,12 +1,28 @@
 import React, {useEffect, useState} from 'react';
+import {gridSelectorState} from "../requestForm/atoms.ts";
+import {useRecoilState} from "recoil";
 
 function GridSelector() {
-    const [boardSize, setBoardSize] = useState(5); // Initial grid size
-    const [selectedCells, setSelectedCells] = useState([]); // Array to hold selected cells
-    const [cellCounter, setCellCounter] = useState(0); // Counter for displaying rank in selected cells
+    const [gridSelector, setGridSelector] = useRecoilState(gridSelectorState);
     const [isMouseDown, setIsMouseDown] = useState(false); // State to track mouse button press
     const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
     const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
+
+    const boardSize = gridSelector.boardSize;
+    const setBoardSize = function (boardSize: number) {
+        setGridSelector({
+            ...gridSelector,
+            boardSize: boardSize
+        })
+    }
+
+    const selectedCells = gridSelector.selectedCells;
+    const setSelectedCells = function (selectedCells: number[]) {
+        setGridSelector({
+            ...gridSelector,
+            selectedCells: selectedCells
+        })
+    }
 
     useEffect(() => {
         // Add event listeners when component mounts
@@ -29,34 +45,34 @@ function GridSelector() {
     }, [isMouseDown, initialCellId, lastSelectedCellId]);
 
     // Function to calculate the direction of selection based on movement
-    const calculateDirection = (currentCellId, lastCellId) => {
+    const calculateDirection = (currentCellId: number, lastCellId: number) => {
         const rowDiff = Math.floor(currentCellId / boardSize) - Math.floor(lastCellId / boardSize);
         const colDiff = currentCellId % boardSize - lastCellId % boardSize;
-
         if (rowDiff === -1 && colDiff === 0) return 'up';
         if (rowDiff === 1 && colDiff === 0) return 'down';
         if (rowDiff === 0 && colDiff === -1) return 'left';
         if (rowDiff === 0 && colDiff === 1) return 'right';
+        if (rowDiff === -1 && colDiff === -1) return 'up-left';
+        if (rowDiff === -1 && colDiff === 1) return 'up-right';
+        if (rowDiff === 1 && colDiff === -1) return 'down-left';
+        if (rowDiff === 1 && colDiff === 1) return 'down-right';
 
         return null;
     };
 
     // Function to handle cell selection
-    const handleCellClick = (id) => {
+    const handleCellClick = (id: number) => {
         if (!isMouseDown) {
             if (selectedCells.includes(id)) {
                 // Deselect cell if already selected
                 setSelectedCells(selectedCells.filter(cell => cell !== id));
             } else {
-                // Select cell and increment rank
                 setSelectedCells([...selectedCells, id]);
-                setCellCounter(cellCounter + 1);
             }
         }
     };
 
-    // Function to handle click-and-drag selection
-    const handleCellSelection = (id) => {
+    const handleCellSelection = (id: number) => {
         if (isMouseDown) {
             if (initialCellId === null) {
                 // Set initial cell id when mouse down
@@ -85,6 +101,18 @@ function GridSelector() {
                             case 'right':
                                 currentId += 1;
                                 break;
+                            case 'up-left':
+                                currentId -= boardSize + 1;
+                                break;
+                            case 'up-right':
+                                currentId -= boardSize - 1;
+                                break;
+                            case 'down-left':
+                                currentId += boardSize - 1;
+                                break;
+                            case 'down-right':
+                                currentId += boardSize + 1;
+                                break;
                             default:
                                 break;
                         }
@@ -98,12 +126,6 @@ function GridSelector() {
                 }
             }
         }
-    };
-
-    // Function to reset the grid
-    const handleReset = () => {
-        setSelectedCells([]);
-        setCellCounter(0);
     };
 
     const renderGrid = () => {
@@ -136,7 +158,7 @@ function GridSelector() {
                         <div
                             key={cell.id}
                             style={{
-                                backgroundColor: cell.rank !== -1 ? rankToColor(cell.rank) : 'white',
+                                backgroundColor: cell.rank !== -1 ? rankToColor(cell.rank) : '#bbbbbb',
                                 display: 'flex',
                                 position: 'relative',
                                 width: '100%',
@@ -190,36 +212,11 @@ function GridSelector() {
         return `rgb(${colorR}, ${colorG}, ${colorB})`;
     };
 
-    // Function to generate list of selected cell ids ordered by their ranking
-    const renderSelectedCellIds = () => {
-        return selectedCells;
-    };
-
     // Function to handle slider change
     const handleSliderChange = (event) => {
         const newSize = parseInt(event.target.value);
         setBoardSize(newSize);
         setSelectedCells([]); // Clear selected cells when grid size changes
-        setCellCounter(0); // Reset cell counter
-    };
-
-    // Function to generate slider for grid size
-    const renderSlider = () => {
-        return (
-            <div>
-                <label htmlFor="grid-size-slider">Grid Size:</label>
-                <input
-                    type="range"
-                    id="grid-size-slider"
-                    name="grid-size-slider"
-                    min="2"
-                    max="16"
-                    value={boardSize}
-                    onChange={handleSliderChange}
-                />
-                <span>{boardSize}</span>
-            </div>
-        );
     };
 
     return (
