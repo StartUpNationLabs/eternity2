@@ -1,5 +1,5 @@
 import {atom, RecoilState} from "recoil";
-import {convertToPieces, createBoard, shuffleAndRotateBoard} from "../../damien/logic.tsx";
+import {convertToPieces, createBoard, shuffleAndRotateBoard} from "../../utils/logic.tsx";
 import {Board} from "../requestForm/atoms.ts";
 
 
