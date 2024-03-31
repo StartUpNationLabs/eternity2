@@ -31,7 +31,7 @@ export const CreatePathForm = () => {
                 onChange={
                     (_, v) => {
                         setGridSelectorState({
-                            ...gridSelector, boardSize: v as number
+                            ...gridSelector, boardSize: v as number, selectedCells: [] as number[]
                         })
                     }
                 }
