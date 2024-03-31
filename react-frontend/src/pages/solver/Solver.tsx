@@ -11,10 +11,16 @@ import {SolvingMultiServer} from "./SolvingMultiServer.tsx";
 
 export const Solver = () => {
     const board = useRecoilValue(boardState);
-    const [solveMode, ] = useRecoilState(solveModeState);
+    const [solveMode,] = useRecoilState(solveModeState);
     return <>
         <Grid container spacing={2}
-              style={{minHeight: "90vh", height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+              style={{
+                  minHeight: "90vh",
+                  height: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+              }}>
 
             <Grid item xs={5}>
                 <div
