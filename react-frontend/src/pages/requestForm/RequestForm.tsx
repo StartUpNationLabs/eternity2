@@ -2,10 +2,11 @@ import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardState, defaultPath, Path, pathsState, settingsState} from "./atoms.ts";
+import {boardState, defaultPath, Path, pathsState, settingsState, solveModeState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToBoard, convertToPieces, createBoard, shuffleAndRotateBoard} from "../../damien/logic.tsx";
 import {isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
+import {abortController} from "../../utils/Constants.tsx";
 
 
 export const RequestForm = () => {
@@ -13,8 +14,9 @@ export const RequestForm = () => {
     const paths = useRecoilValue(pathsState);
     const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
     const [board, setBoard] = useRecoilState(boardState);
-    const [isSolving, setSolving] = useRecoilState(isSolvingState);
-    const [isSolvingStepByStep, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
+    const [, setSolving] = useRecoilState(isSolvingState);
+    const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
+    const [, setSolveMode] = useRecoilState(solveModeState);
     console.log(pathOptions)
 
     console.log(paths)
@@ -24,7 +26,7 @@ export const RequestForm = () => {
 
             <FormGroup
                 style={{
-                    padding: 20,
+                    padding: 10,
                     width: "100%",
                 }}
 
@@ -53,6 +55,7 @@ export const RequestForm = () => {
                     aria-labelledby={"input-slider-size"}
                     valueLabelDisplay="on"
 
+                    size="small"
 
                 />
                 <Typography id="input-slider-colors" gutterBottom>
@@ -72,6 +75,7 @@ export const RequestForm = () => {
                     step={1}
                     aria-labelledby={"input-slider-colors"}
                     valueLabelDisplay="on"
+                    size="small"
                 />
 
 
@@ -105,7 +109,7 @@ export const RequestForm = () => {
             </FormGroup>
             <FormGroup
                 style={{
-                    padding: 20,
+                    padding: 10,
                     width: "100%",
                 }}
             >
@@ -150,6 +154,7 @@ export const RequestForm = () => {
                         step={1}
                         aria-labelledby={"input-slider-hash-threshold"}
                         valueLabelDisplay="on"
+                        size="small"
                     />
                     <Typography id="input-slider-wait-time" gutterBottom>
                         Wait Time
@@ -168,6 +173,7 @@ export const RequestForm = () => {
                         step={100}
                         aria-labelledby={"input-slider-wait-time"}
                         valueLabelDisplay="on"
+                        size="small"
                     />
                     <Typography id="input-slider-cache-pull-interval" gutterBottom>
                         Cache Pull Interval
@@ -186,6 +192,7 @@ export const RequestForm = () => {
                         step={1}
                         aria-labelledby={"input-slider-cache-pull-interval"}
                         valueLabelDisplay="on"
+                        size="small"
                     />
                     <Typography id="input-slider-threads" gutterBottom>
                         Threads
@@ -204,6 +211,7 @@ export const RequestForm = () => {
                         step={1}
                         aria-labelledby={"input-slider-threads"}
                         valueLabelDisplay="on"
+                        size="small"
                     />
 
 
@@ -212,7 +220,7 @@ export const RequestForm = () => {
             </FormGroup>
             <FormGroup
                 style={{
-                    padding: 20,
+                    padding: 10,
                     width: "100%",
                     display: "flex",
                     alignItems: "start",
@@ -253,14 +261,20 @@ export const RequestForm = () => {
             >
                 <Button type="submit" color="primary"
                         onClick={() => {
+                            abortController.abortController.abort();
+                            abortController.abortController = new AbortController();
                             setSolving(true);
+                            setSolveMode("normal");
                         }
                         }
                 >Solve</Button>
                 <Button type="submit" color="primary"
 
                         onClick={() => {
+                            abortController.abortController.abort();
+                            abortController.abortController = new AbortController();
                             setSolvingStepByStep(true);
+                            setSolveMode("stepByStep");
                         }
                         }
                 >Step By Step</Button>

@@ -55,3 +55,8 @@ export const gridSelectorState = atom({
         selectedCells: [] as number[],
     }
 });
+
+export const solveModeState = atom({
+    key: 'solveModeState',
+    default: 'none' as "normal" | "stepByStep" | "none",
+});

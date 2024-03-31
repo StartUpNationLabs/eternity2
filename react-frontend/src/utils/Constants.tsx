@@ -1,6 +1,4 @@
 import {EternityPattern} from "./EternityPattern";
-import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
-import {SolverClient} from "../proto/solver/v1/solver.client.ts";
 
 /**
  * Those are the official pieces for the puzzle
@@ -444,15 +442,10 @@ const ETERNITY_PATTERNS = [
     PATTERN_BG_BLUE_CROSS,
 ]
 
-const transport = new GrpcWebFetchTransport({
-    baseUrl: SERVER_BASE_URL,
-    format: "binary",
 
-});
-const solverClient = new SolverClient(
-    transport
-);
-console.log(solverClient);
+export const abortController ={
+    abortController: new AbortController(),
+}
 
 export {
     ETERNITY_II_PIECES,
@@ -460,6 +453,4 @@ export {
     ETERNITY_PATTERNS,
     Direction,
     Rotation,
-    transport,
-    solverClient
 }

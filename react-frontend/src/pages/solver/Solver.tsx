@@ -2,15 +2,15 @@ import {RequestForm} from "../requestForm/RequestForm.tsx";
 import {Piece} from "../../proto/solver/v1/solver.ts";
 import Board from "../../components/Board.tsx";
 import {Grid} from "@mui/material";
-import {useRecoilValue} from "recoil";
-import {boardState} from "../requestForm/atoms.ts";
+import {useRecoilState, useRecoilValue} from "recoil";
+import {boardState, solveModeState} from "../requestForm/atoms.ts";
 import {Solving} from "./Solving.tsx";
 import {SolvingStepByStep} from "./SolvingStepByStep.tsx";
 
 
 export const Solver = () => {
     const board = useRecoilValue(boardState);
-
+    const [solveMode, ] = useRecoilState(solveModeState);
     return <>
         <Grid container spacing={2}
               style={{height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
@@ -18,14 +18,12 @@ export const Solver = () => {
             <Grid item xs={5}>
                 <div
                     style={{
-                        padding: 20,
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
                         width: "100%",
                         margin: "auto",
-                        marginTop: 20,
                     }}
                 >
                     <RequestForm/>
@@ -51,7 +49,7 @@ export const Solver = () => {
                 </div>
             </Grid>
         </Grid>
-        <Solving/>
-        <SolvingStepByStep/>
+        {solveMode === "normal" && <Solving/>}
+        {solveMode === "stepByStep" && <SolvingStepByStep/>}
     </>
 }
