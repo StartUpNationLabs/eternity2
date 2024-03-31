@@ -5,7 +5,7 @@ import {EternityPattern} from "./EternityPattern";
  * Each piece is a string of 4 characters, each character can be a letter from 'a' to 'v'.
  * Each letter then corresponds to a specific pattern.
  */
-const ETERNITY_II_PIECES = [
+export const ETERNITY_II_PIECES = [
     "aabd", "aabe", "aacd", "aadc", "abgb", "abhc", "abjb", "abjf", "abmd", "aboe", "abpc", "abte",
     "abtf", "abve", "achb", "acid", "ackf", "acnf", "acoc", "acpc", "acqe", "acrb", "acrf", "acsb",
     "acvb", "adgc", "adgd", "adhd", "adid", "adof", "adpc", "adsd", "adtc", "adte", "aduf", "adwe",
@@ -30,7 +30,7 @@ const ETERNITY_II_PIECES = [
     "rtus", "suvu", "swuw", "twvw"
 ]
 
-const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
+export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
 
 /**
  * Directions for the pieces
@@ -51,11 +51,11 @@ enum Rotation {
 
 /**
  * ==============================================================================================================
- * Constant for patterns
+ * export constant for patterns
  * ==============================================================================================================
  */
 
-const PATTERN_GREY: EternityPattern = {
+export const PATTERN_GREY: EternityPattern = {
     name: "GREY",
     binaryInt: 65535,
     bucasLetter: "A",
@@ -70,7 +70,7 @@ const PATTERN_GREY: EternityPattern = {
     },
 }
 
-const PATTERN_GREY_2: EternityPattern = {
+export const PATTERN_GREY_2: EternityPattern = {
     name: "GREY",
     binaryInt: 0,
     bucasLetter: "A",
@@ -85,7 +85,7 @@ const PATTERN_GREY_2: EternityPattern = {
     },
 }
 
-const PATTERN_BG_ORANGE_CONCAVE_FORT: EternityPattern = {
+export const PATTERN_BG_ORANGE_CONCAVE_FORT: EternityPattern = {
     name: "BG_ORANGE_CONCAVE_FORT",
     binaryInt: 1,
     bucasLetter: "B",
@@ -100,7 +100,7 @@ const PATTERN_BG_ORANGE_CONCAVE_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_FLOWER: EternityPattern = {
+export const PATTERN_BG_BLUE_FLOWER: EternityPattern = {
     name: "BG_BLUE_FLOWER",
     binaryInt: 2,
     bucasLetter: "C",
@@ -115,7 +115,7 @@ const PATTERN_BG_BLUE_FLOWER: EternityPattern = {
     },
 }
 
-const PATTERN_BG_PINK_HOLLOW_CONCAVE_FORT: EternityPattern = {
+export const PATTERN_BG_PINK_HOLLOW_CONCAVE_FORT: EternityPattern = {
     name: "BG_PINK_HOLLOW_CONCAVE_FORT",
     binaryInt: 3,
     bucasLetter: "D",
@@ -130,7 +130,7 @@ const PATTERN_BG_PINK_HOLLOW_CONCAVE_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_GREEN_HOLLOW_SQUARE: EternityPattern = {
+export const PATTERN_BG_GREEN_HOLLOW_SQUARE: EternityPattern = {
     name: "BG_GREEN_HOLLOW_SQUARE",
     binaryInt: 4,
     bucasLetter: "E",
@@ -145,7 +145,7 @@ const PATTERN_BG_GREEN_HOLLOW_SQUARE: EternityPattern = {
     },
 }
 
-const PATTERN_BG_RED_ROUND_FORT: EternityPattern = {
+export const PATTERN_BG_RED_ROUND_FORT: EternityPattern = {
     name: "BG_RED_ROUND_FORT",
     binaryInt: 5,
     bucasLetter: "F",
@@ -160,7 +160,7 @@ const PATTERN_BG_RED_ROUND_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_PINK_ROUND_CROSS: EternityPattern = {
+export const PATTERN_BG_PINK_ROUND_CROSS: EternityPattern = {
     name: "BG_PINK_ROUND_CROSS",
     binaryInt: 6,
     bucasLetter: "G",
@@ -175,7 +175,7 @@ const PATTERN_BG_PINK_ROUND_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_PURPLE_POINTY_CROSS: EternityPattern = {
+export const PATTERN_BG_PURPLE_POINTY_CROSS: EternityPattern = {
     name: "BG_PURPLE_POINTY_CROSS",
     binaryInt: 7,
     bucasLetter: "H",
@@ -190,7 +190,7 @@ const PATTERN_BG_PURPLE_POINTY_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_YELLOW_STAR: EternityPattern = {
+export const PATTERN_BG_YELLOW_STAR: EternityPattern = {
     name: "BG_YELLOW_STAR",
     binaryInt: 8,
     bucasLetter: "I",
@@ -205,7 +205,7 @@ const PATTERN_BG_YELLOW_STAR: EternityPattern = {
     },
 }
 
-const PATTERN_BG_PURPLE_CROSS: EternityPattern = {
+export const PATTERN_BG_PURPLE_CROSS: EternityPattern = {
     name: "BG_PURPLE_CROSS",
     binaryInt: 9,
     bucasLetter: "J",
@@ -220,7 +220,7 @@ const PATTERN_BG_PURPLE_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_GREEN_ROUND_CROSS: EternityPattern = {
+export const PATTERN_BG_GREEN_ROUND_CROSS: EternityPattern = {
     name: "BG_GREEN_ROUND_CROSS",
     binaryInt: 10,
     bucasLetter: "K",
@@ -235,7 +235,7 @@ const PATTERN_BG_GREEN_ROUND_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_RED_CROSS: EternityPattern = {
+export const PATTERN_BG_RED_CROSS: EternityPattern = {
     name: "BG_RED_CROSS",
     binaryInt: 11,
     bucasLetter: "L",
@@ -250,7 +250,7 @@ const PATTERN_BG_RED_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_GREEN_POINTY_CROSS: EternityPattern = {
+export const PATTERN_BG_GREEN_POINTY_CROSS: EternityPattern = {
     name: "BG_GREEN_POINTY_CROSS",
     binaryInt: 12,
     bucasLetter: "M",
@@ -265,7 +265,7 @@ const PATTERN_BG_GREEN_POINTY_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_RED_STAR: EternityPattern = {
+export const PATTERN_BG_RED_STAR: EternityPattern = {
     name: "BG_RED_STAR",
     binaryInt: 13,
     bucasLetter: "N",
@@ -280,7 +280,7 @@ const PATTERN_BG_RED_STAR: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_SQUARE_FORT: EternityPattern = {
+export const PATTERN_BG_BLUE_SQUARE_FORT: EternityPattern = {
     name: "BG_BLUE_SQUARE_FORT",
     binaryInt: 14,
     bucasLetter: "O",
@@ -295,7 +295,7 @@ const PATTERN_BG_BLUE_SQUARE_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_YELLOW_SQUARE: EternityPattern = {
+export const PATTERN_BG_YELLOW_SQUARE: EternityPattern = {
     name: "BG_YELLOW_SQUARE",
     binaryInt: 15,
     bucasLetter: "P",
@@ -310,7 +310,7 @@ const PATTERN_BG_YELLOW_SQUARE: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_POINTY_CROSS: EternityPattern = {
+export const PATTERN_BG_BLUE_POINTY_CROSS: EternityPattern = {
     name: "BG_BLUE_POINTY_CROSS",
     binaryInt: 16,
     bucasLetter: "Q",
@@ -325,7 +325,7 @@ const PATTERN_BG_BLUE_POINTY_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_YELLOW_SQUARE_FORT: EternityPattern = {
+export const PATTERN_BG_YELLOW_SQUARE_FORT: EternityPattern = {
     name: "BG_YELLOW_SQUARE_FORT",
     binaryInt: 17,
     bucasLetter: "R",
@@ -340,7 +340,7 @@ const PATTERN_BG_YELLOW_SQUARE_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_ORANGE_STAR: EternityPattern = {
+export const PATTERN_BG_ORANGE_STAR: EternityPattern = {
     name: "BG_ORANGE_STAR",
     binaryInt: 18,
     bucasLetter: "S",
@@ -355,7 +355,7 @@ const PATTERN_BG_ORANGE_STAR: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_ROUND_CROSS: EternityPattern = {
+export const PATTERN_BG_BLUE_ROUND_CROSS: EternityPattern = {
     name: "BG_BLUE_ROUND_CROSS",
     binaryInt: 19,
     bucasLetter: "T",
@@ -370,7 +370,7 @@ const PATTERN_BG_BLUE_ROUND_CROSS: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_SQUARE: EternityPattern = {
+export const PATTERN_BG_BLUE_SQUARE: EternityPattern = {
     name: "BG_BLUE_SQUARE",
     binaryInt: 20,
     bucasLetter: "U",
@@ -385,7 +385,7 @@ const PATTERN_BG_BLUE_SQUARE: EternityPattern = {
     },
 }
 
-const PATTERN_BG_PINK_SQUARE_FORT: EternityPattern = {
+export const PATTERN_BG_PINK_SQUARE_FORT: EternityPattern = {
     name: "BG_PINK_SQUARE_FORT",
     binaryInt: 21,
     bucasLetter: "V",
@@ -400,7 +400,7 @@ const PATTERN_BG_PINK_SQUARE_FORT: EternityPattern = {
     },
 }
 
-const PATTERN_BG_BLUE_CROSS: EternityPattern = {
+export const PATTERN_BG_BLUE_CROSS: EternityPattern = {
     name: "BG_BLUE_CROSS",
     binaryInt: 22,
     bucasLetter: "W",
@@ -415,7 +415,7 @@ const PATTERN_BG_BLUE_CROSS: EternityPattern = {
     },
 }
 
-const ETERNITY_PATTERNS = [
+export const ETERNITY_PATTERNS = [
     PATTERN_GREY,
     PATTERN_GREY_2,
     PATTERN_BG_ORANGE_CONCAVE_FORT,
@@ -443,14 +443,6 @@ const ETERNITY_PATTERNS = [
 ]
 
 
-export const abortController ={
+export const abortController = {
     abortController: new AbortController(),
-}
-
-export {
-    ETERNITY_II_PIECES,
-    SERVER_BASE_URL,
-    ETERNITY_PATTERNS,
-    Direction,
-    Rotation,
 }

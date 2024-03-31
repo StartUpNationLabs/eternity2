@@ -1,9 +1,17 @@
 import {atom, RecoilState} from "recoil";
-import {SolverSolveRequest} from "../../proto/solver/v1/solver.ts";
+import {RotatedPiece, SolverSolveRequest} from "../../proto/solver/v1/solver.ts";
+import {convertBucasBoardToRotatedPieces} from "../../utils/utils.tsx";
+import {ETERNITY_II_PIECES} from "../../utils/Constants.tsx";
 
 export interface Path {
     label: string;
     path: number[];
+}
+
+export interface Board {
+    label: string;
+    gridSideSize: number;
+    pieces: RotatedPiece[];
 }
 
 export const settingsState
@@ -53,3 +61,9 @@ export const solveModeState = atom({
     key: 'solveModeState',
     default: 'none' as "normal" | "stepByStep" | "none",
 });
+
+export const eternity2OfficialBoard: Board = {
+    label: "Eternity II Official",
+    gridSideSize: 16,
+    pieces: RotatedPiece[] = convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES),
+}
