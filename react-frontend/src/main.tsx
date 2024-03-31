@@ -6,10 +6,10 @@ import Test from "./Test.tsx";
 import {createBrowserRouter, RouterProvider,} from "react-router-dom";
 import {RootLayout} from "./RootLayout";
 import {HomePage} from "./pages/homepage/HomePage";
-import {RequestForm} from "./pages/requestForm/RequestForm.tsx";
 import {RecoilRoot} from "recoil";
 import {Solver} from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
+import {RequestFormStatistics} from "./pages/statistics/RequestFormStatistics.tsx";
 
 
 const router = createBrowserRouter([
@@ -45,7 +45,7 @@ const router = createBrowserRouter([
                     }
                     }
                 >
-                    <RequestForm/>
+                    <RequestFormStatistics/>
                 </Paper>,
             },
             {
