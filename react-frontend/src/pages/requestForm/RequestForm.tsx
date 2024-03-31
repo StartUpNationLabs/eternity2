@@ -42,13 +42,17 @@ export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
     const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == spiralPath);
-    const [, setBoard] = useRecoilState(boardState);
+    const [board, setBoard] = useRecoilState(boardState);
     const [, setSolving] = useRecoilState(isSolvingState);
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
     const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
     const boards = useRecoilValue(boardsState);
+
+    // Used to store the already defined selected board
     const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
+    // Used to store the original board when a board is shuffled, we can then reset it
+    const [originalBoard, setOriginalBoard] = useState<Piece[] | null>(null);
 
     useEffect(() => {
         const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
@@ -92,7 +96,7 @@ export const RequestForm = () => {
                             const scanRowPaths = paths.filter((path) => path.label === SCAN_ROW_PATH_NAME);
 
                             const boardSize = v as number;
-                            const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize**2);
+                            const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize ** 2);
 
                             setSettings({...settings, boardSize: v as number, path: scanRowPath || spiralPath});
                         }
@@ -141,7 +145,9 @@ export const RequestForm = () => {
                 // ======= SELECT EXISTING BOARD ======= //
             }
 
-            <div style={{width: "70%"}}>
+            <div style={{
+                width: "80%",
+            }}>
                 <FormGroup>
                     <Autocomplete
                         id="boards"
@@ -167,11 +173,81 @@ export const RequestForm = () => {
                                     boardSize: Math.sqrt(pieceList.length),
                                     boardColors: v.nbColors,
                                 });
+                            } else {
+                                setSelectedBoard(null);
+                                setSettings({
+                                    ...settings,
+                                    boardSize: BOARD_SIZE_DEFAULT,
+                                    boardColors: BOARD_COLOR_DEFAULT,
+                                })
+                                setBoard(convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT)));
                             }
                         }}
                     />
                 </FormGroup>
             </div>
+
+            {
+                // Generate and shuffle buttons
+            }
+            <FormGroup
+                style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    marginTop: 20,
+                    marginBottom: 20,
+                    gap: 20,
+                }}
+            >
+                <Button
+                    variant="contained"
+                    type="submit"
+                    color="primary"
+                    disabled={selectedBoard !== null}
+                    onClick={() => {
+                        const newBoard = convertToPieces(createBoard(settings.boardSize, settings.boardColors));
+                        setBoard(newBoard);
+                        setSelectedBoard(null);
+                    }}
+                >
+                    Generate
+                </Button>
+                <Button
+                    variant="contained"
+                    type="submit"
+                    color="primary"
+                    disabled={selectedBoard !== null}
+                    onClick={() => {
+                        // Store the current board state before shuffling
+                        if (originalBoard === null) {
+                            setOriginalBoard([...board]);
+                        }
+
+                        // Shuffle the board
+                        const newBoard = [...board];
+                        newBoard.sort(() => Math.random() - 0.5);
+                        setBoard(newBoard);
+                        setSelectedBoard(null);
+                    }}
+                >
+                    Shuffle
+                </Button>
+                <Button
+                    variant="contained"
+                    type="submit"
+                    color="primary"
+                    disabled={originalBoard === null}
+                    onClick={() => {
+                        // Set the board state to the stored original board
+                        if (originalBoard !== null) {
+                            setBoard(originalBoard);
+                            setOriginalBoard(null);
+                        }
+                    }}
+                >
+                    Unshuffle
+                </Button>
+            </FormGroup>
 
             <FormGroup
                 style={{
