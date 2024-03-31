@@ -5,13 +5,10 @@ import {useRecoilState, useRecoilValue} from "recoil";
 
 import Container from "@mui/material/Container";
 import {isSolvingState} from "../solver/atoms.ts";
-import {abortController} from "../../utils/Constants.tsx";
+import {abortController, BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN} from "../../utils/Constants.tsx";
 import {useState} from "react";
 import {
     Board,
-    BOARD_SIZE_DEFAULT,
-    BOARD_SIZE_MAX,
-    BOARD_SIZE_MIN,
     boardsState,
     boardState,
     pathsState
