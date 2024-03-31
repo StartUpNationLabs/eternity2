@@ -1,4 +1,6 @@
 import {EternityPattern} from "./EternityPattern";
+import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
+import {SolverClient} from "../proto/solver/v1/solver.client.ts";
 
 /**
  * Those are the official pieces for the puzzle
@@ -58,6 +60,21 @@ enum Rotation {
 const PATTERN_GREY: EternityPattern = {
     name: "GREY",
     binaryInt: 65535,
+    bucasLetter: "A",
+    svg: {
+        name: "A",
+        bg_color: "#9a9a9a",
+        bg_stroke: "black",
+        path: "",
+        path_color: "",
+        path_stroke: "",
+        direction: Direction.Left,
+    },
+}
+
+const PATTERN_GREY_2: EternityPattern = {
+    name: "GREY",
+    binaryInt: 0,
     bucasLetter: "A",
     svg: {
         name: "A",
@@ -402,6 +419,7 @@ const PATTERN_BG_BLUE_CROSS: EternityPattern = {
 
 const ETERNITY_PATTERNS = [
     PATTERN_GREY,
+    PATTERN_GREY_2,
     PATTERN_BG_ORANGE_CONCAVE_FORT,
     PATTERN_BG_BLUE_FLOWER,
     PATTERN_BG_PINK_HOLLOW_CONCAVE_FORT,
@@ -426,10 +444,22 @@ const ETERNITY_PATTERNS = [
     PATTERN_BG_BLUE_CROSS,
 ]
 
+const transport = new GrpcWebFetchTransport({
+    baseUrl: SERVER_BASE_URL,
+    format: "binary",
+
+});
+const solverClient = new SolverClient(
+    transport
+);
+console.log(solverClient);
+
 export {
     ETERNITY_II_PIECES,
     SERVER_BASE_URL,
     ETERNITY_PATTERNS,
     Direction,
     Rotation,
+    transport,
+    solverClient
 }

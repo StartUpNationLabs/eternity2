@@ -24,7 +24,7 @@ export const settingsState
 const defaultPaths: Path[] = [...Array(16).keys()].map(
     i => ({
         label: `Scan Row`,
-        path: [...Array((i + 2) * (i + 2)).keys()].map(j => j + 1)
+        path: [...[...Array((i + 2) * (i + 2) - 1).keys()].map(j => j + 1) , 2147483647]
         ,
     })
 );

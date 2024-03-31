@@ -5,6 +5,7 @@ import {useRecoilState, useRecoilValue} from "recoil";
 import {boardState, defaultPath, Path, pathsState, settingsState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToBoard, convertToPieces, createBoard, shuffleAndRotateBoard} from "../../damien/logic.tsx";
+import {isSolvingState} from "../solver/atoms.ts";
 
 
 export const RequestForm = () => {
@@ -12,6 +13,7 @@ export const RequestForm = () => {
     const paths = useRecoilValue(pathsState);
     const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == defaultPath);
     const [board, setBoard] = useRecoilState(boardState);
+    const [isSolving, setSolving] = useRecoilState(isSolvingState);
     return (
         <>
 
@@ -171,7 +173,12 @@ export const RequestForm = () => {
 
                 }}
             >
-                <Button type="submit" color="primary">Solve</Button>
+                <Button type="submit" color="primary"
+                        onClick={() => {
+                            setSolving(true);
+                        }
+                        }
+                >Solve</Button>
                 <Button type="submit" color="primary">Step By Step</Button>
             </FormGroup>
         </>
