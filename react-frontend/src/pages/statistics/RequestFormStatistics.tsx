@@ -1,13 +1,10 @@
 import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 
-import {useRecoilState, useRecoilValue} from "recoil";
+import {useRecoilState} from "recoil";
 
 import Container from "@mui/material/Container";
-import {isSolvingState} from "../solver/atoms.ts";
 import {abortController, BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN} from "../../utils/Constants.tsx";
-import {useState} from "react";
-import {Board, boardsState, boardState, pathsState} from "../requestForm/atoms.ts";
 import {generateBoards, generatedBoardsState, isSolvingStatisticsState, settingsStatisticsState} from "./atoms.ts";
 
 
