@@ -3,6 +3,7 @@ import {Piece, SolverSolveResponse} from "../../proto/solver/v1/solver.ts";
 import {RequestFormStatistics} from "./RequestFormStatistics.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
 import {Board} from "../requestForm/atoms.ts";
+import {default as BoardComponent} from "../../components/Board.tsx";
 import {useEffect, useState} from "react";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
 import {abortController, SERVER_BASE_URL} from "../../utils/Constants.tsx";
@@ -22,11 +23,12 @@ export const SatisticSolver = () => {
             response: SolverSolveResponse
         }
 
-    }[]>([]);
+    }>({});
     const [currentGeneratedBoardIndex, setCurrentGeneratedBoardIndex] = useState(0);
 
     const generatedBoards = useRecoilValue(generatedBoardsState);
     const [waiting, setWaiting] = useState(false);
+
     useEffect(() => {
             if ((solvingStat && !startedStatistics) || waiting) {
                 setStartedStatistics(true);
@@ -104,7 +106,7 @@ export const SatisticSolver = () => {
         }
     }, []);
 
-
+    console.log("responses", responses);
     return (
         <>
             <Grid container spacing={2}
@@ -138,6 +140,7 @@ export const SatisticSolver = () => {
                         height: '100%',
                         aspectRatio: 1,
                     }}>
+
                     </div>
                 </Grid>
             </Grid>
