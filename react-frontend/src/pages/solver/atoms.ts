@@ -10,3 +10,9 @@ export const isSolvingState: RecoilState<boolean> = atom({
     key: "isSolvingState",
     default: false,
 });
+
+
+export const isSolvingStepByStepState: RecoilState<boolean> = atom({
+    key: "isSolvingStepByStepState",
+    default: false,
+});

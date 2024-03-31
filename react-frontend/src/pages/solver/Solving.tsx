@@ -1,31 +1,14 @@
-import {Grid} from "@mui/material";
+import {Grid, Typography} from "@mui/material";
 import Board from "../../components/Board.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
 import {boardState, settingsState} from "../requestForm/atoms.ts";
 import {Stats} from "./Stats.tsx";
 import {isSolvingState} from "./atoms.ts";
-import React, {useEffect, useState} from "react";
+import {useEffect, useState} from "react";
 import {solverClient} from "../../utils/Constants.tsx";
 import {SolverSolveResponse} from "../../proto/solver/v1/solver.ts";
+import {useStateHistory} from "../../utils/utils.tsx";
 
-function useStateHistory<T>(
-    initialValue?: T | (() => T)
-): [T | undefined, (state: T) => void, Array<T>] {
-    const [allStates, setState] = React.useReducer(
-        (oldState: T[], newState: T) => {
-            return [...oldState, newState];
-        },
-        typeof initialValue === "function"
-            ? [(initialValue as () => T)()]
-            : initialValue !== undefined
-                ? [initialValue as T]
-                : []
-    );
-
-    const currentState = allStates[allStates.length - 1];
-    const stateHistory = allStates.slice(0, allStates.length - 1);
-    return [currentState, setState, stateHistory];
-}
 
 export const Solving = () => {
 
@@ -33,34 +16,31 @@ export const Solving = () => {
     const setting = useRecoilValue(settingsState);
     const [solving, setSolving] = useRecoilState(isSolvingState);
     const [startedSolving, setStartedSolving] = useState(false);
-    const [solverSolveResponse, setSolverSolveResponse, solverSolveResponses] = useStateHistory<SolverSolveResponse>();
+    const [solverSolveResponse, setSolverSolveResponse] = useState<SolverSolveResponse>();
     useEffect(() => {
         if (solving && !startedSolving) {
             setStartedSolving(true);
             console.log("started solving");
             const stream = solverClient.solve({
-                "hashThreshold": 11,
+                "hashThreshold": setting.hashThreshold,
                 "pieces": board,
-                "threads": 16,
-                "waitTime": 500,
+                "threads": setting.threads,
+                "waitTime": setting.waitTime,
                 solvePath: setting.path.path,
                 useCache: setting.useCache,
-                cachePullInterval: 10,
+                cachePullInterval: setting.cachePullInterval
             }, {});
             stream.responses.onMessage((message) => {
-                console.log(message);
                 setSolverSolveResponse(message);
             });
 
             stream.responses.onError((error) => {
-                    console.error(error);
                     setSolving(false);
                     setStartedSolving(false);
                 }
             );
 
             stream.responses.onComplete(() => {
-                console.log("stream ended");
                 setSolving(false);
                 setStartedSolving(false);
             });
@@ -69,8 +49,7 @@ export const Solving = () => {
 
 
     return <Grid container spacing={2}
-                 style={{height: '90vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-
+                 style={{minHeight: "100vh", height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
         <Grid item xs={5}>
             <div
                 style={{
@@ -84,7 +63,7 @@ export const Solving = () => {
                     marginTop: 20,
                 }}
             >
-                <Stats responses={solverSolveResponses}/>
+                <Stats response={solverSolveResponse}/>
             </div>
         </Grid>
         <Grid item xs={4}>

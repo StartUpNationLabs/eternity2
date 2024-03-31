@@ -5,6 +5,7 @@ import {Grid} from "@mui/material";
 import {useRecoilValue} from "recoil";
 import {boardState} from "../requestForm/atoms.ts";
 import {Solving} from "./Solving.tsx";
+import {SolvingStepByStep} from "./SolvingStepByStep.tsx";
 
 
 export const Solver = () => {
@@ -12,7 +13,7 @@ export const Solver = () => {
 
     return <>
         <Grid container spacing={2}
-              style={{height: '90vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+              style={{height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
 
             <Grid item xs={5}>
                 <div
@@ -51,5 +52,6 @@ export const Solver = () => {
             </Grid>
         </Grid>
         <Solving/>
+        <SolvingStepByStep/>
     </>
 }

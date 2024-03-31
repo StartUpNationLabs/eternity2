@@ -17,6 +17,10 @@ export const settingsState
             path: [] as number[]
         },
         useCache: false,
+        hashThreshold: 4,
+        waitTime: 1000,
+        cachePullInterval: 10,
+        threads: 4,
     }, // default value (aka initial value)
 });
 
