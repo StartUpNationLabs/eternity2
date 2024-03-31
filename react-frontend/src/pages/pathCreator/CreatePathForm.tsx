@@ -14,8 +14,6 @@ export const CreatePathForm = () => {
         setPathName(event.target.value);
     };
 
-    console.log(paths)
-
     return (
         <div style={{width: '80%'}}>
             <Typography id="input-slider-size" gutterBottom>
@@ -70,6 +68,7 @@ export const CreatePathForm = () => {
                                 paths.some(path => path.label === pathName) // Check if path name already exists
                             }
                             onClick={() => {
+                                // TODO: FIX THE FUCKING CODE IT'S NOT WORKING WRITE IT CORRECTLY YOU DUMB ASS OF RAPHAEL
                                 setPaths([...paths, {
                                     path: gridSelector.selectedCells,
                                     label: pathName
