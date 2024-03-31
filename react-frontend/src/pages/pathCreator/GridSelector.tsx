@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {gridSelectorState} from "../requestForm/atoms.ts";
 import {useRecoilState} from "recoil";
+import {gridSelectorState} from "./atom.ts";
 
 function GridSelector() {
     const [gridSelector, setGridSelector] = useRecoilState(gridSelectorState);
@@ -8,24 +8,29 @@ function GridSelector() {
     const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
     const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
 
+
     const boardSize = gridSelector.boardSize;
 
-    const selectedCells = gridSelector.selectedCells;
-    const setSelectedCells = function (selectedCells: number[]) {
+    // ID 0 is the default cell, which should not be selected
+    const selectedCells = gridSelector.selectedCells.length ? gridSelector.selectedCells : [0];
+    const setSelectedCells = useCallback(function (selectedCells: number[]) {
         setGridSelector({
             ...gridSelector,
             selectedCells: selectedCells
         })
-    }
+    }, [gridSelector, setGridSelector])
 
     // Function to handle cell selection
     const handleCellClick = useCallback((id: number) => {
         if (!isMouseDown) {
-            if (selectedCells.includes(id)) {
+            // ID 0 is the default cell, which should not be selected
+            if (selectedCells.includes(id) && id !== 0) {
                 // Deselect cell if already selected
                 setSelectedCells(selectedCells.filter(cell => cell !== id));
             } else {
-                setSelectedCells([...selectedCells, id]);
+                if (id !== 0) {
+                    setSelectedCells([...selectedCells, id]);
+                }
             }
         }
     }, [isMouseDown, selectedCells, setSelectedCells]);

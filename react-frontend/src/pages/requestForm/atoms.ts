@@ -48,13 +48,6 @@ export const boardState: RecoilState<SolverSolveRequest["pieces"]> = atom({
     default: [] as SolverSolveRequest["pieces"],
 });
 
-export const gridSelectorState = atom({
-    key: 'gridSelectorState',
-    default: {
-        boardSize: 4,
-        selectedCells: [] as number[],
-    }
-});
 
 export const solveModeState = atom({
     key: 'solveModeState',

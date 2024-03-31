@@ -1,32 +1,39 @@
 import * as React from 'react';
-import {gridSelectorState, pathsState} from "../requestForm/atoms.ts";
+import {pathsState} from "../requestForm/atoms.ts";
 import {Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
+import {gridSelectorState} from "./atom.ts";
 
 export const CreatePathForm = () => {
     const [gridSelector, setGridSelectorState] = useRecoilState(gridSelectorState);
     const [paths, setPaths] = useRecoilState(pathsState);
     const [pathName, setPathName] = React.useState(''); // Add state for path name
 
+
     const handlePathNameChange = (event) => { // Add function to handle changes to the input field
         setPathName(event.target.value);
     };
 
-    function getNextCells(selectedCells: number[]): number[] {
-        console.log("Get next cells")
-        console.log(selectedCells)
-        const nextCells = selectedCells.map((_, index) => {
-            if (index < selectedCells.length - 1) {
-                return selectedCells[index + 1];
-            } else {
-                return 2147483647;
-            }
-        });
-        console.log(nextCells)
 
-        return nextCells;
+    function rearrangeCells(inputCells: number[]) {
+        const rearrangedCells = [];
+
+        // Fill the new list with 0s
+        for (let i = 0; i < inputCells.length; i++) {
+            rearrangedCells.push(0);
+        }
+
+        for (let i = 0; i < inputCells.length; i++) {
+            if (i === inputCells.length - 1) {
+                rearrangedCells[inputCells[i]] = 2147483647;
+                break;
+            }
+            rearrangedCells[inputCells[i]] = inputCells[i + 1];
+        }
+
+        return rearrangedCells;
     }
 
     return (
@@ -84,7 +91,7 @@ export const CreatePathForm = () => {
                             }
                             onClick={() => {
                                 setPaths([...paths, {
-                                    path: getNextCells(gridSelector.selectedCells),
+                                    path: rearrangeCells(gridSelector.selectedCells),
                                     label: pathName
                                 }])
                                 setGridSelectorState({
