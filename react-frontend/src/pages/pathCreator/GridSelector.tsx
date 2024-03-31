@@ -8,6 +8,9 @@ function GridSelector() {
     const [initialCellId, setInitialCellId] = useState(null); // State to store initial cell id when mouse down
     const [lastSelectedCellId, setLastSelectedCellId] = useState(null); // State to store last selected cell id
 
+    console.log(gridSelector.selectedCells.length)
+    console.log(gridSelector.selectedCells)
+
     const boardSize = gridSelector.boardSize;
     const setBoardSize = function (boardSize: number) {
         setGridSelector({
