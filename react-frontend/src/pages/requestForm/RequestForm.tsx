@@ -17,11 +17,6 @@ export const RequestForm = () => {
     const [, setSolving] = useRecoilState(isSolvingState);
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
-    console.log(pathOptions)
-
-    console.log("=================")
-    console.log(paths)
-    console.log("=================")
 
     return (
         <>
