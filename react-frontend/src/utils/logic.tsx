@@ -21,7 +21,7 @@ export function generateInnerSymbols(size: number, numberOfSymbols: number) {
 
 export function createBoard(size: number, numberOfSymbols: number) {
     if (numberOfSymbols > numberOfColorsThatFitInABoard(size)) {
-        throw new Error('Number of symbols cannot be more than 2*(size**2 - 1)');
+        numberOfSymbols = numberOfColorsThatFitInABoard(size);
     }
 
     numberOfSymbols += 1; // Add 1 to account for the border symbol

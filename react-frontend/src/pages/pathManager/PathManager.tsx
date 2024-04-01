@@ -6,10 +6,9 @@ import {PathManagerTabs} from "./PathManagerTabs.tsx";
 function PathManager() {
     return (
         <Grid container spacing={2}
-              style={{height: '90vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+              style={{height: '90vh', display: 'flex', justifyContent: 'center', paddingTop: '5vh'}}>
             <Grid item xs={6}>
                 <div style={{
-                    justifyContent: 'center',
                     alignItems: 'center',
                     width: '80%',
                     height: '80%',

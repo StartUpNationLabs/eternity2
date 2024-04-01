@@ -1,6 +1,13 @@
 import {atom, RecoilState} from "recoil";
 import {convertToPieces, createBoard, shuffleAndRotateBoard} from "../../utils/logic.tsx";
 import {Board} from "../requestForm/atoms.ts";
+import {
+    BOARD_COLOR_MAX,
+    BOARD_COLOR_MIN,
+    BOARD_SIZE_MAX,
+    BOARD_SIZE_MIN, CACHE_PULL_INTERVAL_DEFAULT, HASH_THRESHOLD_DEFAULT,
+    SPIRAL_PATH_NAME, THREADS_DEFAULT, USE_CACHE_DEFAULT, WAIT_TIME_DEFAULT
+} from "../../utils/Constants.tsx";
 
 
 export const isSolvingStatisticsState: RecoilState<boolean> = atom({
@@ -12,16 +19,16 @@ export const settingsStatisticsState
     = atom({
     key: 'settingsStatisticsState', // unique ID (with respect to other atoms/selectors)
     default: {
-        boardSizeMin: 2,
-        boardSizeMax: 16,
-        patternSizeMin: 2,
-        patternSizeMax: 22,
-        path: "Spiral",
-        useCache: false,
-        hashThreshold: 4,
-        waitTime: 1000,
-        cachePullInterval: 10,
-        threads: 4,
+        boardSizeMin: BOARD_SIZE_MIN,
+        boardSizeMax: BOARD_SIZE_MAX,
+        patternSizeMin: BOARD_COLOR_MIN,
+        patternSizeMax: BOARD_COLOR_MAX,
+        path: SPIRAL_PATH_NAME,
+        useCache: USE_CACHE_DEFAULT,
+        hashThreshold: HASH_THRESHOLD_DEFAULT,
+        waitTime: WAIT_TIME_DEFAULT,
+        cachePullInterval: CACHE_PULL_INTERVAL_DEFAULT,
+        threads: THREADS_DEFAULT,
         timeout: 5000,
         sampleSize: 10,
     },

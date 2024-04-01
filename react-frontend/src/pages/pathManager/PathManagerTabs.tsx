@@ -28,7 +28,6 @@ export const PathManagerTabs = () => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '1px solid white'
         }}>
             <Tabs value={value} onChange={handleChange} aria-label="custom tabs example">
                 <Tab label="Create path"/>

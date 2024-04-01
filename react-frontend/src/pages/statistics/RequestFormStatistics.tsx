@@ -4,7 +4,15 @@ import Button from "@mui/material/Button";
 import {useRecoilState} from "recoil";
 
 import Container from "@mui/material/Container";
-import {abortController, BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN} from "../../utils/Constants.tsx";
+import {
+    abortController,
+    BOARD_COLOR_DEFAULT,
+    BOARD_COLOR_MAX,
+    BOARD_COLOR_MIN,
+    BOARD_SIZE_DEFAULT,
+    BOARD_SIZE_MAX,
+    BOARD_SIZE_MIN
+} from "../../utils/Constants.tsx";
 import {generateBoards, generatedBoardsState, isSolvingStatisticsState, settingsStatisticsState} from "./atoms.ts";
 
 
@@ -16,7 +24,6 @@ export const RequestFormStatistics = () => {
 
     return (
         <>
-
             <FormGroup
                 style={{
                     padding: 10,
@@ -77,9 +84,9 @@ export const RequestFormStatistics = () => {
                     Pattern count (min)
                 </Typography>
                 <Slider
-                    defaultValue={1}
-                    min={1}
-                    max={22}
+                    defaultValue={BOARD_COLOR_DEFAULT}
+                    min={BOARD_COLOR_MIN}
+                    max={BOARD_COLOR_MAX}
                     value={settings.patternSizeMin}
                     onChange={
                         (_, v) => {
@@ -98,9 +105,9 @@ export const RequestFormStatistics = () => {
                     Pattern count (max)
                 </Typography>
                 <Slider
-                    defaultValue={1}
-                    min={1}
-                    max={22}
+                    defaultValue={BOARD_COLOR_DEFAULT}
+                    min={BOARD_COLOR_MIN}
+                    max={BOARD_COLOR_MAX}
                     value={settings.patternSizeMax}
                     onChange={
                         (_, v) => {
@@ -121,7 +128,7 @@ export const RequestFormStatistics = () => {
                 <Slider
                     defaultValue={1}
                     min={1}
-                    max={10}
+                    max={1000}
                     value={settings.sampleSize}
                     onChange={
                         (_, v) => {

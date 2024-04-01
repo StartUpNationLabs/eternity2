@@ -1,16 +1,20 @@
-import {Grid} from "@mui/material";
+import {Grid, Typography} from "@mui/material";
 import {Piece, SolverSolveResponse} from "../../proto/solver/v1/solver.ts";
 import {RequestFormStatistics} from "./RequestFormStatistics.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
-import {Board} from "../requestForm/atoms.ts";
-import {default as BoardComponent} from "../../components/Board.tsx";
+import {Board, defaultPaths} from "../requestForm/atoms.ts";
 import {useEffect, useState} from "react";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
 import {abortController, SERVER_BASE_URL} from "../../utils/Constants.tsx";
 import {SolverClient} from "../../proto/solver/v1/solver.client.ts";
 import {generatedBoardsState, isSolvingStatisticsState, settingsStatisticsState} from "./atoms.ts";
+import {default as BoardComponent} from "../../components/Board.tsx";
+import {Stats} from "../solver/Stats.tsx";
+import LinearProgressWithLabel from '@mui/material/LinearProgress';
+import Box from "@mui/material/Box";
 
-export const SatisticSolver = () => {
+
+export const StatisticsSolver = () => {
 
     const setting = useRecoilValue(settingsStatisticsState);
     const [solving, setSolving] = useState(true);
@@ -36,7 +40,7 @@ export const SatisticSolver = () => {
                 const generatedBoard = generatedBoards[currentGeneratedBoardIndex];
                 if (solving && !startedSolving) {
                     setStartedSolving(true);
-                    console.log("started solving statistics" , generatedBoard.label);
+                    console.log("started solving statistics", generatedBoard.label);
 
                     const transport = new GrpcWebFetchTransport({
                         baseUrl: SERVER_BASE_URL,
@@ -53,7 +57,7 @@ export const SatisticSolver = () => {
                         "pieces": generatedBoard.pieces.map(piece => piece.piece as Piece),
                         "threads": setting.threads,
                         "waitTime": setting.waitTime,
-                        solvePath: [],
+                        solvePath: defaultPaths.filter(path => path.path.length === generatedBoard.pieces.length)[0].path,
                         useCache: setting.useCache,
                         cachePullInterval: setting.cachePullInterval
                     }, {});
@@ -76,7 +80,7 @@ export const SatisticSolver = () => {
                             setStartedSolving(false);
                         }
                     );
-                    
+
                     stream.responses.onComplete(() => {
                         setSolving(true);
                         setStartedSolving(false);
@@ -140,7 +144,22 @@ export const SatisticSolver = () => {
                         height: '100%',
                         aspectRatio: 1,
                     }}>
+                        <div style={{width: '100%', height: '100%'}}>
+                            <BoardComponent
+                                pieces={responses[generatedBoards[currentGeneratedBoardIndex]?.label]?.response.rotatedPieces}/>
+                            <Typography>
+                                {generatedBoards[currentGeneratedBoardIndex]?.label}
+                            </Typography>
 
+                            <Box sx={{width: '100%'}}>
+                                <LinearProgressWithLabel variant="determinate"
+                                                         value={Math.round(currentGeneratedBoardIndex / generatedBoards.length * 100)}
+                                />
+                            </Box>
+
+                            <Stats
+                                response={responses[generatedBoards[currentGeneratedBoardIndex]?.label]?.response}></Stats>
+                        </div>
                     </div>
                 </Grid>
             </Grid>

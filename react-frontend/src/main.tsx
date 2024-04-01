@@ -10,7 +10,7 @@ import {RecoilRoot} from "recoil";
 import {Solver} from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
 import {RequestFormStatistics} from "./pages/statistics/RequestFormStatistics.tsx";
-import {SatisticSolver} from "./pages/statistics/SatisticSolver.tsx";
+import {StatisticsSolver} from "./pages/statistics/StatisticsSolver.tsx";
 
 
 const router = createBrowserRouter([
@@ -55,7 +55,7 @@ const router = createBrowserRouter([
             },
             {
                 path: "statistics",
-                element: <SatisticSolver/>,
+                element: <StatisticsSolver/>,
             }
         ]
     }

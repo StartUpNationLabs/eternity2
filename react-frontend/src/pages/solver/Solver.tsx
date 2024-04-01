@@ -18,7 +18,7 @@ export const Solver = () => {
                   minHeight: "90vh",
                   height: '100%',
                   display: 'flex',
-                  justifyContent: 'center',
+                  justifyContent: 'space-around',
                   alignItems: 'center'
               }}>
 

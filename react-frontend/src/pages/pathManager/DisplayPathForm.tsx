@@ -93,12 +93,12 @@ export const DisplayPathForm = () => {
                 marginTop: '20px',
                 marginBottom: '20px',
             }}>
-                <Box display="flex" justifyContent="space-between" width="50%">
+                <Box display="flex" justifyContent="space-between" width="60%">
                     <Button variant="outlined" color="error" onClick={toBeImplemented}>
                         Delete Path
                     </Button>
-                    <Button variant="outlined" onClick={toBeImplemented}>
-                        Animate Path
+                    <Button variant="outlined" disabled={true}>
+                        Animate path (TODO)
                     </Button>
                 </Box>
             </div>

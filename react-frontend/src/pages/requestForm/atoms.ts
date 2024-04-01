@@ -41,7 +41,7 @@ export const spiralPath = {
 }
 
 
-const defaultPaths: Path[] = [...Array(16).keys()].map(
+export const defaultPaths: Path[] = [...Array(16).keys()].map(
     i => ({
         label: SCAN_ROW_PATH_NAME,
         path: [...[...Array((i + 2) * (i + 2) - 1).keys()].map(j => j + 1), 2147483647]
@@ -88,7 +88,7 @@ export const boardState: RecoilState<SolverSolveRequest["pieces"]> = atom({
 
 export const boardsState: RecoilState<Board[]> = atom({
     key: 'boardsState',
-    default: [eternity2OfficialBoard], // Add more boards here as needed
+    default: [eternity2OfficialBoard],
 });
 
 export const solveModeState = atom({
