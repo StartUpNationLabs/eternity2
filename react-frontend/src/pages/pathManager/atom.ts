@@ -9,11 +9,6 @@ export const boardSizeState = atom({
     default: BOARD_SIZE_DEFAULT as number,
 });
 
-export const displayedCellsState = atom({
-    key: 'displayedCellsState',
-    default: DEFAULT_SELECTED_CELLS as number[],
-});
-
 export const selectedCellsState = atom({
     key: 'selectedCellsState',
     default: DEFAULT_SELECTED_CELLS as number[],
@@ -22,4 +17,9 @@ export const selectedCellsState = atom({
 export const selectedPathState = atom({
     key: 'selectedPathState',
     default: null as Path | null,
+});
+
+export const hintCellsState = atom({
+    key: 'hintCellsState',
+    default: [] as number[],
 });

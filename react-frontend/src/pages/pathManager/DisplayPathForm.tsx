@@ -3,13 +3,7 @@ import {Path, pathsState} from "../requestForm/atoms.ts";
 import {Autocomplete, Button, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Box from "@mui/material/Box";
-import {
-    boardSizeState,
-    DEFAULT_SELECTED_CELLS,
-    displayedCellsState,
-    selectedCellsState,
-    selectedPathState
-} from "./atom.ts";
+import {boardSizeState, DEFAULT_SELECTED_CELLS, selectedCellsState, selectedPathState} from "./atom.ts";
 import {convertPathToSelectedCells} from "./utils.ts";
 import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
 
@@ -18,12 +12,10 @@ export const DisplayPathForm = () => {
 
     // States used by path manager
     const [boardSize, setBoardSize] = useRecoilState(boardSizeState);
-    const setDisplayedCells = useRecoilState(displayedCellsState)[1];
     const setSelectedCells = useRecoilState(selectedCellsState)[1];
     const [selectedPath, setSelectedPath] = useRecoilState(selectedPathState);
 
     const resetGrid = () => {
-        setDisplayedCells(DEFAULT_SELECTED_CELLS);
         setSelectedCells(DEFAULT_SELECTED_CELLS);
     }
 
@@ -41,7 +33,6 @@ export const DisplayPathForm = () => {
             if (filteredPaths.length > 0) {
                 setSelectedPath(filteredPaths[0]);
                 setSelectedCells([...DEFAULT_SELECTED_CELLS, ...convertPathToSelectedCells(filteredPaths[0].path)]);
-                setDisplayedCells([...DEFAULT_SELECTED_CELLS, ...convertPathToSelectedCells(filteredPaths[0].path)]);
             } else {
                 setSelectedPath(null);
                 resetGrid();
@@ -53,7 +44,6 @@ export const DisplayPathForm = () => {
         if (value) {
             setSelectedPath(value);
             setSelectedCells([...DEFAULT_SELECTED_CELLS, ...convertPathToSelectedCells(value.path)]);
-            setDisplayedCells([...DEFAULT_SELECTED_CELLS, ...convertPathToSelectedCells(value.path)]);
         } else {
             setSelectedPath(null);
             resetGrid();

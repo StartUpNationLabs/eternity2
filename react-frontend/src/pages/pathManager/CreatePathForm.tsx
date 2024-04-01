@@ -4,7 +4,7 @@ import {FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import {boardSizeState, DEFAULT_SELECTED_CELLS, displayedCellsState, selectedCellsState} from "./atom.ts";
+import {boardSizeState, DEFAULT_SELECTED_CELLS, hintCellsState, selectedCellsState} from "./atom.ts";
 import {convertSelectedCellsToPath} from "./utils.ts"
 import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
 
@@ -18,22 +18,22 @@ export const CreatePathForm = () => {
 
     // States used by path manager
     const [boardSize, setBoardSize] = useRecoilState(boardSizeState);
-    const setDisplayedCells = useRecoilState(displayedCellsState)[1];
     const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
+    const setHintCells = useRecoilState(hintCellsState)[1];
 
     // ===== Reset ==== //
-
-    const resetDisplayedCells = () => {
-        setDisplayedCells(DEFAULT_SELECTED_CELLS);
-    }
 
     const resetSelectedCells = () => {
         setSelectedCells(DEFAULT_SELECTED_CELLS);
     };
 
+    const resetHintCells = () => {
+        setHintCells([]);
+    }
+
     const resetGrid = () => {
         resetSelectedCells();
-        resetDisplayedCells();
+        resetHintCells();
     }
 
     // ===== Path ==== //
