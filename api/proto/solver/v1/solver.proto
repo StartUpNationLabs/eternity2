@@ -17,7 +17,7 @@ message SolverSolveRequest {
   bool use_cache = 5;
   uint32 cache_pull_interval = 6;
   repeated uint32 solve_path = 7;
-
+  repeated Hint hints = 8;
 }
 
 message Piece {
