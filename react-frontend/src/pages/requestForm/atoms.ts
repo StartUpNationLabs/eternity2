@@ -5,7 +5,6 @@ import {
     BOARD_COLOR_DEFAULT,
     BOARD_SIZE_DEFAULT,
     CACHE_PULL_INTERVAL_DEFAULT,
-    ETERNITY_II_PIECES,
     HASH_THRESHOLD_DEFAULT,
     SCAN_ROW_PATH_NAME,
     SPIRAL_PATH_NAME,
@@ -13,6 +12,7 @@ import {
     USE_CACHE_DEFAULT,
     WAIT_TIME_DEFAULT
 } from "../../utils/Constants.tsx";
+import {ETERNITY_II_PIECES} from "../../utils/OfficialEternity2.tsx";
 
 
 export interface Path {

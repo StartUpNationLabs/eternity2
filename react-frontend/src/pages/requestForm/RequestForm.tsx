@@ -123,7 +123,7 @@ export const RequestForm = () => {
                     defaultValue={BOARD_COLOR_DEFAULT}
                     min={BOARD_COLOR_MIN}
                     // TODO: fix because max is actually 16
-                    max={Math.min(numberOfColorsThatFitInABoard(settings.boardSize), BOARD_SIZE_MAX)}
+                    max={BOARD_COLOR_MAX}
                     value={
                         settings.boardColors
                     }

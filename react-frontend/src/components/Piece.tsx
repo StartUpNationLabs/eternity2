@@ -1,6 +1,7 @@
-import {Direction, ETERNITY_PATTERNS, Rotation} from "../utils/Constants";
+import {Direction, Rotation} from "../utils/Constants";
 import {RotatedPiece} from "../proto/solver/v1/solver";
 import {EternityPattern} from "../utils/EternityPattern";
+import {ETERNITY_PATTERNS} from "../utils/OfficialEternity2.tsx";
 
 // Function to get the svg for a specific pattern given as input, as well as a rotation
 function getSVG(pattern: EternityPattern, rotation: Rotation) {
