@@ -6,7 +6,7 @@
 struct SharedData
 {
     Board &max_board;
-    int &max_count;
+    std::atomic_llong max_count;
     std::mutex &mutex;
     std::unordered_set<BoardHash> &hashes;
     std::atomic_llong board_count{0};

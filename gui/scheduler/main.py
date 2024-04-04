@@ -5,10 +5,11 @@ from solve import solve
 from solver.v1 import solver_pb2
 
 servers = [
-    'localhost:50051',
+    # 'localhost:50051',
     # 'node-apoorva2.k3s.hs.ozeliurs.com:50051',
     # 'node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50051',
-    # 'vmpx15.polytech.hs.ozeliurs.com:50051'
+    # 'vmpx15.polytech.hs.ozeliurs.com:50051',
+    "vmpx15.polytech.hs.ozeliurs.com:50059"
 ]
 
 if __name__ == '__main__':
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     # Create a request
     request = solver_pb2.SolverSolveRequest(
         pieces=pieces,
-        threads=50,
+        threads=31,
         hash_threshold=13,
         wait_time=1000,
         use_cache=True,

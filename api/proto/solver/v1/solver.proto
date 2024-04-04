@@ -17,6 +17,7 @@ message SolverSolveRequest {
   bool use_cache = 5;
   uint32 cache_pull_interval = 6;
   repeated uint32 solve_path = 7;
+
 }
 
 message Piece {
@@ -26,10 +27,11 @@ message Piece {
   uint32 left = 4;
 }
 
-message PieceWithOptionalHint {
-  Piece piece = 1;
-  optional int32 x = 2;
-  optional int32 y = 3;
+message Hint {
+  int32 index = 1;
+  int32 x = 2;
+  int32 y = 3;
+  int32 rotation = 4;
 }
 
 message RotatedPiece {
