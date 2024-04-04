@@ -12,6 +12,7 @@ import {Stats} from "../solver/Stats.tsx";
 import LinearProgressWithLabel from '@mui/material/LinearProgress';
 import Box from "@mui/material/Box";
 import {Board} from "../../utils/interface.tsx";
+import {hintsState} from "../requestForm/atoms.ts";
 
 
 export const StatisticsSolver = () => {
@@ -21,12 +22,12 @@ export const StatisticsSolver = () => {
     const [solvingStat, setSolvingStat] = useRecoilState(isSolvingStatisticsState);
     const [startedStatistics, setStartedStatistics] = useState(false);
     const [startedSolving, setStartedSolving] = useState(false);
+    const [hints,] = useRecoilState(hintsState);
     const [responses, setResponses] = useState<{
         [key: string]: {
             board: Board,
             response: SolverSolveResponse
         }
-
     }>({});
     const [currentGeneratedBoardIndex, setCurrentGeneratedBoardIndex] = useState(0);
 
@@ -59,7 +60,8 @@ export const StatisticsSolver = () => {
                         "waitTime": setting.waitTime,
                         solvePath: DEFAULT_PATHS.filter(path => path.path.length === generatedBoard.pieces.length)[0].path,
                         useCache: setting.useCache,
-                        cachePullInterval: setting.cachePullInterval
+                        cachePullInterval: setting.cachePullInterval,
+                        hints: hints,
                     }, {});
                     stream.responses.onMessage((message) => {
                             setResponses((prev) => {

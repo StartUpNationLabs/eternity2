@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {pathsState} from "../requestForm/atoms.ts";
+import {hintsState, pathsState} from "../requestForm/atoms.ts";
 import {FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
@@ -11,6 +11,8 @@ import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} fro
 export const CreatePathForm = () => {
     // Available paths on the website
     const [paths, setPaths] = useRecoilState(pathsState);
+    // Hints for the current path
+    const setHints = useRecoilState(hintsState)[1];
     // User input for path name
     const [pathName, setPathName] = React.useState('');
     // State variable for showing the success message
@@ -63,8 +65,9 @@ export const CreatePathForm = () => {
         setPaths([...paths, {
             path: convertSelectedCellsToPath(selectedCells),
             label: pathName,
-            hints: [...hints],
         }]);
+        setHints([...hints])
+
         resetGrid();
         setPathName('');
 

@@ -1,7 +1,7 @@
 import {Grid, Typography} from "@mui/material";
 import Board from "../../components/Board.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardState, settingsState} from "../requestForm/atoms.ts";
+import {boardState, hintsState, settingsState} from "../requestForm/atoms.ts";
 import {isSolvingStepByStepState} from "./atoms.ts";
 import {useEffect, useState} from "react";
 import {SolverStepByStepResponse} from "../../proto/solver/v1/solver.ts";
@@ -18,6 +18,7 @@ export const SolvingStepByStep = () => {
     const [solvingStepByStep, setsolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [startedsolvingStepByStep, setStartedsolvingStepByStep] = useState(false);
     const [solverSolveResponse, setSolverSolveResponse] = useState<SolverStepByStepResponse>();
+    const [hints,] = useRecoilState(hintsState);
 
 
     useEffect(() => {
@@ -40,7 +41,8 @@ export const SolvingStepByStep = () => {
                 "waitTime": setting.waitTime,
                 solvePath: setting.path.path,
                 useCache: setting.useCache,
-                cachePullInterval: setting.cachePullInterval
+                cachePullInterval: setting.cachePullInterval,
+                hints: hints,
             }, {});
             stream.responses.onMessage((message) => {
                 setSolverSolveResponse(message);
@@ -96,9 +98,9 @@ export const SolvingStepByStep = () => {
             </div>
         </Grid>
         <Grid item xs={3}
-            style={{
-                height: '100%',
-            }}
+              style={{
+                  height: '100%',
+              }}
         >
             <div
                 style={{

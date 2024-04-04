@@ -1,18 +1,17 @@
 import {FC} from "react";
-import {RotatedPiece} from "../proto/solver/v1/solver";
+import {Hint, RotatedPiece} from "../proto/solver/v1/solver";
 import Piece from "./Piece";
-import {Hint} from "../utils/interface.tsx";
 
 interface BoardProps {
     pieces?: RotatedPiece[];
     hints?: Hint[];
 }
 
-const Board: FC<BoardProps> = ({pieces, hints}: BoardProps) => {
-    if (!pieces) {
+const Board: FC<BoardProps> = (props: BoardProps) => {
+    if (!props.pieces) {
         return <div>Empty board</div>;
     }
-    const boardSize = Math.sqrt(pieces.length);
+    const boardSize = Math.sqrt(props.pieces.length);
 
     return (
         <div>
@@ -23,19 +22,21 @@ const Board: FC<BoardProps> = ({pieces, hints}: BoardProps) => {
                     gridTemplateRows: `repeat(${boardSize}, 1fr)`,
                 }}
             >
-                {pieces.map((rotatedPiece, index) => {
-                    // Check if the current piece index is in the hints array
-                    const isHint = hints?.some(hint => hint.index === index);
+                {props.pieces.map((rotatedPiece, index) => {
+                    // Convert index to x, y
+                    const x = index % boardSize;
+                    const y = Math.floor(index / boardSize);
 
-                    if (isHint) {
-                        console.log(`Hint found at index ${index}`);
-                    }
+                    // Check if the current piece index is in the hints array
+                    const isHint = props.hints?.some(hint => hint.x === x && hint.y === y);
 
                     return (
                         <div style={{
-                            // boxShadow: isHint ? 'inset 0 0 0 2px #000000' : undefined // Apply inner border if the piece is in the hint
-                            border: isHint ? '8px solid #000000' : undefined // Apply inner border if the piece is in the hint
-                        }}>
+                            // Apply inner border if the piece is in the hint
+                            border: isHint ? '6px solid #000000' : undefined
+                        }}
+                             key={index}
+                        >
                             <Piece key={index} {...rotatedPiece}/>
                         </div>
                     );

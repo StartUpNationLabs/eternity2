@@ -2,7 +2,7 @@ import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardsState, boardState, pathsState, settingsState, solveModeState} from "./atoms.ts";
+import {boardsState, boardState, hintsState, pathsState, settingsState, solveModeState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToPieces, createBoard} from "../../utils/logic.tsx";
 import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
@@ -50,6 +50,7 @@ export const RequestForm = () => {
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
     const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
+    const [_, setHints] = useRecoilState(hintsState);
     const boards = useRecoilValue(boardsState);
 
     // Used to store the already defined selected board
@@ -184,6 +185,12 @@ export const RequestForm = () => {
                                     boardSize: Math.sqrt(pieceList.length),
                                     boardColors: v.nbColors,
                                 });
+                                setHints(v.hints);
+                                setSettings({
+                                    // Choose the scan row path for size of the board
+                                    ...settings,
+                                    path: paths.find((path) => path.label === SCAN_ROW_PATH_NAME && path.path.length === pieceList.length) || DEFAULT_SPIRAL_PATH
+                                });
                             } else {
                                 setSelectedBoard(null);
                                 setSettings({
@@ -192,6 +199,7 @@ export const RequestForm = () => {
                                     boardColors: BOARD_COLOR_DEFAULT,
                                 })
                                 setBoard(convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT)));
+                                setHints([]);
                             }
                         }}
                     />
@@ -281,6 +289,8 @@ export const RequestForm = () => {
                         onChange={(_, v) => {
                             if (v) {
                                 setSettings({...settings, path: v});
+                                // TODO: from where the fuck do i get hints ?
+                                // setHints(v.hints);
                             }
                         }
                         }
