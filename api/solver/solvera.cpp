@@ -15,6 +15,17 @@ void update_cache(std::mutex &mutex,
                   SharedData &shared_data)
 {
     std::scoped_lock lock(mutex);
+    spdlog::info("Adding {} hashes to redis", shared_data.hashes.size());
+    //  insert into redis
+    try
+    {
+        redis.sadd(pieces_hash, shared_data.hashes.begin(), shared_data.hashes.end());
+    }
+    catch (const sw::redis::Error &e)
+    {
+        spdlog::error("Could not add hashes to redis: {}", e.what());
+    }
+    spdlog::info("Added hashes to redis");
     auto temp = std::unordered_set<BoardHash>{};
     redis.smembers(pieces_hash, std::inserter(temp, temp.end()));
     // copy the temp set into the shared data
@@ -211,34 +222,15 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             while (true)
             {
                 co_await delay(std::chrono::milliseconds{request.wait_time()});
-                spdlog::debug("Max count: {}", shared_data.max_count);
                 double seconds_since_start = static_cast<double>(
                                                  std::chrono::duration_cast<std::chrono::milliseconds>(
                                                      std::chrono::high_resolution_clock::now() - start)
                                                      .count())
                                              / 1000.0;
 
-                double seconds_since_last_cache_pull
-                    = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                              std::chrono::high_resolution_clock::now() - last_cache_pull)
-                                              .count())
-                      / 1000.0;
-                if (request.use_cache() && (seconds_since_last_cache_pull > request.cache_pull_interval()))
-                {
-                    update_cache(mutex, pieces_hash, redis, shared_data);
-                    last_cache_pull = std::chrono::high_resolution_clock::now();
-                }
-
-                if (max_count == board.size * board.size)
+                if (shared_data.max_count == board.size * board.size)
                 {
                     spdlog::info("Found solution");
-                    co_await rpc.write(build_response(shared_data, seconds_since_start));
-                    auto step_by_step = build_response_step_by_step(shared_data.max_board, shared_data);
-                    std::string out   = std::string();
-                    step_by_step.AppendToString(&out);
-
-                    redis.sadd("solutions_" + pieces_hash, out);
-
                     // stop threads
                     spdlog::info("Stopping threads");
                     shared_data.stop = true;
@@ -248,6 +240,13 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                         thread.join();
                     }
                     spdlog::info("Threads stopped");
+                    co_await rpc.write(build_response(shared_data, seconds_since_start));
+                    auto step_by_step = build_response_step_by_step(shared_data.max_board, shared_data);
+                    std::string out   = std::string();
+                    step_by_step.AppendToString(&out);
+
+                    redis.sadd("solutions_" + pieces_hash, out);
+
                     co_await rpc.finish(grpc::Status::OK);
                     co_return;
                 }
@@ -267,18 +266,17 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
                     co_await rpc.finish(grpc::Status::CANCELLED);
                     co_return;
                 }
+                double seconds_since_last_cache_pull
+                    = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                              std::chrono::high_resolution_clock::now() - last_cache_pull)
+                                              .count())
+                      / 1000.0;
+                if (request.use_cache() && (seconds_since_last_cache_pull > request.cache_pull_interval()))
+                {
+                    update_cache(mutex, pieces_hash, redis, shared_data);
+                    last_cache_pull = std::chrono::high_resolution_clock::now();
+                }
                 spdlog::info("Response written");
-                spdlog::info("Adding {} hashes to redis", shared_data.hashes.size());
-                //  insert into redis
-                try
-                {
-                    redis.sadd(pieces_hash, shared_data.hashes.begin(), shared_data.hashes.end());
-                }
-                catch (const sw::redis::Error &e)
-                {
-                    spdlog::error("Could not add hashes to redis: {}", e.what());
-                }
-                spdlog::info("Added hashes to redis");
             }
         });
 }

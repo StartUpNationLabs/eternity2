@@ -122,8 +122,11 @@ auto solve_board_recursive(Board &board,
     if (placed_pieces > shared_data.max_count)
     {
         std::scoped_lock lock(shared_data.mutex);
-        shared_data.max_count = placed_pieces;
-        shared_data.max_board = board;
+        if (placed_pieces > shared_data.max_count)
+        {
+            shared_data.max_count = placed_pieces;
+            shared_data.max_board = board;
+        }
     }
     if (is_end(board, index))
     {
