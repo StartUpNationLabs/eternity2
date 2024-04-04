@@ -41,7 +41,8 @@ export const Solving = () => {
                 "waitTime": setting.waitTime,
                 solvePath: setting.path.path,
                 useCache: setting.useCache,
-                cachePullInterval: setting.cachePullInterval
+                cachePullInterval: setting.cachePullInterval,
+                hints: [],//
             }, {});
             stream.responses.onMessage((message) => {
                 setSolverSolveResponse(message);

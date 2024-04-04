@@ -2,16 +2,16 @@ import {Grid, Typography} from "@mui/material";
 import {Piece, SolverSolveResponse} from "../../proto/solver/v1/solver.ts";
 import {RequestFormStatistics} from "./RequestFormStatistics.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
-import {Board, defaultPaths} from "../requestForm/atoms.ts";
 import {useEffect, useState} from "react";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
-import {abortController, SERVER_BASE_URL} from "../../utils/Constants.tsx";
+import {abortController, DEFAULT_PATHS, SERVER_BASE_URL} from "../../utils/Constants.tsx";
 import {SolverClient} from "../../proto/solver/v1/solver.client.ts";
 import {generatedBoardsState, isSolvingStatisticsState, settingsStatisticsState} from "./atoms.ts";
 import {default as BoardComponent} from "../../components/Board.tsx";
 import {Stats} from "../solver/Stats.tsx";
 import LinearProgressWithLabel from '@mui/material/LinearProgress';
 import Box from "@mui/material/Box";
+import {Board} from "../../utils/interface.tsx";
 
 
 export const StatisticsSolver = () => {
@@ -57,7 +57,7 @@ export const StatisticsSolver = () => {
                         "pieces": generatedBoard.pieces.map(piece => piece.piece as Piece),
                         "threads": setting.threads,
                         "waitTime": setting.waitTime,
-                        solvePath: defaultPaths.filter(path => path.path.length === generatedBoard.pieces.length)[0].path,
+                        solvePath: DEFAULT_PATHS.filter(path => path.path.length === generatedBoard.pieces.length)[0].path,
                         useCache: setting.useCache,
                         cachePullInterval: setting.cachePullInterval
                     }, {});

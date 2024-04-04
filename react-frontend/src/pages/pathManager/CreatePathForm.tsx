@@ -19,7 +19,7 @@ export const CreatePathForm = () => {
     // States used by path manager
     const [boardSize, setBoardSize] = useRecoilState(boardSizeState);
     const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
-    const setHintCells = useRecoilState(hintCellsState)[1];
+    const [hintCells, setHintCells] = useRecoilState(hintCellsState);
 
     // ===== Reset ==== //
 
@@ -49,9 +49,21 @@ export const CreatePathForm = () => {
     };
 
     const handleSavePath = () => {
+        const hintsIndex = hintCells.length > 0 ? hintCells : [];
+
+        // Create hint objects from the hint cells
+        // Hint : {index: number, x: number, y: number, rotation: number}
+        const hints = hintsIndex.map(index => ({
+            index: index,
+            x: index % boardSize,
+            y: Math.floor(index / boardSize),
+            rotation: 0,
+        }));
+
         setPaths([...paths, {
             path: convertSelectedCellsToPath(selectedCells),
-            label: pathName
+            label: pathName,
+            hints: [...hints],
         }]);
         resetGrid();
         setPathName('');

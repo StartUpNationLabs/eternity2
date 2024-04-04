@@ -1,7 +1,9 @@
 import {Card, CardContent, Typography} from "@mui/material";
 import Button from "@mui/material/Button";
 import Board from "../../components/Board.tsx";
-import {eternity2OfficialBoard} from "../requestForm/atoms.ts";
+
+
+import {ETERNITY_II_OFFICIAL_BOARD} from "../../utils/OfficialEternity2.tsx";
 
 export const HomePage = () => {
     return (
@@ -27,7 +29,7 @@ export const HomePage = () => {
                 </CardContent>
             </Card>
             <div style={{width: "40%", margin: "auto"}}>
-                <Board pieces={eternity2OfficialBoard.pieces}></Board>
+                <Board pieces={ETERNITY_II_OFFICIAL_BOARD.pieces}></Board>
             </div>
         </div>
     )

@@ -2,7 +2,7 @@ import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {Board, boardsState, boardState, Path, pathsState, settingsState, solveModeState, spiralPath} from "./atoms.ts";
+import {boardsState, boardState, pathsState, settingsState, solveModeState} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToPieces, createBoard} from "../../utils/logic.tsx";
 import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
@@ -20,6 +20,7 @@ import {
     CACHE_PULL_INTERVAL_MAX,
     CACHE_PULL_INTERVAL_MIN,
     CACHE_PULL_INTERVAL_STEP,
+    DEFAULT_SPIRAL_PATH,
     HASH_THRESHOLD_DEFAULT,
     HASH_THRESHOLD_MAX,
     HASH_THRESHOLD_MIN,
@@ -37,12 +38,13 @@ import {
 import {Piece} from "../../proto/solver/v1/solver.ts";
 import {useEffect, useState} from "react";
 import {numberOfColorsThatFitInABoard} from "../../utils/utils.tsx";
+import {Board, Path} from "../../utils/interface.tsx";
 
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
     const paths = useRecoilValue(pathsState);
-    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == spiralPath);
+    const pathOptions = paths.filter((path) => path.path.length == settings.boardSize * settings.boardSize || path == DEFAULT_SPIRAL_PATH);
     const [board, setBoard] = useRecoilState(boardState);
     const [, setSolving] = useRecoilState(isSolvingState);
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
@@ -102,7 +104,11 @@ export const RequestForm = () => {
                             const boardSize = v as number;
                             const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize ** 2);
 
-                            setSettings({...settings, boardSize: v as number, path: scanRowPath || spiralPath});
+                            setSettings({
+                                ...settings,
+                                boardSize: v as number,
+                                path: scanRowPath || DEFAULT_SPIRAL_PATH
+                            });
                         }
                     }
                     marks

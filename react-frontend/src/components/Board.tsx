@@ -1,12 +1,14 @@
 import {FC} from "react";
 import {RotatedPiece} from "../proto/solver/v1/solver";
 import Piece from "./Piece";
+import {Hint} from "../utils/interface.tsx";
 
 interface BoardProps {
     pieces?: RotatedPiece[];
+    hints?: Hint[];
 }
 
-const Board: FC<BoardProps> = ({pieces}: BoardProps) => {
+const Board: FC<BoardProps> = ({pieces, hints}: BoardProps) => {
     if (!pieces) {
         return <div>Empty board</div>;
     }
@@ -21,9 +23,23 @@ const Board: FC<BoardProps> = ({pieces}: BoardProps) => {
                     gridTemplateRows: `repeat(${boardSize}, 1fr)`,
                 }}
             >
-                {pieces.map((rotatedPiece, index) => (
-                    <Piece key={index} {...rotatedPiece} />
-                ))}
+                {pieces.map((rotatedPiece, index) => {
+                    // Check if the current piece index is in the hints array
+                    const isHint = hints?.some(hint => hint.index === index);
+
+                    if (isHint) {
+                        console.log(`Hint found at index ${index}`);
+                    }
+
+                    return (
+                        <div style={{
+                            // boxShadow: isHint ? 'inset 0 0 0 2px #000000' : undefined // Apply inner border if the piece is in the hint
+                            border: isHint ? '8px solid #000000' : undefined // Apply inner border if the piece is in the hint
+                        }}>
+                            <Piece key={index} {...rotatedPiece}/>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
