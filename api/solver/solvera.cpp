@@ -179,6 +179,7 @@ auto hash_pieces_board(const std::vector<Piece> &pieces, Board board) -> std::st
     {
         hash += std::bitset<64>(next_index_cache).to_string();
     }
+    spdlog::info("Hash: {}", hash);
     return hash;
 }
 
@@ -222,6 +223,7 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             try
             {
                 redis.ping();
+                spdlog::info("Connected to redis");
             }
             catch (const sw::redis::Error &e)
             {
@@ -231,14 +233,17 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             auto last_cache_pull = std::chrono::high_resolution_clock::now();
             if (request.use_cache())
             {
+                spdlog::info("Using cache");
                 update_cache(mutex, pieces_hash, redis, shared_data);
                 last_cache_pull = std::chrono::high_resolution_clock::now();
             }
+            spdlog::info("Starting solver", board.size);
 
             for (int i = 0; i < thread_count; i++)
             {
                 threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
             }
+            spdlog::info("Solver started");
             // every 2 seconds, print the current max count
             while (true)
             {

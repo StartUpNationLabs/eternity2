@@ -133,12 +133,43 @@ auto solve_board_recursive(Board &board,
         return true;
     }
 
-    std::vector<RotatedPiece> possible = {};
+    std::vector<RotatedPiece> possible;
 
     const RotatedPiece *piece = get_piece(board, index);
     if (piece->index < 0)
     {
-        possible.push_back(*piece);
+        auto rotated_piece = *piece;
+        shared_data.pieces_placed++;
+        // add placed piece to board hash
+        if (placed_pieces < shared_data.hash_length_threshold)
+        {
+            board_hash += static_cast<char>(rotated_piece.index);
+            board_hash += static_cast<char>(rotated_piece.rotation);
+        }
+        // remove placed piece from pieces
+        //        pieces[rotated_piece.index].available = false;
+
+        if (Index next_index = get_next(board, index);
+            solve_board_recursive(board, pieces, next_index, placed_pieces + 1, shared_data, board_hash))
+        {
+            return true;
+        }
+        //        // copy board hash and insert it into the shared data
+        //        if (placed_pieces < shared_data.hash_length_threshold)
+        //        {
+        //            std::scoped_lock lock(shared_data.mutex);
+        //            shared_data.hashes.insert(board_hash);
+        //        }
+        //        // remove placed piece from board hash
+        //
+        if (placed_pieces < shared_data.hash_length_threshold)
+        {
+            board_hash.pop_back();
+            board_hash.pop_back();
+        }
+        shared_data.on_board_update(board);
+        shared_data.board_count++;
+        return false;
     }
     else
     {
