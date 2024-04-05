@@ -104,7 +104,9 @@ auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &reques
 {
     const auto &req_pieces = request.pieces();
     const auto size        = req_pieces.size();
-    Board board            = create_board(static_cast<int>(sqrt(size)));
+    spdlog::info("Loading board and pieces from request");
+    spdlog::info("Loaded {} pieces", size);
+    Board board = create_board(static_cast<int>(sqrt(size)));
     std::vector<Piece> pieces;
     pieces.reserve(size * size);
     for (const auto &piece : req_pieces)
@@ -127,6 +129,25 @@ auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &reques
     else
     {
         spdlog::info("Using default solve path");
+    }
+    // add the hints pieces
+    for (const auto &hint : request.hints())
+    {
+        spdlog::info("Placing hint piece");
+        spdlog::info("Hint: x: {}, y: {}, rotation: {}", hint.x(), hint.y(), hint.rotation());
+        auto index    = std::make_pair(hint.x(), hint.y());
+        auto index_1d = get_1d_board_index(board, index);
+        spdlog::info("Index 1d: {}", index_1d);
+        if (hint.x() >= board.size || hint.y() >= board.size || index_1d >= pieces.size())
+        {
+            continue;
+        }
+
+        auto piece                 = request.pieces().at(static_cast<int>(index_1d));
+        RotatedPiece rotated_piece = {make_piece(piece.top(), piece.right(), piece.bottom(), piece.left()),
+                                      hint.rotation(),
+                                      -static_cast<int>(index_1d)};
+        place_piece(board, rotated_piece, index);
     }
     return std::make_pair(board, pieces);
 }

@@ -133,21 +133,20 @@ auto solve_board_recursive(Board &board,
         return true;
     }
 
+    std::vector<RotatedPiece> possible = {};
+
     const RotatedPiece *piece = get_piece(board, index);
     if (piece->index < 0)
     {
-        return solve_board_recursive(board,
-                                     pieces,
-                                     get_next(board, index),
-                                     placed_pieces + 1,
-                                     shared_data,
-                                     board_hash);
+        possible.push_back(*piece);
     }
-
-    auto possible = possible_pieces(board, pieces, index);
-    // random for loop
-    std::shuffle(possible.begin(), possible.end(), rng);
-    // shuffle possible
+    else
+    {
+        possible = possible_pieces(board, pieces, index);
+        // random for loop
+        std::shuffle(possible.begin(), possible.end(), rng);
+        // shuffle possible
+    }
 
     for (auto const &rotated_piece : possible)
     {

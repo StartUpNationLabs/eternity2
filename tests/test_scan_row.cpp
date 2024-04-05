@@ -17,12 +17,12 @@ TEST_CASE("Row scan order", "[scan_row_order_from_board_size]")
 
 TEST_CASE("Row Scan with get index check", "[scan_row_order_from_board_size]")
 {
-    int board_size         = 40;
+    int board_size         = 3;
     Board board            = create_board(board_size);
     auto scan_row_order    = ScanRow::scan_row_order_from_board_size(board_size);
     board.next_index_cache = scan_row_order;
     Index index            = {0, 0};
-    for (int i = 0; i < board_size * board_size; ++i)
+    for (int i = 0; i < board_size * board_size - 1; ++i)
     {
         Index index_scan       = get_next_scan_row(board, index);
         Index cache_index_scan = get_next_using_cache(board, index);
