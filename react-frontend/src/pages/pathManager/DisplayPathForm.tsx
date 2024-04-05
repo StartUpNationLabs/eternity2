@@ -1,11 +1,12 @@
 import {SyntheticEvent} from 'react';
-import {Path, pathsState} from "../requestForm/atoms.ts";
+import {pathsState} from "../requestForm/atoms.ts";
 import {Autocomplete, Button, FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Box from "@mui/material/Box";
 import {boardSizeState, DEFAULT_SELECTED_CELLS, selectedCellsState, selectedPathState} from "./atom.ts";
 import {convertPathToSelectedCells} from "./utils.ts";
 import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
+import {Path} from "../../utils/interface.tsx";
 
 export const DisplayPathForm = () => {
     const paths = useRecoilState(pathsState)[0];

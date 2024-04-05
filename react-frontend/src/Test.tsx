@@ -1,4 +1,4 @@
-import React, {FC} from 'react';
+import {FC} from 'react';
 import {RotatedPiece} from "./proto/solver/v1/solver.ts";
 import Board from "./components/Board.tsx";
 
@@ -18,7 +18,7 @@ const rotatedPiece: RotatedPiece = {
 }
 
 const gridSize = 4;
-const rotatedPieces: RotatedPiece[] = Array.from({length: gridSize**2}, () => (rotatedPiece));
+const rotatedPieces: RotatedPiece[] = Array.from({length: gridSize ** 2}, () => (rotatedPiece));
 
 const Test: FC<AppProps> = () => {
     const percentage: number = 50;

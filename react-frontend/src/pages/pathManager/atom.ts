@@ -1,6 +1,7 @@
 import {atom} from "recoil";
 import {BOARD_SIZE_DEFAULT} from "../../utils/Constants.tsx";
-import {Path} from "../requestForm/atoms.ts";
+
+import {Path} from "../../utils/interface.tsx";
 
 export const DEFAULT_SELECTED_CELLS = [0] as number[];
 

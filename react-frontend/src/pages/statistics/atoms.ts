@@ -1,13 +1,18 @@
 import {atom, RecoilState} from "recoil";
 import {convertToPieces, createBoard, shuffleAndRotateBoard} from "../../utils/logic.tsx";
-import {Board} from "../requestForm/atoms.ts";
 import {
     BOARD_COLOR_MAX,
     BOARD_COLOR_MIN,
     BOARD_SIZE_MAX,
-    BOARD_SIZE_MIN, CACHE_PULL_INTERVAL_DEFAULT, HASH_THRESHOLD_DEFAULT,
-    SPIRAL_PATH_NAME, THREADS_DEFAULT, USE_CACHE_DEFAULT, WAIT_TIME_DEFAULT
+    BOARD_SIZE_MIN,
+    CACHE_PULL_INTERVAL_DEFAULT,
+    HASH_THRESHOLD_DEFAULT,
+    SPIRAL_PATH_NAME,
+    THREADS_DEFAULT,
+    USE_CACHE_DEFAULT,
+    WAIT_TIME_DEFAULT
 } from "../../utils/Constants.tsx";
+import {Board} from "../../utils/interface.tsx";
 
 
 export const isSolvingStatisticsState: RecoilState<boolean> = atom({
@@ -52,6 +57,7 @@ export function generateBoards(minSize: number, maxSize: number, minColors: numb
                         rotation: 0,
                     })),
                     nbColors: colors,
+                    hints: [],
                 });
             }
         }

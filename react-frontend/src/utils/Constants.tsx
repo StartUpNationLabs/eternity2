@@ -1,3 +1,5 @@
+import {Path} from "./interface.tsx";
+
 /**
  * Values used for the settings
  */
@@ -47,7 +49,7 @@ export const MULTI_SERVER_BASE_URLS = [{
     "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
 }
 ]
-export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
+export const SERVER_BASE_URL: string = "http://node-apoorva2.k3s.hs.ozeliurs.com:50052"
 
 /**
  * Directions for the pieces
@@ -66,7 +68,31 @@ export enum Rotation {
     TWO_SEVENTY,
 }
 
-
 export const abortController = {
     abortController: new AbortController(),
 }
+
+export const DEFAULT_SPIRAL_PATH = {
+    label: SPIRAL_PATH_NAME,
+    // It is empty because the server is doing spiral by default
+    // An empty path will be considered as an error by the server and will be replaced by the default spiral path
+    path: [] as number[],
+    hints: []
+}
+
+export const DEFAULT_PATHS: Path[] = [...Array(16).keys()].map(
+    i => ({
+        label: SCAN_ROW_PATH_NAME,
+        path: [...[...Array((i + 2) * (i + 2) - 1).keys()].map(j => j + 1), 2147483647],
+        hints: []
+    })
+);
+
+// Create a default path for the board size : BOARD_SIZE_DEFAULT
+export const DEFAULT_SCAN_ROW_PATH = {
+    label: SCAN_ROW_PATH_NAME,
+    path: [...[...Array(BOARD_SIZE_DEFAULT * BOARD_SIZE_DEFAULT - 1).keys()].map(j => j + 1),
+        2147483647
+    ],
+    hints: [],
+};

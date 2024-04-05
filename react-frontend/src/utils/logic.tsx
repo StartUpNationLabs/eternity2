@@ -50,7 +50,6 @@ export function createBoard(size: number, numberOfSymbols: number) {
 
         // Flatten the board and create a set of all symbols
         uniqueSymbols = new Set(board.flat().flatMap(piece => Object.values(piece)));
-        console.log(uniqueSymbols.size, numberOfSymbols)
     } while (uniqueSymbols.size !== numberOfSymbols);
 
     return board;

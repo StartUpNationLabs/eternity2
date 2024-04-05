@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {pathsState} from "../requestForm/atoms.ts";
+import {hintsState, pathsState} from "../requestForm/atoms.ts";
 import {FormGroup, Slider, TextField, Typography} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
@@ -11,6 +11,8 @@ import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} fro
 export const CreatePathForm = () => {
     // Available paths on the website
     const [paths, setPaths] = useRecoilState(pathsState);
+    // Hints for the current path
+    const setHints = useRecoilState(hintsState)[1];
     // User input for path name
     const [pathName, setPathName] = React.useState('');
     // State variable for showing the success message
@@ -19,7 +21,7 @@ export const CreatePathForm = () => {
     // States used by path manager
     const [boardSize, setBoardSize] = useRecoilState(boardSizeState);
     const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
-    const setHintCells = useRecoilState(hintCellsState)[1];
+    const [hintCells, setHintCells] = useRecoilState(hintCellsState);
 
     // ===== Reset ==== //
 
@@ -49,10 +51,23 @@ export const CreatePathForm = () => {
     };
 
     const handleSavePath = () => {
+        const hintsIndex = hintCells.length > 0 ? hintCells : [];
+
+        // Create hint objects from the hint cells
+        // Hint : {index: number, x: number, y: number, rotation: number}
+        const hints = hintsIndex.map(index => ({
+            index: index,
+            x: index % boardSize,
+            y: Math.floor(index / boardSize),
+            rotation: 0,
+        }));
+
         setPaths([...paths, {
             path: convertSelectedCellsToPath(selectedCells),
-            label: pathName
+            label: pathName,
         }]);
+        setHints([...hints])
+
         resetGrid();
         setPathName('');
 

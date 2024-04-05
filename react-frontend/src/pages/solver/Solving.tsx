@@ -1,7 +1,7 @@
 import {Grid} from "@mui/material";
 import Board from "../../components/Board.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardState, settingsState} from "../requestForm/atoms.ts";
+import {boardState, hintsState, settingsState} from "../requestForm/atoms.ts";
 import {Stats} from "./Stats.tsx";
 import {isSolvingState} from "./atoms.ts";
 import {useEffect, useState} from "react";
@@ -18,6 +18,8 @@ export const Solving = () => {
     const [solving, setSolving] = useRecoilState(isSolvingState);
     const [startedSolving, setStartedSolving] = useState(false);
     const [solverSolveResponse, setSolverSolveResponse] = useState<SolverSolveResponse>();
+    const [hints,] = useRecoilState(hintsState);
+
     useEffect(() => {
 
         if (solving && !startedSolving) {
@@ -28,21 +30,25 @@ export const Solving = () => {
                 baseUrl: SERVER_BASE_URL,
                 format: "binary",
                 abort: abortController.abortController.signal,
-
             });
 
             const solverClient = new SolverClient(
                 transport
             );
+
+            console.log("Just before the request: ", hints);
+
             const stream = solverClient.solve({
-                "hashThreshold": setting.hashThreshold,
-                "pieces": board,
-                "threads": setting.threads,
-                "waitTime": setting.waitTime,
+                hashThreshold: setting.hashThreshold,
+                pieces: board,
+                threads: setting.threads,
+                waitTime: setting.waitTime,
                 solvePath: setting.path.path,
                 useCache: setting.useCache,
-                cachePullInterval: setting.cachePullInterval
+                cachePullInterval: setting.cachePullInterval,
+                hints: hints,
             }, {});
+            
             stream.responses.onMessage((message) => {
                 setSolverSolveResponse(message);
             });
@@ -57,11 +63,9 @@ export const Solving = () => {
                 setSolving(false);
                 setStartedSolving(false);
             });
-
-
         }
 
-    }, [solving, startedSolving, board, setting, solverSolveResponse, setSolverSolveResponse, setSolving]);
+    }, [solving, startedSolving, board, setting, solverSolveResponse, setSolverSolveResponse, setSolving, hints]);
 
     useEffect(() => {
         return () => {

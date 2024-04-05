@@ -1,5 +1,8 @@
 import {EternityPattern} from "./EternityPattern.tsx";
 import {Direction} from "./Constants.tsx";
+import {Hint} from "../proto/solver/v1/solver.ts";
+import {Board} from "./interface.tsx";
+import {boardRearrangedWithHints, convertBucasBoardToRotatedPieces} from "./utils.tsx";
 
 /**
  * Those are the official pieces for the puzzle
@@ -29,6 +32,46 @@ export const ETERNITY_II_PIECES = [
     "msow", "msut", "mtrs", "mtrv", "nnns", "nouq", "nqoq", "nqos", "nqrp", "nrqu", "nspw", "nsvp",
     "ntov", "ntqv", "oppr", "opst", "oqws", "ovuw", "ppvw", "pqrq", "prqv", "psuv", "qqwt", "qrtr",
     "rtus", "suvu", "swuw", "twvw"
+]
+
+/**
+ * index : piece position
+ * x : x coordinate
+ * y : y coordinate
+ * rotation : 0, 1, 2, 3
+ */
+// starts counting from 1 in : https://groups.io/g/eternity2/topic/47714652?p=Created,,,20,2,0,0::recentpostdate%2Fsticky,,,20,2,0,47714652 so added -1
+export const ETERNITY_II_HINTS: Hint[] = [
+    {
+        index: 138, // from website : 139
+        x: 7,
+        y: 8,
+        rotation: 2
+    },
+    {
+        index: 248, // from website : 249
+        x: 13,
+        y: 13,
+        rotation: 0
+    },
+    {
+        index: 180, // from website : 181
+        x: 2,
+        y: 13,
+        rotation: 3
+    },
+    {
+        index: 254, // from website : 255
+        x: 13,
+        y: 2,
+        rotation: 3
+    },
+    {
+        index: 207, // from website : 208
+        x: 2,
+        y: 2,
+        rotation: 3
+    }
 ]
 
 /**
@@ -423,3 +466,10 @@ export const ETERNITY_PATTERNS = [
     PATTERN_BG_PINK_SQUARE_FORT,
     PATTERN_BG_BLUE_CROSS,
 ]
+
+export const ETERNITY_II_OFFICIAL_BOARD: Board = {
+    label: "Eternity II Official",
+    pieces: boardRearrangedWithHints(convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES), ETERNITY_II_HINTS),
+    nbColors: 22,
+    hints: ETERNITY_II_HINTS,
+}

@@ -43,6 +43,10 @@ export interface SolverSolveRequest {
      * @generated from protobuf field: repeated uint32 solve_path = 7;
      */
     solvePath: number[];
+    /**
+     * @generated from protobuf field: repeated solver.v1.Hint hints = 8;
+     */
+    hints: Hint[];
 }
 /**
  * @generated from protobuf message solver.v1.Piece
@@ -66,21 +70,25 @@ export interface Piece {
     left: number;
 }
 /**
- * @generated from protobuf message solver.v1.PieceWithOptionalHint
+ * @generated from protobuf message solver.v1.Hint
  */
-export interface PieceWithOptionalHint {
+export interface Hint {
     /**
-     * @generated from protobuf field: solver.v1.Piece piece = 1;
+     * @generated from protobuf field: int32 index = 1;
      */
-    piece?: Piece;
+    index: number;
     /**
-     * @generated from protobuf field: optional int32 x = 2;
+     * @generated from protobuf field: int32 x = 2;
      */
-    x?: number;
+    x: number;
     /**
-     * @generated from protobuf field: optional int32 y = 3;
+     * @generated from protobuf field: int32 y = 3;
      */
-    y?: number;
+    y: number;
+    /**
+     * @generated from protobuf field: int32 rotation = 4;
+     */
+    rotation: number;
 }
 /**
  * @generated from protobuf message solver.v1.RotatedPiece
@@ -171,7 +179,8 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
             { no: 4, name: "wait_time", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 5, name: "use_cache", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 6, name: "cache_pull_interval", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 7, name: "solve_path", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 13 /*ScalarType.UINT32*/ }
+            { no: 7, name: "solve_path", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 13 /*ScalarType.UINT32*/ },
+            { no: 8, name: "hints", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Hint }
         ]);
     }
     create(value?: PartialMessage<SolverSolveRequest>): SolverSolveRequest {
@@ -183,6 +192,7 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
         message.useCache = false;
         message.cachePullInterval = 0;
         message.solvePath = [];
+        message.hints = [];
         if (value !== undefined)
             reflectionMergePartial<SolverSolveRequest>(this, message, value);
         return message;
@@ -216,6 +226,9 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
                             message.solvePath.push(reader.uint32());
                     else
                         message.solvePath.push(reader.uint32());
+                    break;
+                case /* repeated solver.v1.Hint hints */ 8:
+                    message.hints.push(Hint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -254,6 +267,9 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
                 writer.uint32(message.solvePath[i]);
             writer.join();
         }
+        /* repeated solver.v1.Hint hints = 8; */
+        for (let i = 0; i < message.hints.length; i++)
+            Hint.internalBinaryWrite(message.hints[i], writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -336,33 +352,41 @@ class Piece$Type extends MessageType<Piece> {
  */
 export const Piece = new Piece$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class PieceWithOptionalHint$Type extends MessageType<PieceWithOptionalHint> {
+class Hint$Type extends MessageType<Hint> {
     constructor() {
-        super("solver.v1.PieceWithOptionalHint", [
-            { no: 1, name: "piece", kind: "message", T: () => Piece },
-            { no: 2, name: "x", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "y", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
+        super("solver.v1.Hint", [
+            { no: 1, name: "index", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "x", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "y", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 4, name: "rotation", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
         ]);
     }
-    create(value?: PartialMessage<PieceWithOptionalHint>): PieceWithOptionalHint {
+    create(value?: PartialMessage<Hint>): Hint {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.index = 0;
+        message.x = 0;
+        message.y = 0;
+        message.rotation = 0;
         if (value !== undefined)
-            reflectionMergePartial<PieceWithOptionalHint>(this, message, value);
+            reflectionMergePartial<Hint>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PieceWithOptionalHint): PieceWithOptionalHint {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Hint): Hint {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* solver.v1.Piece piece */ 1:
-                    message.piece = Piece.internalBinaryRead(reader, reader.uint32(), options, message.piece);
+                case /* int32 index */ 1:
+                    message.index = reader.int32();
                     break;
-                case /* optional int32 x */ 2:
+                case /* int32 x */ 2:
                     message.x = reader.int32();
                     break;
-                case /* optional int32 y */ 3:
+                case /* int32 y */ 3:
                     message.y = reader.int32();
+                    break;
+                case /* int32 rotation */ 4:
+                    message.rotation = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -375,16 +399,19 @@ class PieceWithOptionalHint$Type extends MessageType<PieceWithOptionalHint> {
         }
         return message;
     }
-    internalBinaryWrite(message: PieceWithOptionalHint, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* solver.v1.Piece piece = 1; */
-        if (message.piece)
-            Piece.internalBinaryWrite(message.piece, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* optional int32 x = 2; */
-        if (message.x !== undefined)
+    internalBinaryWrite(message: Hint, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 index = 1; */
+        if (message.index !== 0)
+            writer.tag(1, WireType.Varint).int32(message.index);
+        /* int32 x = 2; */
+        if (message.x !== 0)
             writer.tag(2, WireType.Varint).int32(message.x);
-        /* optional int32 y = 3; */
-        if (message.y !== undefined)
+        /* int32 y = 3; */
+        if (message.y !== 0)
             writer.tag(3, WireType.Varint).int32(message.y);
+        /* int32 rotation = 4; */
+        if (message.rotation !== 0)
+            writer.tag(4, WireType.Varint).int32(message.rotation);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -392,9 +419,9 @@ class PieceWithOptionalHint$Type extends MessageType<PieceWithOptionalHint> {
     }
 }
 /**
- * @generated MessageType for protobuf message solver.v1.PieceWithOptionalHint
+ * @generated MessageType for protobuf message solver.v1.Hint
  */
-export const PieceWithOptionalHint = new PieceWithOptionalHint$Type();
+export const Hint = new Hint$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class RotatedPiece$Type extends MessageType<RotatedPiece> {
     constructor() {

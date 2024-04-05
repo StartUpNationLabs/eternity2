@@ -1,8 +1,8 @@
-import { Grid, Tab, Tabs, Typography} from "@mui/material";
+import {Grid, Tab, Tabs, Typography} from "@mui/material";
 
 import Board from "../../components/Board.tsx";
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardState, settingsState} from "../requestForm/atoms.ts";
+import {boardState, hintsState, settingsState} from "../requestForm/atoms.ts";
 import React, {useEffect, useState} from "react";
 import {abortController, MULTI_SERVER_BASE_URLS,} from "../../utils/Constants.tsx";
 import {GrpcWebFetchTransport} from "@protobuf-ts/grpcweb-transport";
@@ -20,6 +20,7 @@ export const SolvingMultiServer = () => {
     const [multiServerResponse, setMultiServerResponse] = useState<
         { [key: string]: SolverSolveResponse }
     >();
+    const [hints,] = useRecoilState(hintsState);
 
     const [tabIndex, setTabIndex] = React.useState(0);
 
@@ -49,7 +50,8 @@ export const SolvingMultiServer = () => {
                     "waitTime": setting.waitTime,
                     solvePath: setting.path.path,
                     useCache: setting.useCache,
-                    cachePullInterval: setting.cachePullInterval
+                    cachePullInterval: setting.cachePullInterval,
+                    hints: hints,
                 }, {});
                 stream.responses.onMessage((message) => {
                     setMultiServerResponse((prev) => {
@@ -101,17 +103,16 @@ export const SolvingMultiServer = () => {
                 indicatorColor="secondary"
                 aria-label="secondary tabs example"
                 sx={
-                    {
-                    }
+                    {}
                 }
             >
                 {MULTI_SERVER_BASE_URLS.map((key, index) => {
                         return (<Tab label={<Typography
 
-                           variant={"h3"}
+                            variant={"h3"}
 
                         >{key.name}</Typography>
-                            } key={index}/>)
+                        } key={index}/>)
                     }
                 )}
             </Tabs>
@@ -126,20 +127,20 @@ export const SolvingMultiServer = () => {
                 <Grid item xs={5}>
 
                     <div
-                    style={{
-                        padding: 20,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "100%",
-                        margin: "auto",
-                        marginTop: 20,
-                    }}
-                >
-                    <Stats response={multiServerResponse?.[MULTI_SERVER_BASE_URLS[tabIndex].url]}/>
+                        style={{
+                            padding: 20,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "100%",
+                            margin: "auto",
+                            marginTop: 20,
+                        }}
+                    >
+                        <Stats response={multiServerResponse?.[MULTI_SERVER_BASE_URLS[tabIndex].url]}/>
 
-                </div>
+                    </div>
                 </Grid>
                 <Grid item xs={4}>
                     <div style={{
@@ -152,7 +153,8 @@ export const SolvingMultiServer = () => {
                     }}
                     >
                         <div style={{width: "100%", height: "100%"}}>
-                            <Board pieces={multiServerResponse?.[MULTI_SERVER_BASE_URLS[tabIndex].url]?.rotatedPieces || []}
+                            <Board
+                                pieces={multiServerResponse?.[MULTI_SERVER_BASE_URLS[tabIndex].url]?.rotatedPieces || []}
                             />
                         </div>
                     </div>
