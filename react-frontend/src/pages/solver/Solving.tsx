@@ -38,7 +38,7 @@ export const Solving = () => {
 
             console.log("Just before the request: ", hints);
 
-            const stream = solverClient.solve({
+            const requestOjb = {
                 hashThreshold: setting.hashThreshold,
                 pieces: board,
                 threads: setting.threads,
@@ -47,8 +47,12 @@ export const Solving = () => {
                 useCache: setting.useCache,
                 cachePullInterval: setting.cachePullInterval,
                 hints: hints,
-            }, {});
-            
+            }
+
+            console.log("Request object: ", requestOjb)
+
+            const stream = solverClient.solve(requestOjb, {});
+
             stream.responses.onMessage((message) => {
                 setSolverSolveResponse(message);
             });

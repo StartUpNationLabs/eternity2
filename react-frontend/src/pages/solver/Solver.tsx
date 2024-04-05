@@ -7,6 +7,7 @@ import {boardState, hintsState, solveModeState} from "../requestForm/atoms.ts";
 import {Solving} from "./Solving.tsx";
 import {SolvingStepByStep} from "./SolvingStepByStep.tsx";
 import {SolvingMultiServer} from "./SolvingMultiServer.tsx";
+import {SolveMode} from "../../utils/Constants.tsx";
 
 
 export const Solver = () => {
@@ -57,8 +58,8 @@ export const Solver = () => {
                 </div>
             </Grid>
         </Grid>
-        {solveMode === "normal" && <Solving/>}
-        {solveMode === "stepByStep" && <SolvingStepByStep/>}
-        {solveMode === "multiServer" && <SolvingMultiServer/>}
+        {solveMode === SolveMode.normal && <Solving/>}
+        {solveMode === SolveMode.stepByStep && <SolvingStepByStep/>}
+        {solveMode === SolveMode.multiServer && <SolvingMultiServer/>}
     </>
 }

@@ -8,6 +8,7 @@ import {
     DEFAULT_SCAN_ROW_PATH,
     DEFAULT_SPIRAL_PATH,
     HASH_THRESHOLD_DEFAULT,
+    SolveMode,
     THREADS_DEFAULT,
     USE_CACHE_DEFAULT,
     WAIT_TIME_DEFAULT
@@ -53,6 +54,6 @@ export const boardsState: RecoilState<Board[]> = atom({
 
 export const solveModeState = atom({
     key: 'solveModeState',
-    default: 'none' as "normal" | "stepByStep" | "none" | "multiServer",
+    default: SolveMode.none,
 });
 

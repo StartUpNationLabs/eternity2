@@ -34,16 +34,21 @@ export const SolvingStepByStep = () => {
             const solverClient = new SolverClient(
                 transport
             );
-            const stream = solverClient.solveStepByStep({
-                "hashThreshold": setting.hashThreshold,
-                "pieces": board,
-                "threads": setting.threads,
-                "waitTime": setting.waitTime,
+
+            const requestObj = {
+                hashThreshold: setting.hashThreshold,
+                pieces: board,
+                threads: setting.threads,
+                waitTime: setting.waitTime,
                 solvePath: setting.path.path,
                 useCache: setting.useCache,
                 cachePullInterval: setting.cachePullInterval,
                 hints: hints,
-            }, {});
+            }
+
+            console.log("Request object: ", requestObj);
+
+            const stream = solverClient.solveStepByStep(requestObj, {});
             stream.responses.onMessage((message) => {
                 setSolverSolveResponse(message);
             });

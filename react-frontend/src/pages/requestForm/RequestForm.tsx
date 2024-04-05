@@ -26,6 +26,7 @@ import {
     HASH_THRESHOLD_MIN,
     HASH_THRESHOLD_STEP,
     SCAN_ROW_PATH_NAME,
+    SolveMode,
     THREADS_DEFAULT,
     THREADS_MAX,
     THREADS_MIN,
@@ -35,7 +36,7 @@ import {
     WAIT_TIME_MIN,
     WAIT_TIME_STEP
 } from "../../utils/Constants.tsx";
-import {Piece} from "../../proto/solver/v1/solver.ts";
+import {Hint, Piece} from "../../proto/solver/v1/solver.ts";
 import {useEffect, useState} from "react";
 import {numberOfColorsThatFitInABoard} from "../../utils/utils.tsx";
 import {Board, Path} from "../../utils/interface.tsx";
@@ -50,18 +51,88 @@ export const RequestForm = () => {
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
     const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
-    const [_, setHints] = useRecoilState(hintsState);
+    const [hints, setHints] = useRecoilState(hintsState);
     const boards = useRecoilValue(boardsState);
 
     // Used to store the already defined selected board
     const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
     // Used to store the original board when a board is shuffled, we can then reset it
     const [originalBoard, setOriginalBoard] = useState<Piece[] | null>(null);
+    // Used to store the selected hints
+    const [selectedHints, setSelectedHints] = useState<Hint | null>(null);
 
     useEffect(() => {
         const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
         setBoard(newBoard);
     }, [setBoard]);
+
+    const handleBoardSizeChange = (event: React.ChangeEvent<HTMLInputElement>, v: number | number[]) => {
+        if (settings.boardColors > numberOfColorsThatFitInABoard(v as number)) {
+            setSettings({...settings, boardColors: numberOfColorsThatFitInABoard(v as number)});
+        }
+
+        // Update board size and then create a new board
+        const newBoard = convertToPieces(createBoard(v as number, settings.boardColors));
+        setBoard(newBoard);
+
+        // Reset the selected board
+        setSelectedBoard(null);
+
+        // Filter the current path as the SCAN_ROW_PATH_NAME with the new board size
+        // Take the value from pathsState
+        const scanRowPaths = paths.filter((path) => path.label === SCAN_ROW_PATH_NAME);
+
+        const boardSize = v as number;
+        const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize ** 2);
+
+        setSettings({
+            ...settings,
+            boardSize: v as number,
+            path: scanRowPath || DEFAULT_SPIRAL_PATH
+        });
+    }
+
+    const handleBoardColorChange = (event, v: number | number[]) => {
+        // Update board colors and then create a new board
+        setSettings({...settings, boardColors: v as number});
+        const newBoard = convertToPieces(createBoard(settings.boardSize, v as number));
+        setBoard(newBoard);
+
+        // Reset the selected board
+        setSelectedBoard(null);
+    }
+
+    const handleBoardChange = (event, v: Board) => {
+        if (v) {
+            const pieceList = v.pieces.map((rotatedPiece) => rotatedPiece.piece).filter(piece => piece !== undefined) as Piece[];
+            setBoard(pieceList);
+            setSelectedBoard(v);
+            setSettings({
+                ...settings,
+                boardSize: Math.sqrt(pieceList.length),
+                boardColors: v.nbColors,
+            });
+            setHints(v.hints);
+            setSettings({
+                // Choose the scan row path for size of the board
+                ...settings,
+                path: paths.find((path) => path.label === SCAN_ROW_PATH_NAME && path.path.length === pieceList.length) || DEFAULT_SPIRAL_PATH
+            });
+        } else {
+            setSelectedBoard(null);
+            setSettings({
+                ...settings,
+                boardSize: BOARD_SIZE_DEFAULT,
+                boardColors: BOARD_COLOR_DEFAULT,
+            })
+            setBoard(convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT)));
+            setHints([]);
+        }
+    }
+
+    const changeSolveMode = (mode: SolveMode) => {
+        //
+    }
 
     return (
         <>
@@ -86,30 +157,8 @@ export const RequestForm = () => {
                     max={BOARD_SIZE_MAX}
                     value={settings.boardSize}
                     onChange={
-                        (_, v) => {
-                            if (settings.boardColors > numberOfColorsThatFitInABoard(v as number)) {
-                                setSettings({...settings, boardColors: numberOfColorsThatFitInABoard(v as number)});
-                            }
-
-                            // Update board size and then create a new board
-                            const newBoard = convertToPieces(createBoard(v as number, settings.boardColors));
-                            setBoard(newBoard);
-
-                            // Reset the selected board
-                            setSelectedBoard(null);
-
-                            // Filter the current path as the SCAN_ROW_PATH_NAME with the new board size
-                            // Take the value from pathsState
-                            const scanRowPaths = paths.filter((path) => path.label === SCAN_ROW_PATH_NAME);
-
-                            const boardSize = v as number;
-                            const scanRowPath = scanRowPaths.find((path) => path.path.length === boardSize ** 2);
-
-                            setSettings({
-                                ...settings,
-                                boardSize: v as number,
-                                path: scanRowPath || DEFAULT_SPIRAL_PATH
-                            });
+                        (event, v) => {
+                            handleBoardSizeChange(event, v);
                         }
                     }
                     marks
@@ -129,20 +178,13 @@ export const RequestForm = () => {
                 <Slider
                     defaultValue={BOARD_COLOR_DEFAULT}
                     min={BOARD_COLOR_MIN}
-                    // TODO: fix because max is actually 16
                     max={BOARD_COLOR_MAX}
                     value={
                         settings.boardColors
                     }
                     onChange={
                         (_, v) => {
-                            // Update board colors and then create a new board
-                            setSettings({...settings, boardColors: v as number});
-                            const newBoard = convertToPieces(createBoard(settings.boardSize, v as number));
-                            setBoard(newBoard);
-
-                            // Reset the selected board
-                            setSelectedBoard(null);
+                            handleBoardColorChange(_, v)
                         }
                     }
                     marks
@@ -175,32 +217,37 @@ export const RequestForm = () => {
                         options={boards}
                         value={selectedBoard}
                         getOptionLabel={(option) => option.label}
-                        onChange={(_, v) => {
-                            if (v) {
-                                const pieceList = v.pieces.map((rotatedPiece) => rotatedPiece.piece).filter(piece => piece !== undefined) as Piece[];
-                                setBoard(pieceList);
-                                setSelectedBoard(v);
-                                setSettings({
-                                    ...settings,
-                                    boardSize: Math.sqrt(pieceList.length),
-                                    boardColors: v.nbColors,
-                                });
-                                setHints(v.hints);
-                                setSettings({
-                                    // Choose the scan row path for size of the board
-                                    ...settings,
-                                    path: paths.find((path) => path.label === SCAN_ROW_PATH_NAME && path.path.length === pieceList.length) || DEFAULT_SPIRAL_PATH
-                                });
-                            } else {
-                                setSelectedBoard(null);
-                                setSettings({
-                                    ...settings,
-                                    boardSize: BOARD_SIZE_DEFAULT,
-                                    boardColors: BOARD_COLOR_DEFAULT,
-                                })
-                                setBoard(convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT)));
-                                setHints([]);
-                            }
+                        onChange={(event, v) => {
+                            handleBoardChange(event, v);
+                        }}
+                    />
+                </FormGroup>
+            </div>
+
+            {
+                // ======= SELECT EXISTING HINTS ======= //
+            }
+
+            <div style={{
+                width: "80%",
+            }}>
+                <FormGroup>
+                    <Autocomplete
+                        id="hints"
+                        disablePortal
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="standard"
+                                label="Available Hints"
+                                placeholder="Hint Name"
+                            />
+                        )}
+                        options={hints}
+                        value={selectedHints}
+                        getOptionLabel={(option) => option.label}
+                        onChange={(event, v) => {
+                            handleBoardChange(event, v);
                         }}
                     />
                 </FormGroup>
@@ -244,7 +291,7 @@ export const RequestForm = () => {
 
                         // Shuffle the board
                         const newBoard = [...board];
-                        newBoard.sort(() => Math.random() - 0.5);
+                        // newBoard.sort(() => Math.random() - 0.5);
                         setBoard(newBoard);
                         setSelectedBoard(null);
                     }}
@@ -427,27 +474,24 @@ export const RequestForm = () => {
                             abortController.abortController.abort();
                             abortController.abortController = new AbortController();
                             setSolving(true);
-                            setSolveMode("normal");
-                        }
-                        }
+                            setSolveMode(SolveMode.normal);
+                        }}
                 >Solve</Button>
                 <Button type="submit" color="primary"
                         onClick={() => {
                             abortController.abortController.abort();
                             abortController.abortController = new AbortController();
-                            setSolvingStepByStep(true);
-                            setSolveMode("stepByStep");
-                        }
-                        }
+                            setSolving(true);
+                            setSolveMode(SolveMode.stepByStep);
+                        }}
                 >Step By Step</Button>
                 <Button type="submit" color="primary"
                         onClick={() => {
                             abortController.abortController.abort();
                             abortController.abortController = new AbortController();
-                            setsolvingMultiServer(true);
-                            setSolveMode("multiServer");
-                        }
-                        }
+                            setSolving(true);
+                            setSolveMode(SolveMode.multiServer);
+                        }}
                 >
                     Multi Server
                 </Button>
