@@ -14,7 +14,11 @@ import {
     WAIT_TIME_DEFAULT
 } from "../../utils/Constants.tsx";
 import {Board, Path} from "../../utils/interface.tsx";
-import {ETERNITY_II_OFFICIAL_BOARD} from "../../utils/OfficialEternity2.tsx";
+import {
+    ETERNITY_II_OFFICIAL_BOARD_ALL_HINTS,
+    ETERNITY_II_OFFICIAL_BOARD_CENTER_HINT,
+    ETERNITY_II_OFFICIAL_BOARD_NO_HINTS
+} from "../../utils/OfficialEternity2.tsx";
 
 
 export const pathsState: RecoilState<Path[]> = atom({
@@ -52,6 +56,7 @@ export interface HintTemplate {
     pieceIndex: number[];
     boardSize: number;
 }
+
 export const hintTemplatesState: RecoilState<HintTemplate[]> = atom({
     key: 'hintTemplatesState',
     default: [] as HintTemplate[],
@@ -59,7 +64,7 @@ export const hintTemplatesState: RecoilState<HintTemplate[]> = atom({
 
 export const boardsState: RecoilState<Board[]> = atom({
     key: 'boardsState',
-    default: [ETERNITY_II_OFFICIAL_BOARD],
+    default: [ETERNITY_II_OFFICIAL_BOARD_ALL_HINTS, ETERNITY_II_OFFICIAL_BOARD_CENTER_HINT, ETERNITY_II_OFFICIAL_BOARD_NO_HINTS],
 });
 
 export const solveModeState = atom({
