@@ -49,7 +49,7 @@ export const MULTI_SERVER_BASE_URLS = [{
     "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
 }
 ]
-export const SERVER_BASE_URL: string = "http://node-apoorva2.k3s.hs.ozeliurs.com:50052"
+export const SERVER_BASE_URL: string = "http://localhost:50052"
 
 /**
  * Directions for the pieces

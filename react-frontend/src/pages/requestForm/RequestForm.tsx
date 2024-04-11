@@ -2,7 +2,16 @@ import {Autocomplete, Checkbox, FormGroup, Slider, TextField, Typography} from "
 import Button from "@mui/material/Button";
 
 import {useRecoilState, useRecoilValue} from "recoil";
-import {boardsState, boardState, hintsState, pathsState, settingsState, solveModeState} from "./atoms.ts";
+import {
+    boardsState,
+    boardState,
+    hintsState,
+    HintTemplate,
+    hintTemplatesState,
+    pathsState,
+    settingsState,
+    solveModeState
+} from "./atoms.ts";
 import Container from "@mui/material/Container";
 import {convertToPieces, createBoard} from "../../utils/logic.tsx";
 import {isSolvingMultiServerState, isSolvingState, isSolvingStepByStepState} from "../solver/atoms.ts";
@@ -36,11 +45,31 @@ import {
     WAIT_TIME_MIN,
     WAIT_TIME_STEP
 } from "../../utils/Constants.tsx";
-import {Hint, Piece} from "../../proto/solver/v1/solver.ts";
-import {useEffect, useState} from "react";
+import {Piece, SolverSolveRequest} from "../../proto/solver/v1/solver.ts";
+import React, {useEffect, useState} from "react";
 import {numberOfColorsThatFitInABoard} from "../../utils/utils.tsx";
 import {Board, Path} from "../../utils/interface.tsx";
 
+
+const suffleWHints = ( originalArray: Piece[], hintsIndex: number[] = []): Piece[] => {
+    // don't shuffle the indexes of the hints
+    const array = [...originalArray];
+    const hints = hintsIndex.map((hintIndex) => array[hintIndex]);
+
+    // shuffle the array without the hints
+    const shuffledArray = array.filter((_, index) => !hintsIndex.includes(index));
+    shuffledArray.sort(() => Math.random() - 0.5);
+
+    // insert the hints in the shuffled array
+    hintsIndex.forEach((hintIndex, index) => {
+        shuffledArray.splice(hintIndex, 0, hints[index]);
+    }
+    );
+    console.log("shuffled array", shuffledArray.length);
+
+    return shuffledArray;
+
+}
 
 export const RequestForm = () => {
     const [settings, setSettings] = useRecoilState(settingsState);
@@ -51,6 +80,8 @@ export const RequestForm = () => {
     const [, setSolvingStepByStep] = useRecoilState(isSolvingStepByStepState);
     const [, setSolveMode] = useRecoilState(solveModeState);
     const [, setsolvingMultiServer] = useRecoilState(isSolvingMultiServerState);
+    const hintTemplates = useRecoilValue(hintTemplatesState);
+    const hintTemplatesOptions = hintTemplates.filter((hint) => hint.boardSize == settings.boardSize * settings.boardSize);
     const [hints, setHints] = useRecoilState(hintsState);
     const boards = useRecoilValue(boardsState);
 
@@ -59,12 +90,15 @@ export const RequestForm = () => {
     // Used to store the original board when a board is shuffled, we can then reset it
     const [originalBoard, setOriginalBoard] = useState<Piece[] | null>(null);
     // Used to store the selected hints
-    const [selectedHints, setSelectedHints] = useState<Hint | null>(null);
-
-    useEffect(() => {
-        const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
-        setBoard(newBoard);
-    }, [setBoard]);
+    const [selectedHintsTemplate, setSelectedHintsTemplate] = useState<HintTemplate | null>(null);
+    console.log(hints)
+    // useEffect(() => {
+    //     if (board === null) {
+    //
+    //         const newBoard = convertToPieces(createBoard(settings.boardSize, settings.boardColors));
+    //         setBoard(newBoard);
+    //     }
+    // }, [board, settings.boardSize, settings.boardColors, setBoard]);
 
     const handleBoardSizeChange = (event: React.ChangeEvent<HTMLInputElement>, v: number | number[]) => {
         if (settings.boardColors > numberOfColorsThatFitInABoard(v as number)) {
@@ -90,6 +124,10 @@ export const RequestForm = () => {
             boardSize: v as number,
             path: scanRowPath || DEFAULT_SPIRAL_PATH
         });
+
+        setHints([])
+        setSelectedHintsTemplate(null)
+        setOriginalBoard(null);
     }
 
     const handleBoardColorChange = (event, v: number | number[]) => {
@@ -100,6 +138,10 @@ export const RequestForm = () => {
 
         // Reset the selected board
         setSelectedBoard(null);
+        setHints([])
+        setSelectedHintsTemplate(null)
+        setOriginalBoard(null);
+
     }
 
     const handleBoardChange = (event, v: Board) => {
@@ -127,9 +169,34 @@ export const RequestForm = () => {
             })
             setBoard(convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT)));
             setHints([]);
+            setSelectedHintsTemplate(null);
         }
     }
+    const handleBoardHintsChange = (event, v: HintTemplate) => {
+        if (v) {
+            console.log("selected hints template", v);
+            if (v) {
+                const hints: SolverSolveRequest["hints"] = []
+                for (const selectedHintsTemplateElement of v.pieceIndex) {
+                    // iterate over original board
 
+
+                    hints.push({
+                        index: selectedHintsTemplateElement,
+                        x: selectedHintsTemplateElement % settings.boardSize,
+                        y: Math.floor(selectedHintsTemplateElement / settings.boardSize),
+                        rotation: 0,
+                    });
+                }
+                console.log("hints", hints);
+                setHints(hints);
+            }
+            setSelectedHintsTemplate(v);
+        } else {
+            setHints([]);
+            setSelectedHintsTemplate(null);
+        }
+    }
     const changeSolveMode = (mode: SolveMode) => {
         //
     }
@@ -243,11 +310,11 @@ export const RequestForm = () => {
                                 placeholder="Hint Name"
                             />
                         )}
-                        options={hints}
-                        value={selectedHints}
+                        options={hintTemplatesOptions}
+                        value={selectedHintsTemplate}
                         getOptionLabel={(option) => option.label}
                         onChange={(event, v) => {
-                            handleBoardChange(event, v);
+                            handleBoardHintsChange(event, v);
                         }}
                     />
                 </FormGroup>
@@ -291,9 +358,14 @@ export const RequestForm = () => {
 
                         // Shuffle the board
                         const newBoard = [...board];
-                        // newBoard.sort(() => Math.random() - 0.5);
-                        setBoard(newBoard);
+
+                        setBoard(suffleWHints(originalBoard ?? newBoard
+                            , hints?.map(hint => hint.index)));
                         setSelectedBoard(null);
+                        // hints on change
+                        if (selectedHintsTemplate) {
+                            handleBoardHintsChange(null, selectedHintsTemplate);
+                        }
                     }}
                 >
                     Shuffle
@@ -473,8 +545,13 @@ export const RequestForm = () => {
                         onClick={() => {
                             abortController.abortController.abort();
                             abortController.abortController = new AbortController();
+                            if (selectedHintsTemplate) {
+                                handleBoardHintsChange(null, selectedHintsTemplate);
+                                console.log("selected hints template", selectedHintsTemplate);
+                            }
                             setSolving(true);
                             setSolveMode(SolveMode.normal);
+
                         }}
                 >Solve</Button>
                 <Button type="submit" color="primary"
@@ -483,6 +560,8 @@ export const RequestForm = () => {
                             abortController.abortController = new AbortController();
                             setSolving(true);
                             setSolveMode(SolveMode.stepByStep);
+                            setSolvingStepByStep(true);
+
                         }}
                 >Step By Step</Button>
                 <Button type="submit" color="primary"
@@ -491,6 +570,7 @@ export const RequestForm = () => {
                             abortController.abortController = new AbortController();
                             setSolving(true);
                             setSolveMode(SolveMode.multiServer);
+                            setsolvingMultiServer(true);
                         }}
                 >
                     Multi Server

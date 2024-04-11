@@ -47,6 +47,16 @@ export const hintsState: RecoilState<SolverSolveRequest["hints"]> = atom({
     default: [] as SolverSolveRequest["hints"],
 });
 
+export interface HintTemplate {
+    label: string;
+    pieceIndex: number[];
+    boardSize: number;
+}
+export const hintTemplatesState: RecoilState<HintTemplate[]> = atom({
+    key: 'hintTemplatesState',
+    default: [] as HintTemplate[],
+});
+
 export const boardsState: RecoilState<Board[]> = atom({
     key: 'boardsState',
     default: [ETERNITY_II_OFFICIAL_BOARD],
