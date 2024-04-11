@@ -1,0 +1,10 @@
+services:
+  envoy2:
+    image: ghcr.io/apoorva64/eternity2/envoy2:latest
+    build:
+      context: envoy2
+    ports:
+      - '50056:50052'
+    restart: always
+
+    network_mode: "host"
