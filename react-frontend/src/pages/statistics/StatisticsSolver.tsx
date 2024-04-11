@@ -183,13 +183,12 @@ export const StatisticsSolver = () => {
                             </Box>
 
                             <Stats
-                                response={responses[generatedBoards[currentGeneratedBoardIndex]?.label]?.response}></Stats>
+                                data={preprocessData(structuredData)}></Stats>
                         </div>
                     </div>
                 </Grid>
             </Grid>
 
-            <Graph data={preprocessData(structuredData)} />
 
 
         </>
