@@ -14,7 +14,7 @@ export const BOARD_COLOR_DEFAULT = 12;
 export const BOARD_COLOR_STEP = 1;
 
 export const HASH_THRESHOLD_MIN = 1;
-export const HASH_THRESHOLD_MAX = 512;
+export const HASH_THRESHOLD_MAX = 16;
 export const HASH_THRESHOLD_DEFAULT = 4;
 export const HASH_THRESHOLD_STEP = 1;
 
