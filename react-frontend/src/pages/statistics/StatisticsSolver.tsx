@@ -12,9 +12,28 @@ import {default as BoardComponent} from "../../components/Board.tsx";
 import {Stats} from "../solver/Stats.tsx";
 import LinearProgressWithLabel from '@mui/material/LinearProgress';
 import Box from "@mui/material/Box";
+import Graph from "./Graph.tsx";
 
-
+interface StructuredDataPoint {
+    size: number;
+    colors: number;
+    time: number;
+}
 export const StatisticsSolver = () => {
+    const preprocessData = (data) => {
+        const uniqueSizes = [...new Set(data.map(item => item.size))].sort((a, b) => a - b);
+        const uniqueColors = [...new Set(data.map(item => item.colors))].sort((a, b) => a - b);
+        const zMatrix = uniqueColors.map(() => new Array(uniqueSizes.length).fill(null));
+        data.forEach(({ size, colors, time }) => {
+            const rowIndex = uniqueColors.indexOf(colors);
+            const colIndex = uniqueSizes.indexOf(size);
+            if (rowIndex > -1 && colIndex > -1) {
+                zMatrix[rowIndex][colIndex] = time;
+            }
+        });
+        return { x: uniqueSizes, y: uniqueColors, z: zMatrix };
+    };
+
 
     const setting = useRecoilValue(settingsStatisticsState);
     const [solving, setSolving] = useState(true);
@@ -29,7 +48,7 @@ export const StatisticsSolver = () => {
 
     }>({});
     const [currentGeneratedBoardIndex, setCurrentGeneratedBoardIndex] = useState(0);
-
+    const [structuredData, setStructuredData] = useState<StructuredDataPoint[]>([]);
     const generatedBoards = useRecoilValue(generatedBoardsState);
     const [waiting, setWaiting] = useState(false);
 
@@ -37,7 +56,8 @@ export const StatisticsSolver = () => {
             if ((solvingStat && !startedStatistics) || waiting) {
                 setStartedStatistics(true);
                 console.log("started statistics");
-                const generatedBoard = generatedBoards[currentGeneratedBoardIndex];
+                if (currentGeneratedBoardIndex >= 0 && currentGeneratedBoardIndex < generatedBoards.length) {
+                    const generatedBoard = generatedBoards[currentGeneratedBoardIndex];
                 if (solving && !startedSolving) {
                     setStartedSolving(true);
                     console.log("started solving statistics", generatedBoard.label);
@@ -62,19 +82,19 @@ export const StatisticsSolver = () => {
                         cachePullInterval: setting.cachePullInterval
                     }, {});
                     stream.responses.onMessage((message) => {
-                            setResponses((prev) => {
-                                    return {
-                                        ...prev,
-                                        [generatedBoard.label]: {
-                                            board: generatedBoard,
-                                            response: message
-                                        }
-
-                                    }
-                                }
-                            );
-                        }
-                    );
+                        setResponses((prev) => ({
+                            ...prev,
+                            [generatedBoard.label]: {
+                                board: generatedBoard,
+                                response: message
+                            }
+                        }));
+                        const [sizeLabel, colorsLabel] = generatedBoard.label.split(' with ');
+                        const size = parseInt(sizeLabel.split('x')[0], 10);
+                        const colors = parseInt(colorsLabel.split(' colors ')[0], 10);
+                        const time = message.time;
+                        setStructuredData(prev => [...prev, { size, colors, time }]);
+                    });
                     stream.responses.onError(() => {
                             setSolving(true);
                             setStartedSolving(false);
@@ -97,6 +117,9 @@ export const StatisticsSolver = () => {
 
 
                 }
+                } else {
+                    console.log("Index out of range: ", currentGeneratedBoardIndex);
+                }
             }
 
         }
@@ -109,7 +132,9 @@ export const StatisticsSolver = () => {
             abortController.abortController = new AbortController();
         }
     }, []);
-
+    useEffect(() => {
+        console.log('Structured Data Points:', structuredData);
+    }, [structuredData]);
     console.log("responses", responses);
     return (
         <>
@@ -163,6 +188,9 @@ export const StatisticsSolver = () => {
                     </div>
                 </Grid>
             </Grid>
+
+            <Graph data={preprocessData(structuredData)} />
+
 
         </>
     )
