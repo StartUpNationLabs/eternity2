@@ -35,4 +35,4 @@ jobs:
           context: envoy2
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy:${{ github.sha }}
+          tags: ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy2:latest,ghcr.io/${{ steps.downcase.outputs.downcase }}/envoy2:${{ github.sha }}
