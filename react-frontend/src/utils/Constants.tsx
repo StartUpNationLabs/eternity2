@@ -63,6 +63,10 @@ export const MULTI_SERVER_BASE_URLS = [
         "url": "http://vmpx13.polytech.hs.ozeliurs.com:50052",
     },
     {
+        "name": "vmpx14",
+        "url": "http://vmpx13.polytech.hs.ozeliurs.com:50052",
+    },
+    {
         "name": "abel",
         "url": "http://vmpx15.polytech.hs.ozeliurs.com:50056",
     },
