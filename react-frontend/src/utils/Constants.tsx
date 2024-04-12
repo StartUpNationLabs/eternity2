@@ -41,19 +41,31 @@ export const USE_CACHE_DEFAULT = false;
 export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
-export const MULTI_SERVER_BASE_URLS = [{
-    "name": "node-apoorva-3",
-    "url": "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052",
-}, {
-    "name": "node-apoorva-2",
-    "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
-}, {
-    "name": "vmpx15",
-    "url": "http://vmpx15.polytech.hs.ozeliurs.com:50052",
-}, {
-    "name": "abel",
-    "url": "http://vmpx15.polytech.hs.ozeliurs.com:50056",
-},
+export const MULTI_SERVER_BASE_URLS = [
+    {
+        "name": "node-apoorva-3",
+        "url": "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052",
+    },
+    {
+        "name": "node-apoorva-2",
+        "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
+    },
+    {
+        "name": "vmpx15",
+        "url": "http://vmpx15.polytech.hs.ozeliurs.com:50052",
+    },
+    {
+        "name": "vmpx12",
+        "url": "http://vmpx12.polytech.hs.ozeliurs.com:50052",
+    },
+    {
+        "name": "vmpx13",
+        "url": "http://vmpx13.polytech.hs.ozeliurs.com:50052",
+    },
+    {
+        "name": "abel",
+        "url": "http://vmpx15.polytech.hs.ozeliurs.com:50056",
+    },
 ]
 export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
 
