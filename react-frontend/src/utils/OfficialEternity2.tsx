@@ -74,6 +74,13 @@ export const ETERNITY_II_HINTS: Hint[] = [
     }
 ]
 
+export const ETERNITY_II_CENTRE_HINT: Hint = {
+    index: 138, // from website : 139
+    x: 7,
+    y: 8,
+    rotation: 2
+}
+
 /**
  * ==============================================================================================================
  * export constant for patterns
@@ -467,9 +474,23 @@ export const ETERNITY_PATTERNS = [
     PATTERN_BG_BLUE_CROSS,
 ]
 
-export const ETERNITY_II_OFFICIAL_BOARD: Board = {
-    label: "Eternity II Official",
+export const ETERNITY_II_OFFICIAL_BOARD_ALL_HINTS: Board = {
+    label: "Eternity II Official (all hints)",
     pieces: boardRearrangedWithHints(convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES), ETERNITY_II_HINTS),
     nbColors: 22,
     hints: ETERNITY_II_HINTS,
+}
+
+export const ETERNITY_II_OFFICIAL_BOARD_CENTER_HINT: Board = {
+    label: "Eternity II Official (center hint)",
+    pieces: boardRearrangedWithHints(convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES), [ETERNITY_II_CENTRE_HINT]),
+    nbColors: 22,
+    hints: [ETERNITY_II_CENTRE_HINT],
+}
+
+export const ETERNITY_II_OFFICIAL_BOARD_NO_HINTS: Board = {
+    label: "Eternity II Official (no hints)",
+    pieces: convertBucasBoardToRotatedPieces(ETERNITY_II_PIECES),
+    nbColors: 22,
+    hints: [],
 }

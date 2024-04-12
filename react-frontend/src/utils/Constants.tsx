@@ -14,7 +14,7 @@ export const BOARD_COLOR_DEFAULT = 12;
 export const BOARD_COLOR_STEP = 1;
 
 export const HASH_THRESHOLD_MIN = 1;
-export const HASH_THRESHOLD_MAX = 16;
+export const HASH_THRESHOLD_MAX = 100;
 export const HASH_THRESHOLD_DEFAULT = 4;
 export const HASH_THRESHOLD_STEP = 1;
 
@@ -24,7 +24,7 @@ export const WAIT_TIME_DEFAULT = 500;
 export const WAIT_TIME_STEP = 100;
 
 export const CACHE_PULL_INTERVAL_MIN = 1;
-export const CACHE_PULL_INTERVAL_MAX = 20;
+export const CACHE_PULL_INTERVAL_MAX = 60;
 export const CACHE_PULL_INTERVAL_DEFAULT = 10;
 export const CACHE_PULL_INTERVAL_STEP = 1;
 
@@ -42,14 +42,20 @@ export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
 export const MULTI_SERVER_BASE_URLS = [{
-    "name": "server1",
+    "name": "node-apoorva-3",
     "url": "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052",
 }, {
-    "name": "server2",
+    "name": "node-apoorva-2",
     "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
-}
+}, {
+    "name": "vmpx15",
+    "url": "http://vmpx15.polytech.hs.ozeliurs.com:50052",
+}, {
+    "name": "abel",
+    "url": "http://vmpx15.polytech.hs.ozeliurs.com:50056",
+},
 ]
-export const SERVER_BASE_URL: string = "http://node-apoorva2.k3s.hs.ozeliurs.com:50052"
+export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
 
 /**
  * Directions for the pieces
