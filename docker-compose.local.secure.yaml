@@ -6,8 +6,7 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    env_file:
-      - .secure.local.env
+    env_file: .secure.local.env
 
   envoy:
     image: ghcr.io/apoorva64/eternity2/envoy:latest
@@ -24,8 +23,7 @@ services:
     command: redis-server --appendonly yes  --requirepass "${REDIS_PASSWORD}"
     volumes:
       - redis-data:/data
-    env_file:
-      - .secure.local.env
+    env_file: .secure.local.env
 
 volumes:
   redis-insight:
