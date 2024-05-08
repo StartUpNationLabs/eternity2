@@ -25,6 +25,7 @@ services:
       - redis-data:/data
     env_file: .secure.local.env
 
+
 volumes:
   redis-insight:
   redis-data:
