@@ -1,5 +1,5 @@
 {
-    "hashThreshold": 30,
+    "hash_threshold": 40,
     "pieces": [
         {
             "top": 65535,
@@ -1539,9 +1539,9 @@
         }
     ],
     "threads": 64,
-    "waitTime": 550,
-    "solvePath": [],
-    "useCache": true,
-    "cachePullInterval": 30,
+    "wait_time": 10000,
+    "solve_path": [],
+    "use_cache": true,
+    "cache_pull_interval": 300,
     "hints": []
 }

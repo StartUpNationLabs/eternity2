@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import grpc
 import solver.v1.solver_pb2_grpc as solver_pb2_grpc
@@ -8,7 +8,7 @@ import threading
 
 from solver.v1 import solver_pb2
 import logging
-
+import json
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
@@ -25,7 +25,33 @@ def equal_rotated_pieces(piece1: solver_pb2.RotatedPiece, piece2: solver_pb2.Rot
             and piece1.rotation == piece2.rotation)
 
 
-def solve(_servers: list[str], _request: solver_pb2.SolverSolveRequest):
+def response_to_dict(server: List[solver_pb2.SolverSolveResponse]):
+    out = []
+    for response in server:
+        out.append({
+            "time": response.time,
+            "hashes_per_second": response.hashes_per_second,
+            "hash_table_size": response.hash_table_size,
+            "boards_per_second": response.boards_per_second,
+            "boards_analyzed": response.boards_analyzed,
+            "hash_table_hits": response.hash_table_hits,
+            "rotated_pieces": [
+                {
+                    "piece": {
+                        "top": piece.piece.top,
+                        "right": piece.piece.right,
+                        "bottom": piece.piece.bottom,
+                        "left": piece.piece.left
+                    },
+                    "rotation": piece.rotation
+                } for piece in response.rotated_pieces
+            ]
+        })
+    return out
+
+
+def solve(_servers: list[str], _request: solver_pb2.SolverSolveRequest, sleep_time: int = 1,
+          store_responses: str = None, res_limit: int = 2):
     stubs = map(lambda _server: (_server, solver_pb2_grpc.SolverStub(grpc.insecure_channel(_server))), _servers)
 
     # Make the
@@ -42,6 +68,8 @@ def solve(_servers: list[str], _request: solver_pb2.SolverSolveRequest):
         _stub = server_stub[1]
         _server = server_stub[0]
         for _response in _stub.Solve(_request):
+            if len(responses[_server]) > res_limit:
+                responses[_server].pop(0)
             responses[_server].append(_response)
             if _found[0]:
                 return
@@ -55,10 +83,14 @@ def solve(_servers: list[str], _request: solver_pb2.SolverSolveRequest):
 
     # if a thread has finished before the others, stop the others
     while not found[0]:
-        time.sleep(1)
+        time.sleep(sleep_time)
         # print
         for server in _servers:
             server_responses = responses[server]
+            if store_responses:
+                with open(store_responses, 'a') as f:
+                    f.write(json.dumps(response_to_dict(server_responses)))
+                    f.write('\n')
             if len(server_responses) > 0:
                 # count the number of pieces
                 piece_count = len(server_responses[-1].rotated_pieces)
