@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16solver/v1/solver.proto\x12\tsolver.v1\"\xb6\x01\n\x12SolverSolveRequest\x12 \n\x06pieces\x18\x01 \x03(\x0b\x32\x10.solver.v1.Piece\x12\x0f\n\x07threads\x18\x02 \x01(\r\x12\x16\n\x0ehash_threshold\x18\x03 \x01(\r\x12\x11\n\twait_time\x18\x04 \x01(\r\x12\x11\n\tuse_cache\x18\x05 \x01(\x08\x12\x1b\n\x13\x63\x61\x63he_pull_interval\x18\x06 \x01(\r\x12\x12\n\nsolve_path\x18\x07 \x03(\r\"A\n\x05Piece\x12\x0b\n\x03top\x18\x01 \x01(\r\x12\r\n\x05right\x18\x02 \x01(\r\x12\x0e\n\x06\x62ottom\x18\x03 \x01(\r\x12\x0c\n\x04left\x18\x04 \x01(\r\"d\n\x15PieceWithOptionalHint\x12\x1f\n\x05piece\x18\x01 \x01(\x0b\x32\x10.solver.v1.Piece\x12\x0e\n\x01x\x18\x02 \x01(\x05H\x00\x88\x01\x01\x12\x0e\n\x01y\x18\x03 \x01(\x05H\x01\x88\x01\x01\x42\x04\n\x02_xB\x04\n\x02_y\"P\n\x0cRotatedPiece\x12\x1f\n\x05piece\x18\x01 \x01(\x0b\x32\x10.solver.v1.Piece\x12\x10\n\x08rotation\x18\x02 \x01(\r\x12\r\n\x05index\x18\x03 \x01(\r\"K\n\x18SolverStepByStepResponse\x12/\n\x0erotated_pieces\x18\x01 \x03(\x0b\x32\x17.solver.v1.RotatedPiece\"\xd5\x01\n\x13SolverSolveResponse\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x19\n\x11hashes_per_second\x18\x02 \x01(\x01\x12\x17\n\x0fhash_table_size\x18\x03 \x01(\r\x12\x19\n\x11\x62oards_per_second\x18\x04 \x01(\x01\x12\x17\n\x0f\x62oards_analyzed\x18\x05 \x01(\r\x12\x17\n\x0fhash_table_hits\x18\x06 \x01(\r\x12/\n\x0erotated_pieces\x18\x07 \x03(\x0b\x32\x17.solver.v1.RotatedPiece2\xaf\x01\n\x06Solver\x12J\n\x05Solve\x12\x1d.solver.v1.SolverSolveRequest\x1a\x1e.solver.v1.SolverSolveResponse\"\x00\x30\x01\x12Y\n\x0fSolveStepByStep\x12\x1d.solver.v1.SolverSolveRequest\x1a#.solver.v1.SolverStepByStepResponse\"\x00\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16solver/v1/solver.proto\x12\tsolver.v1\"\xd6\x01\n\x12SolverSolveRequest\x12 \n\x06pieces\x18\x01 \x03(\x0b\x32\x10.solver.v1.Piece\x12\x0f\n\x07threads\x18\x02 \x01(\r\x12\x16\n\x0ehash_threshold\x18\x03 \x01(\r\x12\x11\n\twait_time\x18\x04 \x01(\r\x12\x11\n\tuse_cache\x18\x05 \x01(\x08\x12\x1b\n\x13\x63\x61\x63he_pull_interval\x18\x06 \x01(\r\x12\x12\n\nsolve_path\x18\x07 \x03(\r\x12\x1e\n\x05hints\x18\x08 \x03(\x0b\x32\x0f.solver.v1.Hint\"A\n\x05Piece\x12\x0b\n\x03top\x18\x01 \x01(\r\x12\r\n\x05right\x18\x02 \x01(\r\x12\x0e\n\x06\x62ottom\x18\x03 \x01(\r\x12\x0c\n\x04left\x18\x04 \x01(\r\"=\n\x04Hint\x12\r\n\x05index\x18\x01 \x01(\x05\x12\t\n\x01x\x18\x02 \x01(\x05\x12\t\n\x01y\x18\x03 \x01(\x05\x12\x10\n\x08rotation\x18\x04 \x01(\x05\"P\n\x0cRotatedPiece\x12\x1f\n\x05piece\x18\x01 \x01(\x0b\x32\x10.solver.v1.Piece\x12\x10\n\x08rotation\x18\x02 \x01(\r\x12\r\n\x05index\x18\x03 \x01(\r\"\xc8\x01\n\x18SolverStepByStepResponse\x12/\n\x0erotated_pieces\x18\x01 \x03(\x0b\x32\x17.solver.v1.RotatedPiece\x12*\n\tmax_board\x18\x02 \x03(\x0b\x32\x17.solver.v1.RotatedPiece\x12\r\n\x05steps\x18\x03 \x01(\r\x12\x0c\n\x04time\x18\x04 \x01(\x01\x12\x17\n\x0f\x62oards_analyzed\x18\x05 \x01(\r\x12\x19\n\x11\x62oards_per_second\x18\x06 \x01(\x01\"\xd5\x01\n\x13SolverSolveResponse\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12\x19\n\x11hashes_per_second\x18\x02 \x01(\x01\x12\x17\n\x0fhash_table_size\x18\x03 \x01(\r\x12\x19\n\x11\x62oards_per_second\x18\x04 \x01(\x01\x12\x17\n\x0f\x62oards_analyzed\x18\x05 \x01(\r\x12\x17\n\x0fhash_table_hits\x18\x06 \x01(\r\x12/\n\x0erotated_pieces\x18\x07 \x03(\x0b\x32\x17.solver.v1.RotatedPiece2\xaf\x01\n\x06Solver\x12J\n\x05Solve\x12\x1d.solver.v1.SolverSolveRequest\x1a\x1e.solver.v1.SolverSolveResponse\"\x00\x30\x01\x12Y\n\x0fSolveStepByStep\x12\x1d.solver.v1.SolverSolveRequest\x1a#.solver.v1.SolverStepByStepResponse\"\x00\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,17 +22,17 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'solver.v1.solver_pb2', _glo
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_SOLVERSOLVEREQUEST']._serialized_start=38
-  _globals['_SOLVERSOLVEREQUEST']._serialized_end=220
-  _globals['_PIECE']._serialized_start=222
-  _globals['_PIECE']._serialized_end=287
-  _globals['_PIECEWITHOPTIONALHINT']._serialized_start=289
-  _globals['_PIECEWITHOPTIONALHINT']._serialized_end=389
-  _globals['_ROTATEDPIECE']._serialized_start=391
-  _globals['_ROTATEDPIECE']._serialized_end=471
-  _globals['_SOLVERSTEPBYSTEPRESPONSE']._serialized_start=473
-  _globals['_SOLVERSTEPBYSTEPRESPONSE']._serialized_end=548
-  _globals['_SOLVERSOLVERESPONSE']._serialized_start=551
-  _globals['_SOLVERSOLVERESPONSE']._serialized_end=764
-  _globals['_SOLVER']._serialized_start=767
-  _globals['_SOLVER']._serialized_end=942
+  _globals['_SOLVERSOLVEREQUEST']._serialized_end=252
+  _globals['_PIECE']._serialized_start=254
+  _globals['_PIECE']._serialized_end=319
+  _globals['_HINT']._serialized_start=321
+  _globals['_HINT']._serialized_end=382
+  _globals['_ROTATEDPIECE']._serialized_start=384
+  _globals['_ROTATEDPIECE']._serialized_end=464
+  _globals['_SOLVERSTEPBYSTEPRESPONSE']._serialized_start=467
+  _globals['_SOLVERSTEPBYSTEPRESPONSE']._serialized_end=667
+  _globals['_SOLVERSOLVERESPONSE']._serialized_start=670
+  _globals['_SOLVERSOLVERESPONSE']._serialized_end=883
+  _globals['_SOLVER']._serialized_start=886
+  _globals['_SOLVER']._serialized_end=1061
 # @@protoc_insertion_point(module_scope)

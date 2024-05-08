@@ -1,0 +1,32 @@
+services:
+  grpc-server:
+    image: ghcr.io/apoorva64/eternity2/api:hint
+    ports:
+      - "50051:50051"
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file:
+      - .secure.local.env
+
+  envoy:
+    image: ghcr.io/apoorva64/eternity2/envoy:latest
+    build:
+      context: envoy
+    ports:
+      - '50052:50052'
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "50053:6379"
+    command: redis-server --appendonly yes  --requirepass "${REDIS_PASSWORD}"
+    volumes:
+      - redis-data:/data
+    env_file:
+      - .secure.local.env
+
+volumes:
+  redis-insight:
+  redis-data:

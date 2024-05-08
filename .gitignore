@@ -79,7 +79,7 @@ build
 build-release
 
 .env
-
+.secure.local.env
 data/
 
 tmp
