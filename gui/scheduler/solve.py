@@ -1,14 +1,14 @@
-from typing import Dict, List
-
 import grpc
-import solver.v1.solver_pb2_grpc as solver_pb2_grpc
-import time
+import json
+import logging
 # launch in threads
 import threading
+import time
+from typing import Dict, List
 
+import solver.v1.solver_pb2_grpc as solver_pb2_grpc
 from solver.v1 import solver_pb2
-import logging
-import json
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
@@ -69,7 +69,8 @@ def solve(_servers: list[str], _request: solver_pb2.SolverSolveRequest, sleep_ti
         _server = server_stub[0]
         for _response in _stub.Solve(_request):
             if len(responses[_server]) > res_limit:
-                responses[_server].pop(0)
+                # keep only the last 2 responses to compare them
+                responses[_server] = responses[_server][1:]
             responses[_server].append(_response)
             if _found[0]:
                 return

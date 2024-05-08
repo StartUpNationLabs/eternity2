@@ -28,7 +28,13 @@ services:
   scheduler:
     image: ghcr.io/apoorva64/eternity2/scheduler:latest
     restart: unless-stopped
+    build:
+      context: gui/scheduler
 
+    environment:
+      - ETERNITY2_SERVERS=grpc-server:50051
+    volumes:
+      - ./output:/scheduler/output
 
 volumes:
   redis-insight:
