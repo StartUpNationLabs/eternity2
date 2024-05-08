@@ -1,11 +1,11 @@
 FROM python:3.10-bookworm
 
-COPY requirements.txt /app/requirements.txt
+COPY requirements.txt /scheduler/requirements.txt
 
-RUN pip install -r /app/requirements.txt
+RUN pip install -r /scheduler/requirements.txt
 
-COPY . /app
+COPY . /scheduler
 
-WORKDIR /app
+WORKDIR /scheduler
 
 CMD ["python", "solve_eternity.py"]
