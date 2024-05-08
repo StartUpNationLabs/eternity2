@@ -25,6 +25,10 @@ services:
       - redis-data:/data
     env_file: .secure.local.env
 
+  scheduler:
+    image: ghcr.io/apoorva64/eternity2/scheduler:latest
+    restart: unless-stopped
+
 
 volumes:
   redis-insight:

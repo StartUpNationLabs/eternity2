@@ -1,2 +1,8 @@
 numpy
+colour
+Pillow
+gradio
+plotly
+kaleido
+lxml
 grpcio-tools
