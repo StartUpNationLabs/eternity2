@@ -1,5 +1,5 @@
 {
-  "hash_threshold": 40,
+  "hash_threshold": 64,
   "pieces": [
     {
       "top": 65535,
