@@ -77,7 +77,6 @@ export const HomePage = () => {
             "X-User-Agent": "grpc-web-javascript/0.1",
             "x-envoy-retry-grpc-on": "unavailable",
             "TE": "trailers",
-            'Authorization': "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJmbGlnaHRyYWRhcjI0LmNvbSIsImV4cCI6MTcyMzM3MzM1MywiaWF0IjoxNzIwNzgxMzUzLCJlbWFpbCI6ImFwcGFkb29hcG9vcnZhQGdtYWlsLmNvbSIsInVzZXJJZCI6MTYxMDk5MzEsImtleVNlc3Npb24iOiJmNTJhOWEzNTUyMjJiOWEwNTdjNWZjMTIxMmNhNzIwNmQwYTQ3ZjkyMTU0ODhmMGFhZjdiNzYzYTBjM2JjNDVlIiwic2wiOiJTIiwiYWwiOiIwIiwicGsiOiIifQ.lShOlDpCZXUgS-kv1NXkyMnKhNv4tPxlUquIkCHRu6s"
         },
         binaryOptions: {
 
