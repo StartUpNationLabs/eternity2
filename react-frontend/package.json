@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "generate": "npx protoc --ts_out src/proto --proto_path ../api/proto ../api/proto/solver/v1/solver.proto"
+    "generate": "npx protoc --ts_out src/proto --proto_path ../api/proto ../api/proto/solver/v1/solver.proto",
+    "generate2": "npx protoc --ts_out src/proto2 --proto_path C:/Users/appad/WebstormProjects/flightradar24-client-ts/ C:/Users/appad/WebstormProjects/flightradar24-client-ts/flightradar.proto"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
