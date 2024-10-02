@@ -9,7 +9,7 @@
 #include <unifex/timed_single_thread_context.hpp>
 unifex::timed_single_thread_context timer;
 std::atomic<int> concurrent_jobs_count = 0;
-int max_concurrent_jobs = 1;
+std::atomic<int>  max_concurrent_jobs = -1;
 
 
 auto build_response(const SharedData &shared_data, double elapsed_seconds) -> SolverRPC::Response
@@ -164,6 +164,25 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
     return agrpc::register_sender_rpc_handler<SolverRPC>(
         grpc_context, service1, [&](SolverRPC &rpc, SolverRPC::Request &request) -> unifex::task<void> {
             spdlog::info("Received request");
+
+            if (max_concurrent_jobs == -1) {
+                std::string env_max_jobs = get_env_var("MAX_CONCURRENT_JOBS", "");
+                if (!env_max_jobs.empty()) {
+                    try {
+                        max_concurrent_jobs = std::stoi(env_max_jobs);
+                    } catch (const std::invalid_argument& e) {
+                        spdlog::error("Invalid MAX_CONCURRENT_JOBS value: {}", env_max_jobs);
+                        max_concurrent_jobs = 10;
+                    } catch (const std::out_of_range& e) {
+                        spdlog::error("MAX_CONCURRENT_JOBS value out of range: {}", env_max_jobs);
+                        max_concurrent_jobs = 10;
+                    }
+                } else {
+                    max_concurrent_jobs = 10;
+                    spdlog::error("MAX_CONCURRENT_JOBS not set in environment. Defaulting to 10.");
+                }
+            }
+
             if (concurrent_jobs_count >= max_concurrent_jobs)
             {
                 spdlog::info("Too many concurrent jobs");
