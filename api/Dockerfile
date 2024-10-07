@@ -24,4 +24,4 @@ EXPOSE 50051
 LABEL project="eternity2"
 LABEL description="Eternity II Asio gRPC server"
 LABEL version="1.0"
-LABEL repository="https://github.com/Apoorva64/eternity2"
+LABEL repository="https://github.com/StartUpNationLabs/eternity2"
