@@ -1,75 +1,53 @@
-FROM debian:bookworm-slim
+FROM debian:bookworm
 ENV DEBIAN_FRONTEND noninteractive
 
-# APT Update
-RUN apt-get --allow-releaseinfo-change update
-RUN apt-get update && apt-get upgrade -y
-
-# APT install (base) packages
-RUN apt-get install -y build-essential cmake libboost-all-dev pkg-config curl tar git zip unzip
-RUN apt-get install -y ninja-build doxygen graphviz
-RUN apt-get install -y --no-install-recommends curl wget
-
-# Get cppcheck dependencies from stable; that's good enough
-RUN echo "deb-src http://deb.debian.org/debian bookworm main" >>/etc/apt/sources.list
-RUN apt-get update
-RUN apt-get build-dep -y cppcheck
-# Download cppcheck source code, build and install
-RUN wget -O cppcheck.tar.gz https://github.com/danmar/cppcheck/archive/2.10.tar.gz
-RUN tar -xvzf cppcheck.tar.gz
-RUN cd cppcheck-2.10 && \
-    mkdir build && \
-    cd build && \
-    cmake -DUSE_MATCHCOMPILER=ON .. && \
-    cmake --build . -- -j 8 && \
-    cmake --install .
-
-# APT install additional packages
-RUN apt-get install -y --no-install-recommends \
-    locales \
-    python3-pip \
+# APT Update, Upgrade, and Install packages
+RUN apt-get --allow-releaseinfo-change update && \
+    apt-get upgrade -y && \
+    apt-get install -y \
+    build-dep \
+    build-essential \
     ca-certificates \
-    netbase \
-    gnupg \
+    clang-format \
+    cmake \
+    cppcheck \
+    curl \
     dirmngr \
+    doxygen \
+    gdb \
     git \
+    gnupg \
+    graphviz \
+    libboost-all-dev \
+    libssl-dev \
+    locales \
+    netbase \
+    ninja-build \
     openssh-client \
+    pkg-config \
+    python3-pip \
     rpm \
     sshpass \
+    unzip \
     valgrind \
-    gdb \
-    clang-format \
-    libssl-dev && \
-    apt-get clean
-# Install cpplint via pip
-RUN pip3 install cpplint --break-system-packages
-# Clean-up
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-# Clean-up manual build(s)
-RUN rm -rf cppcheck.tar.gz && rm -rf cppcheck-2.10
+    wget \
+    zip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# set the locale to en_US.UTF-8
-RUN echo "en_US.UTF-8 UTF-8" >/etc/locale.gen && \
+# Install cpplint via pip
+RUN pip3 install --no-cache-dir cpplint --break-system-packages
+
+# Set the locale to en_US.UTF-8
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen en_US.UTF-8 && \
-    dpkg-reconfigure locales && \
     update-locale LANG=en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-# install vcpkg
+# Install vcpkg and packages
 ENV VCPKG_FORCE_SYSTEM_BINARIES 1
-RUN git clone https://github.com/microsoft/vcpkg.git
-RUN ./vcpkg/bootstrap-vcpkg.sh
-# set the vcpkg environment variable
 ENV VCPKG_ROOT /vcpkg
 ENV PATH $VCPKG_ROOT:$PATH
-
-# install
-RUN vcpkg install protobuf
-RUN vcpkg install asio-grpc
-RUN vcpkg install libunifex
-RUN vcpkg install catch2
-RUN vcpkg install spdlog
-RUN vcpkg install hiredis
-RUN vcpkg install redis-plus-plus
-
-
+RUN git clone https://github.com/microsoft/vcpkg.git && \
+    ./vcpkg/bootstrap-vcpkg.sh && \
+    vcpkg install protobuf asio-grpc libunifex catch2 spdlog hiredis redis-plus-plus
