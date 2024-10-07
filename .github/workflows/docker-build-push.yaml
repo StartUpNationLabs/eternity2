@@ -15,6 +15,16 @@ permissions:
   packages: write
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Debug
+        run: |
+          echo "github.event.push.paths: ${{ github.event.push.paths }}"
+
   build-and-push-base:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.push.paths, 'build-base/')
     runs-on: ubuntu-latest
