@@ -19,7 +19,7 @@ static_resources:
                   name: local_route
                   virtual_hosts:
                     - name: local_service
-                      domains: [ "*" ]
+                      domains: ["*"]
                       routes:
                         - match: { prefix: "/" }
                           route:
@@ -48,7 +48,7 @@ static_resources:
     - name: go_grpc_cluster
       connect_timeout: 0.25s
       type: logical_dns
-      http2_protocol_options: { }
+      http2_protocol_options: {}
       lb_policy: round_robin
       load_assignment:
         cluster_name: go_grpc_cluster
@@ -57,5 +57,5 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: grpc-server
+                      address: ${SOLVER_API}
                       port_value: 50051
