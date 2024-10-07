@@ -77,7 +77,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   build-and-push-envoy:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.push.paths, 'envoy/'
+    if: |
+      (github.event_name == 'workflow_dispatch' || contains(github.event.push.paths, 'envoy/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
