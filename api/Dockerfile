@@ -4,7 +4,9 @@ FROM ghcr.io/startupnationlabs/eternity2/base:latest as builder
 # Copy
 WORKDIR /app
 COPY . .
+
 RUN rm -rf vcpkg.json
+
 # Build
 RUN cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
 RUN cmake --build build
