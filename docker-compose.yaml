@@ -19,6 +19,9 @@ services:
     image: ghcr.io/startupnationlabs/eternity2/frontend:latest
     ports:
       - "80:80"
+    environment:
+      # SERVER_BASE_URL is the URL of the Envoy proxy from the frontend's perspective (client-side)
+      - SERVER_BASE_URL=http://localhost:50052
 
 networks:
   eternity2:
