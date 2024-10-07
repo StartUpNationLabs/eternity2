@@ -17,7 +17,9 @@ jobs:
 
       - name: Debug
         run: |
-          echo "github.event.push.paths: ${{ github.event.push.paths }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Modified files:"
+          echo "${{ toJson(github.event.push.head_commit.modified) }}"
 
   build-and-push-base:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.push.paths, 'build-base/')
