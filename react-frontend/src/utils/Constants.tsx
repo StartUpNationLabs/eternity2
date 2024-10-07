@@ -1,4 +1,4 @@
-import {Path} from "./interface.tsx";
+import { Path } from "./interface.tsx";
 
 /**
  * Values used for the settings
@@ -41,87 +41,63 @@ export const USE_CACHE_DEFAULT = false;
 export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
-export const MULTI_SERVER_BASE_URLS = [
-    {
-        "name": "node-apoorva-3",
-        "url": "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "node-apoorva-2",
-        "url": "http://node-apoorva2.k3s.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "vmpx15",
-        "url": "http://vmpx15.polytech.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "vmpx12",
-        "url": "http://vmpx12.polytech.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "vmpx13",
-        "url": "http://vmpx13.polytech.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "vmpx14",
-        "url": "http://vmpx14.polytech.hs.ozeliurs.com:50052",
-    },
-    {
-        "name": "abel",
-        "url": "http://vmpx15.polytech.hs.ozeliurs.com:50056",
-    },
-]
-export const SERVER_BASE_URL: string = "http://node-apoorva3-abklev50.k3s.hs.ozeliurs.com:50052"
+export const MULTI_SERVER_BASE_URLS = [];
+export const SERVER_BASE_URL: string =
+  process.env.SERVER_BASE_URL || "http://localhost:50052";
 
 /**
  * Directions for the pieces
  */
 export enum Direction {
-    Top,
-    Right,
-    Bottom,
-    Left,
+  Top,
+  Right,
+  Bottom,
+  Left,
 }
 
 export enum Rotation {
-    ZERO,
-    NINETY,
-    ONE_EIGHTY,
-    TWO_SEVENTY,
+  ZERO,
+  NINETY,
+  ONE_EIGHTY,
+  TWO_SEVENTY,
 }
 
 export const abortController = {
-    abortController: new AbortController(),
-}
+  abortController: new AbortController(),
+};
 
 export const DEFAULT_SPIRAL_PATH = {
-    label: SPIRAL_PATH_NAME,
-    // It is empty because the server is doing spiral by default
-    // An empty path will be considered as an error by the server and will be replaced by the default spiral path
-    path: [] as number[],
-    hints: []
-}
+  label: SPIRAL_PATH_NAME,
+  // It is empty because the server is doing spiral by default
+  // An empty path will be considered as an error by the server and will be replaced by the default spiral path
+  path: [] as number[],
+  hints: [],
+};
 
-export const DEFAULT_PATHS: Path[] = [...Array(16).keys()].map(
-    i => ({
-        label: SCAN_ROW_PATH_NAME,
-        path: [...[...Array((i + 2) * (i + 2) - 1).keys()].map(j => j + 1), 2147483647],
-        hints: []
-    })
-);
+export const DEFAULT_PATHS: Path[] = [...Array(16).keys()].map((i) => ({
+  label: SCAN_ROW_PATH_NAME,
+  path: [
+    ...[...Array((i + 2) * (i + 2) - 1).keys()].map((j) => j + 1),
+    2147483647,
+  ],
+  hints: [],
+}));
 
 // Create a default path for the board size : BOARD_SIZE_DEFAULT
 export const DEFAULT_SCAN_ROW_PATH = {
-    label: SCAN_ROW_PATH_NAME,
-    path: [...[...Array(BOARD_SIZE_DEFAULT * BOARD_SIZE_DEFAULT - 1).keys()].map(j => j + 1),
-        2147483647
-    ],
-    hints: [],
+  label: SCAN_ROW_PATH_NAME,
+  path: [
+    ...[...Array(BOARD_SIZE_DEFAULT * BOARD_SIZE_DEFAULT - 1).keys()].map(
+      (j) => j + 1
+    ),
+    2147483647,
+  ],
+  hints: [],
 };
 
 export enum SolveMode {
-    none,
-    normal,
-    stepByStep,
-    multiServer,
+  none,
+  normal,
+  stepByStep,
+  multiServer,
 }
