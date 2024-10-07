@@ -1,17 +1,24 @@
 services:
   grpc-server:
-    image: ghcr.io/apoorva64/eternity2/api:latest
-    ports:
-      - "50051:50051"
-    build:
-      context: .
-      dockerfile: api/Dockerfile
+    container_name: grpc-server
+    image: ghcr.io/startupnationlabs/eternity2/grpc-server:latest
+    networks:
+      - eternity2
 
   envoy:
-    image: ghcr.io/apoorva64/eternity2/envoy:latest
+    image: ghcr.io/startupnationlabs/eternity2/envoy:latest
     environment:
       - SOLVER_API=grpc-server
-    build:
-      context: envoy
     ports:
       - "50052:50052"
+    networks:
+      - eternity2
+
+  frontend:
+    container_name: frontend
+    image: ghcr.io/startupnationlabs/eternity2/frontend:latest
+    ports:
+      - "80:80"
+
+networks:
+  eternity2:

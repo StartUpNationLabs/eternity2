@@ -1,4 +1,5 @@
-FROM apoorvapewpew/eternity2-dependencies:latest as builder
+# FROM apoorvapewpew/eternity2-dependencies:latest as builder
+FROM ghcr.io/startupnationlabs/eternity2/base:latest as builder
 
 # Copy
 WORKDIR /app
