@@ -33,5 +33,5 @@ jobs:
           context: ./build-base
           file: ./build-base/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/base:latest
+          tags: ghcr.io/${{ github.repository_owner | lower }}/${{ github.event.repository.name | lower }}/base:latest
           platforms: linux/amd64,linux/arm64
