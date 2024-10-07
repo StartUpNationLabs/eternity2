@@ -2,10 +2,9 @@ FROM debian:bookworm
 ENV DEBIAN_FRONTEND noninteractive
 
 # APT Update, Upgrade, and Install packages
-RUN apt-get --allow-releaseinfo-change update && \
+RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
-    build-dep \
     build-essential \
     ca-certificates \
     clang-format \
