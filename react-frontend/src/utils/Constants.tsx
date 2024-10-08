@@ -98,5 +98,4 @@ export enum SolveMode {
   none,
   normal,
   stepByStep,
-  multiServer,
 }
