@@ -42,8 +42,7 @@ export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
 export const MULTI_SERVER_BASE_URLS = [];
-export const SERVER_BASE_URL: string =
-  import.meta.env.VITE_SERVER_BASE_URL || "http://localhost:50052";
+export const SERVER_BASE_URL: string = "${SERVER_BASE_URL}";
 
 /**
  * Directions for the pieces

@@ -1,16 +1,21 @@
-FROM node:lts
+
+# Build stage
+FROM node:14 as build
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-
+COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+COPY --from=build /app/build /usr/share/nginx/html
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 EXPOSE 80
 
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
-
-CMD ["npm", "run", "prod"]
+CMD ["/docker-entrypoint.sh"]
