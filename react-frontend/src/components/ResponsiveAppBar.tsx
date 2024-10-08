@@ -22,10 +22,6 @@ const pages: {
     title: "Path Creator",
     href: "/path",
   },
-  {
-    title: "Statistics",
-    href: "/stats",
-  },
 ];
 const settings = ["Profile", "Account", "Dashboard", "Logout"];
 

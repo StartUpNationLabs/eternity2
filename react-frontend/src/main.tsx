@@ -7,7 +7,6 @@ import { RootLayout } from "./RootLayout";
 import { RecoilRoot } from "recoil";
 import { Solver } from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
-import { StatisticsSolver } from "./pages/statistics/StatisticsSolver.tsx";
 
 const router = createBrowserRouter([
   {
@@ -21,10 +20,6 @@ const router = createBrowserRouter([
       {
         path: "path",
         element: <PathManager />,
-      },
-      {
-        path: "stats",
-        element: <StatisticsSolver />,
       },
     ],
   },

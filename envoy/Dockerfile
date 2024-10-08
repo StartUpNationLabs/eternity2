@@ -11,4 +11,4 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 # Make the entrypoint script executable
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["/docker-entrypoint.sh"]
