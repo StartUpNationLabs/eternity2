@@ -6,9 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN ls -la
 RUN npm run build
-RUN ls -la
 
 # Production stage
 FROM nginx:alpine
