@@ -1,6 +1,4 @@
-
-# Build stage
-FROM node:14 as build
+FROM node:14 AS build
 
 WORKDIR /app
 
@@ -8,7 +6,9 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN ls -la
 RUN npm run build
+RUN ls -la
 
 # Production stage
 FROM nginx:alpine
