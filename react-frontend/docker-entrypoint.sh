@@ -6,4 +6,4 @@ for file in /usr/share/nginx/html/*; do
     fi
 done
 
-nginx -g daemon off;
+nginx -g "daemon off;"
