@@ -164,8 +164,12 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
     return agrpc::register_sender_rpc_handler<SolverRPC>(
         grpc_context, service1, [&](SolverRPC &rpc, SolverRPC::Request &request) -> unifex::task<void> {
             spdlog::info("Received request");
-
-            if (max_concurrent_jobs == -1) {
+                const auto &req_pieces = request.pieces();
+                const auto size        = req_pieces.size();
+                if (size == 0){
+                    co_return;
+                }
+                if (max_concurrent_jobs == -1) {
                 std::string env_max_jobs = get_env_var("MAX_CONCURRENT_JOBS", "");
                 if (!env_max_jobs.empty()) {
                     try {

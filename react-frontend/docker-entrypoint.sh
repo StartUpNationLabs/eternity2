@@ -1,9 +1,7 @@
 #!/bin/env bash
 
-for file in /usr/share/nginx/html/*; do
-    if [ -f "$file" ]; then
-        envsubst < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-    fi
-done
+# write all env variables to /usr/share/nginx/html/env
+env | grep 'SERVER_BASE_URL' > /usr/share/nginx/html/env
+
 
 nginx -g "daemon off;"

@@ -1,4 +1,4 @@
-import { Path } from "./interface.tsx";
+import {Path} from "./interface.tsx";
 
 /**
  * Values used for the settings
@@ -42,60 +42,72 @@ export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
 export const MULTI_SERVER_BASE_URLS = [];
-export const SERVER_BASE_URL: string = "$SERVER_BASE_URL";
+export let SERVER_BASE_URL: string = "http://localhost:50052";
+
+fetch("/env").then(
+    (response) => {
+        response.text().then((data) => {
+            SERVER_BASE_URL = data.split("=")[1];
+        });
+    },
+    (error) => {
+        console.error("Failed to fetch /env: ", error);
+
+    }
+);
 
 /**
  * Directions for the pieces
  */
 export enum Direction {
-  Top,
-  Right,
-  Bottom,
-  Left,
+    Top,
+    Right,
+    Bottom,
+    Left,
 }
 
 export enum Rotation {
-  ZERO,
-  NINETY,
-  ONE_EIGHTY,
-  TWO_SEVENTY,
+    ZERO,
+    NINETY,
+    ONE_EIGHTY,
+    TWO_SEVENTY,
 }
 
 export const abortController = {
-  abortController: new AbortController(),
+    abortController: new AbortController(),
 };
 
 export const DEFAULT_SPIRAL_PATH = {
-  label: SPIRAL_PATH_NAME,
-  // It is empty because the server is doing spiral by default
-  // An empty path will be considered as an error by the server and will be replaced by the default spiral path
-  path: [] as number[],
-  hints: [],
+    label: SPIRAL_PATH_NAME,
+    // It is empty because the server is doing spiral by default
+    // An empty path will be considered as an error by the server and will be replaced by the default spiral path
+    path: [] as number[],
+    hints: [],
 };
 
 export const DEFAULT_PATHS: Path[] = [...Array(16).keys()].map((i) => ({
-  label: SCAN_ROW_PATH_NAME,
-  path: [
-    ...[...Array((i + 2) * (i + 2) - 1).keys()].map((j) => j + 1),
-    2147483647,
-  ],
-  hints: [],
+    label: SCAN_ROW_PATH_NAME,
+    path: [
+        ...[...Array((i + 2) * (i + 2) - 1).keys()].map((j) => j + 1),
+        2147483647,
+    ],
+    hints: [],
 }));
 
 // Create a default path for the board size : BOARD_SIZE_DEFAULT
 export const DEFAULT_SCAN_ROW_PATH = {
-  label: SCAN_ROW_PATH_NAME,
-  path: [
-    ...[...Array(BOARD_SIZE_DEFAULT * BOARD_SIZE_DEFAULT - 1).keys()].map(
-      (j) => j + 1
-    ),
-    2147483647,
-  ],
-  hints: [],
+    label: SCAN_ROW_PATH_NAME,
+    path: [
+        ...[...Array(BOARD_SIZE_DEFAULT * BOARD_SIZE_DEFAULT - 1).keys()].map(
+            (j) => j + 1
+        ),
+        2147483647,
+    ],
+    hints: [],
 };
 
 export enum SolveMode {
-  none,
-  normal,
-  stepByStep,
+    none,
+    normal,
+    stepByStep,
 }

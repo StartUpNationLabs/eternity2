@@ -17,8 +17,10 @@ services:
   frontend:
     container_name: frontend
     image: ghcr.io/startupnationlabs/eternity2/frontend:latest
+    build:
+      context: react-frontend
     ports:
-      - "80:80"
+      - "82:80"
     environment:
       # SERVER_BASE_URL is the URL of the Envoy proxy from the frontend's perspective (client-side)
       - SERVER_BASE_URL=http://localhost:50052
