@@ -42,7 +42,7 @@ export const SCAN_ROW_PATH_NAME = "Scan Row";
 export const SPIRAL_PATH_NAME = "Spiral";
 
 export const MULTI_SERVER_BASE_URLS = [];
-export const SERVER_BASE_URL: string = "${SERVER_BASE_URL}";
+export const SERVER_BASE_URL: string = "$SERVER_BASE_URL";
 
 /**
  * Directions for the pieces
