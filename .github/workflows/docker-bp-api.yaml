@@ -35,7 +35,7 @@ jobs:
       - name: Build and push grpc-server image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ..
           file: ./api/Dockerfile
           push: true
           tags: ghcr.io/${{ env.REPO_LOWERCASE }}/grpc-server:latest
