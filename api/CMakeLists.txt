@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.22)
 #
 # c++ standard 20
 set(CMAKE_CXX_STANDARD 20)
-find_package(Protobuf REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 find_package(asio-grpc CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 find_package(unifex CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(hiredis CONFIG REQUIRED)
-find_package(redis++ CONFIG REQUIRED)
+# find_package(hiredis CONFIG REQUIRED)
+# find_package(redis++ CONFIG REQUIRED)
 
 # example helper
 add_library(asio-grpc-helper INTERFACE)
@@ -37,14 +37,22 @@ target_link_libraries(
         unifex::unifex
         solver_lib
         spdlog::spdlog
-        hiredis::hiredis
-        redis++::redis++_static
-        -static
-        -static-libgcc
-        -static-libstdc++
+        # hiredis::hiredis
+        # redis++::redis++_static
 )
 
 target_include_directories(asio-grpc-server PRIVATE ${CPP_BASE64_INCLUDE_DIRS})
 
 # set release
 set(CMAKE_BUILD_TYPE Release)
+
+include(GNUInstallDirs)
+
+install(
+        TARGETS asio-grpc-server
+        EXPORT asio-grpc-server-targets
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+

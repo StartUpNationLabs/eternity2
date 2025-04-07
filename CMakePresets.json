@@ -60,10 +60,10 @@
       "name": "linux"
     },
     {
-      "generator": "Unix Makefiles",
+      "generator": "Ninja",
       "inherits": [
         "linux",
-        "vcpkg"
+        "cmake-dev"
       ],
       "name": "ninja-linux"
     },
