@@ -1,0 +1,30 @@
+services:
+  grpc-server:
+    container_name: grpc-server
+    image: ghcr.io/startupnationlabs/eternity2/grpc-server:latest
+    networks:
+      - eternity2
+
+  envoy:
+    image: ghcr.io/startupnationlabs/eternity2/envoy:latest
+    environment:
+      - SOLVER_API=grpc-server
+    ports:
+      - "50052:50052"
+    networks:
+      - eternity2
+
+  frontend:
+    container_name: frontend
+    build:
+      context: react-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "82:80"
+    environment:
+      - SERVER_BASE_URL=http://localhost:50052
+    networks:
+      - eternity2
+
+networks:
+  eternity2:
