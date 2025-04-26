@@ -32,11 +32,22 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Build and load docker image
+        id: load-image
         run: |
           nix build .#grpc-server-docker
-          docker load --input result
+          LOAD_OUTPUT=$(docker load --input result)
+          echo "LOADED_TAG=$(echo "$LOAD_OUTPUT" | grep -o 'eternity2-grpc-server:[a-zA-Z0-9]*' | cut -d':' -f2)" >> $GITHUB_OUTPUT
 
-      - name: Push docker image
+      - name: Tag and push docker image
         run: |
-          docker tag $(docker image list --quiet) ghcr.io/apoorva64/eternity2-grpc-server:latest
-          docker push ghcr.io/apoorva64/eternity2-grpc-server:latest
+          # Generate tag based on commit hash
+          TAG=$(git rev-parse --short HEAD)
+          IMAGE_NAME=ghcr.io/startupnationlabs/eternity2/grpc-server
+          
+          # Tag the loaded image with the exact tag
+          docker tag eternity2-grpc-server:${{ steps.load-image.outputs.LOADED_TAG }} $IMAGE_NAME:$TAG
+          docker tag eternity2-grpc-server:${{ steps.load-image.outputs.LOADED_TAG }} $IMAGE_NAME:latest
+
+          # Push both tags
+          docker push $IMAGE_NAME:$TAG
+          docker push $IMAGE_NAME:latest
