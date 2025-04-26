@@ -1,0 +1,25 @@
+From b24e8a86c301dc0dc244cdf8a23a6b70b7bdaa49 Mon Sep 17 00:00:00 2001
+From: Edgar B <39066502+Guekka@users.noreply.github.com>
+Date: Sat, 5 Apr 2025 20:20:35 +0200
+Subject: [PATCH] fix: absolute path package config
+
+---
+ source/unifex.pc.in | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/source/unifex.pc.in b/source/unifex.pc.in
+index ea7905f..188fc7f 100644
+--- a/source/unifex.pc.in
++++ b/source/unifex.pc.in
+@@ -1,6 +1,5 @@
+-prefix=@CMAKE_INSTALL_PREFIX@
+-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
++libdir=@CMAKE_INSTALL_FULL_LIBDIR@
++includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+ 
+ Name: @PROJECT_NAME@
+ Description: @CMAKE_PROJECT_DESCRIPTION@
+-- 
+2.47.2
+

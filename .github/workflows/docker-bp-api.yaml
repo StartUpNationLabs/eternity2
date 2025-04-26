@@ -18,12 +18,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set lowercase repository name
-        run: echo "REPO_LOWERCASE=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -31,12 +30,24 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Build and load docker image
+        id: load-image
+        run: |
+          nix build .#grpc-server-docker
+          LOAD_OUTPUT=$(docker load --input result)
+          echo "LOADED_TAG=$(echo "$LOAD_OUTPUT" | grep -o 'eternity2-grpc-server:[a-zA-Z0-9]*' | cut -d':' -f2)" >> $GITHUB_OUTPUT
 
-      - name: Build and push grpc-server image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./api/Dockerfile
-          push: true
-          tags: ghcr.io/${{ env.REPO_LOWERCASE }}/grpc-server:latest
-          platforms: linux/amd64
+      - name: Tag and push docker image
+        run: |
+          # Generate tag based on commit hash
+          TAG=$(git rev-parse --short HEAD)
+          IMAGE_NAME=ghcr.io/startupnationlabs/eternity2/grpc-server
+          
+          # Tag the loaded image with the exact tag
+          docker tag eternity2-grpc-server:${{ steps.load-image.outputs.LOADED_TAG }} $IMAGE_NAME:$TAG
+          docker tag eternity2-grpc-server:${{ steps.load-image.outputs.LOADED_TAG }} $IMAGE_NAME:latest
+
+          # Push both tags
+          docker push $IMAGE_NAME:$TAG
+          docker push $IMAGE_NAME:latest
