@@ -167,7 +167,7 @@ export const RequestForm = () => {
     setOriginalBoard(null);
   };
 
-  const handleBoardChange = (_: React.SyntheticEvent, v: Board) => {
+  const handleBoardChange = (_: React.SyntheticEvent, v: Board | null) => {
     if (v) {
       const pieceList = v.pieces
         .map((rotatedPiece) => rotatedPiece.piece)
@@ -178,11 +178,6 @@ export const RequestForm = () => {
         ...settings,
         boardSize: Math.sqrt(pieceList.length),
         boardColors: v.nbColors,
-      });
-      setHints(v.hints);
-      setSettings({
-        // Choose the scan row path for size of the board
-        ...settings,
         path:
           paths.find(
             (path) =>
@@ -190,16 +185,16 @@ export const RequestForm = () => {
               path.path.length === pieceList.length
           ) || DEFAULT_SPIRAL_PATH,
       });
+      setHints(v.hints);
     } else {
       setSelectedBoard(null);
+      const newBoard = convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT));
+      setBoard(newBoard);
       setSettings({
         ...settings,
         boardSize: BOARD_SIZE_DEFAULT,
         boardColors: BOARD_COLOR_DEFAULT,
       });
-      setBoard(
-        convertToPieces(createBoard(BOARD_SIZE_DEFAULT, BOARD_COLOR_DEFAULT))
-      );
       setHints([]);
       setSelectedHintsTemplate(null);
     }
