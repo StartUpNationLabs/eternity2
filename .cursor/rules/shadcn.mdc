@@ -1,14 +1,12 @@
 ---
-description: 
+description: To build frontend with shadcn components
 globs: *.tsx
 alwaysApply: false
----
----
-description: To build frontend with shadcn components
 ---
 # Shadcn UI Components
 
 This project uses @shadcn/ui for UI components. These are beautifully designed, accessible components that you can copy and paste into your apps.
+Do not hesitate to use the web tool to find components.
 
 ## Finding and Using Components
 

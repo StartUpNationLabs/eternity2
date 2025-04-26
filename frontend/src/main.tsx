@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { CssBaseline, ThemeProvider } from "@mui/material";
-import theme from "./theme";
+import theme from "./theme.tsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { RootLayout } from "./RootLayout";
+import { RootLayout } from "./RootLayout.tsx";
 import { RecoilRoot } from "recoil";
 import { Solver } from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
