@@ -52,8 +52,13 @@ export const DisplayPathForm = () => {
     }
 
     return (
-        <FormGroup style={{width: '80%'}}>
-            <Typography id="input-slider-path" gutterBottom>
+        <FormGroup sx={{
+            width: '100%',
+            maxWidth: '800px',
+            margin: '0 auto',
+            padding: '20px'
+        }}>
+            <Typography id="input-slider-path" gutterBottom variant="h6">
                 Select Path
             </Typography>
             <Slider
@@ -66,6 +71,7 @@ export const DisplayPathForm = () => {
                 step={BOARD_SIZE_STEP}
                 aria-labelledby={"input-slider-path"}
                 valueLabelDisplay="on"
+                sx={{ mb: 3 }}
             />
             <Autocomplete
                 id="available-paths"
@@ -74,25 +80,36 @@ export const DisplayPathForm = () => {
                 onChange={handlePathChange}
                 value={selectedPath}
                 renderInput={(params) => <TextField {...params} label="Available Paths"/>}
-                style={{marginTop: '20px'}}
+                sx={{ mb: 3 }}
             />
-            <div style={{
+            <Box sx={{
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center',
                 width: '100%',
-                marginTop: '20px',
-                marginBottom: '20px',
+                mb: 3
             }}>
-                <Box display="flex" justifyContent="space-between" width="60%">
-                    <Button variant="outlined" color="error" onClick={toBeImplemented}>
+                <Box sx={{
+                    display: 'flex',
+                    gap: 2,
+                    width: '100%'
+                }}>
+                    <Button 
+                        variant="outlined" 
+                        color="error" 
+                        onClick={toBeImplemented}
+                        sx={{ flex: 1 }}
+                    >
                         Delete Path
                     </Button>
-                    <Button variant="outlined" disabled={true}>
+                    <Button 
+                        variant="outlined" 
+                        disabled={true}
+                        sx={{ flex: 1 }}
+                    >
                         Animate path (TODO)
                     </Button>
                 </Box>
-            </div>
+            </Box>
         </FormGroup>
     );
 }

@@ -75,59 +75,79 @@ export const CreatePathForm = () => {
     // ===== Render ==== //
 
     return (
-        <FormGroup style={{width: '80%'}}>
-            <Typography id="input-slider-size" gutterBottom>
+        <FormGroup sx={{
+            width: '100%',
+            maxWidth: '800px',
+            margin: '0 auto',
+            padding: '20px'
+        }}>
+            <Typography id="input-slider-size" gutterBottom variant="h6">
                 Board size
             </Typography>
             <Slider
                 defaultValue={BOARD_SIZE_DEFAULT}
                 min={BOARD_SIZE_MIN}
                 max={BOARD_SIZE_MAX}
-                value={
-                    boardSize
-                }
-                onChange={
-                    (_, v) => {
-                        setBoardSize(v as number)
-                        resetGrid()
-                    }
-                }
+                value={boardSize}
+                onChange={(_, v) => {
+                    setBoardSize(v as number)
+                    resetGrid()
+                }}
                 marks
                 step={BOARD_SIZE_STEP}
                 aria-labelledby={"input-slider-size"}
                 valueLabelDisplay="on"
+                sx={{ mb: 3 }}
             />
-            <div style={{marginTop: '20px', marginBottom: '20px'}}>
-                <TextField id="path-name-input" label="Path Name" variant="outlined" style={{width: '100%'}}
-                           value={pathName}
-                           onChange={handlePathNameChange}/>
-            </div>
-            <div style={{
+            <TextField 
+                id="path-name-input" 
+                label="Path Name" 
+                variant="outlined" 
+                value={pathName}
+                onChange={handlePathNameChange}
+                sx={{ width: '100%', mb: 3 }}
+            />
+            <Box sx={{
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center',
                 width: '100%',
-                marginBottom: '20px'
+                mb: 3
             }}>
-                <Box display="flex" justifyContent="space-between" width="80%">
-                    <Button variant="outlined" color="error" onClick={resetGrid}>
+                <Box sx={{
+                    display: 'flex',
+                    gap: 2,
+                    width: '100%'
+                }}>
+                    <Button 
+                        variant="outlined" 
+                        color="error" 
+                        onClick={resetGrid}
+                        sx={{ flex: 1 }}
+                    >
                         Reset path
                     </Button>
-                    <Button variant="outlined" disabled={true}>
+                    <Button 
+                        variant="outlined" 
+                        disabled={true}
+                        sx={{ flex: 1 }}
+                    >
                         Animate path (TODO)
                     </Button>
-                    <Button variant="contained" color="success" disabled={isSavePathDisabled()}
-                            onClick={handleSavePath}>
+                    <Button 
+                        variant="contained" 
+                        color="success" 
+                        disabled={isSavePathDisabled()}
+                        onClick={handleSavePath}
+                        sx={{ flex: 1 }}
+                    >
                         Save path
                     </Button>
                 </Box>
-            </div>
-            <div style={{
+            </Box>
+            <Box sx={{
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                marginBottom: '20px'
+                width: '100%'
             }}>
                 {showSuccessMessage ? (
                     <Typography variant="body2" color="success">
@@ -138,7 +158,7 @@ export const CreatePathForm = () => {
                         A new path must have a name and cover the full board in order to be saved.
                     </Typography>
                 )}
-            </div>
+            </Box>
         </FormGroup>
     );
 }
