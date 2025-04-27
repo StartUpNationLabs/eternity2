@@ -1,8 +1,8 @@
-import { Box, Container, Typography, Grid, Card, CardContent, useTheme, useMediaQuery, Paper } from "@mui/material";
+import { Box, Container, Typography, Grid, Card, CardContent, useTheme } from "@mui/material";
+import { RotatedPiece } from "../../proto/solver/v1/solver.ts";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Board from "../../components/Board.tsx";
-import { Piece, RotatedPiece } from "../../proto/solver/v1/solver.ts";
 import { createBoard, convertToPieces } from "../../utils/logic.tsx";
 import { BOARD_COLOR_DEFAULT } from "../../utils/Constants.tsx";
 import ConstructionIcon from "@mui/icons-material/Construction";
@@ -11,7 +11,6 @@ import RouteIcon from "@mui/icons-material/Route";
 
 function HomePage() {
   const theme = useTheme();
-  const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
   const [puzzlePieces, setPuzzlePieces] = useState<RotatedPiece[]>([]);
 
   // Generate a non-shuffled 16x16 puzzle on component mount

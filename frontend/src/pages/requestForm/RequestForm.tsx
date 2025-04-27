@@ -27,11 +27,9 @@ import {
   settingsState,
   solveModeState,
 } from "./atoms.ts";
-import Container from "@mui/material/Container";
 import { convertToPieces, createBoard } from "../../utils/logic.tsx";
 import { isSolvingState, isSolvingStepByStepState } from "../solver/atoms.ts";
 import {
-  abortController,
   BOARD_COLOR_DEFAULT,
   BOARD_COLOR_MAX,
   BOARD_COLOR_MIN,
@@ -40,30 +38,27 @@ import {
   BOARD_SIZE_MAX,
   BOARD_SIZE_MIN,
   BOARD_SIZE_STEP,
-  CACHE_PULL_INTERVAL_DEFAULT,
   CACHE_PULL_INTERVAL_MAX,
   CACHE_PULL_INTERVAL_MIN,
   CACHE_PULL_INTERVAL_STEP,
   DEFAULT_SPIRAL_PATH,
-  HASH_THRESHOLD_DEFAULT,
   HASH_THRESHOLD_MAX,
   HASH_THRESHOLD_MIN,
   HASH_THRESHOLD_STEP,
   SCAN_ROW_PATH_NAME,
   SolveMode,
-  THREADS_DEFAULT,
   THREADS_MAX,
   THREADS_MIN,
   THREADS_STEP,
-  WAIT_TIME_DEFAULT,
   WAIT_TIME_MAX,
   WAIT_TIME_MIN,
   WAIT_TIME_STEP,
+  abortController,
 } from "../../utils/Constants.tsx";
-import { Piece, SolverSolveRequest } from "../../proto/solver/v1/solver.ts";
+import { Piece } from "../../proto/solver/v1/solver.ts";
 import React, { useState } from "react";
 import { numberOfColorsThatFitInABoard } from "../../utils/utils.tsx";
-import { Board, Path } from "../../utils/interface.tsx";
+import { Board } from "../../utils/interface.tsx";
 
 const suffleWHints = (
   originalArray: Piece[],
@@ -207,28 +202,23 @@ export const RequestForm = () => {
       setSelectedHintsTemplate(null);
     }
   };
-  const handleBoardHintsChange = (_: React.SyntheticEvent, v: HintTemplate) => {
+  const handleBoardHintsChange = (
+    _: React.SyntheticEvent,
+    v: HintTemplate | null
+  ) => {
     if (v) {
-      console.log("selected hints template", v);
-      if (v) {
-        const hints: SolverSolveRequest["hints"] = [];
-        for (const selectedHintsTemplateElement of v.pieceIndex) {
-          // iterate over original board
-
-          hints.push({
-            index: selectedHintsTemplateElement,
-            x: selectedHintsTemplateElement % settings.boardSize,
-            y: Math.floor(selectedHintsTemplateElement / settings.boardSize),
-            rotation: 0,
-          });
-        }
-        console.log("hints", hints);
-        setHints(hints);
-      }
       setSelectedHintsTemplate(v);
+      // Create hints from pieceIndex
+      const newHints = v.pieceIndex.map(index => ({
+        index,
+        x: index % settings.boardSize,
+        y: Math.floor(index / settings.boardSize),
+        rotation: 0,
+      }));
+      setHints(newHints);
     } else {
-      setHints([]);
       setSelectedHintsTemplate(null);
+      setHints([]);
     }
   };
 

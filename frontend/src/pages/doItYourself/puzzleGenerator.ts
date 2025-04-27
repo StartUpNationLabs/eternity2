@@ -1,4 +1,4 @@
-import { Piece, RotatedPiece } from "../../proto/solver/v1/solver.ts";
+import { Piece } from "../../proto/solver/v1/solver.ts";
 import { createBoard, shuffleAndRotateBoard } from "../../utils/logic.tsx";
 import { BOARD_COLOR_DEFAULT } from "../../utils/Constants.tsx";
 

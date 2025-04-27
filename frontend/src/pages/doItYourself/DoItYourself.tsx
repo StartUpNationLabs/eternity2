@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Box, Card, CardContent, Grid, Typography, Button, useTheme, useMediaQuery, Tooltip, IconButton, Collapse } from "@mui/material";
-import Board from "../../components/Board.tsx";
+import { Box, Card, CardContent, Grid, Typography, Button, useTheme, useMediaQuery, IconButton, Collapse } from "@mui/material";
 import { Piece, RotatedPiece } from "../../proto/solver/v1/solver.ts";
 import PiecePalette from "./PiecePalette.tsx";
 import DraggablePiece from "./DraggablePiece.tsx";
@@ -22,8 +21,7 @@ function DoItYourself() {
     
     // Puzzle state
     const [gridSize, setGridSize] = useState<3 | 4 | 5>(4);
-    const [pieces, setPieces] = useState<Piece[]>([]);
-    const [board, setBoard] = useState<(RotatedPiece | null)[]>(Array(16).fill(null)); // Default 4x4
+    const [board, setBoard] = useState<(RotatedPiece | null)[]>(Array(16).fill(null));
     const [availablePieces, setAvailablePieces] = useState<RotatedPiece[]>([]);
     const [originalPieces, setOriginalPieces] = useState<Piece[]>([]);
     
@@ -49,7 +47,6 @@ function DoItYourself() {
         
         // Generate random pieces for the puzzle
         const newPieces = generateRandomPieces(gridSize * gridSize);
-        setPieces(newPieces);
         setOriginalPieces(newPieces); // Save original pieces for reset
         
         // Create empty board
@@ -105,7 +102,6 @@ function DoItYourself() {
         
         // Generate new puzzle with the new size
         const newPieces = generateRandomPieces(newSize * newSize);
-        setPieces(newPieces);
         setOriginalPieces(newPieces);
         
         // Reset timer
