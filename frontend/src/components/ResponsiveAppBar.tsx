@@ -24,6 +24,10 @@ const pages: {
         title: "Solver",
         href: "/",
     },
+    {
+        title: "Do It Yourself",
+        href: "/diy",
+    },
 ];
 
 function ResponsiveAppBar() {

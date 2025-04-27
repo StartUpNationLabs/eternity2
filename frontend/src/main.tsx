@@ -7,6 +7,7 @@ import { RootLayout } from "./RootLayout.tsx";
 import { RecoilRoot } from "recoil";
 import { Solver } from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
+import DoItYourself from "./pages/doItYourself/DoItYourself.tsx";
 
 const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
       {
         path: "path",
         element: <PathManager />,
+      },
+      {
+        path: "diy",
+        element: <DoItYourself />,
       },
     ],
   },
