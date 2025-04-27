@@ -18,7 +18,7 @@ services:
     container_name: frontend
     image: ghcr.io/startupnationlabs/eternity2/frontend:latest
     build:
-      context: react-frontend
+      context: frontend
     ports:
       - "82:80"
     environment:

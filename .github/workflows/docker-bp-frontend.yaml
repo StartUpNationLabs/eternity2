@@ -3,7 +3,7 @@ name: Build and Push Frontend Docker Image
 on:
   push:
     paths:
-      - "react-frontend/**"
+      - "frontend/**"
       - .github/workflows/docker-bp-frontend.yaml
   workflow_dispatch:
 
@@ -34,8 +34,8 @@ jobs:
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
-          context: ./react-frontend
-          file: ./react-frontend/Dockerfile
+          context: ./frontend
+          file: ./frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.REPO_LOWERCASE }}/frontend:latest
           platforms: linux/amd64,linux/arm64
