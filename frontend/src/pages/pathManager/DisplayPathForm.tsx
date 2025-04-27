@@ -14,6 +14,7 @@ import { calculateCellDelay } from "./animation.ts";
 export const DisplayPathForm = () => {
     const [paths, setPaths] = useRecoilState(pathsState);
     const [hints, setHints] = useRecoilState(hintTemplatesState);
+    // @ts-ignore - hintCells is used in resetGrid and handlePathChange
     const [hintCells, setHintCells] = useRecoilState(hintCellsState);
 
     // States used by path manager

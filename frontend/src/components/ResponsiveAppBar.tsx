@@ -51,6 +51,9 @@ function ResponsiveAppBar() {
                 bgcolor: 'background.paper',
                 borderBottom: '1px solid',
                 borderColor: 'divider',
+                backdropFilter: 'blur(8px)',
+                background: 'rgba(255, 255, 255, 0.9)',
+                transition: 'all 0.2s ease-in-out',
             }}
         >
             <Container maxWidth="xl">
@@ -59,7 +62,8 @@ function ResponsiveAppBar() {
                         sx={{ 
                             display: { xs: "none", md: "flex" }, 
                             mr: 1,
-                            color: 'primary.main'
+                            color: 'primary.main',
+                            fontSize: 28,
                         }}
                     />
                     <Typography
@@ -75,6 +79,7 @@ function ResponsiveAppBar() {
                             letterSpacing: ".2rem",
                             color: 'text.primary',
                             textDecoration: "none",
+                            transition: 'color 0.2s ease-in-out',
                             '&:hover': {
                                 color: 'primary.main',
                             },
@@ -90,7 +95,12 @@ function ResponsiveAppBar() {
                             aria-controls="menu-appbar"
                             aria-haspopup="true"
                             onClick={handleOpenNavMenu}
-                            sx={{ color: 'text.primary' }}
+                            sx={{ 
+                                color: 'text.primary',
+                                '&:hover': {
+                                    bgcolor: 'action.hover',
+                                },
+                            }}
                         >
                             <MenuIcon />
                         </IconButton>
@@ -110,6 +120,13 @@ function ResponsiveAppBar() {
                             onClose={handleCloseNavMenu}
                             sx={{
                                 display: { xs: "block", md: "none" },
+                                '& .MuiPaper-root': {
+                                    borderRadius: 2,
+                                    mt: 1,
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                },
                             }}
                         >
                             {pages.map((page) => (
@@ -119,6 +136,19 @@ function ResponsiveAppBar() {
                                     component={Link}
                                     to={page.href}
                                     selected={location.pathname === page.href}
+                                    sx={{
+                                        minWidth: 180,
+                                        borderRadius: 1,
+                                        mx: 1,
+                                        my: 0.5,
+                                        '&.Mui-selected': {
+                                            bgcolor: 'primary.main',
+                                            color: 'primary.contrastText',
+                                            '&:hover': {
+                                                bgcolor: 'primary.dark',
+                                            },
+                                        },
+                                    }}
                                 >
                                     <Typography textAlign="center">{page.title}</Typography>
                                 </MenuItem>
@@ -129,7 +159,8 @@ function ResponsiveAppBar() {
                     <ExtensionIcon sx={{ 
                         display: { xs: "flex", md: "none" }, 
                         mr: 1,
-                        color: 'primary.main'
+                        color: 'primary.main',
+                        fontSize: 24,
                     }}/>
                     <Typography
                         variant="h5"
@@ -145,6 +176,8 @@ function ResponsiveAppBar() {
                             letterSpacing: ".2rem",
                             color: 'text.primary',
                             textDecoration: "none",
+                            fontSize: '1.2rem',
+                            transition: 'color 0.2s ease-in-out',
                             '&:hover': {
                                 color: 'primary.main',
                             },
@@ -161,10 +194,27 @@ function ResponsiveAppBar() {
                                 to={page.href}
                                 sx={{
                                     mx: 1,
+                                    px: 2,
+                                    py: 1,
                                     color: location.pathname === page.href ? 'primary.main' : 'text.primary',
-                                    fontWeight: location.pathname === page.href ? 600 : 400,
+                                    fontWeight: location.pathname === page.href ? 600 : 500,
+                                    position: 'relative',
                                     '&:hover': {
-                                        bgcolor: 'action.hover',
+                                        bgcolor: 'transparent',
+                                        color: 'primary.main',
+                                    },
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        width: location.pathname === page.href ? '100%' : '0%',
+                                        height: '2px',
+                                        bottom: '8px',
+                                        left: '0',
+                                        bgcolor: 'primary.main',
+                                        transition: 'width 0.2s ease-in-out',
+                                    },
+                                    '&:hover::after': {
+                                        width: '100%',
                                     },
                                 }}
                             >

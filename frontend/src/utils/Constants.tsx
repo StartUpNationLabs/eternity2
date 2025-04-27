@@ -5,7 +5,7 @@ import {Path} from "./interface.tsx";
  */
 export const BOARD_SIZE_MIN = 2;
 export const BOARD_SIZE_MAX = 16;
-export const BOARD_SIZE_DEFAULT = 8;
+export const BOARD_SIZE_DEFAULT = 4;
 export const BOARD_SIZE_STEP = 1;
 
 export const BOARD_COLOR_MIN = 2;

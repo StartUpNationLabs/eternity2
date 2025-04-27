@@ -235,15 +235,15 @@ export const RequestForm = () => {
                 sx={{ color: 'text.secondary', mb: 1 }}
               >
                 Board Size
-        </Typography>
-        <Slider
+              </Typography>
+              <Slider
                 value={settings.boardSize}
                 onChange={handleBoardSizeChange}
-          min={BOARD_SIZE_MIN}
-          max={BOARD_SIZE_MAX}
+                min={BOARD_SIZE_MIN}
+                max={BOARD_SIZE_MAX}
                 step={BOARD_SIZE_STEP}
                 marks
-                valueLabelDisplay="auto"
+                valueLabelDisplay="on"
                 sx={{ 
                   '& .MuiSlider-markLabel': {
                     color: 'text.secondary',
@@ -258,16 +258,16 @@ export const RequestForm = () => {
                 gutterBottom
                 sx={{ color: 'text.secondary', mb: 1 }}
               >
-          Number of Colors
-        </Typography>
-        <Slider
+                Number of Colors
+              </Typography>
+              <Slider
                 value={settings.boardColors}
                 onChange={handleBoardColorChange}
-          min={BOARD_COLOR_MIN}
-          max={BOARD_COLOR_MAX}
+                min={BOARD_COLOR_MIN}
+                max={BOARD_COLOR_MAX}
                 step={BOARD_COLOR_STEP}
-          marks
-                valueLabelDisplay="auto"
+                marks
+                valueLabelDisplay="on"
                 sx={{ 
                   '& .MuiSlider-markLabel': {
                     color: 'text.secondary',

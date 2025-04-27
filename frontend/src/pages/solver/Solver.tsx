@@ -7,17 +7,41 @@ import {
   boardState,
   hintsState,
   solveModeState,
+  settingsState,
 } from "../requestForm/atoms.ts";
 import { Solving } from "./Solving.tsx";
 import { SolvingStepByStep } from "./SolvingStepByStep.tsx";
 import { SolveMode } from "../../utils/Constants.tsx";
+import { useEffect } from "react";
+import { createBoard, convertToPieces } from "../../utils/logic.tsx";
+
+// Default values for initial board
+const DEFAULT_SOLVER_SIZE = 4;
+const DEFAULT_SOLVER_COLORS = 8;
 
 export const Solver = () => {
-  const board = useRecoilValue(boardState);
+  const [board, setBoard] = useRecoilState(boardState);
   const [solveMode] = useRecoilState(solveModeState);
   const hints = useRecoilValue(hintsState);
+  const [settings, setSettings] = useRecoilState(settingsState);
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
+
+  // Initialize board when component mounts
+  useEffect(() => {
+    if (board.length === 0) {
+      // Create board with our custom defaults
+      const newBoard = convertToPieces(createBoard(DEFAULT_SOLVER_SIZE, DEFAULT_SOLVER_COLORS));
+      setBoard(newBoard);
+      
+      // Update settings to match the default board
+      setSettings({
+        ...settings,
+        boardSize: DEFAULT_SOLVER_SIZE,
+        boardColors: DEFAULT_SOLVER_COLORS,
+      });
+    }
+  }, []);
 
   return (
     <Box 

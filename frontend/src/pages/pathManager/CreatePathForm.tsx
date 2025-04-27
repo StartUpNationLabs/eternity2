@@ -118,7 +118,7 @@ export const CreatePathForm = () => {
         setShowSuccessMessage(true);
     };
 
-    const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    const handleCloseSnackbar = (_event: React.SyntheticEvent | Event, reason: string) => {
         if (reason === 'clickaway') {
             return;
         }
@@ -248,7 +248,7 @@ export const CreatePathForm = () => {
                 onClose={handleCloseSnackbar}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
-                <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+                <Alert onClose={() => setShowSuccessMessage(false)} severity="success" sx={{ width: '100%' }}>
                     Path has been saved successfully
                 </Alert>
             </Snackbar>
