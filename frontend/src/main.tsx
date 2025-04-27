@@ -8,6 +8,7 @@ import { RecoilRoot } from "recoil";
 import { Solver } from "./pages/solver/Solver.tsx";
 import PathManager from "./pages/pathManager/PathManager.tsx";
 import DoItYourself from "./pages/doItYourself/DoItYourself.tsx";
+import HomePage from "./pages/home/HomePage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -16,15 +17,19 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <HomePage />,
+      },
+      {
+        path: "diy",
+        element: <DoItYourself />,
+      },
+      {
+        path: "solver",
         element: <Solver />,
       },
       {
         path: "path",
         element: <PathManager />,
-      },
-      {
-        path: "diy",
-        element: <DoItYourself />,
       },
     ],
   },

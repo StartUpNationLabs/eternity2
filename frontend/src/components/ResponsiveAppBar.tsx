@@ -17,16 +17,16 @@ const pages: {
     href: string;
 }[] = [
     {
-        title: "Path Creator",
-        href: "/path",
+        title: "Do It Yourself",
+        href: "/diy",
     },
     {
         title: "Solver",
-        href: "/",
+        href: "/solver",
     },
     {
-        title: "Do It Yourself",
-        href: "/diy",
+        title: "Path Creator",
+        href: "/path",
     },
 ];
 
