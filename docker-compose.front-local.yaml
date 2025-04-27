@@ -20,7 +20,7 @@ services:
       context: frontend
       dockerfile: Dockerfile
     ports:
-      - "82:80"
+      - "80:80"
     environment:
       - SERVER_BASE_URL=http://localhost:50052
     networks:
