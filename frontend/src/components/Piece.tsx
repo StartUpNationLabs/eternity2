@@ -9,11 +9,28 @@ function getSVG(pattern: EternityPattern, rotation: Rotation) {
     return (
         <g>
             <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="100%"
-                 viewBox="-128 -128 256 256">
+                 viewBox="-128 -128 256 256" preserveAspectRatio="none"
+                 style={{
+                     display: "block",
+                     position: "absolute",
+                     top: 0,
+                     left: 0,
+                     width: "100%",
+                     height: "100%",
+                     imageRendering: "pixelated",
+                 }}>
                 <polygon points="-128,-128 0,0 -128,128" fill={pattern.svg.bg_color}
-                         stroke={pattern.svg.bg_stroke} transform={`rotate(${angle}, 0, 0)`}/>
+                         stroke="none" strokeWidth="0" transform={`rotate(${angle}, 0, 0)`}
+                         style={{ 
+                             shapeRendering: "geometricPrecision",
+                             imageRendering: "pixelated",
+                         }}/>
                 <path d={pattern.svg.path} fill={pattern.svg.path_color}
-                      stroke={pattern.svg.path_stroke} transform={`rotate(${angle}, 0, 0)`}/>
+                      stroke="none" strokeWidth="0" transform={`rotate(${angle}, 0, 0)`}
+                      style={{ 
+                          shapeRendering: "geometricPrecision",
+                          imageRendering: "pixelated",
+                      }}/>
             </svg>
         </g>
     )
@@ -73,8 +90,22 @@ const Piece = (props: RotatedPiece) => {
             width: "100%",
             height: "100%",
             aspectRatio: 1,
+            overflow: "hidden",
+            fontSize: 0,
+            lineHeight: 0,
+            imageRendering: "pixelated",
         }}>
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256" style={{position: "absolute"}}>
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256" 
+                 style={{
+                     position: "absolute",
+                     width: "100%",
+                     height: "100%",
+                     display: "block",
+                     top: 0,
+                     left: 0,
+                     shapeRendering: "geometricPrecision",
+                     imageRendering: "pixelated",
+                 }}>
                 {getSVG(topPattern, rotation)}
                 {getSVG(rightPattern, rotation)}
                 {getSVG(bottomPattern, rotation)}

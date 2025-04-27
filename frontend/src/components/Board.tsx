@@ -14,26 +14,43 @@ const Board: FC<BoardProps> = (props: BoardProps) => {
     const boardSize = Math.sqrt(props.pieces.length);
 
     return (
-        <div>
+        <div style={{
+            width: "100%",
+            aspectRatio: 1,
+            lineHeight: 0,
+            backgroundColor: "#808080",
+        }}>
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: `repeat(${boardSize}, 1fr)`,
-                    gridTemplateRows: `repeat(${boardSize}, 1fr)`,
+                    gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${boardSize}, minmax(0, 1fr))`,
+                    gap: 0,
+                    width: "100%",
+                    height: "100%",
+                    fontSize: 0,
+                    lineHeight: 0,
                 }}
             >
                 {props.pieces.map((rotatedPiece, index) => {
-                    // Convert index to x, y
                     const x = index % boardSize;
                     const y = Math.floor(index / boardSize);
-
-                    // Check if the current piece index is in the hints array
                     const isHint = props.hints?.some(hint => hint.x === x && hint.y === y);
 
                     return (
                         <div style={{
-                            // Apply inner border if the piece is in the hint
-                            border: isHint ? '6px solid #000000' : undefined
+                            border: isHint ? '6px solid #000000' : undefined,
+                            width: "100%",
+                            height: "100%",
+                            padding: 0,
+                            margin: 0,
+                            overflow: "hidden",
+                            fontSize: 0,
+                            lineHeight: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            position: "relative",
                         }}
                              key={index}
                         >
