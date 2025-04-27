@@ -1,12 +1,20 @@
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Autocomplete,
+  Box,
   Checkbox,
+  FormControl,
   FormGroup,
+  FormLabel,
   Slider,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import Button from "@mui/material/Button";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { useRecoilState, useRecoilValue } from "recoil";
 import {
@@ -225,143 +233,63 @@ export const RequestForm = () => {
   };
 
   return (
-    <>
-      <FormGroup
-        style={{
-          padding: 10,
-          width: "100%",
-        }}
-      >
-        <h2>Board Generation</h2>
-
-        {
-          // ======= BOARD SIZE SLIDER ======= //
-        }
-
-        <Typography id="input-slider-size" gutterBottom>
-          Board size
+    <Stack spacing={4}>
+      {/* Essential Controls */}
+      <Box>
+        <FormControl fullWidth>
+          <Stack spacing={3}>
+            <Box>
+              <Typography 
+                variant="subtitle2" 
+                gutterBottom
+                sx={{ color: 'text.secondary', mb: 1 }}
+              >
+                Board Size
         </Typography>
         <Slider
-          defaultValue={BOARD_SIZE_DEFAULT}
+                value={settings.boardSize}
+                onChange={handleBoardSizeChange}
           min={BOARD_SIZE_MIN}
           max={BOARD_SIZE_MAX}
-          value={settings.boardSize}
-          onChange={(event, v) => {
-            handleBoardSizeChange(event, v);
-          }}
-          marks
-          step={BOARD_SIZE_STEP}
-          aria-labelledby={"input-slider-size"}
-          valueLabelDisplay="on"
-          size="small"
-        />
+                step={BOARD_SIZE_STEP}
+                marks
+                valueLabelDisplay="auto"
+                sx={{ 
+                  '& .MuiSlider-markLabel': {
+                    color: 'text.secondary',
+                  }
+                }}
+              />
+            </Box>
 
-        {
-          // ======= BOARD COLOR SLIDER ======= //
-        }
-
-        <Typography id="input-slider-colors" gutterBottom>
+            <Box>
+              <Typography 
+                variant="subtitle2" 
+                gutterBottom
+                sx={{ color: 'text.secondary', mb: 1 }}
+              >
           Number of Colors
         </Typography>
         <Slider
-          defaultValue={BOARD_COLOR_DEFAULT}
+                value={settings.boardColors}
+                onChange={handleBoardColorChange}
           min={BOARD_COLOR_MIN}
           max={BOARD_COLOR_MAX}
-          value={settings.boardColors}
-          onChange={(event: Event, v) => {
-            handleBoardColorChange(event, v);
-          }}
+                step={BOARD_COLOR_STEP}
           marks
-          step={BOARD_COLOR_STEP}
-          aria-labelledby={"input-slider-colors"}
-          valueLabelDisplay="on"
-          size="small"
-        />
-      </FormGroup>
-
-      {
-        // ======= SELECT EXISTING BOARD ======= //
-      }
-
-      <div
-        style={{
-          width: "80%",
-        }}
-      >
-        <FormGroup>
-          <Autocomplete
-            id="boards"
-            disablePortal
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="standard"
-                label="Available Boards"
-                placeholder="Board Name"
+                valueLabelDisplay="auto"
+                sx={{ 
+                  '& .MuiSlider-markLabel': {
+                    color: 'text.secondary',
+                  }
+                }}
               />
-            )}
-            options={boards}
-            value={selectedBoard}
-            getOptionLabel={(option) => option.label}
-            onChange={(event: React.SyntheticEvent, v) => {
-              if (v !== null) {
-                handleBoardChange(event, v);
-              }
-            }}
-          />
-        </FormGroup>
-      </div>
+            </Box>
 
-      {
-        // ======= SELECT EXISTING HINTS ======= //
-      }
-
-      <div
-        style={{
-          width: "80%",
-        }}
-      >
-        <FormGroup>
-          <Autocomplete
-            id="hints"
-            disablePortal
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="standard"
-                label="Available Hints"
-                placeholder="Hint Name"
-              />
-            )}
-            options={hintTemplatesOptions}
-            value={selectedHintsTemplate}
-            getOptionLabel={(option) => option.label}
-            onChange={(event: React.SyntheticEvent, v) => {
-              if (v !== null) {
-                handleBoardHintsChange(event, v);
-              }
-            }}
-          />
-        </FormGroup>
-      </div>
-
-      {
-        // Generate and shuffle buttons
-      }
-      <FormGroup
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          marginTop: 20,
-          marginBottom: 20,
-          gap: 20,
-        }}
-      >
+            {/* Action Buttons - Moved up */}
+            <Stack direction="row" spacing={2}>
         <Button
           variant="contained"
-          type="submit"
-          color="primary"
-          disabled={selectedBoard !== null}
           onClick={() => {
             const newBoard = convertToPieces(
               createBoard(settings.boardSize, settings.boardColors)
@@ -369,23 +297,24 @@ export const RequestForm = () => {
             setBoard(newBoard);
             setSelectedBoard(null);
           }}
+                sx={{
+                  flex: 1,
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
+                  },
+                }}
         >
           Generate
         </Button>
         <Button
-          variant="contained"
-          type="submit"
-          color="primary"
-          disabled={selectedBoard !== null}
+                variant="outlined"
           onClick={() => {
-            // Store the current board state before shuffling
             if (originalBoard === null) {
               setOriginalBoard([...board]);
             }
-
-            // Shuffle the board
             const newBoard = [...board];
-
             setBoard(
               suffleWHints(
                 originalBoard ?? newBoard,
@@ -393,7 +322,6 @@ export const RequestForm = () => {
               )
             );
             setSelectedBoard(null);
-            // hints on change
             if (selectedHintsTemplate) {
               handleBoardHintsChange(
                 {} as React.SyntheticEvent,
@@ -401,205 +329,374 @@ export const RequestForm = () => {
               );
             }
           }}
+                sx={{
+                  flex: 1,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    bgcolor: 'action.hover',
+                  },
+                }}
         >
           Shuffle
         </Button>
         <Button
-          variant="contained"
-          type="submit"
-          color="primary"
-          disabled={originalBoard === null}
+                variant="outlined"
           onClick={() => {
-            // Set the board state to the stored original board
             if (originalBoard !== null) {
               setBoard(originalBoard);
               setOriginalBoard(null);
             }
           }}
+                disabled={!originalBoard}
+                sx={{
+                  flex: 1,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    bgcolor: 'action.hover',
+                  },
+                  '&.Mui-disabled': {
+                    borderColor: 'action.disabled',
+                    color: 'action.disabled',
+                  },
+                }}
         >
           Unshuffle
         </Button>
-      </FormGroup>
+            </Stack>
 
-      <FormGroup
-        style={{
-          padding: 10,
-          width: "100%",
+            {/* Solve Buttons - Moved up */}
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  abortController.abortController.abort();
+                  abortController.abortController = new AbortController();
+                  if (selectedHintsTemplate) {
+                    handleBoardHintsChange(
+                      {} as React.SyntheticEvent,
+                      selectedHintsTemplate
+                    );
+                  }
+                  setSolving(true);
+                  setSolveMode(SolveMode.normal);
+                }}
+                sx={{
+                  flex: 1,
+                  bgcolor: 'secondary.main',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'secondary.dark',
+                  },
+                }}
+              >
+                Solve
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  abortController.abortController.abort();
+                  abortController.abortController = new AbortController();
+                  setSolving(true);
+                  setSolveMode(SolveMode.stepByStep);
+                  setSolvingStepByStep(true);
+                }}
+                sx={{
+                  flex: 1,
+                  bgcolor: 'secondary.main',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'secondary.dark',
+                  },
+                }}
+              >
+                Step By Step
+              </Button>
+            </Stack>
+          </Stack>
+        </FormControl>
+      </Box>
+
+      {/* Advanced Settings Accordion */}
+      <Accordion 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'transparent',
+          '&:before': { display: 'none' },
         }}
       >
-        <h2>Solver</h2>
-        <FormGroup>
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{
+            px: 0,
+            '& .MuiAccordionSummary-content': {
+              my: 0,
+            },
+          }}
+        >
+          <Typography 
+            variant="subtitle1"
+            sx={{ 
+              fontWeight: 600,
+              color: 'text.primary',
+            }}
+          >
+            Advanced Settings
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0, pt: 0 }}>
+          <Stack spacing={4}>
+            {/* Board Configuration */}
+            <Box>
+              <FormControl fullWidth>
+                <FormLabel 
+                  sx={{ 
+                    mb: 2,
+                    color: 'text.primary',
+                    '&.Mui-focused': {
+                      color: 'text.primary',
+                    }
+                  }}
+                >
+                  Additional Board Options
+                </FormLabel>
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Available Boards
+                    </Typography>
+                    <Autocomplete
+                      value={selectedBoard}
+                      onChange={handleBoardChange}
+                      options={boards}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select a board"
+                          size="small"
+                        />
+                      )}
+                      sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'background.paper',
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Available Hints
+                    </Typography>
           <Autocomplete
-            id="paths"
+                      value={selectedHintsTemplate}
+                      onChange={handleBoardHintsChange}
+                      options={hintTemplatesOptions}
+                      getOptionLabel={(option) => option.label}
             renderInput={(params) => (
               <TextField
                 {...params}
-                variant="standard"
-                label="Paths"
-                placeholder="Paths"
-              />
-            )}
-            options={pathOptions}
+                          placeholder="Select hints"
+                          size="small"
+                        />
+                      )}
+                      sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'background.paper',
+                        }
+                      }}
+                    />
+                  </Box>
+                </Stack>
+              </FormControl>
+            </Box>
+
+            {/* Solver Settings */}
+            <Box>
+              <FormControl fullWidth>
+                <FormLabel 
+                  sx={{ 
+                    mb: 2,
+                    color: 'text.primary',
+                    '&.Mui-focused': {
+                      color: 'text.primary',
+                    }
+                  }}
+                >
+                  Solver Settings
+                </FormLabel>
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Path
+                    </Typography>
+                    <Autocomplete
             value={settings.path}
             onChange={(_, v) => {
               if (v) {
                 setSettings({ ...settings, path: v });
-                // TODO: from where the fuck do i get hints ?
-                // setHints(v.hints);
-              }
-            }}
-            isOptionEqualToValue={(option: Path, value: Path) => {
-              return (
-                option.label === value.label &&
-                option.path.length === value.path.length
-              );
-            }}
-            style={{
-              padding: 10,
-            }}
-          ></Autocomplete>
-          <Typography id="input-slider-hash-threshold" gutterBottom>
+                        }
+                      }}
+                      options={pathOptions}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select a path"
+                          size="small"
+                        />
+                      )}
+                      sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'background.paper',
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
             Hash Threshold
           </Typography>
           <Slider
-            defaultValue={HASH_THRESHOLD_DEFAULT}
-            min={HASH_THRESHOLD_MIN}
-            max={HASH_THRESHOLD_MAX}
             value={settings.hashThreshold}
             onChange={(_, v) =>
               setSettings({ ...settings, hashThreshold: v as number })
             }
+                      min={HASH_THRESHOLD_MIN}
+                      max={HASH_THRESHOLD_MAX}
+                      step={HASH_THRESHOLD_STEP}
             marks
-            step={HASH_THRESHOLD_STEP}
-            aria-labelledby={"input-slider-hash-threshold"}
-            valueLabelDisplay="on"
-            size="small"
-          />
-          <Typography id="input-slider-wait-time" gutterBottom>
-            Wait Time
+                      valueLabelDisplay="auto"
+                      sx={{ 
+                        '& .MuiSlider-markLabel': {
+                          color: 'text.secondary',
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Wait Time (ms)
           </Typography>
           <Slider
-            defaultValue={WAIT_TIME_DEFAULT}
-            min={WAIT_TIME_MIN}
-            max={WAIT_TIME_MAX}
             value={settings.waitTime}
             onChange={(_, v) =>
               setSettings({ ...settings, waitTime: v as number })
             }
+                      min={WAIT_TIME_MIN}
+                      max={WAIT_TIME_MAX}
+                      step={WAIT_TIME_STEP}
             marks
-            step={WAIT_TIME_STEP}
-            aria-labelledby={"input-slider-wait-time"}
-            valueLabelDisplay="on"
-            size="small"
-          />
-          <Typography id="input-slider-cache-pull-interval" gutterBottom>
-            Cache Pull Interval
+                      valueLabelDisplay="auto"
+                      sx={{ 
+                        '& .MuiSlider-markLabel': {
+                          color: 'text.secondary',
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Cache Pull Interval (s)
           </Typography>
           <Slider
-            defaultValue={CACHE_PULL_INTERVAL_DEFAULT}
-            min={CACHE_PULL_INTERVAL_MIN}
-            max={CACHE_PULL_INTERVAL_MAX}
             value={settings.cachePullInterval}
             onChange={(_, v) =>
               setSettings({ ...settings, cachePullInterval: v as number })
             }
+                      min={CACHE_PULL_INTERVAL_MIN}
+                      max={CACHE_PULL_INTERVAL_MAX}
+                      step={CACHE_PULL_INTERVAL_STEP}
             marks
-            step={CACHE_PULL_INTERVAL_STEP}
-            aria-labelledby={"input-slider-cache-pull-interval"}
-            valueLabelDisplay="on"
-            size="small"
-          />
-          <Typography id="input-slider-threads" gutterBottom>
+                      valueLabelDisplay="auto"
+                      sx={{ 
+                        '& .MuiSlider-markLabel': {
+                          color: 'text.secondary',
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
             Threads
           </Typography>
           <Slider
-            defaultValue={THREADS_DEFAULT}
-            min={THREADS_MIN}
-            max={THREADS_MAX}
             value={settings.threads}
             onChange={(_, v) =>
               setSettings({ ...settings, threads: v as number })
             }
+                      min={THREADS_MIN}
+                      max={THREADS_MAX}
+                      step={THREADS_STEP}
             marks
-            step={THREADS_STEP}
-            aria-labelledby={"input-slider-threads"}
-            valueLabelDisplay="on"
-            size="small"
-          />
-        </FormGroup>
-      </FormGroup>
+                      valueLabelDisplay="auto"
+                      sx={{ 
+                        '& .MuiSlider-markLabel': {
+                          color: 'text.secondary',
+                        }
+                      }}
+                    />
+                  </Box>
 
-      <FormGroup
-        style={{
-          padding: 10,
-          width: "100%",
-          display: "flex",
-          alignItems: "start",
-        }}
-      >
-        <h2>Options</h2>
-        <Container
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <Typography id={"use-cache"}>Use Cache</Typography>
+                  <FormGroup>
+                    <Stack direction="row" spacing={2} alignItems="center">
           <Checkbox
-            color="primary"
-            aria-labelledby={"use-cache"}
-            style={{
-              padding: 20,
-            }}
             checked={settings.useCache}
             onChange={(_, v) => setSettings({ ...settings, useCache: v })}
-          />
-        </Container>
+                        sx={{ 
+                          color: 'text.secondary',
+                          '&.Mui-checked': {
+                            color: 'primary.main',
+                          }
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Use Cache
+                      </Typography>
+                    </Stack>
       </FormGroup>
-      <FormGroup
-        style={{
-          padding: 20,
-          width: "100%",
-          flexDirection: "row",
-          display: "flex",
-          justifyContent: "center",
-          gap: 20,
-        }}
-      >
-        <Button
-          type="submit"
-          color="primary"
-          onClick={() => {
-            abortController.abortController.abort();
-            abortController.abortController = new AbortController();
-            if (selectedHintsTemplate) {
-              handleBoardHintsChange(
-                {} as React.SyntheticEvent,
-                selectedHintsTemplate
-              );
-              console.log("selected hints template", selectedHintsTemplate);
-            }
-            setSolving(true);
-            setSolveMode(SolveMode.normal);
-          }}
-        >
-          Solve
-        </Button>
-        <Button
-          type="submit"
-          color="primary"
-          onClick={() => {
-            abortController.abortController.abort();
-            abortController.abortController = new AbortController();
-            setSolving(true);
-            setSolveMode(SolveMode.stepByStep);
-            setSolvingStepByStep(true);
-          }}
-        >
-          Step By Step
-        </Button>
-      </FormGroup>
-    </>
+                </Stack>
+              </FormControl>
+            </Box>
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
+    </Stack>
   );
 };

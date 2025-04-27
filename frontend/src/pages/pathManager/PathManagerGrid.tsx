@@ -1,20 +1,18 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {useRecoilState} from "recoil";
 import {boardSizeState, hintCellsState, selectedCellsState} from "./atom.ts";
 import {calculateDirection, Movement, rankToColor} from "./utils.ts";
-
 
 function PathManagerGrid() {
     // States used to manage path manager
     const boardSize = useRecoilState(boardSizeState)[0];
     const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
-    const [hintCells, setHintCells] = useRecoilState(hintCellsState)
+    const [hintCells, setHintCells] = useRecoilState(hintCellsState);
 
     // States used to handle cell selection
-    const [isMouseDown, setIsMouseDown] = useState<boolean>(false); // State to track mouse button press
-    const [initialCellId, setInitialCellId] = useState<number | null>(null); // State to store initial cell id when mouse down
+    const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
+    const [initialCellId, setInitialCellId] = useState<number | null>(null);
     const [lastSelectedCellId, setLastSelectedCellId] = useState<number | null>(null);
-
 
     // Function to handle cell selection
     const handleCellClick = useCallback((id: number) => {
@@ -39,7 +37,6 @@ function PathManagerGrid() {
             }
         }
     }, [hintCells, isMouseDown, selectedCells, setSelectedCells]);
-
 
     // Function to handle cell right click
     const handleCellRightClick = (id: number) => {
@@ -110,19 +107,24 @@ function PathManagerGrid() {
         }
     };
 
+    const handleMouseUp = () => {
+        setIsMouseDown(false);
+        setInitialCellId(null);
+        setLastSelectedCellId(null);
+    };
+
     const renderGrid = () => {
         const cells = [];
 
         for (let i = 0; i < boardSize; i++) {
             for (let j = 0; j < boardSize; j++) {
-                const id = i * boardSize + j; // Calculate cell id
+                const id = i * boardSize + j;
                 const rank = selectedCells.indexOf(id);
-                cells.push(
-                    {
-                        id: id,
-                        rank: rank,
-                    }
-                );
+                
+                cells.push({
+                    id,
+                    rank,
+                });
             }
         }
 
@@ -140,79 +142,36 @@ function PathManagerGrid() {
                         <div
                             key={cell.id}
                             style={{
-                                backgroundColor: hintCells.includes(cell.id) ? 'green' : (cell.rank !== -1 ? rankToColor(boardSize, cell.rank) : '#9a9a9a'),
+                                backgroundColor: hintCells.includes(cell.id) 
+                                    ? 'green' 
+                                    : (cell.rank !== -1 
+                                        ? rankToColor(boardSize, cell.rank)
+                                        : '#9a9a9a'),
                                 display: 'flex',
-                                position: 'relative',
-                                width: '100%',
-                                height: '100%',
-                                aspectRatio: 1,
-                                boxShadow: "inset 0 0 0 1px black",
-                                cursor: "pointer",
-                                fontSize: "12px",
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                aspectRatio: '1/1',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                border: '1px solid #000',
                             }}
-                            onMouseDown={() => {
-                                handleCellClick(cell.id); // Handle single click
-                            }}
-                            onMouseEnter={() => {
-                                handleCellSelection(cell.id); // Handle click-and-drag selection
-                            }}
+                            onMouseDown={() => handleCellClick(cell.id)}
+                            onMouseEnter={() => handleCellSelection(cell.id)}
+                            onMouseUp={handleMouseUp}
                             onContextMenu={(e) => {
-                                e.preventDefault(); // Prevent the context menu from showing
-                                handleCellRightClick(cell.id); // Handle right click
+                                e.preventDefault();
+                                handleCellRightClick(cell.id);
                             }}
                         >
-                            {cell.rank !== -1 && <span style={{
-                                position: "absolute",
-                                top: "50%",
-                                left: "50%",
-                                transform: "translate(-50%, -50%)",
-                                userSelect: "none"
-                            }}>{cell.rank}</span>}
+                            {cell.rank !== -1 && cell.rank + 1}
                         </div>
                     ))}
                 </div>
-
             </div>
         );
-    }
+    };
 
-    useEffect(() => {
-        // Add event listeners when component mounts
-        const handleMouseUp = () => {
-            if (isMouseDown && initialCellId === lastSelectedCellId) {
-                // Treat as single click if mouse didn't move
-                if (initialCellId !== null) {
-                    handleCellClick(initialCellId);
-                }
-            }
-            setIsMouseDown(false);
-            // Variables used for click-and-drag selection
-            setInitialCellId(null);
-            setLastSelectedCellId(null);
-        };
-
-        window.addEventListener('mouseup', handleMouseUp);
-
-        // Cleanup event listeners when component unmounts
-        return () => {
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isMouseDown, initialCellId, lastSelectedCellId, handleCellClick]);
-
-    return (
-        <div>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                height: '100%',
-                margin: 'auto',
-            }}>
-                {renderGrid()}
-            </div>
-        </div>
-    );
+    return renderGrid();
 }
 
 export default PathManagerGrid;

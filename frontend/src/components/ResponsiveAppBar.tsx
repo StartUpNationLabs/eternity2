@@ -10,7 +10,7 @@ import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import ExtensionIcon from "@mui/icons-material/Extension";
-import {Link} from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const pages: {
     title: string;
@@ -19,16 +19,16 @@ const pages: {
     {
         title: "Path Creator",
         href: "/path",
-    }, {
+    },
+    {
         title: "Solver",
         href: "/",
     },
 ];
 
 function ResponsiveAppBar() {
-    const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
-        null
-    );
+    const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
+    const location = useLocation();
 
     const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElNav(event.currentTarget);
@@ -39,40 +39,56 @@ function ResponsiveAppBar() {
     };
 
     return (
-        <AppBar
-            position="sticky"
-            style={{height: "10vh", display: "flex", justifyContent: "center"}}
+        <AppBar 
+            position="sticky" 
+            elevation={0}
+            sx={{
+                height: "64px",
+                bgcolor: 'background.paper',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+            }}
         >
             <Container maxWidth="xl">
-                <Toolbar disableGutters>
-                    <ExtensionIcon sx={{display: {xs: "none", md: "flex"}, mr: 1}}/>
+                <Toolbar disableGutters sx={{ height: '100%' }}>
+                    <ExtensionIcon 
+                        sx={{ 
+                            display: { xs: "none", md: "flex" }, 
+                            mr: 1,
+                            color: 'primary.main'
+                        }}
+                    />
                     <Typography
                         variant="h6"
                         noWrap
-                        component="a"
+                        component={Link}
+                        to="/"
                         sx={{
-                            mr: 2,
-                            display: {xs: "none", md: "flex"},
+                            mr: 4,
+                            display: { xs: "none", md: "flex" },
                             fontFamily: "monospace",
                             fontWeight: 700,
-                            letterSpacing: ".3rem",
-                            color: "inherit",
+                            letterSpacing: ".2rem",
+                            color: 'text.primary',
                             textDecoration: "none",
+                            '&:hover': {
+                                color: 'primary.main',
+                            },
                         }}
                     >
                         Eternity II
                     </Typography>
 
-                    <Box sx={{flexGrow: 1, display: {xs: "flex", md: "none"}}}>
+                    <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
                         <IconButton
                             size="large"
-                            aria-label="account of current user"
+                            aria-label="navigation menu"
                             aria-controls="menu-appbar"
                             aria-haspopup="true"
                             onClick={handleOpenNavMenu}
-                            color="inherit"
+                            sx={{ color: 'text.primary' }}
                         >
-                            <MenuIcon/>
+                            <MenuIcon />
                         </IconButton>
                         <Menu
                             id="menu-appbar"
@@ -89,43 +105,64 @@ function ResponsiveAppBar() {
                             open={Boolean(anchorElNav)}
                             onClose={handleCloseNavMenu}
                             sx={{
-                                display: {xs: "block", md: "none"},
+                                display: { xs: "block", md: "none" },
                             }}
                         >
                             {pages.map((page) => (
-                                <MenuItem key={page.title} onClick={handleCloseNavMenu}>
+                                <MenuItem 
+                                    key={page.title} 
+                                    onClick={handleCloseNavMenu}
+                                    component={Link}
+                                    to={page.href}
+                                    selected={location.pathname === page.href}
+                                >
                                     <Typography textAlign="center">{page.title}</Typography>
                                 </MenuItem>
                             ))}
                         </Menu>
                     </Box>
-                    <ExtensionIcon sx={{display: {xs: "flex", md: "none"}, mr: 1}}/>
+
+                    <ExtensionIcon sx={{ 
+                        display: { xs: "flex", md: "none" }, 
+                        mr: 1,
+                        color: 'primary.main'
+                    }}/>
                     <Typography
                         variant="h5"
                         noWrap
-                        component="a"
-                        href="/"
+                        component={Link}
+                        to="/"
                         sx={{
                             mr: 2,
-                            display: {xs: "flex", md: "none"},
+                            display: { xs: "flex", md: "none" },
                             flexGrow: 1,
                             fontFamily: "monospace",
                             fontWeight: 700,
-                            letterSpacing: ".3rem",
-                            color: "inherit",
+                            letterSpacing: ".2rem",
+                            color: 'text.primary',
                             textDecoration: "none",
+                            '&:hover': {
+                                color: 'primary.main',
+                            },
                         }}
                     >
                         Eternity II
                     </Typography>
-                    <Box sx={{flexGrow: 1, display: {xs: "none", md: "flex"}}}>
+
+                    <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
                         {pages.map((page) => (
                             <Button
                                 key={page.title}
-                                onClick={handleCloseNavMenu}
-                                sx={{my: 2, color: "white", display: "block"}}
                                 component={Link}
                                 to={page.href}
+                                sx={{
+                                    mx: 1,
+                                    color: location.pathname === page.href ? 'primary.main' : 'text.primary',
+                                    fontWeight: location.pathname === page.href ? 600 : 400,
+                                    '&:hover': {
+                                        bgcolor: 'action.hover',
+                                    },
+                                }}
                             >
                                 {page.title}
                             </Button>

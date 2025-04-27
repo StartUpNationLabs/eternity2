@@ -1,12 +1,19 @@
 import * as React from 'react';
 import {hintTemplatesState, pathsState} from "../requestForm/atoms.ts";
-import {FormGroup, Slider, TextField, Typography} from "@mui/material";
+import {FormGroup, Slider, TextField, Typography, Paper} from "@mui/material";
 import {useRecoilState} from "recoil";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import {boardSizeState, DEFAULT_SELECTED_CELLS, hintCellsState, selectedCellsState} from "./atom.ts";
 import {convertSelectedCellsToPath} from "./utils.ts"
 import {BOARD_SIZE_DEFAULT, BOARD_SIZE_MAX, BOARD_SIZE_MIN, BOARD_SIZE_STEP} from "../../utils/Constants.tsx";
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useCallback, useState } from 'react';
+import { calculateCellDelay } from "./animation.ts";
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import MouseIcon from '@mui/icons-material/Mouse';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 export const CreatePathForm = () => {
     // Available paths on the website
@@ -21,6 +28,12 @@ export const CreatePathForm = () => {
     const [boardSize, setBoardSize] = useRecoilState(boardSizeState);
     const [selectedCells, setSelectedCells] = useRecoilState(selectedCellsState);
     const [hintCells, setHintCells] = useRecoilState(hintCellsState);
+
+    // Animation states
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [animationTimeout, setAnimationTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [animatingCells, setAnimatingCells] = useState<number[]>([]);
+    const [originalCells, setOriginalCells] = useState<number[]>([]);
 
     // ===== Reset ==== //
 
@@ -37,8 +50,60 @@ export const CreatePathForm = () => {
         resetHintCells();
     }
 
+    // ===== Animation ==== //
+    const startAnimation = useCallback(() => {
+        if (selectedCells.length <= 1 || isAnimating) return;
+
+        setIsAnimating(true);
+        // Store the original path without DEFAULT_SELECTED_CELLS
+        const pathToAnimate = selectedCells.filter(cell => !DEFAULT_SELECTED_CELLS.includes(cell));
+        let currentIndex = 0;
+
+        const delay = calculateCellDelay(pathToAnimate.length);
+
+        const animate = () => {
+            if (currentIndex < pathToAnimate.length) {
+                // Show cells up to the current index
+                const animatedPath = pathToAnimate.slice(0, currentIndex + 1);
+                setSelectedCells([...DEFAULT_SELECTED_CELLS, ...animatedPath]);
+                
+                currentIndex++;
+                const timeout = setTimeout(animate, delay);
+                setAnimationTimeout(timeout);
+            } else {
+                setIsAnimating(false);
+                setAnimationTimeout(null);
+            }
+        };
+
+        animate();
+    }, [selectedCells, isAnimating, setSelectedCells]);
+
+    const stopAnimation = useCallback(() => {
+        if (animationTimeout) {
+            clearTimeout(animationTimeout);
+        }
+        setIsAnimating(false);
+        setAnimationTimeout(null);
+    }, [animationTimeout]);
+
+    // Cleanup animation on unmount
+    React.useEffect(() => {
+        return () => {
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+            }
+        };
+    }, [animationTimeout]);
+
+    // Update selected cells during animation
+    React.useEffect(() => {
+        if (isAnimating && animatingCells.length > 0) {
+            setSelectedCells(animatingCells);
+        }
+    }, [animatingCells, isAnimating, setSelectedCells]);
+
     // ===== Path ==== //
-    console.log(hints);
 
     const handlePathNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setPathName(event.target.value);
@@ -50,10 +115,12 @@ export const CreatePathForm = () => {
             paths.some(path => path.label === pathName && path.path.length === boardSize ** 2);
     };
 
+    const isAnimateDisabled = () => {
+        return selectedCells.length <= 1 || isAnimating;
+    };
+
     const handleSavePath = () => {
         const hintsIndex = hintCells.length > 0 ? hintCells : [];
-
-        // Create hint objects from the hint cells
 
         setPaths([...paths, {
             path: convertSelectedCellsToPath(selectedCells),
@@ -67,9 +134,14 @@ export const CreatePathForm = () => {
         resetGrid();
         setPathName('');
 
-        // Show the success message and hide it after 3 seconds
         setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 3000);
+    };
+
+    const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setShowSuccessMessage(false);
     };
 
     // ===== Render ==== //
@@ -99,6 +171,31 @@ export const CreatePathForm = () => {
                 valueLabelDisplay="on"
                 sx={{ mb: 3 }}
             />
+
+            {/* Help Section */}
+            <Paper elevation={1} sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <HelpOutlineIcon sx={{ mr: 1 }} />
+                    <Typography variant="h6" component="h2">
+                        How to Create a Path
+                    </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Typography variant="body2">
+                        <strong>Left Click:</strong> Select a cell to add it to your path
+                    </Typography>
+                    <Typography variant="body2">
+                        <strong>Left Click + Drag:</strong> Select multiple cells in a line
+                    </Typography>
+                    <Typography variant="body2">
+                        <strong>Right Click:</strong> Mark a cell as a hint (turns green)
+                    </Typography>
+                    <Typography variant="body2">
+                        <strong>Right Click Again:</strong> Remove hint from a cell
+                    </Typography>
+                </Box>
+            </Paper>
+
             <TextField 
                 id="path-name-input" 
                 label="Path Name" 
@@ -119,46 +216,62 @@ export const CreatePathForm = () => {
                     width: '100%'
                 }}>
                     <Button 
-                        variant="outlined" 
+                        variant="contained"
                         color="error" 
                         onClick={resetGrid}
-                        sx={{ flex: 1 }}
+                        sx={{ 
+                            flex: 1,
+                            bgcolor: 'error.main',
+                            '&:hover': {
+                                bgcolor: 'error.dark',
+                            }
+                        }}
                     >
                         Reset path
                     </Button>
                     <Button 
-                        variant="outlined" 
-                        disabled={true}
-                        sx={{ flex: 1 }}
+                        variant="contained"
+                        color="primary"
+                        onClick={startAnimation}
+                        disabled={isAnimateDisabled()}
+                        startIcon={<PlayArrowIcon />}
+                        sx={{ 
+                            flex: 1,
+                            bgcolor: 'primary.main',
+                            '&:hover': {
+                                bgcolor: 'primary.dark',
+                            }
+                        }}
                     >
-                        Animate path (TODO)
+                        Animate path
                     </Button>
                     <Button 
                         variant="contained" 
                         color="success" 
                         disabled={isSavePathDisabled()}
                         onClick={handleSavePath}
-                        sx={{ flex: 1 }}
+                        sx={{ 
+                            flex: 1,
+                            bgcolor: 'success.main',
+                            '&:hover': {
+                                bgcolor: 'success.dark',
+                            }
+                        }}
                     >
                         Save path
                     </Button>
                 </Box>
             </Box>
-            <Box sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                width: '100%'
-            }}>
-                {showSuccessMessage ? (
-                    <Typography variant="body2" color="success">
-                        Path has been saved successfully.
-                    </Typography>
-                ) : isSavePathDisabled() && (
-                    <Typography variant="body2" color="error">
-                        A new path must have a name and cover the full board in order to be saved.
-                    </Typography>
-                )}
-            </Box>
+            <Snackbar
+                open={showSuccessMessage}
+                autoHideDuration={3000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+                    Path has been saved successfully
+                </Alert>
+            </Snackbar>
         </FormGroup>
     );
 }

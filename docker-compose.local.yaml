@@ -17,7 +17,7 @@ services:
   frontend:
     container_name: frontend
     build:
-      context: react-frontend
+      context: frontend
       dockerfile: Dockerfile
     ports:
       - "82:80"
