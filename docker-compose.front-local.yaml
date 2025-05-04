@@ -9,6 +9,7 @@ services:
     image: ghcr.io/startupnationlabs/eternity2/envoy:latest
     environment:
       - SOLVER_API=grpc-server
+      - SOLVER_API_PORT=50051
     ports:
       - "50052:50052"
     networks:

@@ -58,4 +58,4 @@ static_resources:
                   address:
                     socket_address:
                       address: ${SOLVER_API}
-                      port_value: 50051
+                      port_value: ${SOLVER_API_PORT}
