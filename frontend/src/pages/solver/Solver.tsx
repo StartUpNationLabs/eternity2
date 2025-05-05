@@ -176,23 +176,24 @@ export const Solver = () => {
       </Grid>
 
       {/* Solving Section */}
-      {(solveMode === SolveMode.normal || solveMode === SolveMode.stepByStep) && (
-        <Box sx={{ pt: 1.5, px: 1.5 }}>
-          <Card 
-            elevation={0}
-            sx={{ 
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-              {solveMode === SolveMode.normal && <Solving />}
-              {solveMode === SolveMode.stepByStep && <SolvingStepByStep />}
-            </CardContent>
-          </Card>
-        </Box>
-      )}
+        <div id={'solving-section'}
+        >{(solveMode === SolveMode.normal || solveMode === SolveMode.stepByStep) && (
+            <Box sx={{pt: 1.5, px: 1.5}}>
+                <Card
+                    elevation={0}
+                    sx={{
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                    }}
+                >
+                    <CardContent sx={{p: 3, '&:last-child': {pb: 3}}}>
+                        {solveMode === SolveMode.normal && <Solving/>}
+                        {solveMode === SolveMode.stepByStep && <SolvingStepByStep/>}
+                    </CardContent>
+                </Card>
+            </Box>
+        )}</div>
     </Box>
   );
 };
