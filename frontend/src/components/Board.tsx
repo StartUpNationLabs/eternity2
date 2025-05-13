@@ -5,6 +5,7 @@ import Piece from "./Piece";
 interface BoardProps {
     pieces?: RotatedPiece[];
     hints?: Hint[];
+    showCuttingGuide?: boolean;
 }
 
 const Board: FC<BoardProps> = (props: BoardProps) => {
@@ -39,7 +40,8 @@ const Board: FC<BoardProps> = (props: BoardProps) => {
 
                     return (
                         <div style={{
-                            border: isHint ? '6px solid #000000' : undefined,
+                            border: props.showCuttingGuide ? '2px solid #000' : (isHint ? '6px solid #000000' : undefined),
+                            boxSizing: 'border-box',
                             width: "100%",
                             height: "100%",
                             padding: 0,
