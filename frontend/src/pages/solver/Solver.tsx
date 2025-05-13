@@ -1,7 +1,8 @@
+import React from "react";
 import { RequestForm } from "../requestForm/RequestForm.tsx";
 import { Piece } from "../../proto/solver/v1/solver.ts";
 import Board from "../../components/Board.tsx";
-import { Box, Card, CardContent, Grid, Typography, useTheme, useMediaQuery } from "@mui/material";
+import { Box, Card, CardContent, Grid, Typography, useTheme, useMediaQuery, Button } from "@mui/material";
 import { useRecoilState, useRecoilValue } from "recoil";
 import {
   boardState,
@@ -14,6 +15,7 @@ import { SolvingStepByStep } from "./SolvingStepByStep.tsx";
 import { SolveMode } from "../../utils/Constants.tsx";
 import { useEffect } from "react";
 import { createBoard, convertToPieces } from "../../utils/logic.tsx";
+import html2canvas from "html2canvas";
 
 // Default values for initial board
 const DEFAULT_SOLVER_SIZE = 4;
@@ -42,6 +44,49 @@ export const Solver = () => {
       });
     }
   }, []);
+
+  // Add a ref to the board container
+  const boardRef = React.useRef<HTMLDivElement>(null);
+  // Add a ref for the cutting guide board
+  const cuttingGuideRef = React.useRef<HTMLDivElement>(null);
+  const [exportingCuttingGuide, setExportingCuttingGuide] = React.useState(false);
+
+  // Function to handle export
+  const handleExportPNG = async () => {
+    if (boardRef.current) {
+      const canvas = await html2canvas(boardRef.current, {
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+        scale: 2,
+      });
+      const link = document.createElement("a");
+      link.download = "eternity2-board.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  };
+
+  // Function to handle export with cutting guide
+  const handleExportPNGWithGuide = async () => {
+    setExportingCuttingGuide(true);
+    // Wait for the next render
+    setTimeout(async () => {
+      if (cuttingGuideRef.current) {
+        const canvas = await html2canvas(cuttingGuideRef.current, {
+          backgroundColor: null,
+          useCORS: true,
+          logging: false,
+          scale: 2,
+        });
+        const link = document.createElement("a");
+        link.download = "eternity2-board-cutting-guide.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
+      setExportingCuttingGuide(false);
+    }, 50);
+  };
 
   return (
     <Box 
@@ -107,6 +152,7 @@ export const Solver = () => {
                 }}
               >
                 <Box
+                  ref={boardRef}
                   sx={{
                     width: 'min(100%, calc(100vh - 250px))',
                     aspectRatio: '1/1',
@@ -170,6 +216,29 @@ export const Solver = () => {
                 Board Generation
               </Typography>
               <RequestForm />
+              {/* Export to PNG Button */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2, gap: 2 }}>
+                <Button variant="contained" color="secondary" onClick={handleExportPNG}>
+                  Export to PNG
+                </Button>
+                <Button variant="contained" color="secondary" onClick={handleExportPNGWithGuide}>
+                  Export to PNG with cutting guide
+                </Button>
+              </Box>
+              {/* Hidden board for cutting guide export */}
+              {exportingCuttingGuide && (
+                <Box ref={cuttingGuideRef} sx={{ position: 'absolute', left: -9999, top: 0, width: '400px', height: '400px' }}>
+                  <Board
+                    hints={hints}
+                    pieces={board.map((piece: Piece) => ({
+                      piece: piece,
+                      index: 0,
+                      rotation: 0,
+                    }))}
+                    showCuttingGuide={true}
+                  />
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
