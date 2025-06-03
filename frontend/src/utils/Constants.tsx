@@ -44,18 +44,32 @@ export const SPIRAL_PATH_NAME = "Spiral";
 export const MULTI_SERVER_BASE_URLS = [];
 export let SERVER_BASE_URL: string = "http://localhost:50052";
 
-fetch("/env").then(
-    (response) => {
-        response.text().then((data) => {
-            SERVER_BASE_URL = data.split("=")[1];
+export let PREFIX: string = "";
+
+export async function loadEnv() {
+    try {
+        const response = await fetch("./env");
+        const data = await response.text();
+
+        // split lines by new line
+        const lines = data.split("\n");
+        // parse each line as a key=value pair
+        const environment: Record<string, string> = {};
+        lines.forEach((line) => {
+            const [key, value] = line.split("=");
+            if (key && value) {
+                environment[key.trim()] = value.trim();
+            }
         });
-    },
-    (error) => {
+
+        // Set the server base URL and prefix from the environment variables
+        SERVER_BASE_URL = environment["SERVER_BASE_URL"] || SERVER_BASE_URL;
+        PREFIX = environment["PREFIX"] || PREFIX;
+        console.log("Environment variables loaded:", environment);
+    } catch (error) {
         console.error("Failed to fetch /env: ", error);
-
     }
-);
-
+}
 /**
  * Directions for the pieces
  */

@@ -2,27 +2,42 @@ services:
   grpc-server:
     container_name: grpc-server
     image: ghcr.io/startupnationlabs/eternity2/grpc-server:latest
+    build:
+      context: api
+      dockerfile: Dockerfile
     networks:
       - eternity2
 
   envoy:
     image: ghcr.io/startupnationlabs/eternity2/envoy:latest
+    build:
+      context: envoy
+      dockerfile: Dockerfile
     environment:
       - SOLVER_API=grpc-server
       - SOLVER_API_PORT=50051
+      - NGINX_FRONTEND_PORT=80
+      - NGINX_FRONTEND=frontend
+      - SOLVER_API_PREFIX=${BASE_PREFIX:-/eternity2}/api/
+      - FRONTEND_PREFIX=${BASE_PREFIX:-/eternity2}/
     ports:
-      - "50052:50052"
+      - "80:50052"
+      - "9901:9901"
     networks:
       - eternity2
 
   frontend:
     container_name: frontend
     image: ghcr.io/startupnationlabs/eternity2/frontend:latest
-    ports:
-      - "80:80"
+    build:
+      context: frontend
+      dockerfile: Dockerfile
     environment:
       # SERVER_BASE_URL is the URL of the Envoy proxy from the frontend's perspective (client-side)
-      - SERVER_BASE_URL=http://localhost:50052
+      - SERVER_BASE_URL=${BASE_PREFIX:-/eternity2}/api
+      - PREFIX=${BASE_PREFIX:-/eternity2}
+    networks:
+      - eternity2
 
 networks:
   eternity2:
