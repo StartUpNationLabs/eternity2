@@ -1,0 +1,7 @@
+Puzzle: ../../puzzles/big/size_7_official_16e7fdba.csv
+  Boards analyzed: 117
+  Max pieces placed: 49
+  Hash hits: 0
+  Bloom filter hits: 0
+  Total time: 1.01 seconds
+  Status: Solved

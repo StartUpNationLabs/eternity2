@@ -1,0 +1,7 @@
+Puzzle: ../../puzzles/big/size_5_colors_9_14baa75b.csv
+  Boards analyzed: 213
+  Max pieces placed: 25
+  Hash hits: 0
+  Bloom filter hits: 0
+  Total time: 1.00 seconds
+  Status: Solved
