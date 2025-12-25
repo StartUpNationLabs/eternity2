@@ -106,7 +106,7 @@ auto solve_board_recursive(Board &board,
     // function to solve the board recursively
     // the function tries to place a piece at the given position and then calls itself for the next position
     // if the board is solved, the function returns true
-    log_board(board, format("Solving board at index: {}", index_to_string(index)));
+    log_board(board, eternity2::format("Solving board at index: {}", index_to_string(index)));
     shared_data.on_board_update(board);
     if (shared_data.stop)
     {
@@ -212,7 +212,7 @@ auto solve_board_recursive(Board &board,
             board_hash.pop_back();
         }
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_OFF
-        log_board(board, format("Backtracking at index: {}", index_to_string(index)));
+        log_board(board, eternity2::format("Backtracking at index: {}", index_to_string(index)));
 #endif
         remove_piece(board, index);
         shared_data.on_board_update(board);

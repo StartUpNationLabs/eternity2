@@ -20,7 +20,7 @@ TEST_CASE("Piece mask search", "[Pieces with 4 on the left]") {
     Query query = {start, mask, QueryType::POSITIVE};
     auto result = match_piece_mask(std::vector<Query>{query}, pieces);
     for (auto r: result) {
-        log_piece(r.piece, format("piece: {}", r.rotation));
+        log_piece(r.piece, eternity2::format("piece: {}", r.rotation));
         Piece rotated_piece = rotate_piece_right(r.piece, r.rotation);
         REQUIRE((rotated_piece & mask) == start);
     }
@@ -33,7 +33,7 @@ TEST_CASE("Piece mask search2", "[ID: 4 Pieces on Left and Down]") {
     Query query = {start, mask, QueryType::POSITIVE};
     auto result = match_piece_mask(std::vector<Query>{query}, pieces);
     for (const auto r: result) {
-        log_piece(r.piece, format("piece: {}", r.rotation));
+        log_piece(r.piece, eternity2::format("piece: {}", r.rotation));
         Piece rotated_piece = rotate_piece_right(r.piece, r.rotation);
         REQUIRE((rotated_piece & mask) == start);
     }
@@ -46,7 +46,7 @@ TEST_CASE("Piece mask search3", "[ID: 1 Pieces on Left and Down]") {
     Query query = {start, mask, QueryType::POSITIVE};
     auto result = match_piece_mask(std::vector<Query>{query}, pieces);
     for (const auto r: result) {
-        log_piece(r.piece, format("piece: {}", r.rotation));
+        log_piece(r.piece, eternity2::format("piece: {}", r.rotation));
         Piece rotated_piece = rotate_piece_right(r.piece, r.rotation);
         REQUIRE((rotated_piece & mask) == start);
     }

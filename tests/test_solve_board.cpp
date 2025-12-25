@@ -121,7 +121,7 @@ TEST_CASE("Solve Board")
         solve_board(board, pieces, shared_data);
         auto end                              = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
-        log_board(board, format("3x3 board solved in {} seconds", elapsed.count()));
+        log_board(board, eternity2::format("3x3 board solved in {} seconds", elapsed.count()));
         for (auto const &piece : board.board)
         {
             REQUIRE(piece.piece != 0);

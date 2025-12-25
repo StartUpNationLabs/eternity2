@@ -84,7 +84,7 @@ auto is_end(const Board &board, Index index) -> bool
 auto index_to_string(Index index) -> std::string
 {
     // function to convert the index to a string
-    return format("x: {}, y: {}", index.first, index.second);
+    return eternity2::format("x: {}, y: {}", index.first, index.second);
 }
 
 auto board_to_string(const Board &board) -> std::vector<std::string>

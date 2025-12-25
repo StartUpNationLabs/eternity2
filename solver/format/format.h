@@ -7,6 +7,8 @@
 
 #include <sstream>
 
+namespace eternity2 {
+
 template<typename T>
 void format_helper(std::ostringstream& oss,
                    std::string_view& str, const T& value)
@@ -27,5 +29,7 @@ std::string format(std::string_view str, Targs...args)
     oss << str;
     return oss.str();
 }
+
+} // namespace eternity2
 
 #endif //ETERNITY2_FORMAT_H

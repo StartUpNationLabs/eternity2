@@ -73,7 +73,7 @@ auto csv_piece(RotatedPiece piece) -> std::string
     // convert the piece to a csv string like this <first 16 bits>,<second 16 bits>,<third 16 bits>,<fourth 16 bits>
     Piece rpiece = apply_rotation(piece);
     std::bitset<64> bits(rpiece);
-    return format("{},{},{},{},{},{}",
+    return eternity2::format("{},{},{},{},{},{}",
                   bits.to_string().substr(0, 16),
                   bits.to_string().substr(16, 16),
                   bits.to_string().substr(32, 16),

@@ -56,11 +56,11 @@ auto piece_to_string(Piece piece) -> std::vector<std::string>
     const std::string s1 = s.substr(16, 16);
     const std::string s2 = s.substr(32, 16);
     const std::string s3 = s.substr(48, 16);
-    return {format("-----------------------------------------------------"),
-            format("|                 {}                  |", s0),
-            format("|  {}               {}  |", s3, s1),
-            format("|                 {}                  |", s2),
-            format("-----------------------------------------------------")};
+    return {eternity2::format("-----------------------------------------------------"),
+            eternity2::format("|                 {}                  |", s0),
+            eternity2::format("|  {}               {}  |", s3, s1),
+            eternity2::format("|                 {}                  |", s2),
+            eternity2::format("-----------------------------------------------------")};
 }
 
 void log_piece(Piece piece, const std::string &description)
