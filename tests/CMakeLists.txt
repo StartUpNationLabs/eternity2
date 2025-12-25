@@ -4,6 +4,7 @@ find_package(Catch2 CONFIG REQUIRED)
 add_executable(tests
         test_piece.cpp
         test_piece_search.cpp
+        test_query_semantics.cpp
         test_board.cpp
         test_piece_load.cpp
         test_solve_board.cpp
