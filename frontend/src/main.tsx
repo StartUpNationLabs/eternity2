@@ -10,6 +10,23 @@ import PathManager from "./pages/pathManager/PathManager.tsx";
 import DoItYourself from "./pages/doItYourself/DoItYourself.tsx";
 import HomePage from "./pages/home/HomePage.tsx";
 
+// Get base path from runtime environment (set by docker-entrypoint.sh)
+// This allows deployment under a path prefix (e.g., /eternity2)
+let basePath = "/";
+try {
+  const envResponse = await fetch("/env");
+  const envText = await envResponse.text();
+  const basepathMatch = envText.match(/BASE_PATH=(.+)/);
+  if (basepathMatch && basepathMatch[1]) {
+    basePath = basepathMatch[1];
+    // Ensure base path starts with / and ends with /
+    if (!basePath.startsWith("/")) basePath = "/" + basePath;
+    if (!basePath.endsWith("/")) basePath = basePath + "/";
+  }
+} catch (e) {
+  console.log("Using default base path:", basePath);
+}
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -33,7 +50,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-]);
+], { basename: basePath });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

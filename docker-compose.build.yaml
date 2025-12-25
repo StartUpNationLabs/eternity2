@@ -1,0 +1,57 @@
+# Docker Compose Configuration for Building from Source
+# This configuration builds all images from source code
+#
+# Usage:
+#   1. Build: docker compose -f docker-compose.build.yaml build
+#   2. Run: docker compose -f docker-compose.build.yaml up -d
+#
+# This is useful when you need to:
+# - Make modifications to the code
+# - Build your own images for a private registry
+# - Maintain full control over the build process
+
+services:
+  grpc-server:
+    container_name: grpc-server
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      args:
+        # Use cached base image to speed up builds
+        - BASE_IMAGE=${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/base:${DOCKER_TAG:-latest}
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/grpc-server:${DOCKER_TAG:-latest}
+    networks:
+      - eternity2
+
+  envoy:
+    build:
+      context: envoy
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/envoy:${DOCKER_TAG:-latest}
+    environment:
+      - SOLVER_API=grpc-server
+    ports:
+      - "${ENVOY_PORT:-50052}:50052"
+    networks:
+      - eternity2
+
+  frontend:
+    container_name: frontend
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+      args:
+        # Pass build-time environment variables
+        - BASE_PATH=${BASE_PATH:-}
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/frontend:${DOCKER_TAG:-latest}
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    environment:
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:50052}
+      - BASE_PATH=${BASE_PATH:-}
+    networks:
+      - eternity2
+
+networks:
+  eternity2:
+    driver: bridge

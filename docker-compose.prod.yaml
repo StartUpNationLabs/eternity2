@@ -1,0 +1,121 @@
+# Production Docker Compose Configuration
+# This configuration is designed for deployment behind a reverse proxy (Traefik)
+#
+# Usage:
+#   1. Copy .env.example to .env and configure for your environment
+#   2. Deploy: docker compose -f docker-compose.prod.yaml up -d
+#
+# Note: Ports are not exposed directly. The reverse proxy should route traffic
+# to the containers via Docker networks.
+
+services:
+  grpc-server:
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/grpc-server:${DOCKER_TAG:-latest}
+    container_name: eternity2-grpc-server
+    restart: unless-stopped
+    networks:
+      - eternity2-internal
+    # No ports exposed - internal service only
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  envoy:
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/envoy:${DOCKER_TAG:-latest}
+    container_name: eternity2-envoy
+    restart: unless-stopped
+    environment:
+      - SOLVER_API=${SOLVER_API:-grpc-server}
+    networks:
+      - eternity2-internal
+      - traefik-public
+    # Traefik labels for automatic configuration
+    labels:
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+
+      # HTTP Router configuration
+      - "traefik.http.routers.eternity2-api.rule=PathPrefix(`/eternity2-api`)"
+      - "traefik.http.routers.eternity2-api.entrypoints=websecure"
+      - "traefik.http.routers.eternity2-api.tls=true"
+      - "traefik.http.routers.eternity2-api.tls.certresolver=letsencrypt"
+
+      # Middleware to strip path prefix
+      - "traefik.http.middlewares.eternity2-api-strip.stripprefix.prefixes=/eternity2-api"
+      - "traefik.http.routers.eternity2-api.middlewares=eternity2-api-strip"
+
+      # Service configuration
+      - "traefik.http.services.eternity2-api.loadbalancer.server.port=50052"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9901/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/frontend:${DOCKER_TAG:-latest}
+    container_name: eternity2-frontend
+    restart: unless-stopped
+    environment:
+      # Configure for production deployment
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-https://terranumerica.fr/eternity2-api}
+      - BASE_PATH=${BASE_PATH:-/eternity2}
+    networks:
+      - eternity2-internal
+      - traefik-public
+    # Traefik labels for automatic configuration
+    labels:
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+
+      # HTTP Router configuration
+      - "traefik.http.routers.eternity2-frontend.rule=PathPrefix(`/eternity2`)"
+      - "traefik.http.routers.eternity2-frontend.entrypoints=websecure"
+      - "traefik.http.routers.eternity2-frontend.tls=true"
+      - "traefik.http.routers.eternity2-frontend.tls.certresolver=letsencrypt"
+
+      # Middleware to strip path prefix
+      - "traefik.http.middlewares.eternity2-frontend-strip.stripprefix.prefixes=/eternity2"
+      - "traefik.http.routers.eternity2-frontend.middlewares=eternity2-frontend-strip"
+
+      # Service configuration
+      - "traefik.http.services.eternity2-frontend.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  # Internal network for inter-service communication
+  eternity2-internal:
+    driver: bridge
+    internal: true
+
+  # External network for reverse proxy
+  # This network should already exist and be used by Traefik
+  traefik-public:
+    external: true
+
+# Note: If you want to build images from source instead of using pre-built images,
+# add build configurations:
+#
+# services:
+#   grpc-server:
+#     build:
+#       context: .
+#       dockerfile: api/Dockerfile
+#
+#   envoy:
+#     build:
+#       context: envoy
+#       dockerfile: Dockerfile
+#
+#   frontend:
+#     build:
+#       context: frontend
+#       dockerfile: Dockerfile

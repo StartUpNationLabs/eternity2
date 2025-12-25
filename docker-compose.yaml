@@ -2,11 +2,19 @@ services:
   grpc-server:
     container_name: grpc-server
     image: ghcr.io/startupnationlabs/eternity2/grpc-server:latest
+    # Uncomment 'build' section below to build from source instead of using pre-built image
+    # build:
+    #   context: .
+    #   dockerfile: api/Dockerfile
     networks:
       - eternity2
 
   envoy:
     image: ghcr.io/startupnationlabs/eternity2/envoy:latest
+    # Uncomment 'build' section below to build from source instead of using pre-built image
+    # build:
+    #   context: envoy
+    #   dockerfile: Dockerfile
     environment:
       - SOLVER_API=grpc-server
     ports:
@@ -17,11 +25,20 @@ services:
   frontend:
     container_name: frontend
     image: ghcr.io/startupnationlabs/eternity2/frontend:latest
+    # Uncomment 'build' section below to build from source instead of using pre-built image
+    # build:
+    #   context: frontend
+    #   dockerfile: Dockerfile
     ports:
       - "80:80"
     environment:
       # SERVER_BASE_URL is the URL of the Envoy proxy from the frontend's perspective (client-side)
       - SERVER_BASE_URL=http://localhost:50052
+      # BASE_PATH is the path prefix for deployment behind a reverse proxy (e.g., /eternity2)
+      # Leave empty or unset for root path deployment
+      - BASE_PATH=${BASE_PATH:-}
+    networks:
+      - eternity2
 
 networks:
   eternity2:
