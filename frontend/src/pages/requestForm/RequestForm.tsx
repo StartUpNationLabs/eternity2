@@ -277,45 +277,6 @@ export const RequestForm = () => {
               />
             </Box>
 
-            <Box>
-              <Typography 
-                variant="subtitle2" 
-                gutterBottom
-                sx={{ color: 'text.secondary', mb: 1 }}
-              >
-                Solver Version
-              </Typography>
-              <Autocomplete
-                value={settings.solverVersion === SolverVersion.V1 ? SolverVersion.V1 : SolverVersion.V2}
-                onChange={(_, v) => {
-                  if (v !== null) {
-                    setSettings({ 
-                      ...settings, 
-                      solverVersion: v 
-                    });
-                  }
-                }}
-                options={[SolverVersion.V1, SolverVersion.V2]}
-                getOptionLabel={(option) => {
-                  if (option === SolverVersion.V1) return "Solver V1 (Baseline)";
-                  if (option === SolverVersion.V2) return "Solver V2 (Optimized)";
-                  return "Unknown";
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="Select solver version"
-                    size="small"
-                  />
-                )}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'background.paper',
-                  }
-                }}
-              />
-            </Box>
-
             {/* Action Buttons - Moved up */}
             <Stack direction="row" spacing={2}>
         <Button
@@ -568,6 +529,45 @@ export const RequestForm = () => {
                   Solver Settings
                 </FormLabel>
                 <Stack spacing={3}>
+                  <Box>
+                    <Typography 
+                      variant="subtitle2" 
+                      gutterBottom
+                      sx={{ color: 'text.secondary', mb: 1 }}
+                    >
+                      Solver Version
+                    </Typography>
+                    <Autocomplete
+                      value={settings.solverVersion === SolverVersion.V1 ? SolverVersion.V1 : SolverVersion.V2}
+                      onChange={(_, v) => {
+                        if (v !== null) {
+                          setSettings({ 
+                            ...settings, 
+                            solverVersion: v 
+                          });
+                        }
+                      }}
+                      options={[SolverVersion.V1, SolverVersion.V2]}
+                      getOptionLabel={(option) => {
+                        if (option === SolverVersion.V1) return "Solver V1 (Baseline)";
+                        if (option === SolverVersion.V2) return "Solver V2 (Optimized)";
+                        return "Unknown";
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select solver version"
+                          size="small"
+                        />
+                      )}
+                      sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'background.paper',
+                        }
+                      }}
+                    />
+                  </Box>
+
                   <Box>
                     <Typography 
                       variant="subtitle2" 

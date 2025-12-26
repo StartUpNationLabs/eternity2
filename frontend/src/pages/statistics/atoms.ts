@@ -17,6 +17,7 @@ import {
   WAIT_TIME_DEFAULT,
 } from "../../utils/Constants.tsx";
 import { Board } from "../../utils/interface.tsx";
+import { SolverVersion } from "../../proto/solver/v1/solver.ts";
 
 export const isSolvingStatisticsState: RecoilState<boolean> = atom({
   key: "isSolvingStatisticsState",
@@ -38,6 +39,7 @@ export const settingsStatisticsState = atom({
     threads: THREADS_DEFAULT,
     timeout: 5000,
     sampleSize: 10,
+    solverVersion: SolverVersion.V1,
   },
 });
 

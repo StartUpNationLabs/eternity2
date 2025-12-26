@@ -62,6 +62,7 @@ export const StatisticsSolver = () => {
                         useCache: setting.useCache,
                         cachePullInterval: setting.cachePullInterval,
                         hints: hints,
+                        solverVersion: setting.solverVersion,
                     }, {});
                     stream.responses.onMessage((message) => {
                             setResponses((prev) => {

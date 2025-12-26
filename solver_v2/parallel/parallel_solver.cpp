@@ -1,13 +1,60 @@
 //
 // Parallel Eternity II Solver v2 Implementation
-// Uses Embarrassingly Parallel Search (EPS) with std::thread
+// Uses Multi-Level Partitioning + Portfolio Search
 //
 
 #include "parallel_solver.h"
+#include "../../solver/board/board.h"
+#include "../../solver/piece/piece.h"
 #include <iostream>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 namespace eternity2_v2 {
+
+// ============================================================================
+// WorkQueue Implementation
+// ============================================================================
+
+void WorkQueue::push(WorkUnit unit) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        queue_.push(std::move(unit));
+    }
+    cv_.notify_one();
+}
+
+bool WorkQueue::pop(WorkUnit& unit) {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    // Wait until there's work or we're done
+    cv_.wait(lock, [this] {
+        return !queue_.empty() || done_;
+    });
+
+    if (queue_.empty()) {
+        return false;  // No more work
+    }
+
+    unit = std::move(queue_.front());
+    queue_.pop();
+    return true;
+}
+
+void WorkQueue::finish() {
+    done_ = true;
+    cv_.notify_all();
+}
+
+size_t WorkQueue::size() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return queue_.size();
+}
+
+// ============================================================================
+// ParallelSolverV2 Implementation
+// ============================================================================
 
 ParallelSolverV2::ParallelSolverV2(const std::vector<Piece>& pieces,
                                    size_t board_size,
@@ -29,61 +76,213 @@ ParallelSolverV2::ParallelSolverV2(const std::vector<Piece>& pieces,
 SolveResult ParallelSolverV2::solve() {
     auto start_time = std::chrono::steady_clock::now();
 
-    // Initialize a temporary domain manager to get initial choices
-    DomainManager temp_domain(board_size_, pieces_);
-    temp_domain.initialize_domains();
-
-    // Get first position using MRV (typically a corner with few valid pieces)
-    VariableSelection first_var = select_next_variable(temp_domain);
-    if (first_var.is_failure) {
-        shared_data_.stats.domain_wipeouts++;
-        return SolveResult::NO_SOLUTION;
-    }
-
-    // Get all valid pieces for first position
-    const DomainEntry& first_domain = temp_domain.get_domain(first_var.index);
-    std::vector<RotatedPiece> initial_choices = first_domain.valid_pieces;
-
-    if (initial_choices.empty()) {
-        return SolveResult::NO_SOLUTION;
-    }
-
-    // Limit threads to number of initial choices
-    size_t effective_threads = std::min(num_threads_, initial_choices.size());
+    // Calculate partition depth (or use provided value)
+    size_t target_depth = (partition_depth_ > 0) ? partition_depth_ : calculate_partition_depth();
 
     if (shared_data_.config.verbose) {
-        std::cout << "Parallel solver starting with " << effective_threads << " threads" << std::endl;
-        std::cout << "First position: (" << first_var.index.first << ", " << first_var.index.second << ")" << std::endl;
-        std::cout << "Initial choices: " << initial_choices.size() << std::endl;
+        std::cout << "Parallel solver: " << num_threads_ << " threads, partition depth " << target_depth << std::endl;
+    }
+
+    // Phase 1: Collect work units at partition depth
+    std::vector<WorkUnit> work_units;
+    collect_work_units(work_units, target_depth);
+
+    if (work_units.empty()) {
+        // No valid work units found (puzzle unsolvable from start)
+        return SolveResult::NO_SOLUTION;
+    }
+
+    if (shared_data_.config.verbose) {
+        std::cout << "Collected " << work_units.size() << " work units" << std::endl;
+    }
+
+    // Phase 2: Distribute and solve
+    SolveResult result = distribute_and_solve(work_units);
+
+    // Update elapsed time
+    auto end_time = std::chrono::steady_clock::now();
+    shared_data_.stats.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_time - start_time).count();
+
+    return result;
+}
+
+size_t ParallelSolverV2::calculate_partition_depth() const {
+    // Target: ~2-4x more work units than threads for good load balancing
+    // Estimated branching factor at each depth:
+    // - Depth 0: ~4 (corners)
+    // - Depth 1: ~4-8 (edges adjacent to corners)
+    // - Depth 2: ~4-8 (more edges)
+    // - Depth 3+: varies
+
+    // For 4 threads: depth 2 (~16-32 units)
+    // For 8 threads: depth 2-3 (~32-128 units)
+    // For 16+ threads: depth 3 (~64-256 units)
+
+    if (num_threads_ <= 4) {
+        return 2;
+    } else if (num_threads_ <= 8) {
+        return 2;
+    } else {
+        return 3;
+    }
+}
+
+void ParallelSolverV2::collect_work_units(std::vector<WorkUnit>& units, size_t target_depth) {
+    // Create initial board and domain manager
+    Board board = create_board(static_cast<int>(board_size_));
+    DomainManager domain_manager(board_size_, pieces_);
+    domain_manager.initialize_domains();
+
+    // Collect work units recursively
+    collect_recursive(board, domain_manager, 0, target_depth, units);
+}
+
+void ParallelSolverV2::collect_recursive(Board& board,
+                                          DomainManager& domain_manager,
+                                          size_t depth,
+                                          size_t target_depth,
+                                          std::vector<WorkUnit>& units) {
+    // Check for stop signal
+    if (shared_data_.stop || solution_found_) {
+        return;
+    }
+
+    // If we've reached target depth, create a work unit
+    if (depth >= target_depth) {
+        WorkUnit unit;
+        unit.partial_board = board;  // Copy the board
+        unit.partial_domain = std::make_unique<DomainManager>(domain_manager);  // Copy domain
+        unit.depth = depth;
+        unit.profile = HeuristicProfile::MRV_LCV;  // Will be assigned later
+
+        units.push_back(std::move(unit));
+        return;
+    }
+
+    // Check if complete (shouldn't happen at shallow depths, but check anyway)
+    if (domain_manager.is_complete()) {
+        // Found solution during collection!
+        solution_found_ = true;
+        shared_data_.stop = true;
+        shared_data_.max_board = board;
+        shared_data_.max_count = static_cast<long long>(board_size_ * board_size_);
+        return;
+    }
+
+    // Select next variable using MRV (always use MRV for collection phase)
+    SolverConfig config;
+    config.use_mrv = true;
+    config.use_degree = true;
+    VariableSelection var = select_next_variable(domain_manager, config);
+
+    if (var.is_failure) {
+        // Dead end - no work unit to create
+        return;
+    }
+
+    if (var.domain_size == 0) {
+        // No unassigned variables but not complete - shouldn't happen
+        return;
+    }
+
+    // Get values to try (use random ordering for diversity in work units)
+    const DomainEntry& domain = domain_manager.get_domain(var.index);
+    std::vector<RotatedPiece> values = order_values_random(domain.valid_pieces);
+
+    // Try each value
+    for (const auto& piece : values) {
+        if (shared_data_.stop || solution_found_) {
+            return;
+        }
+
+        // Check if piece is still available
+        if (!domain_manager.is_piece_available(piece.index)) {
+            continue;
+        }
+
+        // Save state for backtracking
+        domain_manager.push_state();
+
+        // Place piece on board
+        place_piece(board, piece, var.index);
+
+        // Update domain manager
+        bool consistent = domain_manager.place_piece(var.index, piece);
+
+        if (consistent) {
+            // Recurse to collect more work units
+            collect_recursive(board, domain_manager, depth + 1, target_depth, units);
+        }
+
+        // Backtrack
+        domain_manager.pop_state();
+        remove_piece(board, var.index);
+    }
+}
+
+SolveResult ParallelSolverV2::distribute_and_solve(std::vector<WorkUnit>& units) {
+    if (units.empty()) {
+        return SolveResult::NO_SOLUTION;
+    }
+
+    // Check if solution was found during collection
+    if (solution_found_) {
+        return SolveResult::SOLVED;
+    }
+
+    // Assign heuristic profiles to work units (round-robin for portfolio diversity)
+    size_t num_profiles = static_cast<size_t>(HeuristicProfile::COUNT);
+    for (size_t i = 0; i < units.size(); ++i) {
+        units[i].profile = static_cast<HeuristicProfile>(i % num_profiles);
     }
 
     // Initialize per-thread stats
+    size_t effective_threads = std::min(num_threads_, units.size());
     thread_stats_.resize(effective_threads);
     for (auto& ts : thread_stats_) {
         ts = ThreadStats{};
     }
 
-    // Calculate work distribution
-    size_t choices_per_thread = initial_choices.size() / effective_threads;
-    size_t remainder = initial_choices.size() % effective_threads;
+    // Push all work units to the queue
+    for (auto& unit : units) {
+        work_queue_.push(std::move(unit));
+    }
+    work_queue_.finish();  // Signal that all work has been added
 
     // Launch worker threads
     std::vector<std::thread> threads;
     threads.reserve(effective_threads);
 
-    size_t start = 0;
     for (size_t t = 0; t < effective_threads; ++t) {
-        size_t count = choices_per_thread + (t < remainder ? 1 : 0);
-        size_t end = start + count;
+        threads.emplace_back(&ParallelSolverV2::worker_thread, this, t);
+    }
 
-        threads.emplace_back(&ParallelSolverV2::worker_thread, this,
-                            t, first_var.index, std::cref(initial_choices), start, end);
-        start = end;
+    // Launch progress reporting thread if verbose
+    std::thread progress_thread;
+    if (shared_data_.config.verbose) {
+        progress_thread = std::thread([&]() {
+            long long last_count = -1;
+            while (!shared_data_.stop && !solution_found_) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                long long current_count = shared_data_.max_count.load();
+                if (current_count > last_count) {
+                    last_count = current_count;
+                    std::cout << "Progress: " << current_count << "/" << (board_size_ * board_size_)
+                              << " pieces placed" << std::endl;
+                }
+            }
+        });
     }
 
     // Wait for all threads to complete
     for (auto& t : threads) {
         t.join();
+    }
+
+    // Wait for progress thread
+    if (progress_thread.joinable()) {
+        progress_thread.join();
     }
 
     // Aggregate statistics from all threads
@@ -96,11 +295,6 @@ SolveResult ParallelSolverV2::solve() {
         }
     }
 
-    // Update elapsed time
-    auto end_time = std::chrono::steady_clock::now();
-    shared_data_.stats.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_time - start_time).count();
-
     if (solution_found_) {
         shared_data_.stats.solutions_found++;
         return SolveResult::SOLVED;
@@ -111,42 +305,91 @@ SolveResult ParallelSolverV2::solve() {
     }
 
     if (limits_reached()) {
-        if (shared_data_.config.max_time_ms > 0) {
-            return SolveResult::TIMEOUT;
-        }
         return SolveResult::LIMIT_REACHED;
     }
 
     return SolveResult::NO_SOLUTION;
 }
 
-void ParallelSolverV2::worker_thread(size_t thread_id,
-                                     Index first_position,
-                                     const std::vector<RotatedPiece>& initial_choices,
-                                     size_t start_idx,
-                                     size_t end_idx) {
+void ParallelSolverV2::worker_thread(size_t thread_id) {
     ThreadStats& stats = thread_stats_[thread_id];
 
-    for (size_t i = start_idx; i < end_idx && !shared_data_.stop && !solution_found_; ++i) {
-        const RotatedPiece& first_piece = initial_choices[i];
+    WorkUnit unit;
+    while (work_queue_.pop(unit) && !shared_data_.stop && !solution_found_) {
+        // Get config from heuristic profile
+        SolverConfig config = config_from_profile(unit.profile);
 
-        // Create thread-local board and domain manager
-        Board board = create_board(static_cast<int>(board_size_));
-        DomainManager domain_manager(board_size_, pieces_);
-        domain_manager.initialize_domains();
+        // Create a temporary SharedDataV2 for this solver instance
+        // (shares the stop flag, mutex, max_count, and callbacks but has local config)
+        Board local_max_board = create_board(static_cast<int>(board_size_));
+        SharedDataV2 local_shared = {
+            local_max_board,
+            {0},
+            shared_data_.mutex  // Share the main mutex
+        };
+        local_shared.stop.store(shared_data_.stop.load());
+        local_shared.config = config;
+        
+        // Copy the progress callback from main shared_data and wrap it to update main max_count
+        auto original_callback = shared_data_.on_board_update;
+        local_shared.on_board_update = [&, original_callback](const Board& board) {
+            // Count non-empty pieces on the board
+            long long piece_count = 0;
+            for (size_t y = 0; y < board_size_; ++y) {
+                for (size_t x = 0; x < board_size_; ++x) {
+                    Index idx = {x, y};
+                    const RotatedPiece* piece = get_piece(board, idx);
+                    if (piece->piece != EMPTY && piece->piece != 0) {
+                        piece_count++;
+                    }
+                }
+            }
+            
+            // Update main shared_data_.max_count if this is better
+            {
+                std::scoped_lock lock(shared_data_.mutex);
+                if (piece_count > shared_data_.max_count.load()) {
+                    shared_data_.max_count = piece_count;
+                    shared_data_.max_board = board;
+                }
+            }
+            
+            // Call original callback if it exists
+            if (original_callback) {
+                original_callback(board);
+            }
+        };
 
-        // Place the first piece
-        place_piece(board, first_piece, first_position);
+        // Create solver and solve from the work unit's state
+        SolverV2 solver(pieces_, board_size_, local_shared);
+        SolveResult result = solver.solve_from_state(
+            unit.partial_board,
+            *unit.partial_domain,
+            unit.depth
+        );
 
-        if (!domain_manager.place_piece(first_position, first_piece)) {
-            stats.domain_wipeouts++;
-            continue;  // Invalid first choice, try next
+        // Update local stats
+        stats.nodes_explored += local_shared.stats.nodes_explored;
+        stats.backtracks += local_shared.stats.backtracks;
+        stats.domain_wipeouts += local_shared.stats.domain_wipeouts;
+        if (local_shared.stats.max_depth > stats.max_depth) {
+            stats.max_depth = local_shared.stats.max_depth;
+        }
+        
+        // Update main shared_data_.max_count if local found a better partial solution
+        {
+            std::scoped_lock lock(shared_data_.mutex);
+            if (local_shared.max_count.load() > shared_data_.max_count.load()) {
+                shared_data_.max_count = local_shared.max_count.load();
+                shared_data_.max_board = local_shared.max_board;
+                // Trigger callback to show progress
+                if (shared_data_.on_board_update) {
+                    shared_data_.on_board_update(local_shared.max_board);
+                }
+            }
         }
 
-        stats.nodes_explored++;
-
-        // Search from depth 1
-        if (search_recursive(board, domain_manager, 1, stats)) {
+        if (result == SolveResult::SOLVED) {
             // Solution found!
             solution_found_ = true;
             shared_data_.stop = true;
@@ -154,115 +397,31 @@ void ParallelSolverV2::worker_thread(size_t thread_id,
             // Update shared solution (thread-safe with mutex)
             {
                 std::scoped_lock lock(shared_data_.mutex);
-                shared_data_.max_board = board;
+                shared_data_.max_board = solver.get_solution();
                 shared_data_.max_count = static_cast<long long>(board_size_ * board_size_);
             }
 
             if (shared_data_.config.verbose) {
-                std::cout << "Thread " << thread_id << " found solution!" << std::endl;
+                std::cout << "Thread " << thread_id << " found solution with profile "
+                          << static_cast<int>(unit.profile) << std::endl;
             }
+            break;
+        }
+
+        // Check if global stop was triggered by another thread
+        if (shared_data_.stop) {
             break;
         }
     }
 
     if (shared_data_.config.verbose && !solution_found_) {
-        std::cout << "Thread " << thread_id << " completed range ["
-                  << start_idx << ", " << end_idx << ") - "
+        std::cout << "Thread " << thread_id << " completed - "
                   << stats.nodes_explored << " nodes explored" << std::endl;
     }
 }
 
-bool ParallelSolverV2::search_recursive(Board& board,
-                                        DomainManager& domain_manager,
-                                        size_t depth,
-                                        ThreadStats& stats) {
-    // Update local stats
-    stats.nodes_explored++;
-    if (depth > stats.max_depth) {
-        stats.max_depth = depth;
-    }
-
-    // Check for stop signal or limits
-    if (shared_data_.stop || solution_found_ || limits_reached()) {
-        return false;
-    }
-
-    // Check if complete
-    if (domain_manager.is_complete()) {
-        return true;  // Solution found!
-    }
-
-    // Select next variable (position to fill)
-    VariableSelection var = select_next_variable(domain_manager);
-
-    // Check for failure (empty domain detected)
-    if (var.is_failure) {
-        stats.domain_wipeouts++;
-        return false;
-    }
-
-    // If no unassigned variables but not complete, something went wrong
-    if (var.domain_size == 0) {
-        return domain_manager.is_complete();
-    }
-
-    // Get values to try
-    const DomainEntry& domain = domain_manager.get_domain(var.index);
-    std::vector<RotatedPiece> values = order_values(domain_manager, var.index, domain.valid_pieces);
-
-    // Update shared best board progress (thread-safe)
-    if (static_cast<long long>(depth) > shared_data_.max_count) {
-        std::scoped_lock lock(shared_data_.mutex);
-        if (static_cast<long long>(depth) > shared_data_.max_count) {
-            shared_data_.max_count = static_cast<long long>(depth);
-            shared_data_.max_board = board;
-            shared_data_.stats.best_depth = depth;
-        }
-    }
-
-    // Try each value
-    for (const auto& piece : values) {
-        // Check if piece is still available
-        if (!domain_manager.is_piece_available(piece.index)) {
-            continue;
-        }
-
-        // Check for stop signal (check periodically to avoid overhead)
-        if (shared_data_.stop || solution_found_) {
-            return false;
-        }
-
-        // Save state for backtracking
-        domain_manager.push_state();
-
-        // Place piece on board
-        place_piece(board, piece, var.index);
-
-        // Update domain manager (place piece and propagate constraints)
-        bool consistent = domain_manager.place_piece(var.index, piece);
-
-        if (consistent) {
-            // Recurse
-            if (search_recursive(board, domain_manager, depth + 1, stats)) {
-                return true;  // Solution found!
-            }
-        } else {
-            // Domain wipeout detected during propagation
-            stats.domain_wipeouts++;
-        }
-
-        // Backtrack
-        stats.backtracks++;
-        domain_manager.pop_state();
-        remove_piece(board, var.index);
-    }
-
-    return false;
-}
-
-VariableSelection ParallelSolverV2::select_next_variable(const DomainManager& domain_manager) {
-    const auto& config = shared_data_.config;
-
+VariableSelection ParallelSolverV2::select_next_variable(const DomainManager& domain_manager,
+                                                          const SolverConfig& config) {
     if (config.use_mrv) {
         if (config.use_degree) {
             return select_variable_mrv(domain_manager);
@@ -275,11 +434,16 @@ VariableSelection ParallelSolverV2::select_next_variable(const DomainManager& do
 }
 
 std::vector<RotatedPiece> ParallelSolverV2::order_values(DomainManager& domain_manager,
-                                                         Index index,
-                                                         const std::vector<RotatedPiece>& values) {
-    const auto& config = shared_data_.config;
-
+                                                          Index index,
+                                                          const std::vector<RotatedPiece>& values,
+                                                          const SolverConfig& config) {
     if (config.use_lcv) {
+        if (config.use_reverse_lcv) {
+            // Reverse LCV - most constraining first
+            auto ordered = order_values_lcv(domain_manager, index, values);
+            std::reverse(ordered.begin(), ordered.end());
+            return ordered;
+        }
         return order_values_lcv(domain_manager, index, values);
     } else {
         return order_values_random(values);
@@ -297,9 +461,6 @@ bool ParallelSolverV2::limits_reached() const {
     if (config.max_nodes > 0 && stats.nodes_explored >= config.max_nodes) {
         return true;
     }
-
-    // Note: Time limit checking is approximate in parallel mode
-    // The main solve() function tracks overall time more accurately
 
     return false;
 }

@@ -28,6 +28,7 @@ void print_usage(const char* program_name) {
     std::cout << "  --timeout <ms>  Set timeout in milliseconds\n";
     std::cout << "  --parallel      Enable parallel search mode\n";
     std::cout << "  --threads <n>   Set number of worker threads (default: auto-detect)\n";
+    std::cout << "  --partition-depth <n>  Set partition depth for parallel mode (default: auto)\n";
     std::cout << "  --help          Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program_name << " puzzle.csv              # Solve with all optimizations\n";
@@ -43,6 +44,7 @@ int main(int argc, char* argv[]) {
     config.verbose = false;
     bool print_stats = true;
     bool quiet = false;
+    size_t partition_depth = 0;  // 0 = auto-detect
     std::string filename;
 
     for (int i = 1; i < argc; ++i) {
@@ -78,6 +80,8 @@ int main(int argc, char* argv[]) {
             if (config.num_threads > 1) {
                 config.parallel_enabled = true;
             }
+        } else if (arg == "--partition-depth" && i + 1 < argc) {
+            partition_depth = std::stoul(argv[++i]);
         } else if (arg[0] != '-') {
             filename = arg;
         } else {
@@ -157,6 +161,9 @@ int main(int argc, char* argv[]) {
     eternity2_v2::SolveResult result;
     if (config.parallel_enabled && config.num_threads > 1) {
         eternity2_v2::ParallelSolverV2 parallel_solver(board_pieces.second, board_size, shared_data);
+        if (partition_depth > 0) {
+            parallel_solver.set_partition_depth(partition_depth);
+        }
         result = parallel_solver.solve();
     } else {
         eternity2_v2::SolverV2 solver(board_pieces.second, board_size, shared_data);

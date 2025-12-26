@@ -19,6 +19,69 @@ const char* solve_result_to_string(SolveResult result) {
     }
 }
 
+SolverConfig config_from_profile(HeuristicProfile profile) {
+    SolverConfig config;
+
+    switch (profile) {
+        case HeuristicProfile::MRV_LCV:
+            // Default: MRV + Degree + LCV
+            config.use_mrv = true;
+            config.use_degree = true;
+            config.use_lcv = true;
+            config.use_reverse_lcv = false;
+            break;
+
+        case HeuristicProfile::MRV_RANDOM:
+            // MRV + Degree + Random value ordering
+            config.use_mrv = true;
+            config.use_degree = true;
+            config.use_lcv = false;
+            config.use_reverse_lcv = false;
+            break;
+
+        case HeuristicProfile::MRV_ONLY_LCV:
+            // MRV only (no degree tie-breaker) + LCV
+            config.use_mrv = true;
+            config.use_degree = false;
+            config.use_lcv = true;
+            config.use_reverse_lcv = false;
+            break;
+
+        case HeuristicProfile::STATIC_LCV:
+            // Static ordering + LCV
+            config.use_mrv = false;
+            config.use_degree = false;
+            config.use_lcv = true;
+            config.use_reverse_lcv = false;
+            break;
+
+        case HeuristicProfile::MRV_REVERSE_LCV:
+            // MRV + Degree + Reverse LCV (most constraining first)
+            config.use_mrv = true;
+            config.use_degree = true;
+            config.use_lcv = true;
+            config.use_reverse_lcv = true;
+            break;
+
+        case HeuristicProfile::STATIC_RANDOM:
+            // Static ordering + Random
+            config.use_mrv = false;
+            config.use_degree = false;
+            config.use_lcv = false;
+            config.use_reverse_lcv = false;
+            break;
+
+        default:
+            // Default to MRV + LCV
+            config.use_mrv = true;
+            config.use_degree = true;
+            config.use_lcv = true;
+            break;
+    }
+
+    return config;
+}
+
 SolverV2::SolverV2(const std::vector<Piece>& pieces, size_t board_size, SharedDataV2& shared_data)
     : pieces_(pieces)
     , board_size_(board_size)
@@ -53,6 +116,44 @@ SolveResult SolverV2::solve() {
 
     if (found) {
         shared_data_.stats.solutions_found++;
+        return SolveResult::SOLVED;
+    }
+
+    if (shared_data_.stop) {
+        return SolveResult::STOPPED;
+    }
+
+    if (limits_reached()) {
+        if (shared_data_.config.max_time_ms > 0) {
+            return SolveResult::TIMEOUT;
+        }
+        return SolveResult::LIMIT_REACHED;
+    }
+
+    return SolveResult::NO_SOLUTION;
+}
+
+SolveResult SolverV2::solve_from_state(const Board& initial_board,
+                                        const DomainManager& initial_domain,
+                                        size_t initial_depth) {
+    // Start from provided state (used by parallel solver for work units)
+    start_time_ = std::chrono::steady_clock::now();
+
+    // Copy the initial state
+    board_ = initial_board;
+    domain_manager_ = initial_domain;
+
+    // Check for immediate failure
+    auto initial_check = select_next_variable();
+    if (initial_check.is_failure) {
+        shared_data_.stats.domain_wipeouts++;
+        return SolveResult::NO_SOLUTION;
+    }
+
+    // Start search from the given depth
+    bool found = search(initial_depth);
+
+    if (found) {
         return SolveResult::SOLVED;
     }
 

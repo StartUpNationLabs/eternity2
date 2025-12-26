@@ -19,12 +19,24 @@
 
 namespace eternity2_v2 {
 
+// Heuristic profiles for portfolio parallel search
+enum class HeuristicProfile {
+    MRV_LCV,           // Current best: MRV + Degree + LCV
+    MRV_RANDOM,        // MRV + Degree + Random value ordering
+    MRV_ONLY_LCV,      // MRV only (no degree) + LCV
+    STATIC_LCV,        // Static ordering + LCV
+    MRV_REVERSE_LCV,   // MRV + Degree + Reverse LCV (most constraining first)
+    STATIC_RANDOM,     // Static ordering + Random
+    COUNT              // Number of profiles
+};
+
 // Configuration for solver_v2
 struct SolverConfig {
     // Heuristic options
     bool use_mrv = true;           // Use MRV variable ordering
     bool use_degree = true;        // Use degree as tie-breaker for MRV
     bool use_lcv = true;           // Use LCV value ordering
+    bool use_reverse_lcv = false;  // Use reverse LCV (most constraining first)
 
     // Statistics and debugging
     bool collect_stats = true;     // Collect detailed statistics
@@ -97,6 +109,9 @@ enum class SolveResult {
 // Convert result to string
 const char* solve_result_to_string(SolveResult result);
 
+// Create config from heuristic profile
+SolverConfig config_from_profile(HeuristicProfile profile);
+
 // Main solver class
 class SolverV2 {
 public:
@@ -104,6 +119,11 @@ public:
 
     // Solve the puzzle
     SolveResult solve();
+
+    // Solve from initial state (for parallel work units)
+    SolveResult solve_from_state(const Board& initial_board,
+                                  const DomainManager& initial_domain,
+                                  size_t initial_depth);
 
     // Get the solution board (valid only if solve() returned SOLVED)
     const Board& get_solution() const { return board_; }
