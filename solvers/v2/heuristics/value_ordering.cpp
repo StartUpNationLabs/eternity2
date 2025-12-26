@@ -60,6 +60,25 @@ static size_t count_compatible_values(
     return count;
 }
 
+// Calculate rare color bonus: higher bonus for pieces with rarer colors
+// This encourages placing rare-color pieces early to avoid stranding them later
+[[gnu::always_inline]] static inline size_t calculate_rare_color_bonus(
+    const DomainManager& domain_manager,
+    const RotatedPiece& piece)
+{
+    uint16_t max_freq = domain_manager.get_max_color_frequency();
+    if (max_freq == 0) return 0;
+
+    // Sum up "rarity scores" for each edge (max_freq - freq = higher for rare colors)
+    size_t bonus = 0;
+    bonus += max_freq - domain_manager.get_color_frequency(piece.edge_up);
+    bonus += max_freq - domain_manager.get_color_frequency(piece.edge_right);
+    bonus += max_freq - domain_manager.get_color_frequency(piece.edge_down);
+    bonus += max_freq - domain_manager.get_color_frequency(piece.edge_left);
+
+    return bonus;
+}
+
 size_t calculate_constrainedness(
     const DomainManager& domain_manager,
     Index index,
@@ -137,7 +156,11 @@ std::vector<RotatedPiece> order_values_lcv(
     scored.reserve(compute_count);
 
     for (size_t i = 0; i < compute_count; ++i) {
+        // Base LCV score: how many neighbor values remain (higher = less constraining)
         size_t score = calculate_constrainedness(domain_manager, index, values[i]);
+        // NOTE: Rare color bonus disabled - adds overhead without clear benefit
+        // size_t rare_bonus = calculate_rare_color_bonus(domain_manager, values[i]) / 8;
+        // score += rare_bonus;
         scored.push_back({values[i], score});
     }
 

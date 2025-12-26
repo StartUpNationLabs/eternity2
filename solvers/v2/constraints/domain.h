@@ -29,15 +29,18 @@ static constexpr size_t MAX_PIECES = 256;
 // Instead of copying entire domain state, we record changes and undo them
 // OPTIMIZATION: Uses SmallVector to avoid heap allocation for small domain shrinks
 struct TrailEntry {
-    enum class Type {
+    enum class Type : uint8_t {  // Use uint8_t to minimize enum size
         DOMAIN_SHRINK,      // Pieces were removed from a domain
         PIECE_USED,         // A piece was marked as used
         POSITION_ASSIGNED   // A position was marked as assigned
     };
 
-    Type type;
+    // OPTIMIZATION: Fields ordered by size (largest first) to minimize padding
+    // Old order: Type(4) + pad(4) + position_1d(8) + piece_index(4) + pad(4) = 24 bytes overhead
+    // New order: position_1d(8) + piece_index(4) + Type(1) + pad(3) = 16 bytes overhead (8 bytes saved)
     size_t position_1d;                        // Affected position (for DOMAIN_SHRINK, POSITION_ASSIGNED)
     int piece_index;                           // Affected piece index (for PIECE_USED)
+    Type type;
     // SmallVector with inline storage for 8 pieces - balance between inline storage and struct size
     SmallVector<RotatedPiece, 8> removed_pieces;
 };
@@ -51,9 +54,6 @@ struct DomainEntry {
     bool empty() const { return valid_pieces.empty(); }
 };
 
-// Compatibility entry: stores which pieces can be adjacent in each direction
-// Key: (piece_index, rotation, direction) -> vector of compatible (piece_index, rotation)
-using CompatiblePieces = std::vector<std::pair<int, int>>;
 
 // Snapshot of domains for backtracking (legacy - kept for compatibility)
 // Now just stores trail position for efficient undo
@@ -118,7 +118,14 @@ public:
     // Get number of assigned positions
     [[gnu::always_inline]] size_t assigned_count() const { return assigned_count_; }
 
+    // Get color frequency for rare color heuristic (lower = rarer)
+    [[gnu::always_inline]] uint16_t get_color_frequency(PiecePart color) const {
+        return (color < MAX_COLORS) ? color_frequency_[color] : max_color_frequency_;
+    }
+    [[gnu::always_inline]] uint16_t get_max_color_frequency() const { return max_color_frequency_; }
+
 private:
+    static constexpr size_t MAX_COLORS = 32;
     size_t board_size_;
     std::vector<Piece> pieces_;
     std::vector<DomainEntry> domains_;
@@ -132,16 +139,16 @@ private:
 
     size_t assigned_count_ = 0;
 
-    // Piece compatibility matrix for O(1) constraint lookups
-    // compatible_[piece_idx][rotation][direction] = vector of (piece_idx, rotation)
-    // direction: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
-    std::vector<std::array<std::array<CompatiblePieces, 4>, 4>> compatible_;
-    bool compatibility_computed_ = false;
+    // OPTIMIZATION: Cached neighbor degrees for O(1) lookup in MRV degree heuristic
+    // neighbor_degrees_[pos_1d] = count of unassigned adjacent positions
+    // Updated incrementally when positions are assigned
+    std::array<uint8_t, MAX_PIECES> neighbor_degrees_;
 
-    // OPTIMIZATION: Inverted index for O(1) piece removal from domains
-    // piece_to_positions_[piece_idx] = set of position indices containing this piece
-    // Eliminates O(n) iteration in propagate_to_neighbors
-    std::vector<std::vector<size_t>> piece_to_positions_;
+    // OPTIMIZATION: Color frequency for rare color elimination heuristic
+    // color_frequency_[color] = count of edges with this color across all pieces
+    // Lower frequency = rarer color, prioritize placing these pieces early
+    std::array<uint16_t, MAX_COLORS> color_frequency_;
+    uint16_t max_color_frequency_ = 0;  // For normalization
 
     // OPTIMIZATION: Reusable scratch buffers to avoid heap allocations on hot path
     // These are cleared and reused instead of creating new vectors each call
@@ -189,9 +196,6 @@ private:
 
     // Filter domain entries that don't match the constraint
     void filter_domain_by_constraint(Index index, int direction, PiecePart constraint);
-
-    // Precompute piece compatibility matrix for O(1) constraint lookups
-    void precompute_compatibility();
 
     // Undo a single trail entry (called during pop_state)
     void undo_trail_entry(const TrailEntry& entry);

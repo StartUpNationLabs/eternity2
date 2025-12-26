@@ -48,17 +48,32 @@ DomainManager::DomainManager(size_t board_size, const std::vector<Piece>& pieces
 }
 
 void DomainManager::initialize_domains() {
-    // Precompute piece compatibility matrix for O(1) constraint lookups
-    if (!compatibility_computed_) {
-        precompute_compatibility();
-        compatibility_computed_ = true;
-    }
-
     // Reset piece availability - all pieces available
     piece_availability_.set();
     // Clear bits for pieces beyond our actual piece count
     for (size_t i = pieces_.size(); i < MAX_PIECES; ++i) {
         piece_availability_.reset(i);
+    }
+
+    // OPTIMIZATION: Compute color frequency for rare color heuristic
+    color_frequency_.fill(0);
+    max_color_frequency_ = 0;
+    for (const auto& piece : pieces_) {
+        // Count each edge color (4 edges per piece)
+        PiecePart up = get_piece_part(piece, UP_MASK);
+        PiecePart right = get_piece_part(piece, RIGHT_MASK);
+        PiecePart down = get_piece_part(piece, DOWN_MASK);
+        PiecePart left = get_piece_part(piece, LEFT_MASK);
+        if (up < MAX_COLORS) color_frequency_[up]++;
+        if (right < MAX_COLORS) color_frequency_[right]++;
+        if (down < MAX_COLORS) color_frequency_[down]++;
+        if (left < MAX_COLORS) color_frequency_[left]++;
+    }
+    // Find max for normalization
+    for (size_t i = 0; i < MAX_COLORS; ++i) {
+        if (color_frequency_[i] > max_color_frequency_) {
+            max_color_frequency_ = color_frequency_[i];
+        }
     }
 
     // Clear trail and choice points
@@ -69,8 +84,18 @@ void DomainManager::initialize_domains() {
     for (size_t y = 0; y < board_size_; ++y) {
         for (size_t x = 0; x < board_size_; ++x) {
             Index index = {x, y};
-            domains_[to_1d(index)].valid_pieces = compute_initial_domain(index);
-            domains_[to_1d(index)].is_assigned = false;
+            size_t idx = to_1d(index);
+            domains_[idx].valid_pieces = compute_initial_domain(index);
+            domains_[idx].is_assigned = false;
+
+            // OPTIMIZATION: Compute initial neighbor degrees (valid adjacent positions)
+            // Corners: 2, Edges: 3, Interior: 4
+            uint8_t degree = 0;
+            if (y > 0) degree++;                    // has up neighbor
+            if (x < board_size_ - 1) degree++;      // has right neighbor
+            if (y < board_size_ - 1) degree++;      // has down neighbor
+            if (x > 0) degree++;                    // has left neighbor
+            neighbor_degrees_[idx] = degree;
         }
     }
     assigned_count_ = 0;
@@ -110,6 +135,25 @@ bool DomainManager::place_piece(Index index, const RotatedPiece& piece) {
     domains_[idx].valid_pieces.clear();
     domains_[idx].valid_pieces.push_back(piece);
     assigned_count_++;
+
+    // OPTIMIZATION: Decrement neighbor degrees for adjacent unassigned positions
+    // When this position is assigned, it's no longer an "unassigned neighbor" for its neighbors
+    if (index.second > 0) {
+        size_t up_idx = to_1d({index.first, index.second - 1});
+        if (!domains_[up_idx].is_assigned) neighbor_degrees_[up_idx]--;
+    }
+    if (index.first < board_size_ - 1) {
+        size_t right_idx = to_1d({index.first + 1, index.second});
+        if (!domains_[right_idx].is_assigned) neighbor_degrees_[right_idx]--;
+    }
+    if (index.second < board_size_ - 1) {
+        size_t down_idx = to_1d({index.first, index.second + 1});
+        if (!domains_[down_idx].is_assigned) neighbor_degrees_[down_idx]--;
+    }
+    if (index.first > 0) {
+        size_t left_idx = to_1d({index.first - 1, index.second});
+        if (!domains_[left_idx].is_assigned) neighbor_degrees_[left_idx]--;
+    }
 
     // Record piece used in trail
     record_piece_used(piece.index);
@@ -191,6 +235,27 @@ void DomainManager::undo_trail_entry(const TrailEntry& entry) {
             // Mark position as unassigned
             domains_[entry.position_1d].is_assigned = false;
             assigned_count_--;
+
+            // OPTIMIZATION: Restore neighbor degrees for adjacent unassigned positions
+            {
+                Index index = to_2d(entry.position_1d);
+                if (index.second > 0) {
+                    size_t up_idx = to_1d({index.first, index.second - 1});
+                    if (!domains_[up_idx].is_assigned) neighbor_degrees_[up_idx]++;
+                }
+                if (index.first < board_size_ - 1) {
+                    size_t right_idx = to_1d({index.first + 1, index.second});
+                    if (!domains_[right_idx].is_assigned) neighbor_degrees_[right_idx]++;
+                }
+                if (index.second < board_size_ - 1) {
+                    size_t down_idx = to_1d({index.first, index.second + 1});
+                    if (!domains_[down_idx].is_assigned) neighbor_degrees_[down_idx]++;
+                }
+                if (index.first > 0) {
+                    size_t left_idx = to_1d({index.first - 1, index.second});
+                    if (!domains_[left_idx].is_assigned) neighbor_degrees_[left_idx]++;
+                }
+            }
             break;
     }
 }
@@ -268,26 +333,8 @@ std::vector<Index> DomainManager::get_neighbor_indices(Index index) const {
 }
 
 size_t DomainManager::count_unassigned_neighbors(Index index) const {
-    size_t count = 0;
-
-    // Up
-    if (index.second > 0) {
-        if (!domains_[to_1d({index.first, index.second - 1})].is_assigned) count++;
-    }
-    // Right
-    if (index.first < board_size_ - 1) {
-        if (!domains_[to_1d({index.first + 1, index.second})].is_assigned) count++;
-    }
-    // Down
-    if (index.second < board_size_ - 1) {
-        if (!domains_[to_1d({index.first, index.second + 1})].is_assigned) count++;
-    }
-    // Left
-    if (index.first > 0) {
-        if (!domains_[to_1d({index.first - 1, index.second})].is_assigned) count++;
-    }
-
-    return count;
+    // OPTIMIZATION: Use cached neighbor degrees (O(1) instead of 4 lookups)
+    return neighbor_degrees_[to_1d(index)];
 }
 
 bool DomainManager::is_complete() const {
@@ -424,7 +471,7 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         Index up_idx = {placed_index.first, placed_index.second - 1};
         if (!domains_[to_1d(up_idx)].is_assigned) {
             filter_domain_by_constraint(up_idx, DIR_DOWN, up_edge);
-            if (domains_[to_1d(up_idx)].empty()) return false;
+            if (__builtin_expect(domains_[to_1d(up_idx)].empty(), 0)) return false;
         }
     }
 
@@ -433,7 +480,7 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         Index right_idx = {placed_index.first + 1, placed_index.second};
         if (!domains_[to_1d(right_idx)].is_assigned) {
             filter_domain_by_constraint(right_idx, DIR_LEFT, right_edge);
-            if (domains_[to_1d(right_idx)].empty()) return false;
+            if (__builtin_expect(domains_[to_1d(right_idx)].empty(), 0)) return false;
         }
     }
 
@@ -442,7 +489,7 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         Index down_idx = {placed_index.first, placed_index.second + 1};
         if (!domains_[to_1d(down_idx)].is_assigned) {
             filter_domain_by_constraint(down_idx, DIR_UP, down_edge);
-            if (domains_[to_1d(down_idx)].empty()) return false;
+            if (__builtin_expect(domains_[to_1d(down_idx)].empty(), 0)) return false;
         }
     }
 
@@ -451,7 +498,7 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         Index left_idx = {placed_index.first - 1, placed_index.second};
         if (!domains_[to_1d(left_idx)].is_assigned) {
             filter_domain_by_constraint(left_idx, DIR_RIGHT, left_edge);
-            if (domains_[to_1d(left_idx)].empty()) return false;
+            if (__builtin_expect(domains_[to_1d(left_idx)].empty(), 0)) return false;
         }
     }
 
@@ -481,64 +528,10 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         // Record domain shrink in trail
         record_domain_shrink(i, scratch_removed_propagate_);
 
-        if (valid.empty()) return false;
+        if (__builtin_expect(valid.empty(), 0)) return false;
     }
 
     return true;
-}
-
-void DomainManager::precompute_compatibility() {
-    // Initialize the compatibility matrix
-    compatible_.resize(pieces_.size());
-    for (size_t i = 0; i < pieces_.size(); ++i) {
-        for (int r1 = 0; r1 < 4; ++r1) {
-            for (int dir = 0; dir < 4; ++dir) {
-                compatible_[i][r1][dir].clear();
-            }
-        }
-    }
-
-    // For each piece and rotation, compute compatible pieces for each direction
-    for (size_t i = 0; i < pieces_.size(); ++i) {
-        for (int r1 = 0; r1 < 4; ++r1) {
-            Piece rotated1 = rotate_piece_right(pieces_[i], r1);
-
-            // Get edges for this piece/rotation
-            PiecePart up_edge = get_piece_part(rotated1, UP_MASK);
-            PiecePart right_edge = get_piece_part(rotated1, RIGHT_MASK);
-            PiecePart down_edge = get_piece_part(rotated1, DOWN_MASK);
-            PiecePart left_edge = get_piece_part(rotated1, LEFT_MASK);
-
-            // Find compatible pieces for each direction
-            for (size_t j = 0; j < pieces_.size(); ++j) {
-                if (i == j) continue;  // Same piece can't be adjacent to itself
-
-                for (int r2 = 0; r2 < 4; ++r2) {
-                    Piece rotated2 = rotate_piece_right(pieces_[j], r2);
-
-                    // Check UP direction (neighbor needs matching DOWN edge)
-                    if (up_edge == get_piece_part(rotated2, DOWN_MASK)) {
-                        compatible_[i][r1][DIR_UP].push_back({static_cast<int>(j), r2});
-                    }
-
-                    // Check RIGHT direction (neighbor needs matching LEFT edge)
-                    if (right_edge == get_piece_part(rotated2, LEFT_MASK)) {
-                        compatible_[i][r1][DIR_RIGHT].push_back({static_cast<int>(j), r2});
-                    }
-
-                    // Check DOWN direction (neighbor needs matching UP edge)
-                    if (down_edge == get_piece_part(rotated2, UP_MASK)) {
-                        compatible_[i][r1][DIR_DOWN].push_back({static_cast<int>(j), r2});
-                    }
-
-                    // Check LEFT direction (neighbor needs matching RIGHT edge)
-                    if (left_edge == get_piece_part(rotated2, RIGHT_MASK)) {
-                        compatible_[i][r1][DIR_LEFT].push_back({static_cast<int>(j), r2});
-                    }
-                }
-            }
-        }
-    }
 }
 
 bool DomainManager::recompute_domain(Index index, const RotatedPiece& placed_piece, Index placed_index) {

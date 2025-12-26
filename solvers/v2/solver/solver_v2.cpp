@@ -189,13 +189,13 @@ bool SolverV2::search(size_t depth) {
         shared_data_.stats.max_depth = depth;
     }
 
-    // Check for stop signal or limits
-    if (shared_data_.stop || limits_reached()) {
+    // Check for stop signal or limits (unlikely during normal operation)
+    if (__builtin_expect(shared_data_.stop || limits_reached(), 0)) {
         return false;
     }
 
-    // Check if complete
-    if (domain_manager_.is_complete()) {
+    // Check if complete (unlikely until the very end)
+    if (__builtin_expect(domain_manager_.is_complete(), 0)) {
         // Final verification: double-check that the solution is actually correct
         if (!verify_solution(board_)) {
             // Verification failed - this should not happen with proper constraint propagation
@@ -216,8 +216,8 @@ bool SolverV2::search(size_t depth) {
     // Select next variable (position to fill)
     VariableSelection var = select_next_variable();
 
-    // Check for failure (empty domain detected)
-    if (var.is_failure) {
+    // Check for failure (empty domain detected) - relatively rare
+    if (__builtin_expect(var.is_failure, 0)) {
         shared_data_.stats.domain_wipeouts++;
         return false;
     }
