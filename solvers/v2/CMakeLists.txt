@@ -49,8 +49,8 @@ target_include_directories(solver_v2_lib PUBLIC
 # Also link Threads for parallel solver
 target_link_libraries(solver_v2_lib PUBLIC solver_lib Threads::Threads)
 
-# Disable logging in v2 for performance
-target_compile_definitions(solver_v2_lib PUBLIC DISABLE_LOGGING)
+# Disable logging in v2 library for performance (PRIVATE so executable can still log)
+target_compile_definitions(solver_v2_lib PRIVATE DISABLE_LOGGING)
 
 # Common utilities
 set(COMMON_SOURCES
@@ -63,6 +63,9 @@ set(COMMON_SOURCES
 add_executable(SolverV2 main.cpp ${COMMON_SOURCES})
 target_include_directories(SolverV2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)  # Add solvers/ to include path
 target_link_libraries(SolverV2 solver_v2_lib)
+# Explicitly enable logging for the executable (remove DISABLE_LOGGING that propagates from solver_lib)
+# Use compile option to undefine the macro
+target_compile_options(SolverV2 PRIVATE -UDISABLE_LOGGING)
 
 # Optional: benchmark executable for comparing v1 vs v2
 # add_executable(benchmark benchmark.cpp)
