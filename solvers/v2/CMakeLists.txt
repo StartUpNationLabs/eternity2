@@ -93,6 +93,7 @@ set(SOLVER_V2_HEADERS
     heuristics/value_ordering.h
     solver/solver_v2.h
     parallel/parallel_solver.h
+    simd/simd_filter.h
 )
 
 # Create solver_v2 library (links to solver_lib from v1 for shared types)

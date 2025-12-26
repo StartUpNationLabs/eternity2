@@ -34,6 +34,10 @@ VariableSelection select_variable_static(const DomainManager& domain_manager);
 // Select variable with most unassigned neighbors (fail-last, for comparison)
 VariableSelection select_variable_degree_only(const DomainManager& domain_manager);
 
+// Border-first variable selection: prioritize corners, then edges, then interior
+// Within each category, use MRV with degree tie-breaker
+VariableSelection select_variable_border_first(const DomainManager& domain_manager);
+
 } // namespace eternity2_v2
 
 #endif // ETERNITY2_V2_VARIABLE_ORDERING_H

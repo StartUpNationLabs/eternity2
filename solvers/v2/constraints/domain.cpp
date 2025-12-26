@@ -421,39 +421,47 @@ void DomainManager::filter_domain_by_constraint(Index index, int direction, Piec
 
     if (domain.is_assigned) return;  // Don't filter assigned positions
 
+    auto& valid = domain.valid_pieces;
+    const size_t n = valid.size();
+
+    if (n == 0) return;
+
     // OPTIMIZATION: Use scratch buffer instead of allocating new vector
     scratch_removed_.clear();
 
-    // Filter out pieces that don't match the constraint
-    // OPTIMIZATION: Use cached edges instead of rotate_piece_right + get_piece_part
-    auto it = std::remove_if(domain.valid_pieces.begin(), domain.valid_pieces.end(),
-        [&](const RotatedPiece& rp) {
-            // Check if this piece is still available (using bitset)
-            if (!piece_availability_.test(rp.index)) {
-                scratch_removed_.push_back(rp);
-                return true;  // Remove unavailable pieces
-            }
+    // OPTIMIZATION: Explicit loop instead of std::remove_if to avoid lambda overhead
+    // Single pass: check both availability and edge match, compact in place
+    size_t write_pos = 0;
 
-            // Use cached edges instead of recomputing rotation
-            PiecePart edge;
-            switch (direction) {
-                case DIR_UP:    edge = rp.edge_up; break;
-                case DIR_RIGHT: edge = rp.edge_right; break;
-                case DIR_DOWN:  edge = rp.edge_down; break;
-                case DIR_LEFT:  edge = rp.edge_left; break;
-                default:        edge = 0; break;
-            }
+    // Use function pointer to select edge based on direction (eliminates switch per iteration)
+    // This is slightly faster than switch in hot loop due to better branch prediction
+    for (size_t i = 0; i < n; ++i) {
+        const RotatedPiece& rp = valid[i];
 
-            // Edge must match the constraint
-            if (edge != constraint) {
-                scratch_removed_.push_back(rp);
-                return true;
-            }
-            return false;
+        // Check availability first (likely to short-circuit for used pieces)
+        if (__builtin_expect(!piece_availability_.test(rp.index), 0)) {
+            scratch_removed_.push_back(rp);
+            continue;
         }
-    );
 
-    domain.valid_pieces.erase(it, domain.valid_pieces.end());
+        // Check edge match using cached edges
+        // OPTIMIZATION: Use pointer arithmetic instead of switch
+        // Edges are stored contiguously: edge_up, edge_right, edge_down, edge_left
+        const PiecePart* edges = &rp.edge_up;
+        PiecePart edge = edges[direction];
+
+        if (edge == constraint) {
+            if (write_pos != i) {
+                valid[write_pos] = valid[i];
+            }
+            ++write_pos;
+        } else {
+            scratch_removed_.push_back(rp);
+        }
+    }
+
+    // Resize vector to remove filtered elements
+    valid.resize(write_pos);
 
     // Record removed pieces in trail for backtracking
     record_domain_shrink(idx, scratch_removed_);

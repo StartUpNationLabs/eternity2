@@ -33,10 +33,15 @@ void WorkQueue::push(WorkUnit unit) {
 bool WorkQueue::pop(WorkUnit& unit) {
     std::unique_lock<std::mutex> lock(mutex_);
 
-    // Wait until there's work or we're done
+    // Wait until there's work, we're done, or aborted
     cv_.wait(lock, [this] {
-        return !queue_.empty() || done_;
+        return !queue_.empty() || done_ || aborted_;
     });
+
+    // Check abort first - exit immediately if solution found
+    if (aborted_) {
+        return false;
+    }
 
     if (queue_.empty()) {
         return false;  // No more work
@@ -50,6 +55,11 @@ bool WorkQueue::pop(WorkUnit& unit) {
 void WorkQueue::finish() {
     done_ = true;
     cv_.notify_all();
+}
+
+void WorkQueue::abort() {
+    aborted_ = true;
+    cv_.notify_all();  // Wake up all waiting threads
 }
 
 size_t WorkQueue::size() const {
@@ -88,9 +98,12 @@ SolveResult ParallelSolverV2::solve() {
         std::cout << "Parallel solver: " << num_threads_ << " threads, partition depth " << target_depth << std::endl;
     }
 
-    // Phase 1: Collect work units at partition depth
+    // Phase 1: Collect work units at partition depth (SERIAL - this is the bottleneck!)
+    auto collect_start = std::chrono::steady_clock::now();
     std::vector<WorkUnit> work_units;
     collect_work_units(work_units, target_depth);
+    auto collect_end = std::chrono::steady_clock::now();
+    auto collect_ms = std::chrono::duration_cast<std::chrono::milliseconds>(collect_end - collect_start).count();
 
     if (work_units.empty()) {
         // No valid work units found (puzzle unsolvable from start)
@@ -98,7 +111,7 @@ SolveResult ParallelSolverV2::solve() {
     }
 
     if (shared_data_.config.verbose) {
-        std::cout << "Collected " << work_units.size() << " work units" << std::endl;
+        std::cout << "Collected " << work_units.size() << " work units in " << collect_ms << " ms (serial phase)" << std::endl;
     }
 
     // Phase 2: Distribute and solve
@@ -113,23 +126,36 @@ SolveResult ParallelSolverV2::solve() {
 }
 
 size_t ParallelSolverV2::calculate_partition_depth() const {
-    // Target: ~2-4x more work units than threads for good load balancing
-    // Estimated branching factor at each depth:
-    // - Depth 0: ~4 (corners)
-    // - Depth 1: ~4-8 (edges adjacent to corners)
-    // - Depth 2: ~4-8 (more edges)
-    // - Depth 3+: varies
+    // Target: ~4-8x more work units than threads for good load balancing
+    //
+    // With BORDER-FIRST strategy, the search tree is much narrower at shallow depths:
+    // - Depth 0-1: Only 4 corners with ~3 rotations each = ~12 branches
+    // - Need deeper partition to get enough work units
+    //
+    // With STANDARD strategy, branching is wider:
+    // - Each position has more choices initially
 
-    // For 4 threads: depth 2 (~16-32 units)
-    // For 8 threads: depth 2-3 (~32-128 units)
-    // For 16+ threads: depth 3 (~64-256 units)
+    bool is_border_first = (shared_data_.config.strategy == SolveStrategy::BORDER_FIRST);
 
-    if (num_threads_ <= 4) {
-        return 2;
-    } else if (num_threads_ <= 8) {
-        return 2;
+    if (is_border_first) {
+        // Border-first needs deeper partitioning due to narrow initial tree
+        // Depth 4-5 gives ~50-200 work units (corners + adjacent edges)
+        if (num_threads_ <= 4) {
+            return 4;
+        } else if (num_threads_ <= 8) {
+            return 5;
+        } else {
+            return 6;
+        }
     } else {
-        return 3;
+        // Standard MRV strategy has wider branching
+        if (num_threads_ <= 4) {
+            return 2;
+        } else if (num_threads_ <= 8) {
+            return 3;
+        } else {
+            return 3;
+        }
     }
 }
 
@@ -175,10 +201,11 @@ void ParallelSolverV2::collect_recursive(Board& board,
         return;
     }
 
-    // Select next variable using MRV (always use MRV for collection phase)
+    // Select next variable - use border-first if configured, otherwise MRV
     SolverConfig config;
     config.use_mrv = true;
     config.use_degree = true;
+    config.strategy = shared_data_.config.strategy;  // Copy strategy from main config
     VariableSelection var = select_next_variable(domain_manager, config);
 
     if (var.is_failure) {
@@ -265,15 +292,18 @@ SolveResult ParallelSolverV2::distribute_and_solve(std::vector<WorkUnit>& units)
 
     // Launch progress reporting thread if verbose
     std::thread progress_thread;
+    auto parallel_start = std::chrono::steady_clock::now();
     if (shared_data_.config.verbose) {
-        progress_thread = std::thread([&]() {
+        progress_thread = std::thread([&, parallel_start]() {
             long long last_count = -1;
             while (!shared_data_.stop && !solution_found_) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 long long current_count = shared_data_.max_count.load();
                 if (current_count > last_count) {
                     last_count = current_count;
-                    std::cout << "Progress: " << current_count << "/" << (board_size_ * board_size_)
+                    auto now = std::chrono::steady_clock::now();
+                    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - parallel_start).count();
+                    std::cout << "[" << elapsed_ms << "ms] Progress: " << current_count << "/" << (board_size_ * board_size_)
                               << " pieces placed" << std::endl;
                 }
             }
@@ -323,6 +353,8 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
     while (work_queue_.pop(unit) && !shared_data_.stop && !solution_found_) {
         // Get config from heuristic profile
         SolverConfig config = config_from_profile(unit.profile);
+        // IMPORTANT: Copy strategy from main config (for border-first support)
+        config.strategy = shared_data_.config.strategy;
 
         // Create a temporary SharedDataV2 for this solver instance
         // (shares the stop flag, mutex, max_count, and callbacks but has local config)
@@ -334,10 +366,15 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
         };
         local_shared.stop.store(shared_data_.stop.load());
         local_shared.config = config;
-        
+
         // Copy the progress callback from main shared_data and wrap it to update main max_count
         auto original_callback = shared_data_.on_board_update;
         local_shared.on_board_update = [&, original_callback](const Board& board) {
+            // Check if global stop was set (solution found by another thread)
+            if (shared_data_.stop.load()) {
+                local_shared.stop.store(true);
+            }
+
             // Count non-empty pieces on the board
             long long piece_count = 0;
             for (size_t y = 0; y < board_size_; ++y) {
@@ -349,7 +386,7 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
                     }
                 }
             }
-            
+
             // Update main shared_data_.max_count if this is better
             {
                 std::scoped_lock lock(shared_data_.mutex);
@@ -358,7 +395,7 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
                     shared_data_.max_board = board;
                 }
             }
-            
+
             // Call original callback if it exists
             if (original_callback) {
                 original_callback(board);
@@ -395,38 +432,53 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
         }
 
         if (result == SolveResult::SOLVED) {
-            // Solution found!
-            solution_found_ = true;
-            shared_data_.stop = true;
+            // Solution found! Use compare-exchange to ensure only first thread claims victory
+            bool expected = false;
+            if (solution_found_.compare_exchange_strong(expected, true)) {
+                // We are the first thread to find a solution
+                shared_data_.stop = true;
 
-            // Update shared solution (thread-safe with mutex)
-            {
-                std::scoped_lock lock(shared_data_.mutex);
-                shared_data_.max_board = solver.get_solution();
-                shared_data_.max_count = static_cast<long long>(board_size_ * board_size_);
-            }
+                // CRITICAL: Abort work queue to wake up waiting threads
+                work_queue_.abort();
 
-            if (shared_data_.config.verbose) {
-                std::cout << "Thread " << thread_id << " found solution with profile "
-                          << static_cast<int>(unit.profile) << std::endl;
+                // Update shared solution (thread-safe with mutex)
+                {
+                    std::scoped_lock lock(shared_data_.mutex);
+                    shared_data_.max_board = solver.get_solution();
+                    shared_data_.max_count = static_cast<long long>(board_size_ * board_size_);
+                }
+
+                if (shared_data_.config.verbose) {
+                    std::cout << "Thread " << thread_id << " FOUND SOLUTION with profile "
+                              << static_cast<int>(unit.profile) << std::endl;
+                }
             }
             break;
         }
 
         // Check if global stop was triggered by another thread
         if (shared_data_.stop) {
+            if (shared_data_.config.verbose) {
+                std::cout << "Thread " << thread_id << " stopping (solution found by other thread)" << std::endl;
+            }
             break;
         }
     }
 
-    if (shared_data_.config.verbose && !solution_found_) {
-        std::cout << "Thread " << thread_id << " completed - "
+    if (shared_data_.config.verbose) {
+        std::cout << "Thread " << thread_id << " exiting - "
                   << stats.nodes_explored << " nodes explored" << std::endl;
     }
 }
 
 VariableSelection ParallelSolverV2::select_next_variable(const DomainManager& domain_manager,
                                                           const SolverConfig& config) {
+    // Check strategy first - border-first overrides MRV settings
+    if (config.strategy == SolveStrategy::BORDER_FIRST) {
+        return select_variable_border_first(domain_manager);
+    }
+
+    // Standard MRV-based selection
     if (config.use_mrv) {
         if (config.use_degree) {
             return select_variable_mrv(domain_manager);

@@ -93,6 +93,7 @@ struct BenchmarkConfig {
     bool v2_use_mrv = true;
     bool v2_use_degree = true;
     bool v2_use_lcv = true;
+    bool v2_border_first = false;  // Use border-first strategy
 
     // V2 parallel configuration
     bool run_v2_parallel = false;       // Run V2 parallel solver

@@ -124,6 +124,20 @@ public:
     }
     [[gnu::always_inline]] uint16_t get_max_color_frequency() const { return max_color_frequency_; }
 
+    // Position type checks (for border-first heuristic)
+    [[gnu::always_inline]] bool is_corner(Index index) const {
+        return (index.first == 0 || index.first == board_size_ - 1) &&
+               (index.second == 0 || index.second == board_size_ - 1);
+    }
+    [[gnu::always_inline]] bool is_edge(Index index) const {
+        return !is_corner(index) &&
+               (index.first == 0 || index.first == board_size_ - 1 ||
+                index.second == 0 || index.second == board_size_ - 1);
+    }
+    [[gnu::always_inline]] bool is_interior(Index index) const {
+        return !is_corner(index) && !is_edge(index);
+    }
+
 private:
     static constexpr size_t MAX_COLORS = 32;
     size_t board_size_;
@@ -164,20 +178,6 @@ private:
     // Check if index is valid - inline for hot path
     [[gnu::always_inline]] bool is_valid_index(Index index) const {
         return index.first < board_size_ && index.second < board_size_;
-    }
-
-    // Check if position is corner, edge, or interior - inline for hot path
-    [[gnu::always_inline]] bool is_corner(Index index) const {
-        return (index.first == 0 || index.first == board_size_ - 1) &&
-               (index.second == 0 || index.second == board_size_ - 1);
-    }
-    [[gnu::always_inline]] bool is_edge(Index index) const {
-        return !is_corner(index) &&
-               (index.first == 0 || index.first == board_size_ - 1 ||
-                index.second == 0 || index.second == board_size_ - 1);
-    }
-    [[gnu::always_inline]] bool is_interior(Index index) const {
-        return !is_corner(index) && !is_edge(index);
     }
 
     // Compute initial domain for a position (based on position type)

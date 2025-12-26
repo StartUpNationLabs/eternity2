@@ -142,6 +142,9 @@ BenchmarkResult Benchmark::run_v2(const std::string& puzzle_file) {
         shared_data.config.use_mrv = config_.v2_use_mrv;
         shared_data.config.use_degree = config_.v2_use_degree;
         shared_data.config.use_lcv = config_.v2_use_lcv;
+        shared_data.config.strategy = config_.v2_border_first ? 
+            eternity2_v2::SolveStrategy::BORDER_FIRST : 
+            eternity2_v2::SolveStrategy::STANDARD;
         shared_data.config.max_time_ms = config_.timeout_ms;
         shared_data.config.collect_stats = true;
         shared_data.config.verbose = false;
@@ -218,9 +221,12 @@ BenchmarkResult Benchmark::run_v2_parallel(const std::string& puzzle_file) {
         shared_data.config.use_mrv = config_.v2_use_mrv;
         shared_data.config.use_degree = config_.v2_use_degree;
         shared_data.config.use_lcv = config_.v2_use_lcv;
+        shared_data.config.strategy = config_.v2_border_first ?
+            eternity2_v2::SolveStrategy::BORDER_FIRST :
+            eternity2_v2::SolveStrategy::STANDARD;
         shared_data.config.max_time_ms = config_.timeout_ms;
         shared_data.config.collect_stats = true;
-        shared_data.config.verbose = false;
+        shared_data.config.verbose = config_.verbose;  // Pass through verbose flag
         shared_data.config.parallel_enabled = true;
         shared_data.config.num_threads = num_threads;
 
@@ -523,37 +529,56 @@ void Benchmark::print_comparison(const BenchmarkComparison& comparison) {
 void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons) {
     if (comparisons.empty()) return;
 
+    // Check if any parallel results exist
+    bool has_parallel = false;
+    for (const auto& comp : comparisons) {
+        if (comp.v2_parallel_result.elapsed_ms > 0) {
+            has_parallel = true;
+            break;
+        }
+    }
+
     // Header
-    std::cout << "\n" << std::string(120, '=') << std::endl;
+    std::cout << "\n" << std::string(has_parallel ? 145 : 120, '=') << std::endl;
     std::cout << "BENCHMARK RESULTS TABLE" << std::endl;
-    std::cout << std::string(120, '=') << std::endl;
+    std::cout << std::string(has_parallel ? 145 : 120, '=') << std::endl;
 
     // Column headers
     std::cout << std::left << std::setw(30) << "Puzzle"
               << std::right << std::setw(6) << "Size"
               << std::setw(12) << "V1 Time"
-              << std::setw(12) << "V2 Time"
-              << std::setw(10) << "Speedup"
-              << std::setw(12) << "V1 Nodes"
+              << std::setw(12) << "V2 Time";
+    if (has_parallel) {
+        std::cout << std::setw(12) << "V2P Time"
+                  << std::setw(10) << "P.Speedup";
+    }
+    std::cout << std::setw(10) << "Speedup"
               << std::setw(12) << "V2 Nodes"
-              << std::setw(12) << "Node Red."
               << std::setw(8) << "V1"
-              << std::setw(8) << "V2"
-              << std::endl;
+              << std::setw(8) << "V2";
+    if (has_parallel) {
+        std::cout << std::setw(8) << "V2P";
+    }
+    std::cout << std::endl;
 
     std::cout << std::left << std::setw(30) << ""
               << std::right << std::setw(6) << ""
               << std::setw(12) << "(ms)"
-              << std::setw(12) << "(ms)"
-              << std::setw(10) << ""
-              << std::setw(12) << ""
-              << std::setw(12) << ""
+              << std::setw(12) << "(ms)";
+    if (has_parallel) {
+        std::cout << std::setw(12) << "(ms)"
+                  << std::setw(10) << "(vs V2)";
+    }
+    std::cout << std::setw(10) << "(V2/V1)"
               << std::setw(12) << ""
               << std::setw(8) << "Solved"
-              << std::setw(8) << "Solved"
-              << std::endl;
+              << std::setw(8) << "Solved";
+    if (has_parallel) {
+        std::cout << std::setw(8) << "Solved";
+    }
+    std::cout << std::endl;
 
-    std::cout << std::string(120, '-') << std::endl;
+    std::cout << std::string(has_parallel ? 145 : 120, '-') << std::endl;
 
     // Data rows
     for (const auto& comp : comparisons) {
@@ -574,6 +599,18 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
                   << std::setw(12) << comp.v1_result.elapsed_ms
                   << std::setw(12) << comp.v2_result.elapsed_ms;
 
+        if (has_parallel) {
+            std::cout << std::setw(12) << comp.v2_parallel_result.elapsed_ms;
+            // Parallel speedup vs V2 single
+            if (comp.v2_result.solved && comp.v2_parallel_result.solved && comp.v2_parallel_result.elapsed_ms > 0) {
+                std::ostringstream pspeedup_str;
+                pspeedup_str << std::fixed << std::setprecision(1) << comp.parallel_speedup() << "x";
+                std::cout << std::setw(10) << pspeedup_str.str();
+            } else {
+                std::cout << std::setw(10) << "-";
+            }
+        }
+
         if (comp.v1_result.solved && comp.v2_result.solved) {
             std::ostringstream speedup_str;
             speedup_str << std::fixed << std::setprecision(1) << comp.speedup() << "x";
@@ -582,23 +619,17 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
             std::cout << std::setw(10) << "-";
         }
 
-        std::cout << std::setw(12) << comp.v1_result.nodes_explored
-                  << std::setw(12) << comp.v2_result.nodes_explored;
-
-        if (comp.v1_result.solved && comp.v2_result.solved && comp.v2_result.nodes_explored > 0) {
-            std::ostringstream reduction_str;
-            reduction_str << std::fixed << std::setprecision(1) << comp.node_reduction() << "x";
-            std::cout << std::setw(12) << reduction_str.str();
-        } else {
-            std::cout << std::setw(12) << "-";
-        }
+        std::cout << std::setw(12) << comp.v2_result.nodes_explored;
 
         std::cout << std::setw(8) << (comp.v1_result.solved ? "YES" : "NO")
-                  << std::setw(8) << (comp.v2_result.solved ? "YES" : "NO")
-                  << std::endl;
+                  << std::setw(8) << (comp.v2_result.solved ? "YES" : "NO");
+        if (has_parallel) {
+            std::cout << std::setw(8) << (comp.v2_parallel_result.solved ? "YES" : "NO");
+        }
+        std::cout << std::endl;
     }
 
-    std::cout << std::string(120, '=') << std::endl;
+    std::cout << std::string(has_parallel ? 145 : 120, '=') << std::endl;
 }
 
 void Benchmark::print_summary(const BenchmarkSummary& summary) {

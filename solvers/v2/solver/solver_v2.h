@@ -31,6 +31,12 @@ enum class HeuristicProfile {
     COUNT              // Number of profiles
 };
 
+// Solve strategy for search ordering
+enum class SolveStrategy {
+    STANDARD,        // Standard MRV-based search
+    BORDER_FIRST    // Two-phase: solve border (corners + edges) first, then interior
+};
+
 // Configuration for solver_v2
 struct SolverConfig {
     // Heuristic options
@@ -38,6 +44,9 @@ struct SolverConfig {
     bool use_degree = true;        // Use degree as tie-breaker for MRV
     bool use_lcv = true;           // Use LCV value ordering
     bool use_reverse_lcv = false;  // Use reverse LCV (most constraining first)
+
+    // Search strategy
+    SolveStrategy strategy = SolveStrategy::STANDARD;  // Search strategy
 
     // Statistics and debugging
     bool collect_stats = true;     // Collect detailed statistics

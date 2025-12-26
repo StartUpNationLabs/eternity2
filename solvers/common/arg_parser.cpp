@@ -16,6 +16,7 @@ void print_v2_usage(const char* program_name) {
     std::cout << "  --no-degree     Disable degree heuristic (MRV tie-breaker)\n";
     std::cout << "  --no-lcv        Disable LCV value ordering\n";
     std::cout << "  --random        Use random value ordering (disables LCV)\n";
+    std::cout << "  --border-first  Use border-first strategy (corners -> edges -> interior)\n";
     std::cout << "  --verbose       Print detailed progress\n";
     std::cout << "  --quiet         Minimal output\n";
     std::cout << "  --stats         Print statistics at end\n";
@@ -59,6 +60,8 @@ bool parse_v2_arguments(int argc, char* argv[],
             config.use_lcv = false;
         } else if (arg == "--random") {
             config.use_lcv = false;
+        } else if (arg == "--border-first") {
+            config.strategy = eternity2_v2::SolveStrategy::BORDER_FIRST;
         } else if (arg == "--verbose" || arg == "-v") {
             config.verbose = true;
         } else if (arg == "--quiet" || arg == "-q") {

@@ -21,6 +21,8 @@ void print_usage(const char* program_name) {
     std::cout << "  --no-mrv           Disable MRV heuristic in V2" << std::endl;
     std::cout << "  --no-degree        Disable degree heuristic in V2" << std::endl;
     std::cout << "  --no-lcv           Disable LCV heuristic in V2" << std::endl;
+    std::cout << "  --border-first     Use border-first strategy in V2" << std::endl;
+    std::cout << "  --v2-parallel      Use V2 parallel solver (multi-threaded)" << std::endl;
     std::cout << "  --v1-only          Run V1 only" << std::endl;
     std::cout << "  --v2-only          Run V2 only (for ablation studies)" << std::endl;
     std::cout << "  --sequential       Run puzzles sequentially (default: parallel)" << std::endl;
@@ -97,12 +99,20 @@ int main(int argc, char* argv[]) {
             config.v2_use_degree = false;
         } else if (arg == "--no-lcv") {
             config.v2_use_lcv = false;
+        } else if (arg == "--border-first") {
+            config.v2_border_first = true;
+        } else if (arg == "--v2-parallel") {
+            config.run_v2_parallel = true;
         } else if (arg == "--v1-only") {
             config.run_v1 = true;
             config.run_v2 = false;
         } else if (arg == "--v2-only") {
             config.run_v1 = false;
             config.run_v2 = true;
+        } else if (arg == "--v2-parallel-only") {
+            config.run_v1 = false;
+            config.run_v2 = false;
+            config.run_v2_parallel = true;
         } else if (arg == "--sequential") {
             config.parallel = false;
         } else if (arg == "--table") {
@@ -149,6 +159,9 @@ int main(int argc, char* argv[]) {
     } else if (config.run_v2) {
         std::cout << "V2 only";
     }
+    if (config.run_v2_parallel) {
+        std::cout << " + V2 Parallel";
+    }
     std::cout << std::endl;
 
     // Show V2 configuration if V2 is enabled
@@ -157,7 +170,8 @@ int main(int argc, char* argv[]) {
         std::cout << (config.v2_use_mrv ? "MRV " : "");
         std::cout << (config.v2_use_degree ? "Degree " : "");
         std::cout << (config.v2_use_lcv ? "LCV " : "");
-        if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv) {
+        std::cout << (config.v2_border_first ? "BorderFirst " : "");
+        if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv && !config.v2_border_first) {
             std::cout << "(none - random ordering)";
         }
         std::cout << std::endl;

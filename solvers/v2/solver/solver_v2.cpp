@@ -3,6 +3,7 @@
 //
 
 #include "solver_v2.h"
+#include "../heuristics/variable_ordering.h"
 
 using eternity2_common::Piece;
 using eternity2_common::PiecePart;
@@ -310,6 +311,12 @@ void SolverV2::update_best_board(size_t depth) {
 VariableSelection SolverV2::select_next_variable() {
     const auto& config = shared_data_.config;
 
+    // Check strategy first - border-first overrides MRV settings
+    if (config.strategy == SolveStrategy::BORDER_FIRST) {
+        return select_variable_border_first(domain_manager_);
+    }
+
+    // Standard MRV-based selection
     if (config.use_mrv) {
         if (config.use_degree) {
             return select_variable_mrv(domain_manager_);

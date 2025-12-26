@@ -66,6 +66,7 @@ public:
     void push(WorkUnit unit);
     bool pop(WorkUnit& unit);  // Returns false when done and queue is empty
     void finish();             // Signal no more work will be added
+    void abort();              // Signal threads to stop immediately (solution found)
     size_t size() const;
 
 private:
@@ -73,6 +74,7 @@ private:
     mutable std::mutex mutex_;
     std::condition_variable cv_;
     std::atomic<bool> done_{false};
+    std::atomic<bool> aborted_{false};
 };
 
 // Parallel solver using Multi-Level Partitioning + Portfolio Search
