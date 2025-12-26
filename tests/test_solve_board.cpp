@@ -2,10 +2,14 @@
 
 #include "board/board.h"
 #include "format/format.h"
-#include "piece_loader/piece_loader.h"
+#include "solvers/common/piece_loader.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
 #include "solver/solver.h"
 
 #include <catch2/catch_all.hpp>
+
+using namespace eternity2_common;
 
 TEST_CASE("Possible pieces")
 {

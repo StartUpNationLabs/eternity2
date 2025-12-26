@@ -25,14 +25,15 @@ This document provides instructions for deploying the Eternity2 application in v
 
 If you want to build the images locally instead of using pre-built images:
 
-1. Edit `docker-compose.yaml` and uncomment the `build` sections
+1. Edit `docker-compose/docker-compose.yaml` and uncomment the `build` sections
 2. Build all images:
    ```bash
    make docker-build
    ```
 3. Start the services:
    ```bash
-   docker compose up -d
+   make up
+   # Or: docker compose -f docker-compose/docker-compose.yaml up -d
    ```
 
 ## Production Deployment
@@ -53,11 +54,12 @@ make docker-push-all
 
 ### Deploying to Production
 
-1. Update `docker-compose.yaml` with your registry URLs
+1. Update `docker-compose/docker-compose.yaml` (or `docker-compose/docker-compose.prod.yaml`) with your registry URLs
 2. Set environment variables for your production environment
 3. Deploy using Docker Compose:
    ```bash
-   docker compose -f docker-compose.yaml up -d
+   make up
+   # Or: docker compose -f docker-compose/docker-compose.yaml up -d
    ```
 
 ## Deployment Behind Reverse Proxy
@@ -80,7 +82,7 @@ When deploying behind a reverse proxy with path prefix routing (e.g., `https://y
 #### Example: Traefik with Path Prefix
 
 ```yaml
-# docker-compose.yaml
+# docker-compose/docker-compose.yaml
 services:
   frontend:
     environment:
@@ -120,7 +122,7 @@ services:
 
 In production, you typically **should not expose ports 50052 or 50051 directly** to the internet. Instead:
 
-1. Remove port mappings from `docker-compose.yaml`:
+1. Remove port mappings from `docker-compose/docker-compose.yaml`:
    ```yaml
    services:
      envoy:
@@ -137,7 +139,7 @@ In production, you typically **should not expose ports 50052 or 50051 directly**
 2. Let the reverse proxy handle all external traffic on ports 80/443
 3. Use Docker networking for internal communication between containers
 
-#### Example Production docker-compose.yaml
+#### Example Production docker-compose/docker-compose.yaml
 
 ```yaml
 services:

@@ -8,10 +8,9 @@
 #include "board/board.h"
 #include "solver/solver.h"
 #include "solver/v1/solver.grpc.pb.h"
-#include "../solver_v2/solver/solver_v2.h"
+#include "solvers/v2/solver/solver_v2.h"
 
 #include <agrpc/asio_grpc.hpp>
-#include <spdlog/spdlog.h>
 #include <unifex/finally.hpp>
 #include <unifex/just_from.hpp>
 #include <unifex/let_value_with.hpp>

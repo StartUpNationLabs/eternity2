@@ -44,9 +44,9 @@
 ### CMake ###
 CMakeLists.txt.user
 CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
+CMakeFiles/
+CMakeScripts/
+Testing/
 Makefile
 cmake_install.cmake
 install_manifest.txt
@@ -55,7 +55,16 @@ CTestTestfile.cmake
 DartConfiguration.tcl
 tests/tests-*.cmake
 .old/
-_deps
+_deps/
+
+# CMake artifacts in subdirectories (enforce out-of-source builds)
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+**/Makefile
+**/CTestTestfile.cmake
+**/lib*.a
+**/Testing/
 
 ### CMake Patch ###
 # External projects

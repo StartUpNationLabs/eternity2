@@ -14,7 +14,6 @@
     "protobuf",
     "asio-grpc",
     "libunifex",
-    "spdlog",
     "hiredis",
     "redis-plus-plus"
   ]

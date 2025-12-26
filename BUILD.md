@@ -71,7 +71,7 @@ Dependencies installed:
 - asio-grpc (Async gRPC library)
 - libunifex (Unified Executors)
 - catch2 (Testing framework)
-- spdlog (Logging)
+- Custom logger (built-in, no external dependency)
 - hiredis (Redis client)
 - redis-plus-plus (C++ Redis client)
 
@@ -98,7 +98,9 @@ make build-cpp
 
 #### Build Output
 
-- **Solver library**: `build/solver/libsolver_lib.a`
+- **Solver v1 library**: `build/solvers/v1/libsolver_lib.a`
+- **Solver v2 library**: `build/solvers/v2/libsolver_v2_lib.a`
+- **Benchmark tool**: `build/solvers/benchmark/benchmark`
 - **gRPC Server**: `build/api/asio-grpc-server`
 - **Tests**: `build/tests/tests` (if Catch2 is available)
 
@@ -229,10 +231,10 @@ make docker-build
 
 You can also use Docker Compose to build images:
 
-1. Edit `docker-compose.yaml` and uncomment the `build` sections
+1. Edit `docker-compose/docker-compose.yaml` and uncomment the `build` sections
 2. Run:
    ```bash
-   docker compose build
+   docker compose -f docker-compose/docker-compose.yaml build
    ```
 
 ## Build Artifacts
@@ -245,8 +247,13 @@ After a successful local build, you'll have:
 build/
 ├── api/
 │   └── asio-grpc-server          # gRPC server binary
-├── solver/
-│   └── libsolver_lib.a           # Solver library
+├── solvers/
+│   ├── v1/
+│   │   └── libsolver_lib.a       # Solver v1 library
+│   ├── v2/
+│   │   └── libsolver_v2_lib.a    # Solver v2 library
+│   └── benchmark/
+│       └── benchmark              # Benchmark tool
 └── tests/
     └── tests                      # Test binary (if Catch2 available)
 
@@ -329,7 +336,7 @@ vcpkg can't install packages or times out.
    ```
 3. Try installing packages individually:
    ```bash
-   vcpkg install protobuf asio-grpc libunifex catch2 spdlog hiredis redis-plus-plus
+   vcpkg install protobuf asio-grpc libunifex catch2 hiredis redis-plus-plus
    ```
 
 ### Frontend build fails with Node.js errors

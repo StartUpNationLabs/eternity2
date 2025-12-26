@@ -1,8 +1,11 @@
 #define CONFIG_CATCH_MAIN
 
 #include <catch2/catch_all.hpp>
-#include "piece/piece.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
 #include "piece_search/piece_search.h"
+
+using namespace eternity2_common;
 
 // These tests specifically target the bug in solver_v2 that broke constraint satisfaction
 // by using POSITIVE queries instead of NEGATIVE queries for wall exclusion

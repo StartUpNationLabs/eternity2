@@ -140,14 +140,17 @@ docker-push-envoy: ## Push Envoy image to registry
 
 ##@ Docker Compose Operations
 
+DOCKER_COMPOSE_DIR := docker-compose
+DOCKER_COMPOSE_FILE := $(DOCKER_COMPOSE_DIR)/docker-compose.yaml
+
 up: ## Start all services with docker-compose
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up -d
 
 down: ## Stop all services
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) down
 
 logs: ## Show logs from all services
-	$(DOCKER_COMPOSE) logs -f
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) logs -f
 
 restart: down up ## Restart all services
 

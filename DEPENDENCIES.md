@@ -68,7 +68,7 @@ The following C++ libraries are automatically installed via vcpkg:
 - **asio-grpc** - Asynchronous gRPC library
 - **libunifex** - Unified Executors library
 - **catch2** - C++ testing framework
-- **spdlog** - Fast C++ logging library
+- **Custom logger** - Simple logging utility (in `solvers/common/logger.h`)
 - **hiredis** - Redis C client library
 - **redis-plus-plus** - C++ client for Redis
 

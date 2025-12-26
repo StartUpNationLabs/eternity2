@@ -68,12 +68,20 @@ make docker-build
 
 ```
 .
+├── solvers/          # All solver implementations and tools
+│   ├── v1/          # Solver v1 (C++17, original implementation)
+│   ├── v2/          # Solver v2 (C++20, optimized with MAC/MRV/LCV)
+│   └── benchmark/   # Benchmark tool for comparing solvers
+├── data/             # Puzzle and data files
+│   ├── puzzles/     # Original puzzle files
+│   ├── generated/   # Generated puzzle files
+│   └── benchmark/   # Benchmark puzzle files
 ├── api/              # C++ gRPC server implementation
-├── solver/           # Core solver algorithms (C++)
 ├── frontend/         # React web application
 ├── envoy/            # Envoy proxy configuration
 ├── tests/            # C++ unit tests
 ├── build-base/       # Docker base image with dependencies
+├── docker-compose/   # Docker compose configuration files
 └── Makefile          # Build automation
 ```
 

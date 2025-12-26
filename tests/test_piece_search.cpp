@@ -1,9 +1,13 @@
 #define CONFIG_CATCH_MAIN
 
 #include <catch2/catch_all.hpp>
-#include "piece/piece.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
 #include "piece_search/piece_search.h"
 #include "format/format.h"
+#include "solvers/v1/piece/piece.h"
+
+using namespace eternity2_common;
 
 const auto pieces = create_pieces_with_availability(std::vector<Piece>{
         make_piece(1, 1, 4, 4),

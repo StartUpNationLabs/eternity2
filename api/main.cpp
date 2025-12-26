@@ -21,7 +21,7 @@
 #include <agrpc/health_check_service.hpp>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
-#include <spdlog/spdlog.h>
+#include "../solvers/common/logger.h"
 #include <unifex/finally.hpp>
 #include <unifex/just_from.hpp>
 #include <unifex/just_void_or_done.hpp>
@@ -47,7 +47,7 @@ auto main(int argc, const char **argv) -> int
 {
     const auto *const port = argc >= 2 ? argv[1] : "50051";
     const auto host        = std::string("0.0.0.0:") + port;
-    spdlog::info("Starting server on {}", host);
+    eternity2_logger::info("Starting server on {}", host);
 
     solver::v1::Solver::AsyncService solver_service;
     std::unique_ptr<grpc::Server> server;

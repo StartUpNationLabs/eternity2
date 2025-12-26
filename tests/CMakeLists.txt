@@ -11,6 +11,10 @@ add_executable(tests
         test_spiral.cpp
         test_scan_row.cpp
         test_solver_v2.cpp)
+target_include_directories(tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..  # Add project root to include path so we can use "solvers/common/types.h"
+)
+
 target_link_libraries(tests Catch2::Catch2WithMain solver_lib solver_v2_lib)
 include(CTest)
 include(Catch)

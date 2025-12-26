@@ -49,4 +49,4 @@ ENV VCPKG_ROOT /vcpkg
 ENV PATH $VCPKG_ROOT:$PATH
 RUN git clone https://github.com/microsoft/vcpkg.git && \
     ./vcpkg/bootstrap-vcpkg.sh && \
-    vcpkg install protobuf asio-grpc libunifex catch2 spdlog hiredis redis-plus-plus
+    vcpkg install protobuf asio-grpc libunifex catch2 hiredis redis-plus-plus

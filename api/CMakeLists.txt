@@ -6,7 +6,6 @@ find_package(Protobuf CONFIG REQUIRED)
 find_package(asio-grpc CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 find_package(unifex CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
 # find_package(hiredis CONFIG REQUIRED)
 # find_package(redis++ CONFIG REQUIRED)
 
@@ -37,12 +36,14 @@ target_link_libraries(
         unifex::unifex
         solver_lib
         solver_v2_lib
-        spdlog::spdlog
         # hiredis::hiredis
         # redis++::redis++_static
 )
 
-target_include_directories(asio-grpc-server PRIVATE ${CPP_BASE64_INCLUDE_DIRS})
+target_include_directories(asio-grpc-server PRIVATE 
+    ${CPP_BASE64_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..  # Add project root to include path so we can use "solvers/v2/solver/solver_v2.h"
+)
 
 # set release
 set(CMAKE_BUILD_TYPE Release)

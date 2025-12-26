@@ -1,11 +1,13 @@
 #define CONFIG_CATCH_MAIN
 
 #include <catch2/catch_all.hpp>
-#include "piece/piece.h"
-#include "piece_search/piece_search.h"
-#include "format/format.h"
-#include "piece_loader/piece_loader.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
+#include "solvers/v1/piece_search/piece_search.h"
+#include "solvers/v1/format/format.h"
+#include "solvers/common/piece_loader.h"
 
+using namespace eternity2_common;
 
 TEST_CASE("Piece load from string", "[load]") {
 

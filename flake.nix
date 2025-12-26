@@ -32,7 +32,6 @@
             asio-grpc
             libunifex
             pkgs.openssl
-            pkgs.pkgs.spdlog
             pkgs.protobuf
             pkgs.hiredis
             pkgs.redis-plus-plus

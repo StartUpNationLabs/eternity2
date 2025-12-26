@@ -3,7 +3,10 @@
 #include <catch2/catch_all.hpp>
 #include "board/board.h"
 #include "format/format.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
 
+using namespace eternity2_common;
 
 TEST_CASE("Board Creation", "[create]"){
     SECTION("Create 4x4 board") {

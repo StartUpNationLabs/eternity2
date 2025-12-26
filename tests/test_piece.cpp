@@ -1,7 +1,10 @@
 #define CONFIG_CATCH_MAIN
 
 #include <catch2/catch_all.hpp>
-#include "piece/piece.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
+
+using namespace eternity2_common;
 
 TEST_CASE("Piece Rotation", "[left][right]") {
     SECTION("Rotate left") {

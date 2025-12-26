@@ -6,13 +6,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <mutex>
 
-#include "../solver_v2/constraints/domain.h"
-#include "../solver_v2/heuristics/variable_ordering.h"
-#include "../solver_v2/heuristics/value_ordering.h"
-#include "../solver_v2/solver/solver_v2.h"
-#include "../solver/piece_loader/piece_loader.h"
+#include "solvers/v2/constraints/domain.h"
+#include "solvers/v2/heuristics/variable_ordering.h"
+#include "solvers/v2/heuristics/value_ordering.h"
+#include "solvers/v2/solver/solver_v2.h"
+#include "solvers/common/piece_loader.h"
+#include "solvers/common/types.h"
+#include "solvers/common/piece_utils.h"
 
 using namespace eternity2_v2;
+using namespace eternity2_common;
 
 // Helper to create a simple 2x2 puzzle
 // Pieces must have walls on edges and matching interior edges
