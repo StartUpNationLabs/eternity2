@@ -41,6 +41,7 @@ export const Solving = () => {
                 useCache: setting.useCache,
                 cachePullInterval: setting.cachePullInterval,
                 hints: hints,
+                solverVersion: setting.solverVersion,
             };
 
             console.log("Request object: ", requestOjb);

@@ -8,6 +8,7 @@
 #include "board/board.h"
 #include "solver/solver.h"
 #include "solver/v1/solver.grpc.pb.h"
+#include "../solver_v2/solver/solver_v2.h"
 
 #include <agrpc/asio_grpc.hpp>
 #include <spdlog/spdlog.h>
@@ -30,8 +31,11 @@ using SolverRPC           = agrpc::ServerRPC<&SolverService::RequestSolve>;
 using SolverStepByStepRPC = agrpc::ServerRPC<&SolverService::RequestSolveStepByStep>;
 
 void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data);
+void thread_function_v2(Board board, std::vector<Piece> pieces, eternity2_v2::SharedDataV2 &shared_data);
 
 auto build_response(const SharedData &shared_data, double elapsed_time) -> SolverRPC::Response;
+auto build_response_v2(const eternity2_v2::SharedDataV2 &shared_data, double elapsed_seconds) -> SolverRPC::Response;
+auto build_response_step_by_step_v2(const Board &board, const eternity2_v2::SharedDataV2 &data, double elapsed_seconds) -> SolverStepByStepRPC::Response;
 
 auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &request)
     -> std::pair<Board, std::vector<Piece>>;

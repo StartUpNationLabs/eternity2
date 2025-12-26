@@ -12,6 +12,19 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
+ * @generated from protobuf enum solver.v1.SolverVersion
+ */
+export enum SolverVersion {
+    /**
+     * @generated from protobuf enum value: V1 = 0;
+     */
+    V1 = 0,
+    /**
+     * @generated from protobuf enum value: V2 = 1;
+     */
+    V2 = 1
+}
+/**
  * @generated from protobuf message solver.v1.SolverSolveRequest
  */
 export interface SolverSolveRequest {
@@ -47,6 +60,10 @@ export interface SolverSolveRequest {
      * @generated from protobuf field: repeated solver.v1.Hint hints = 8;
      */
     hints: Hint[];
+    /**
+     * @generated from protobuf field: solver.v1.SolverVersion solver_version = 9;
+     */
+    solverVersion: SolverVersion;
 }
 /**
  * @generated from protobuf message solver.v1.Piece
@@ -180,7 +197,8 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
             { no: 5, name: "use_cache", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 6, name: "cache_pull_interval", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 7, name: "solve_path", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 13 /*ScalarType.UINT32*/ },
-            { no: 8, name: "hints", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Hint }
+            { no: 8, name: "hints", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Hint },
+            { no: 9, name: "solver_version", kind: "enum", T: () => ["solver.v1.SolverVersion", SolverVersion] }
         ]);
     }
     create(value?: PartialMessage<SolverSolveRequest>): SolverSolveRequest {
@@ -193,6 +211,7 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
         message.cachePullInterval = 0;
         message.solvePath = [];
         message.hints = [];
+        message.solverVersion = 0; // V1
         if (value !== undefined)
             reflectionMergePartial<SolverSolveRequest>(this, message, value);
         return message;
@@ -229,6 +248,9 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
                     break;
                 case /* repeated solver.v1.Hint hints */ 8:
                     message.hints.push(Hint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* solver.v1.SolverVersion solver_version */ 9:
+                    message.solverVersion = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -270,6 +292,9 @@ class SolverSolveRequest$Type extends MessageType<SolverSolveRequest> {
         /* repeated solver.v1.Hint hints = 8; */
         for (let i = 0; i < message.hints.length; i++)
             Hint.internalBinaryWrite(message.hints[i], writer.tag(8, WireType.LengthDelimited).fork(), options).join();
+        /* solver.v1.SolverVersion solver_version = 9; */
+        if (message.solverVersion !== 0)
+            writer.tag(9, WireType.Varint).int32(message.solverVersion);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

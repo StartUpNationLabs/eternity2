@@ -36,6 +36,7 @@ target_link_libraries(
         asio-grpc::asio-grpc-unifex
         unifex::unifex
         solver_lib
+        solver_v2_lib
         spdlog::spdlog
         # hiredis::hiredis
         # redis++::redis++_static

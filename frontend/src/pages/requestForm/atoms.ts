@@ -1,5 +1,5 @@
 import { atom, RecoilState } from "recoil";
-import { SolverSolveRequest } from "../../proto/solver/v1/solver.ts";
+import { SolverSolveRequest, SolverVersion } from "../../proto/solver/v1/solver.ts";
 import {
   BOARD_COLOR_DEFAULT,
   BOARD_SIZE_DEFAULT,
@@ -36,6 +36,7 @@ export const settingsState = atom({
     waitTime: WAIT_TIME_DEFAULT,
     cachePullInterval: CACHE_PULL_INTERVAL_DEFAULT,
     threads: THREADS_DEFAULT,
+    solverVersion: SolverVersion.V1,
   }, // default value (aka initial value)
 });
 

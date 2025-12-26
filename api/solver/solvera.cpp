@@ -5,6 +5,7 @@
 #include "solvera.h"
 
 #include "board/scan_utils.h"
+#include "../solver_v2/solver/solver_v2.h"
 
 #include <unifex/timed_single_thread_context.hpp>
 unifex::timed_single_thread_context timer;
@@ -36,6 +37,36 @@ auto build_response(const SharedData &shared_data, double elapsed_seconds) -> So
         piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
     }
     spdlog::info("Response built");
+    return response;
+}
+
+auto build_response_v2(const eternity2_v2::SharedDataV2 &shared_data, double elapsed_seconds) -> SolverRPC::Response
+{
+    SolverRPC::Response response{};
+    const auto &stats = shared_data.stats;
+    response.set_boards_analyzed(static_cast<uint32_t>(stats.nodes_explored.load()));
+    response.set_hash_table_size(0);  // v2 doesn't use hash table
+    response.set_time(elapsed_seconds);
+    if (elapsed_seconds > 0) {
+        response.set_boards_per_second(static_cast<double>(stats.nodes_explored.load()) / elapsed_seconds);
+    } else {
+        response.set_boards_per_second(0.0);
+    }
+    response.set_hashes_per_second(0.0);  // v2 doesn't use hash table
+    response.set_hash_table_hits(0);  // v2 doesn't use hash table
+
+    for (auto &board_piece : shared_data.max_board.board)
+    {
+        auto *rotated_piece = response.add_rotated_pieces();
+        rotated_piece->set_index(board_piece.index);
+        rotated_piece->set_rotation(board_piece.rotation);
+        auto *piece = rotated_piece->mutable_piece();
+        piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
+        piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
+        piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
+        piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
+    }
+    spdlog::info("Response built (v2)");
     return response;
 }
 
@@ -71,6 +102,45 @@ auto build_response_step_by_step(const Board &board, SharedData &data) -> Solver
     response.set_time(elapsed_seconds);
     response.set_boards_per_second(static_cast<double>(data.board_count) / elapsed_seconds);
     response.set_steps(data.pieces_placed);
+    return response;
+}
+
+auto build_response_step_by_step_v2(const Board &board, const eternity2_v2::SharedDataV2 &data, double elapsed_seconds) -> SolverStepByStepRPC::Response
+{
+    SolverStepByStepRPC::Response response{};
+    for (const auto &board_piece : board.board)
+    {
+        auto *rotated_piece = response.add_rotated_pieces();
+        rotated_piece->set_index(board_piece.index);
+        rotated_piece->set_rotation(board_piece.rotation);
+        auto *piece = rotated_piece->mutable_piece();
+        piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
+        piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
+        piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
+        piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
+    }
+    // add max board
+    for (const auto &board_piece : data.max_board.board)
+    {
+        auto *rotated_piece = response.add_max_board();
+        rotated_piece->set_index(board_piece.index);
+        rotated_piece->set_rotation(board_piece.rotation);
+        auto *piece = rotated_piece->mutable_piece();
+        piece->set_top(get_piece_part(board_piece.piece, UP_MASK));
+        piece->set_right(get_piece_part(board_piece.piece, RIGHT_MASK));
+        piece->set_bottom(get_piece_part(board_piece.piece, DOWN_MASK));
+        piece->set_left(get_piece_part(board_piece.piece, LEFT_MASK));
+    }
+    // add stats
+    const auto &stats = data.stats;
+    response.set_boards_analyzed(static_cast<uint32_t>(stats.nodes_explored.load()));
+    response.set_time(elapsed_seconds);
+    if (elapsed_seconds > 0) {
+        response.set_boards_per_second(static_cast<double>(stats.nodes_explored.load()) / elapsed_seconds);
+    } else {
+        response.set_boards_per_second(0.0);
+    }
+    response.set_steps(static_cast<uint32_t>(stats.pieces_placed.load()));
     return response;
 }
 
@@ -129,6 +199,11 @@ auto load_board_pieces_from_request(const solver::v1::SolverSolveRequest &reques
 void thread_function(Board board, std::vector<Piece> pieces, SharedData &shared_data)
 {
     solve_board(board, pieces, shared_data);
+}
+
+void thread_function_v2(Board board, std::vector<Piece> pieces, eternity2_v2::SharedDataV2 &shared_data)
+{
+    eternity2_v2::solve_board_v2(board, pieces, shared_data);
 }
 auto delay(std::chrono::milliseconds ms) -> unifex::_timed_single_thread_context::_schedule_after_sender<
     std::chrono::duration<long, std::ratio<1, 1000>>>::type
@@ -194,38 +269,128 @@ auto handle_server_solver_request(agrpc::GrpcContext &grpc_context,
             }
             concurrent_jobs_count++;
             auto [board, pieces] = load_board_pieces_from_request(request);
-            std::mutex mutex;
-            Board max_board = create_board(board.size);
-            int max_count   = 0;
-            std::vector<std::thread> threads;
-            int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
-            int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
+            
+            // Check solver version (defaults to V1 if not set)
+            auto solver_version = request.solver_version();
+            bool use_v2 = (solver_version == solver::v1::SolverVersion::V2);
+            
+            if (use_v2) {
+                spdlog::info("Using solver v2");
+                // V2 implementation
+                std::mutex mutex;
+                Board max_board = create_board(board.size);
+                eternity2_v2::SharedDataV2 shared_data = {max_board, {0}, mutex};
+                shared_data.config.collect_stats = true;
+                shared_data.config.verbose = false;
+                
+                auto start = std::chrono::high_resolution_clock::now();
+                spdlog::info("Starting solver v2 with board size: {}", board.size);
+                spdlog::info("Pieces: {}", pieces.size());
+                spdlog::info("Timebetween: {}", request.wait_time());
+                
+                // V2 runs single-threaded per instance, but we can run multiple instances
+                int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
+                int thread_count = std::min(max_thread_count, static_cast<int>(request.threads()));
+                std::vector<std::thread> threads;
+                threads.reserve(thread_count);
+                
+                // Create multiple solver instances (each runs in its own thread)
+                for (int i = 0; i < thread_count; i++)
+                {
+                    threads.emplace_back(thread_function_v2, board, pieces, std::ref(shared_data));
+                }
+                
+                auto last_cache_pull = std::chrono::high_resolution_clock::now();
+                if (request.use_cache())
+                {
+                    spdlog::info("Using cache (v2 doesn't support cache yet)");
+                    last_cache_pull = std::chrono::high_resolution_clock::now();
+                }
+                spdlog::info("Solver v2 started");
+                
+                while (true)
+                {
+                    co_await delay(std::chrono::milliseconds{request.wait_time()});
+                    double seconds_since_start = static_cast<double>(
+                                                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                         std::chrono::high_resolution_clock::now() - start)
+                                                         .count())
+                                                 / 1000.0;
 
-            spdlog::info("Starting solver with board size: {}", board.size);
-            spdlog::info("Using {} threads", thread_count);
-            spdlog::info("Pieces: {}", pieces.size());
-            spdlog::info("Timebetween: {}", request.wait_time());
-            spdlog::info("Hash length threshold: {}", request.hash_threshold());
+                    if (shared_data.max_count.load() == static_cast<long long>(board.size * board.size))
+                    {
+                        spdlog::info("Found solution (v2)");
+                        concurrent_jobs_count--;
+                        shared_data.stop = true;
+                        for (auto &thread : threads)
+                        {
+                            thread.join();
+                        }
+                        spdlog::info("Threads stopped (v2)");
+                        co_await rpc.write(build_response_v2(shared_data, seconds_since_start));
+                        co_await rpc.finish(grpc::Status::OK);
+                        co_return;
+                    }
+                    spdlog::info("Writing response (v2)");
+                    if (!co_await rpc.write(build_response_v2(shared_data, seconds_since_start)))
+                    {
+                        spdlog::info("Client cancelled request (v2)");
+                        concurrent_jobs_count--;
+                        shared_data.stop = true;
+                        for (auto &thread : threads)
+                        {
+                            thread.join();
+                        }
+                        spdlog::info("Threads stopped (v2)");
+                        co_await rpc.finish(grpc::Status::CANCELLED);
+                        co_return;
+                    }
+                    double seconds_since_last_cache_pull
+                        = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                  std::chrono::high_resolution_clock::now() - last_cache_pull)
+                                                  .count())
+                          / 1000.0;
+                    if (request.use_cache() && (seconds_since_last_cache_pull > request.cache_pull_interval()))
+                    {
+                        last_cache_pull = std::chrono::high_resolution_clock::now();
+                    }
+                    spdlog::info("Response written (v2)");
+                }
+            } else {
+                spdlog::info("Using solver v1");
+                // V1 implementation (existing code)
+                std::mutex mutex;
+                Board max_board = create_board(board.size);
+                int max_count   = 0;
+                std::vector<std::thread> threads;
+                int max_thread_count = std::max(4, static_cast<int>(std::thread::hardware_concurrency()));
+                int thread_count     = std::min(max_thread_count, static_cast<int>(request.threads()));
 
-            threads.reserve(thread_count);
-            std::unordered_set<BoardHash> hashes = {};
-            SharedData shared_data               = {max_board, max_count, mutex, hashes};
-            shared_data.hash_length_threshold    = request.hash_threshold();
-            auto start                           = std::chrono::high_resolution_clock::now();
-            auto pieces_hash                     = hash_pieces_board(pieces, board);
+                spdlog::info("Starting solver with board size: {}", board.size);
+                spdlog::info("Using {} threads", thread_count);
+                spdlog::info("Pieces: {}", pieces.size());
+                spdlog::info("Timebetween: {}", request.wait_time());
+                spdlog::info("Hash length threshold: {}", request.hash_threshold());
 
-            auto last_cache_pull = std::chrono::high_resolution_clock::now();
-            if (request.use_cache())
-            {
-                spdlog::info("Using cache");
-                last_cache_pull = std::chrono::high_resolution_clock::now();
-            }
-            spdlog::info("Starting solver", board.size);
+                threads.reserve(thread_count);
+                std::unordered_set<BoardHash> hashes = {};
+                SharedData shared_data               = {max_board, max_count, mutex, hashes};
+                shared_data.hash_length_threshold    = request.hash_threshold();
+                auto start                           = std::chrono::high_resolution_clock::now();
+                auto pieces_hash                     = hash_pieces_board(pieces, board);
 
-            for (int i = 0; i < thread_count; i++)
-            {
-                threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
-            }
+                auto last_cache_pull = std::chrono::high_resolution_clock::now();
+                if (request.use_cache())
+                {
+                    spdlog::info("Using cache");
+                    last_cache_pull = std::chrono::high_resolution_clock::now();
+                }
+                spdlog::info("Starting solver", board.size);
+
+                for (int i = 0; i < thread_count; i++)
+                {
+                    threads.emplace_back(thread_function, board, pieces, std::ref(shared_data));
+                }
             spdlog::info("Solver started");
             // every 2 seconds, print the current max count
             while (true)
@@ -299,59 +464,124 @@ auto handle_server_solver_request_step_by_step(agrpc::GrpcContext &grpc_context,
         [&](SolverStepByStepRPC &rpc, SolverStepByStepRPC::Request &request) -> unifex::task<void> {
             spdlog::info("Received StepByStep request");
             auto [board, pieces] = load_board_pieces_from_request(request);
-            std::mutex mutex;
-            Board max_board = create_board(board.size);
-            int max_count   = 0;
-            std::unordered_set<BoardHash> hashes;
-            SharedData shared_data = {max_board, max_count, mutex, hashes};
-            std::vector<SolverStepByStepRPC::Response> responses;
-            std::vector<SolverStepByStepRPC::Response> responses_to_send;
-            shared_data.on_board_update = [&](const Board &board) {
-                mutex.lock();
-                auto res = build_response_step_by_step(board, shared_data);
-                responses.push_back(res);
-                mutex.unlock();
-            };
-            shared_data.hash_length_threshold = request.hash_threshold();
-            spdlog::info("Starting solver with board size: {}", board.size);
-            spdlog::info("Pieces: {}", pieces.size());
-            spdlog::info("Timebetween: {}", request.wait_time());
-            spdlog::info("Hash length threshold: {}", request.hash_threshold());
-            auto start = std::chrono::high_resolution_clock::now();
-            // launch the solver in a new thread
-            std::thread solver_thread(thread_function, board, pieces, std::ref(shared_data));
-
-            // while the solver is running, send the responses to the client
-            while (!shared_data.stop)
-            {
-                co_await delay(std::chrono::milliseconds{request.wait_time()});
-                const auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start);
-                shared_data.milliseconds_since_start = elapsed_milliseconds.count();
-                {
+            
+            // Check solver version (defaults to V1 if not set)
+            auto solver_version = request.solver_version();
+            bool use_v2 = (solver_version == solver::v1::SolverVersion::V2);
+            
+            if (use_v2) {
+                spdlog::info("Using solver v2 (step by step)");
+                std::mutex mutex;
+                Board max_board = create_board(board.size);
+                eternity2_v2::SharedDataV2 shared_data = {max_board, {0}, mutex};
+                shared_data.config.collect_stats = true;
+                shared_data.config.verbose = false;
+                
+                auto start = std::chrono::high_resolution_clock::now();
+                std::vector<SolverStepByStepRPC::Response> responses;
+                std::vector<SolverStepByStepRPC::Response> responses_to_send;
+                shared_data.on_board_update = [&](const Board &board) {
                     std::scoped_lock lock(mutex);
-                    // only copy the last 10 responses
-                    responses_to_send = {responses.end() - std::min(static_cast<int>(responses.size()), 10),
-                                         responses.end()};
-                    responses.clear();
-                }
-                for (auto const &res : responses_to_send)
+                    auto elapsed_seconds = static_cast<double>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::high_resolution_clock::now() - start).count()) / 1000.0;
+                    auto res = build_response_step_by_step_v2(board, shared_data, elapsed_seconds);
+                    responses.push_back(res);
+                };
+                
+                spdlog::info("Starting solver v2 with board size: {}", board.size);
+                spdlog::info("Pieces: {}", pieces.size());
+                spdlog::info("Timebetween: {}", request.wait_time());
+                
+                // launch the solver in a new thread
+                std::thread solver_thread(thread_function_v2, board, pieces, std::ref(shared_data));
+
+                // while the solver is running, send the responses to the client
+                while (!shared_data.stop.load())
                 {
-                    if (!co_await rpc.write(res))
+                    co_await delay(std::chrono::milliseconds{request.wait_time()});
                     {
-                        spdlog::info("Client cancelled request");
-                        shared_data.stop = true;
-                        spdlog::info("Stopping solver thread");
-                        solver_thread.join();
-                        spdlog::info("Solver thread stopped");
-                        co_await rpc.finish(grpc::Status::CANCELLED);
-                        co_return;
+                        std::scoped_lock lock(mutex);
+                        // only copy the last 10 responses
+                        responses_to_send = {responses.end() - std::min(static_cast<int>(responses.size()), 10),
+                                             responses.end()};
+                        responses.clear();
                     }
+                    for (auto const &res : responses_to_send)
+                    {
+                        if (!co_await rpc.write(res))
+                        {
+                            spdlog::info("Client cancelled request (v2)");
+                            shared_data.stop = true;
+                            spdlog::info("Stopping solver thread (v2)");
+                            solver_thread.join();
+                            spdlog::info("Solver thread stopped (v2)");
+                            co_await rpc.finish(grpc::Status::CANCELLED);
+                            co_return;
+                        }
+                    }
+                    responses_to_send.clear();
                 }
-                responses_to_send.clear();
+                solver_thread.join();
+                co_await rpc.finish(grpc::Status::OK);
+                co_return;
+            } else {
+                spdlog::info("Using solver v1 (step by step)");
+                // V1 implementation (existing code)
+                std::mutex mutex;
+                Board max_board = create_board(board.size);
+                int max_count   = 0;
+                std::unordered_set<BoardHash> hashes;
+                SharedData shared_data = {max_board, max_count, mutex, hashes};
+                std::vector<SolverStepByStepRPC::Response> responses;
+                std::vector<SolverStepByStepRPC::Response> responses_to_send;
+                shared_data.on_board_update = [&](const Board &board) {
+                    mutex.lock();
+                    auto res = build_response_step_by_step(board, shared_data);
+                    responses.push_back(res);
+                    mutex.unlock();
+                };
+                shared_data.hash_length_threshold = request.hash_threshold();
+                spdlog::info("Starting solver with board size: {}", board.size);
+                spdlog::info("Pieces: {}", pieces.size());
+                spdlog::info("Timebetween: {}", request.wait_time());
+                spdlog::info("Hash length threshold: {}", request.hash_threshold());
+                auto start = std::chrono::high_resolution_clock::now();
+                // launch the solver in a new thread
+                std::thread solver_thread(thread_function, board, pieces, std::ref(shared_data));
+
+                // while the solver is running, send the responses to the client
+                while (!shared_data.stop)
+                {
+                    co_await delay(std::chrono::milliseconds{request.wait_time()});
+                    const auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::high_resolution_clock::now() - start);
+                    shared_data.milliseconds_since_start = elapsed_milliseconds.count();
+                    {
+                        std::scoped_lock lock(mutex);
+                        // only copy the last 10 responses
+                        responses_to_send = {responses.end() - std::min(static_cast<int>(responses.size()), 10),
+                                             responses.end()};
+                        responses.clear();
+                    }
+                    for (auto const &res : responses_to_send)
+                    {
+                        if (!co_await rpc.write(res))
+                        {
+                            spdlog::info("Client cancelled request");
+                            shared_data.stop = true;
+                            spdlog::info("Stopping solver thread");
+                            solver_thread.join();
+                            spdlog::info("Solver thread stopped");
+                            co_await rpc.finish(grpc::Status::CANCELLED);
+                            co_return;
+                        }
+                    }
+                    responses_to_send.clear();
+                }
+                solver_thread.join();
+                co_await rpc.finish(grpc::Status::OK);
+                co_return;
             }
-            solver_thread.join();
-            co_await rpc.finish(grpc::Status::OK);
-            co_return;
         });
 }

@@ -8,6 +8,10 @@ service Solver{
   rpc SolveStepByStep(SolverSolveRequest) returns  (stream SolverStepByStepResponse) {}
 }
 
+enum SolverVersion {
+  V1 = 0;
+  V2 = 1;
+}
 
 message SolverSolveRequest {
   repeated Piece pieces = 1;
@@ -18,6 +22,7 @@ message SolverSolveRequest {
   uint32 cache_pull_interval = 6;
   repeated uint32 solve_path = 7;
   repeated Hint hints = 8;
+  SolverVersion solver_version = 9;
 }
 
 message Piece {

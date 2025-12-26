@@ -40,6 +40,7 @@ export const SolvingStepByStep = () => {
                 useCache: setting.useCache,
                 cachePullInterval: setting.cachePullInterval,
                 hints: hints,
+                solverVersion: setting.solverVersion,
             };
 
             console.log("Request object: ", requestObj);
