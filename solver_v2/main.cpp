@@ -12,6 +12,7 @@
 #include "../solver/board/board.h"
 #include "../solver/piece_loader/piece_loader.h"
 #include "solver/solver_v2.h"
+#include "parallel/parallel_solver.h"
 
 void print_usage(const char* program_name) {
     std::cout << "Eternity II Solver v2 - Optimized with MAC, MRV, LCV\n\n";
@@ -25,11 +26,15 @@ void print_usage(const char* program_name) {
     std::cout << "  --quiet         Minimal output\n";
     std::cout << "  --stats         Print statistics at end\n";
     std::cout << "  --timeout <ms>  Set timeout in milliseconds\n";
+    std::cout << "  --parallel      Enable parallel search mode\n";
+    std::cout << "  --threads <n>   Set number of worker threads (default: auto-detect)\n";
     std::cout << "  --help          Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program_name << " puzzle.csv              # Solve with all optimizations\n";
     std::cout << "  " << program_name << " --no-lcv puzzle.csv     # Disable LCV only\n";
     std::cout << "  " << program_name << " --verbose puzzle.csv    # Verbose output\n";
+    std::cout << "  " << program_name << " --parallel puzzle.csv   # Use all CPU cores\n";
+    std::cout << "  " << program_name << " --threads 4 puzzle.csv  # Use 4 threads\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -63,6 +68,16 @@ int main(int argc, char* argv[]) {
             print_stats = true;
         } else if (arg == "--timeout" && i + 1 < argc) {
             config.max_time_ms = std::stoul(argv[++i]);
+        } else if (arg == "--parallel") {
+            config.parallel_enabled = true;
+            if (config.num_threads <= 1) {
+                config.num_threads = 0;  // 0 = auto-detect in ParallelSolverV2
+            }
+        } else if (arg == "--threads" && i + 1 < argc) {
+            config.num_threads = std::stoul(argv[++i]);
+            if (config.num_threads > 1) {
+                config.parallel_enabled = true;
+            }
         } else if (arg[0] != '-') {
             filename = arg;
         } else {
@@ -86,6 +101,14 @@ int main(int argc, char* argv[]) {
     auto board_pieces = load_from_csv(filename);
     auto board_size = board_pieces.first.size;
 
+    // Set num_threads to hardware concurrency if auto-detect (0)
+    if (config.parallel_enabled && config.num_threads == 0) {
+        config.num_threads = std::thread::hardware_concurrency();
+        if (config.num_threads == 0) {
+            config.num_threads = 4;  // Fallback
+        }
+    }
+
     if (!quiet) {
         std::cout << "Puzzle size: " << board_size << "x" << board_size << std::endl;
         std::cout << "Pieces: " << board_pieces.second.size() << std::endl;
@@ -93,6 +116,11 @@ int main(int argc, char* argv[]) {
         std::cout << "  MRV: " << (config.use_mrv ? "enabled" : "disabled") << std::endl;
         std::cout << "  Degree: " << (config.use_degree ? "enabled" : "disabled") << std::endl;
         std::cout << "  LCV: " << (config.use_lcv ? "enabled" : "disabled") << std::endl;
+        if (config.parallel_enabled) {
+            std::cout << "  Parallel: enabled (" << config.num_threads << " threads)" << std::endl;
+        } else {
+            std::cout << "  Parallel: disabled (single-threaded)" << std::endl;
+        }
         if (config.max_time_ms > 0) {
             std::cout << "  Timeout: " << config.max_time_ms << " ms\n";
         }
@@ -125,9 +153,15 @@ int main(int argc, char* argv[]) {
     // Start timer
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Solve
-    eternity2_v2::SolverV2 solver(board_pieces.second, board_size, shared_data);
-    eternity2_v2::SolveResult result = solver.solve();
+    // Solve - use parallel solver if enabled
+    eternity2_v2::SolveResult result;
+    if (config.parallel_enabled && config.num_threads > 1) {
+        eternity2_v2::ParallelSolverV2 parallel_solver(board_pieces.second, board_size, shared_data);
+        result = parallel_solver.solve();
+    } else {
+        eternity2_v2::SolverV2 solver(board_pieces.second, board_size, shared_data);
+        result = solver.solve();
+    }
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;

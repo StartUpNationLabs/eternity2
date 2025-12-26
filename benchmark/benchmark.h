@@ -51,8 +51,9 @@ struct BenchmarkComparison {
 
     BenchmarkResult v1_result;
     BenchmarkResult v2_result;
+    BenchmarkResult v2_parallel_result;  // V2 parallel mode result
 
-    // Speedup metrics
+    // Speedup metrics (V2 single-threaded vs V1)
     double speedup() const {
         if (v2_result.elapsed_ms <= 0) return 0;
         return v1_result.elapsed_ms / v2_result.elapsed_ms;
@@ -61,6 +62,18 @@ struct BenchmarkComparison {
     double node_reduction() const {
         if (v2_result.nodes_explored == 0) return 0;
         return static_cast<double>(v1_result.nodes_explored) / v2_result.nodes_explored;
+    }
+
+    // V2 parallel speedup (vs V2 single-threaded)
+    double parallel_speedup() const {
+        if (v2_parallel_result.elapsed_ms <= 0) return 0;
+        return v2_result.elapsed_ms / v2_parallel_result.elapsed_ms;
+    }
+
+    // V2 parallel speedup (vs V1)
+    double parallel_vs_v1_speedup() const {
+        if (v2_parallel_result.elapsed_ms <= 0) return 0;
+        return v1_result.elapsed_ms / v2_parallel_result.elapsed_ms;
     }
 };
 
@@ -80,6 +93,10 @@ struct BenchmarkConfig {
     bool v2_use_mrv = true;
     bool v2_use_degree = true;
     bool v2_use_lcv = true;
+
+    // V2 parallel configuration
+    bool run_v2_parallel = false;       // Run V2 parallel solver
+    size_t v2_num_threads = 0;          // 0 = auto-detect
 
     // V1 configuration
     size_t v1_thread_count = 1;         // Single thread for fair comparison
@@ -155,6 +172,7 @@ private:
     // Individual solver runners
     BenchmarkResult run_v1(const std::string& puzzle_file);
     BenchmarkResult run_v2(const std::string& puzzle_file);
+    BenchmarkResult run_v2_parallel(const std::string& puzzle_file);
 };
 
 } // namespace eternity2_benchmark

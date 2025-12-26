@@ -34,6 +34,10 @@ struct SolverConfig {
     size_t max_backtracks = 0;     // 0 = unlimited
     size_t max_nodes = 0;          // 0 = unlimited
     size_t max_time_ms = 0;        // 0 = unlimited
+
+    // Parallelization options
+    size_t num_threads = 1;        // Number of worker threads (1 = single-threaded)
+    bool parallel_enabled = false; // Enable parallel search mode
 };
 
 // Statistics collected during solving

@@ -23,11 +23,33 @@ DomainManager::DomainManager(size_t board_size, const std::vector<Piece>& pieces
     : board_size_(board_size)
     , pieces_(pieces)
     , domains_(board_size * board_size)
-    , piece_availability_(pieces.size(), true)
 {
+    // Initialize all pieces as available using bitset
+    piece_availability_.set();  // Set all bits to 1
+
+    // Reserve space for trail to avoid reallocations
+    trail_.reserve(board_size * board_size * 10);  // Estimate ~10 entries per placed piece
+    choice_points_.reserve(board_size * board_size);
 }
 
 void DomainManager::initialize_domains() {
+    // Precompute piece compatibility matrix for O(1) constraint lookups
+    if (!compatibility_computed_) {
+        precompute_compatibility();
+        compatibility_computed_ = true;
+    }
+
+    // Reset piece availability - all pieces available
+    piece_availability_.set();
+    // Clear bits for pieces beyond our actual piece count
+    for (size_t i = pieces_.size(); i < MAX_PIECES; ++i) {
+        piece_availability_.reset(i);
+    }
+
+    // Clear trail and choice points
+    trail_.clear();
+    choice_points_.clear();
+
     // Initialize domain for each position based on position type (corner, edge, interior)
     for (size_t y = 0; y < board_size_; ++y) {
         for (size_t x = 0; x < board_size_; ++x) {
@@ -54,14 +76,30 @@ size_t DomainManager::get_domain_size(Index index) const {
 bool DomainManager::place_piece(Index index, const RotatedPiece& piece) {
     size_t idx = to_1d(index);
 
+    // Record position assignment in trail
+    record_position_assigned(idx);
+
+    // Record domain shrink: all pieces except the one being placed are "removed"
+    // This is needed so we can restore the domain on backtrack
+    std::vector<RotatedPiece> removed;
+    for (const auto& rp : domains_[idx].valid_pieces) {
+        if (rp.index != piece.index || rp.rotation != piece.rotation) {
+            removed.push_back(rp);
+        }
+    }
+    record_domain_shrink(idx, removed);
+
     // Mark position as assigned
     domains_[idx].is_assigned = true;
     domains_[idx].valid_pieces.clear();
     domains_[idx].valid_pieces.push_back(piece);
     assigned_count_++;
 
-    // Mark piece as used
-    piece_availability_[piece.index] = false;
+    // Record piece used in trail
+    record_piece_used(piece.index);
+
+    // Mark piece as used (using bitset)
+    piece_availability_.reset(piece.index);
 
     // Propagate constraints to neighbors
     return propagate_to_neighbors(index, piece);
@@ -73,50 +111,101 @@ void DomainManager::remove_piece(Index index) {
     // Get the piece that was placed (should be single entry)
     if (!domains_[idx].valid_pieces.empty()) {
         int piece_index = domains_[idx].valid_pieces[0].index;
-        piece_availability_[piece_index] = true;
+        piece_availability_.set(piece_index);  // Using bitset
     }
 
     domains_[idx].is_assigned = false;
     assigned_count_--;
 
-    // Note: Domain restoration happens via pop_state()
+    // Note: Full domain restoration happens via pop_state()
 }
 
 bool DomainManager::is_piece_available(int piece_index) const {
-    return piece_availability_[piece_index];
+    return piece_availability_.test(piece_index);  // Using bitset
 }
 
 void DomainManager::mark_piece_used(int piece_index) {
-    piece_availability_[piece_index] = false;
+    piece_availability_.reset(piece_index);  // Using bitset
 }
 
 void DomainManager::mark_piece_available(int piece_index) {
-    piece_availability_[piece_index] = true;
+    piece_availability_.set(piece_index);  // Using bitset
 }
 
 void DomainManager::push_state() {
-    DomainSnapshot snapshot;
-    snapshot.domains = domains_;
-    snapshot.piece_availability = piece_availability_;
-    state_stack_.push(std::move(snapshot));
+    // Simply record current trail position as a choice point
+    choice_points_.push_back(trail_.size());
 }
 
 void DomainManager::pop_state() {
-    if (!state_stack_.empty()) {
-        DomainSnapshot& snapshot = state_stack_.top();
-        domains_ = std::move(snapshot.domains);
-        piece_availability_ = std::move(snapshot.piece_availability);
-
-        // Recalculate assigned count
-        assigned_count_ = 0;
-        for (const auto& domain : domains_) {
-            if (domain.is_assigned) {
-                assigned_count_++;
-            }
-        }
-
-        state_stack_.pop();
+    if (choice_points_.empty()) {
+        return;
     }
+
+    size_t restore_point = choice_points_.back();
+    choice_points_.pop_back();
+
+    // Undo all trail entries back to the choice point (in reverse order)
+    while (trail_.size() > restore_point) {
+        undo_trail_entry(trail_.back());
+        trail_.pop_back();
+    }
+}
+
+void DomainManager::undo_trail_entry(const TrailEntry& entry) {
+    switch (entry.type) {
+        case TrailEntry::Type::DOMAIN_SHRINK:
+            // Restore removed pieces to domain
+            {
+                auto& domain = domains_[entry.position_1d];
+                domain.valid_pieces.insert(
+                    domain.valid_pieces.end(),
+                    entry.removed_pieces.begin(),
+                    entry.removed_pieces.end()
+                );
+            }
+            break;
+
+        case TrailEntry::Type::PIECE_USED:
+            // Mark piece as available again
+            piece_availability_.set(entry.piece_index);
+            break;
+
+        case TrailEntry::Type::POSITION_ASSIGNED:
+            // Mark position as unassigned
+            domains_[entry.position_1d].is_assigned = false;
+            assigned_count_--;
+            break;
+    }
+}
+
+void DomainManager::record_domain_shrink(size_t position_1d, const std::vector<RotatedPiece>& removed) {
+    if (!removed.empty()) {
+        trail_.push_back({
+            TrailEntry::Type::DOMAIN_SHRINK,
+            position_1d,
+            -1,  // Not used for DOMAIN_SHRINK
+            removed
+        });
+    }
+}
+
+void DomainManager::record_piece_used(int piece_index) {
+    trail_.push_back({
+        TrailEntry::Type::PIECE_USED,
+        0,  // Not used for PIECE_USED
+        piece_index,
+        {}  // No removed pieces
+    });
+}
+
+void DomainManager::record_position_assigned(size_t position_1d) {
+    trail_.push_back({
+        TrailEntry::Type::POSITION_ASSIGNED,
+        position_1d,
+        -1,  // Not used for POSITION_ASSIGNED
+        {}   // No removed pieces
+    });
 }
 
 std::vector<Index> DomainManager::get_unassigned_positions() const {
@@ -281,7 +370,8 @@ PiecePart DomainManager::get_edge_constraint(const RotatedPiece& piece, int dire
 }
 
 void DomainManager::filter_domain_by_constraint(Index index, int direction, PiecePart constraint) {
-    DomainEntry& domain = domains_[to_1d(index)];
+    size_t idx = to_1d(index);
+    DomainEntry& domain = domains_[idx];
 
     if (domain.is_assigned) return;  // Don't filter assigned positions
 
@@ -295,11 +385,15 @@ void DomainManager::filter_domain_by_constraint(Index index, int direction, Piec
         default: return;
     }
 
+    // Collect pieces to remove (for trail)
+    std::vector<RotatedPiece> removed;
+
     // Filter out pieces that don't match the constraint
     auto it = std::remove_if(domain.valid_pieces.begin(), domain.valid_pieces.end(),
         [&](const RotatedPiece& rp) {
-            // Check if this piece is still available
-            if (!piece_availability_[rp.index]) {
+            // Check if this piece is still available (using bitset)
+            if (!piece_availability_.test(rp.index)) {
+                removed.push_back(rp);
                 return true;  // Remove unavailable pieces
             }
 
@@ -307,11 +401,18 @@ void DomainManager::filter_domain_by_constraint(Index index, int direction, Piec
             PiecePart edge = get_piece_part(rotated, mask);
 
             // Edge must match the constraint
-            return edge != constraint;
+            if (edge != constraint) {
+                removed.push_back(rp);
+                return true;
+            }
+            return false;
         }
     );
 
     domain.valid_pieces.erase(it, domain.valid_pieces.end());
+
+    // Record removed pieces in trail for backtracking
+    record_domain_shrink(idx, removed);
 }
 
 bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiece& placed_piece) {
@@ -363,17 +464,80 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         if (domains_[i].is_assigned) continue;
 
         auto& valid = domains_[i].valid_pieces;
+        std::vector<RotatedPiece> removed;
+
         auto it = std::remove_if(valid.begin(), valid.end(),
             [&](const RotatedPiece& rp) {
-                return rp.index == placed_piece.index;
+                if (rp.index == placed_piece.index) {
+                    removed.push_back(rp);
+                    return true;
+                }
+                return false;
             }
         );
         valid.erase(it, valid.end());
+
+        // Record domain shrink in trail
+        record_domain_shrink(i, removed);
 
         if (valid.empty()) return false;
     }
 
     return true;
+}
+
+void DomainManager::precompute_compatibility() {
+    // Initialize the compatibility matrix
+    compatible_.resize(pieces_.size());
+    for (size_t i = 0; i < pieces_.size(); ++i) {
+        for (int r1 = 0; r1 < 4; ++r1) {
+            for (int dir = 0; dir < 4; ++dir) {
+                compatible_[i][r1][dir].clear();
+            }
+        }
+    }
+
+    // For each piece and rotation, compute compatible pieces for each direction
+    for (size_t i = 0; i < pieces_.size(); ++i) {
+        for (int r1 = 0; r1 < 4; ++r1) {
+            Piece rotated1 = rotate_piece_right(pieces_[i], r1);
+
+            // Get edges for this piece/rotation
+            PiecePart up_edge = get_piece_part(rotated1, UP_MASK);
+            PiecePart right_edge = get_piece_part(rotated1, RIGHT_MASK);
+            PiecePart down_edge = get_piece_part(rotated1, DOWN_MASK);
+            PiecePart left_edge = get_piece_part(rotated1, LEFT_MASK);
+
+            // Find compatible pieces for each direction
+            for (size_t j = 0; j < pieces_.size(); ++j) {
+                if (i == j) continue;  // Same piece can't be adjacent to itself
+
+                for (int r2 = 0; r2 < 4; ++r2) {
+                    Piece rotated2 = rotate_piece_right(pieces_[j], r2);
+
+                    // Check UP direction (neighbor needs matching DOWN edge)
+                    if (up_edge == get_piece_part(rotated2, DOWN_MASK)) {
+                        compatible_[i][r1][DIR_UP].push_back({static_cast<int>(j), r2});
+                    }
+
+                    // Check RIGHT direction (neighbor needs matching LEFT edge)
+                    if (right_edge == get_piece_part(rotated2, LEFT_MASK)) {
+                        compatible_[i][r1][DIR_RIGHT].push_back({static_cast<int>(j), r2});
+                    }
+
+                    // Check DOWN direction (neighbor needs matching UP edge)
+                    if (down_edge == get_piece_part(rotated2, UP_MASK)) {
+                        compatible_[i][r1][DIR_DOWN].push_back({static_cast<int>(j), r2});
+                    }
+
+                    // Check LEFT direction (neighbor needs matching RIGHT edge)
+                    if (left_edge == get_piece_part(rotated2, RIGHT_MASK)) {
+                        compatible_[i][r1][DIR_LEFT].push_back({static_cast<int>(j), r2});
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool DomainManager::recompute_domain(Index index, const RotatedPiece& placed_piece, Index placed_index) {

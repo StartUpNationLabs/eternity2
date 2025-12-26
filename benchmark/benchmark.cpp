@@ -3,6 +3,7 @@
 #include "../solver/board/board.h"
 #include "../solver/solver/solver.h"
 #include "../solver_v2/solver/solver_v2.h"
+#include "../solver_v2/parallel/parallel_solver.h"
 
 #include <iostream>
 #include <iomanip>
@@ -177,6 +178,84 @@ BenchmarkResult Benchmark::run_v2(const std::string& puzzle_file) {
     return result;
 }
 
+BenchmarkResult Benchmark::run_v2_parallel(const std::string& puzzle_file) {
+    BenchmarkResult result;
+
+    // Determine thread count
+    size_t num_threads = config_.v2_num_threads;
+    if (num_threads == 0) {
+        num_threads = std::thread::hardware_concurrency();
+        if (num_threads == 0) {
+            num_threads = 4;  // Fallback
+        }
+    }
+
+    result.solver_name = "V2 Parallel (" + std::to_string(num_threads) + " threads)";
+    result.puzzle_file = puzzle_file;
+    result.solved = false;
+    result.pieces_placed = 0;
+    result.nodes_explored = 0;
+    result.backtracks = 0;
+    result.hash_hits = 0;
+    result.domain_wipeouts = 0;
+
+    try {
+        // Load puzzle
+        auto board_pieces = load_from_csv(puzzle_file);
+        result.board_size = board_pieces.first.size;
+
+        // Setup shared data
+        std::mutex mutex;
+        Board max_board = create_board(static_cast<int>(result.board_size));
+
+        eternity2_v2::SharedDataV2 shared_data = {
+            max_board,
+            {0},
+            mutex
+        };
+
+        // Configure heuristics and parallel mode
+        shared_data.config.use_mrv = config_.v2_use_mrv;
+        shared_data.config.use_degree = config_.v2_use_degree;
+        shared_data.config.use_lcv = config_.v2_use_lcv;
+        shared_data.config.max_time_ms = config_.timeout_ms;
+        shared_data.config.collect_stats = true;
+        shared_data.config.verbose = false;
+        shared_data.config.parallel_enabled = true;
+        shared_data.config.num_threads = num_threads;
+
+        // Start timing
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Run parallel solver
+        eternity2_v2::ParallelSolverV2 solver(board_pieces.second, result.board_size, shared_data);
+        eternity2_v2::SolveResult solve_result = solver.solve();
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        // Collect results
+        const auto& stats = shared_data.stats;
+        result.elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
+        result.pieces_placed = static_cast<size_t>(shared_data.max_count.load());
+        result.solved = (solve_result == eternity2_v2::SolveResult::SOLVED);
+        result.nodes_explored = stats.nodes_explored.load();
+        result.backtracks = stats.backtracks.load();
+        result.domain_wipeouts = stats.domain_wipeouts.load();
+
+        // Store solution board if solved
+        if (result.solved) {
+            result.solution_board = shared_data.max_board;
+        }
+
+    } catch (const std::exception& e) {
+        if (config_.verbose) {
+            std::cerr << "V2 Parallel error on " << puzzle_file << ": " << e.what() << std::endl;
+        }
+    }
+
+    return result;
+}
+
 BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
     BenchmarkComparison comparison;
     comparison.puzzle_file = puzzle_file;
@@ -189,12 +268,20 @@ BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
         comparison.v1_result.solver_name = "V1 (Skipped)";
     }
 
-    // Run V2 (if enabled)
+    // Run V2 single-threaded (if enabled)
     if (config_.run_v2) {
         comparison.v2_result = run_v2(puzzle_file);
     } else {
         comparison.v2_result.puzzle_file = puzzle_file;
         comparison.v2_result.solver_name = "V2 (Skipped)";
+    }
+
+    // Run V2 parallel (if enabled)
+    if (config_.run_v2_parallel) {
+        comparison.v2_parallel_result = run_v2_parallel(puzzle_file);
+    } else {
+        comparison.v2_parallel_result.puzzle_file = puzzle_file;
+        comparison.v2_parallel_result.solver_name = "V2 Parallel (Skipped)";
     }
 
     // Set board size from whichever solver ran

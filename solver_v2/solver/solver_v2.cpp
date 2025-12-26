@@ -3,6 +3,7 @@
 //
 
 #include "solver_v2.h"
+#include "../parallel/parallel_solver.h"
 #include <iostream>
 
 namespace eternity2_v2 {
@@ -346,11 +347,25 @@ bool SolverV2::verify_solution(const Board& board) const {
 }
 
 void solve_board_v2(Board& board, const std::vector<Piece>& pieces, SharedDataV2& shared_data) {
-    SolverV2 solver(pieces, board.size, shared_data);
-    SolveResult result = solver.solve();
+    SolveResult result;
 
-    if (result == SolveResult::SOLVED) {
-        board = solver.get_solution();
+    // Use parallel solver if enabled and more than 1 thread
+    if (shared_data.config.parallel_enabled && shared_data.config.num_threads > 1) {
+        ParallelSolverV2 parallel_solver(pieces, board.size, shared_data);
+        result = parallel_solver.solve();
+
+        if (result == SolveResult::SOLVED) {
+            // Solution is already stored in shared_data.max_board by parallel solver
+            board = shared_data.max_board;
+        }
+    } else {
+        // Use single-threaded solver
+        SolverV2 solver(pieces, board.size, shared_data);
+        result = solver.solve();
+
+        if (result == SolveResult::SOLVED) {
+            board = solver.get_solution();
+        }
     }
 
     shared_data.stop = true;
@@ -359,6 +374,11 @@ void solve_board_v2(Board& board, const std::vector<Piece>& pieces, SharedDataV2
         const auto& stats = shared_data.stats;
         std::cout << "=== Solver v2 Results ===" << std::endl;
         std::cout << "Result: " << solve_result_to_string(result) << std::endl;
+        if (shared_data.config.parallel_enabled) {
+            std::cout << "Mode: Parallel (" << shared_data.config.num_threads << " threads)" << std::endl;
+        } else {
+            std::cout << "Mode: Single-threaded" << std::endl;
+        }
         std::cout << "Nodes explored: " << stats.nodes_explored << std::endl;
         std::cout << "Backtracks: " << stats.backtracks << std::endl;
         std::cout << "Domain wipeouts: " << stats.domain_wipeouts << std::endl;

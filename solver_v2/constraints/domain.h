@@ -11,9 +11,30 @@
 
 #include <vector>
 #include <stack>
+#include <bitset>
 #include <functional>
+#include <array>
+#include <unordered_map>
 
 namespace eternity2_v2 {
+
+// Maximum pieces for Eternity II (256 pieces on 16x16 board)
+static constexpr size_t MAX_PIECES = 256;
+
+// Trail entry for incremental state management
+// Instead of copying entire domain state, we record changes and undo them
+struct TrailEntry {
+    enum class Type {
+        DOMAIN_SHRINK,      // Pieces were removed from a domain
+        PIECE_USED,         // A piece was marked as used
+        POSITION_ASSIGNED   // A position was marked as assigned
+    };
+
+    Type type;
+    size_t position_1d;                        // Affected position (for DOMAIN_SHRINK, POSITION_ASSIGNED)
+    int piece_index;                           // Affected piece index (for PIECE_USED)
+    std::vector<RotatedPiece> removed_pieces;  // Pieces that were removed (for DOMAIN_SHRINK)
+};
 
 // Domain entry for a single board position
 struct DomainEntry {
@@ -24,10 +45,14 @@ struct DomainEntry {
     bool empty() const { return valid_pieces.empty(); }
 };
 
-// Snapshot of domains for backtracking
+// Compatibility entry: stores which pieces can be adjacent in each direction
+// Key: (piece_index, rotation, direction) -> vector of compatible (piece_index, rotation)
+using CompatiblePieces = std::vector<std::pair<int, int>>;
+
+// Snapshot of domains for backtracking (legacy - kept for compatibility)
+// Now just stores trail position for efficient undo
 struct DomainSnapshot {
-    std::vector<DomainEntry> domains;
-    std::vector<bool> piece_availability;
+    size_t trail_position;  // Position in trail to restore to
 };
 
 // Domain Manager - Core component for MAC
@@ -91,9 +116,21 @@ private:
     size_t board_size_;
     std::vector<Piece> pieces_;
     std::vector<DomainEntry> domains_;
-    std::vector<bool> piece_availability_;
-    std::stack<DomainSnapshot> state_stack_;
+
+    // Bitset for O(1) piece availability checks (replaces vector<bool>)
+    std::bitset<MAX_PIECES> piece_availability_;
+
+    // Trailing system for efficient backtracking
+    std::vector<TrailEntry> trail_;
+    std::vector<size_t> choice_points_;  // Stack of trail positions
+
     size_t assigned_count_ = 0;
+
+    // Piece compatibility matrix for O(1) constraint lookups
+    // compatible_[piece_idx][rotation][direction] = vector of (piece_idx, rotation)
+    // direction: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
+    std::vector<std::array<std::array<CompatiblePieces, 4>, 4>> compatible_;
+    bool compatibility_computed_ = false;
 
     // Convert 2D index to 1D
     size_t to_1d(Index index) const;
@@ -125,6 +162,21 @@ private:
 
     // Filter domain entries that don't match the constraint
     void filter_domain_by_constraint(Index index, int direction, PiecePart constraint);
+
+    // Precompute piece compatibility matrix for O(1) constraint lookups
+    void precompute_compatibility();
+
+    // Undo a single trail entry (called during pop_state)
+    void undo_trail_entry(const TrailEntry& entry);
+
+    // Record a domain shrink in the trail
+    void record_domain_shrink(size_t position_1d, const std::vector<RotatedPiece>& removed);
+
+    // Record piece used in the trail
+    void record_piece_used(int piece_index);
+
+    // Record position assigned in the trail
+    void record_position_assigned(size_t position_1d);
 };
 
 } // namespace eternity2_v2

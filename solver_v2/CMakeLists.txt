@@ -15,12 +15,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 endif()
 
+# Find Threads package for parallel solver
+find_package(Threads REQUIRED)
+
 # solver_v2 library sources
 set(SOLVER_V2_SOURCES
     constraints/domain.cpp
     heuristics/variable_ordering.cpp
     heuristics/value_ordering.cpp
     solver/solver_v2.cpp
+    parallel/parallel_solver.cpp
 )
 
 # solver_v2 library headers
@@ -29,6 +33,7 @@ set(SOLVER_V2_HEADERS
     heuristics/variable_ordering.h
     heuristics/value_ordering.h
     solver/solver_v2.h
+    parallel/parallel_solver.h
 )
 
 # Create solver_v2 library (links to solver_lib from v1 for shared types)
@@ -41,7 +46,8 @@ target_include_directories(solver_v2_lib PUBLIC
 )
 
 # Link to v1 solver_lib for shared types (Piece, Board, etc.)
-target_link_libraries(solver_v2_lib PUBLIC solver_lib)
+# Also link Threads for parallel solver
+target_link_libraries(solver_v2_lib PUBLIC solver_lib Threads::Threads)
 
 # Disable logging in v2 for performance
 target_compile_definitions(solver_v2_lib PUBLIC DISABLE_LOGGING)
