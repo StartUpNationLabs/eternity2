@@ -52,6 +52,9 @@ cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
+DartConfiguration.tcl
+tests/tests-*.cmake
+.old/
 _deps
 
 ### CMake Patch ###

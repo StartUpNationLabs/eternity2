@@ -9,8 +9,9 @@ add_executable(tests
         test_piece_load.cpp
         test_solve_board.cpp
         test_spiral.cpp
-        test_scan_row.cpp)
-target_link_libraries(tests Catch2::Catch2WithMain solver_lib)
+        test_scan_row.cpp
+        test_solver_v2.cpp)
+target_link_libraries(tests Catch2::Catch2WithMain solver_lib solver_v2_lib)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)

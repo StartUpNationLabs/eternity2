@@ -3,7 +3,7 @@
 
 .PHONY: all clean help
 .PHONY: build build-cpp build-frontend
-.PHONY: docker-build docker-build-base docker-build-api docker-build-frontend docker-build-envoy
+.PHONY: docker-build docker-build-base docker-build-base-build docker-build-api docker-build-frontend docker-build-envoy
 .PHONY: docker-push docker-push-all
 .PHONY: test test-cpp
 .PHONY: dev dev-frontend
@@ -86,7 +86,13 @@ test-cpp: build-cpp ## Run C++ tests
 
 docker-build: docker-build-base docker-build-api docker-build-frontend docker-build-envoy ## Build all Docker images
 
-docker-build-base: ## Build base Docker image with dependencies
+docker-build-base: ## Pull base Docker image with dependencies
+	@echo "Pulling base image..."
+	$(DOCKER) pull $(DOCKER_REGISTRY)/base:$(DOCKER_TAG) || \
+		(echo "Warning: Failed to pull base image. You may need to build it first with: make docker-build-base-build" && exit 1)
+	@echo "Base image pulled: $(DOCKER_REGISTRY)/base:$(DOCKER_TAG)"
+
+docker-build-base-build: ## Build base Docker image with dependencies (use docker-build-base to pull instead)
 	@echo "Building base image..."
 	$(DOCKER) build -t $(DOCKER_REGISTRY)/base:$(DOCKER_TAG) \
 		-f $(BUILD_BASE_DIR)/Dockerfile \
