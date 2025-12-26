@@ -8,6 +8,7 @@
 
 #include "v1/piece_search/piece_search.h"
 #include "v1/board/board.h"
+#include "common/small_vector.h"
 
 #include <vector>
 #include <stack>
@@ -15,6 +16,7 @@
 #include <functional>
 
 using eternity2_common::PiecePart;
+using eternity2_common::SmallVector;
 #include <array>
 #include <unordered_map>
 
@@ -25,6 +27,7 @@ static constexpr size_t MAX_PIECES = 256;
 
 // Trail entry for incremental state management
 // Instead of copying entire domain state, we record changes and undo them
+// OPTIMIZATION: Uses SmallVector to avoid heap allocation for small domain shrinks
 struct TrailEntry {
     enum class Type {
         DOMAIN_SHRINK,      // Pieces were removed from a domain
@@ -35,7 +38,8 @@ struct TrailEntry {
     Type type;
     size_t position_1d;                        // Affected position (for DOMAIN_SHRINK, POSITION_ASSIGNED)
     int piece_index;                           // Affected piece index (for PIECE_USED)
-    std::vector<RotatedPiece> removed_pieces;  // Pieces that were removed (for DOMAIN_SHRINK)
+    // SmallVector with inline storage for 8 pieces - balance between inline storage and struct size
+    SmallVector<RotatedPiece, 8> removed_pieces;
 };
 
 // Domain entry for a single board position
@@ -102,17 +106,17 @@ public:
     // Count unassigned neighbors (for degree heuristic)
     size_t count_unassigned_neighbors(Index index) const;
 
-    // Board size
-    size_t board_size() const { return board_size_; }
+    // Board size - inline for hot path
+    [[gnu::always_inline]] size_t board_size() const { return board_size_; }
 
-    // Total positions
-    size_t total_positions() const { return board_size_ * board_size_; }
+    // Total positions - inline for hot path
+    [[gnu::always_inline]] size_t total_positions() const { return board_size_ * board_size_; }
 
     // Check if all positions are assigned
     bool is_complete() const;
 
     // Get number of assigned positions
-    size_t assigned_count() const { return assigned_count_; }
+    [[gnu::always_inline]] size_t assigned_count() const { return assigned_count_; }
 
 private:
     size_t board_size_;
@@ -134,19 +138,40 @@ private:
     std::vector<std::array<std::array<CompatiblePieces, 4>, 4>> compatible_;
     bool compatibility_computed_ = false;
 
-    // Convert 2D index to 1D
-    size_t to_1d(Index index) const;
+    // OPTIMIZATION: Inverted index for O(1) piece removal from domains
+    // piece_to_positions_[piece_idx] = set of position indices containing this piece
+    // Eliminates O(n) iteration in propagate_to_neighbors
+    std::vector<std::vector<size_t>> piece_to_positions_;
 
-    // Convert 1D index to 2D
-    Index to_2d(size_t index) const;
+    // OPTIMIZATION: Reusable scratch buffers to avoid heap allocations on hot path
+    // These are cleared and reused instead of creating new vectors each call
+    mutable std::vector<RotatedPiece> scratch_removed_;
+    mutable std::vector<RotatedPiece> scratch_removed_propagate_;
 
-    // Check if index is valid
-    bool is_valid_index(Index index) const;
+    // Convert 2D index to 1D - HOT PATH, always inline
+    [[gnu::always_inline]] size_t to_1d(Index index) const { return index.second * board_size_ + index.first; }
 
-    // Check if position is corner, edge, or interior
-    bool is_corner(Index index) const;
-    bool is_edge(Index index) const;
-    bool is_interior(Index index) const;
+    // Convert 1D index to 2D - inline for hot path
+    [[gnu::always_inline]] Index to_2d(size_t index) const { return {index % board_size_, index / board_size_}; }
+
+    // Check if index is valid - inline for hot path
+    [[gnu::always_inline]] bool is_valid_index(Index index) const {
+        return index.first < board_size_ && index.second < board_size_;
+    }
+
+    // Check if position is corner, edge, or interior - inline for hot path
+    [[gnu::always_inline]] bool is_corner(Index index) const {
+        return (index.first == 0 || index.first == board_size_ - 1) &&
+               (index.second == 0 || index.second == board_size_ - 1);
+    }
+    [[gnu::always_inline]] bool is_edge(Index index) const {
+        return !is_corner(index) &&
+               (index.first == 0 || index.first == board_size_ - 1 ||
+                index.second == 0 || index.second == board_size_ - 1);
+    }
+    [[gnu::always_inline]] bool is_interior(Index index) const {
+        return !is_corner(index) && !is_edge(index);
+    }
 
     // Compute initial domain for a position (based on position type)
     std::vector<RotatedPiece> compute_initial_domain(Index index) const;

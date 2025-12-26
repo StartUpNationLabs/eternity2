@@ -26,14 +26,29 @@ constexpr Piece FULLWALL   = UP_MASK | RIGHT_MASK | DOWN_MASK | LEFT_MASK;
 
 /**
  * @brief Represents a piece with rotation and index information
- * 
+ *
  * This structure is used by both v1 and v2 solvers to represent
  * a piece that has been rotated and placed on the board.
+ *
+ * OPTIMIZATION: Precomputed edges eliminate repeated rotation/extraction calls
+ * during constraint propagation (hot path optimization).
  */
 struct RotatedPiece {
-    Piece piece;      ///< The piece data (with rotation applied)
+    Piece piece;      ///< The original piece data (before rotation)
     int rotation;     ///< Rotation value (0-3)
     int index;        ///< Original piece index
+
+    // Precomputed edges for the rotated piece (eliminates repeated rotation calls)
+    // These are populated during domain initialization and used during constraint filtering
+    PiecePart edge_up = 0;    ///< UP edge value after rotation
+    PiecePart edge_right = 0; ///< RIGHT edge value after rotation
+    PiecePart edge_down = 0;  ///< DOWN edge value after rotation
+    PiecePart edge_left = 0;  ///< LEFT edge value after rotation
+
+    // Check if edges are cached (for backward compatibility)
+    [[gnu::always_inline]] bool has_cached_edges() const {
+        return edge_up != 0 || edge_right != 0 || edge_down != 0 || edge_left != 0;
+    }
 };
 
 /**

@@ -9,11 +9,70 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Compiler flags
+include(CheckCXXCompilerFlag)
+
+# =============================================================================
+# SIMD Detection and Configuration (copied from v1 for consistency)
+# =============================================================================
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|ARM64")
+    set(ETERNITY2_SIMD_TYPE "NEON")
+    message(STATUS "V2 Target architecture: ARM")
+    check_cxx_compiler_flag("-march=armv8-a+simd" HAS_ARM_SIMD)
+    if(HAS_ARM_SIMD)
+        set(V2_ARCH_FLAGS "-march=armv8-a+simd")
+        message(STATUS "V2 SIMD: ARM NEON enabled")
+    endif()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    message(STATUS "V2 Target architecture: x86_64")
+    check_cxx_compiler_flag("-mavx512f -mavx512bw" HAS_AVX512)
+    check_cxx_compiler_flag("-mavx2" HAS_AVX2)
+    check_cxx_compiler_flag("-march=native" HAS_MARCH_NATIVE)
+
+    if(HAS_AVX512)
+        set(ETERNITY2_SIMD_TYPE "AVX512")
+        set(V2_ARCH_FLAGS "-mavx512f -mavx512bw")
+        message(STATUS "V2 SIMD: AVX-512 enabled")
+    elseif(HAS_AVX2)
+        set(ETERNITY2_SIMD_TYPE "AVX2")
+        set(V2_ARCH_FLAGS "-mavx2")
+        message(STATUS "V2 SIMD: AVX2 enabled")
+    elseif(HAS_MARCH_NATIVE)
+        set(ETERNITY2_SIMD_TYPE "NATIVE")
+        set(V2_ARCH_FLAGS "-march=native")
+        message(STATUS "V2 SIMD: Using native architecture")
+    else()
+        set(ETERNITY2_SIMD_TYPE "SCALAR")
+        message(STATUS "V2 SIMD: Scalar fallback (no SIMD)")
+    endif()
+else()
+    set(ETERNITY2_SIMD_TYPE "SCALAR")
+    message(STATUS "V2 SIMD: Scalar fallback (unknown architecture)")
+endif()
+
+# =============================================================================
+# Compiler Flags - Aggressive Optimization for HPC
+# =============================================================================
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # Base optimization flags
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
+    # Architecture-specific optimizations
+    if(V2_ARCH_FLAGS)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${V2_ARCH_FLAGS}")
+    endif()
+
+    # Additional performance flags
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -funroll-loops -ffast-math")
+
+    # Link-Time Optimization (LTO) for cross-TU inlining
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+
+    # Debug flags with sanitizers
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 endif()
+
+# Export SIMD type as compile definition for conditional code
+add_compile_definitions(ETERNITY2_SIMD_TYPE_${ETERNITY2_SIMD_TYPE})
 
 # Find Threads package for parallel solver
 find_package(Threads REQUIRED)

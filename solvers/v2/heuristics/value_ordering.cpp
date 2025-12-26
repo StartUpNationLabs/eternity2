@@ -26,14 +26,13 @@ constexpr int DIR_DOWN = 2;
 constexpr int DIR_LEFT = 3;
 
 // Get the edge of a rotated piece in a specific direction
-static PiecePart get_edge(const RotatedPiece& piece, int direction) {
-    Piece rotated = rotate_piece_right(piece.piece, piece.rotation);
-
+// OPTIMIZATION: Use cached edges instead of recomputing rotation
+[[gnu::always_inline]] static inline PiecePart get_edge(const RotatedPiece& piece, int direction) {
     switch (direction) {
-        case DIR_UP:    return get_piece_part(rotated, UP_MASK);
-        case DIR_RIGHT: return get_piece_part(rotated, RIGHT_MASK);
-        case DIR_DOWN:  return get_piece_part(rotated, DOWN_MASK);
-        case DIR_LEFT:  return get_piece_part(rotated, LEFT_MASK);
+        case DIR_UP:    return piece.edge_up;
+        case DIR_RIGHT: return piece.edge_right;
+        case DIR_DOWN:  return piece.edge_down;
+        case DIR_LEFT:  return piece.edge_left;
         default:        return EMPTY;
     }
 }
@@ -122,27 +121,42 @@ std::vector<RotatedPiece> order_values_lcv(
 {
     if (values.empty()) return values;
 
-    // Score each value
-    std::vector<ScoredPiece> scored;
-    scored.reserve(values.size());
+    // OPTIMIZATION: Lazy LCV - only compute scores for first K values
+    // Most searches don't try all values before backtracking
+    constexpr size_t K = 8;  // Only score first K values
 
-    for (const auto& piece : values) {
-        size_t score = calculate_constrainedness(domain_manager, index, piece);
-        scored.push_back({piece, score});
+    if (values.size() <= 3) {
+        // For very small domains, full ordering isn't worth the overhead
+        return values;
     }
 
-    // Sort by score (descending - higher score = more options left = less constraining)
+    const size_t compute_count = std::min(values.size(), K);
+
+    // Score first K values
+    std::vector<ScoredPiece> scored;
+    scored.reserve(compute_count);
+
+    for (size_t i = 0; i < compute_count; ++i) {
+        size_t score = calculate_constrainedness(domain_manager, index, values[i]);
+        scored.push_back({values[i], score});
+    }
+
+    // Sort scored portion (descending - higher score = less constraining)
     std::sort(scored.begin(), scored.end(),
         [](const ScoredPiece& a, const ScoredPiece& b) {
             return a.score > b.score;
         }
     );
 
-    // Extract pieces
+    // Build result: sorted portion + remaining unsorted
     std::vector<RotatedPiece> result;
-    result.reserve(scored.size());
+    result.reserve(values.size());
+
     for (const auto& sp : scored) {
         result.push_back(sp.piece);
+    }
+    for (size_t i = compute_count; i < values.size(); ++i) {
+        result.push_back(values[i]);
     }
 
     return result;

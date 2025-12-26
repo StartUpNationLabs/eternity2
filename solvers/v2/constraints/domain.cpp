@@ -40,6 +40,11 @@ DomainManager::DomainManager(size_t board_size, const std::vector<Piece>& pieces
     // Reserve space for trail to avoid reallocations
     trail_.reserve(board_size * board_size * 10);  // Estimate ~10 entries per placed piece
     choice_points_.reserve(board_size * board_size);
+
+    // OPTIMIZATION: Pre-allocate scratch buffers to avoid hot-path heap allocations
+    // Typical domain size is pieces * 4 rotations, but filtering removes most
+    scratch_removed_.reserve(pieces.size() * 4);
+    scratch_removed_propagate_.reserve(16);  // Usually only a few pieces removed per domain
 }
 
 void DomainManager::initialize_domains() {
@@ -91,13 +96,14 @@ bool DomainManager::place_piece(Index index, const RotatedPiece& piece) {
 
     // Record domain shrink: all pieces except the one being placed are "removed"
     // This is needed so we can restore the domain on backtrack
-    std::vector<RotatedPiece> removed;
+    // OPTIMIZATION: Use scratch buffer instead of allocating new vector
+    scratch_removed_.clear();
     for (const auto& rp : domains_[idx].valid_pieces) {
         if (rp.index != piece.index || rp.rotation != piece.rotation) {
-            removed.push_back(rp);
+            scratch_removed_.push_back(rp);
         }
     }
-    record_domain_shrink(idx, removed);
+    record_domain_shrink(idx, scratch_removed_);
 
     // Mark position as assigned
     domains_[idx].is_assigned = true;
@@ -191,31 +197,35 @@ void DomainManager::undo_trail_entry(const TrailEntry& entry) {
 
 void DomainManager::record_domain_shrink(size_t position_1d, const std::vector<RotatedPiece>& removed) {
     if (!removed.empty()) {
-        trail_.push_back({
-            TrailEntry::Type::DOMAIN_SHRINK,
-            position_1d,
-            -1,  // Not used for DOMAIN_SHRINK
-            removed
-        });
+        TrailEntry entry;
+        entry.type = TrailEntry::Type::DOMAIN_SHRINK;
+        entry.position_1d = position_1d;
+        entry.piece_index = -1;  // Not used for DOMAIN_SHRINK
+        // Reserve capacity to avoid reallocation during copy
+        entry.removed_pieces.reserve(removed.size());
+        for (const auto& rp : removed) {
+            entry.removed_pieces.push_back(rp);
+        }
+        trail_.push_back(std::move(entry));
     }
 }
 
 void DomainManager::record_piece_used(int piece_index) {
-    trail_.push_back({
-        TrailEntry::Type::PIECE_USED,
-        0,  // Not used for PIECE_USED
-        piece_index,
-        {}  // No removed pieces
-    });
+    TrailEntry entry;
+    entry.type = TrailEntry::Type::PIECE_USED;
+    entry.position_1d = 0;  // Not used for PIECE_USED
+    entry.piece_index = piece_index;
+    // removed_pieces stays empty (default constructed)
+    trail_.push_back(std::move(entry));
 }
 
 void DomainManager::record_position_assigned(size_t position_1d) {
-    trail_.push_back({
-        TrailEntry::Type::POSITION_ASSIGNED,
-        position_1d,
-        -1,  // Not used for POSITION_ASSIGNED
-        {}   // No removed pieces
-    });
+    TrailEntry entry;
+    entry.type = TrailEntry::Type::POSITION_ASSIGNED;
+    entry.position_1d = position_1d;
+    entry.piece_index = -1;  // Not used for POSITION_ASSIGNED
+    // removed_pieces stays empty (default constructed)
+    trail_.push_back(std::move(entry));
 }
 
 std::vector<Index> DomainManager::get_unassigned_positions() const {
@@ -284,33 +294,8 @@ bool DomainManager::is_complete() const {
     return assigned_count_ == total_positions();
 }
 
-size_t DomainManager::to_1d(Index index) const {
-    return index.second * board_size_ + index.first;
-}
-
-Index DomainManager::to_2d(size_t index) const {
-    return {index % board_size_, index / board_size_};
-}
-
-bool DomainManager::is_valid_index(Index index) const {
-    return index.first < board_size_ && index.second < board_size_;
-}
-
-bool DomainManager::is_corner(Index index) const {
-    bool x_edge = (index.first == 0 || index.first == board_size_ - 1);
-    bool y_edge = (index.second == 0 || index.second == board_size_ - 1);
-    return x_edge && y_edge;
-}
-
-bool DomainManager::is_edge(Index index) const {
-    bool x_edge = (index.first == 0 || index.first == board_size_ - 1);
-    bool y_edge = (index.second == 0 || index.second == board_size_ - 1);
-    return (x_edge || y_edge) && !is_corner(index);
-}
-
-bool DomainManager::is_interior(Index index) const {
-    return !is_corner(index) && !is_edge(index);
-}
+// NOTE: to_1d, to_2d, is_valid_index, is_corner, is_edge, is_interior
+// are now inline in domain.h for performance
 
 std::vector<RotatedPiece> DomainManager::compute_initial_domain(Index index) const {
     std::vector<RotatedPiece> domain;
@@ -354,7 +339,17 @@ std::vector<RotatedPiece> DomainManager::compute_initial_domain(Index index) con
             if (no_wall_left && left_part == WALL) valid = false;
 
             if (valid) {
-                domain.push_back({pieces_[i], rot, static_cast<int>(i)});
+                // Create RotatedPiece with precomputed edges for hot path optimization
+                RotatedPiece rp;
+                rp.piece = pieces_[i];
+                rp.rotation = rot;
+                rp.index = static_cast<int>(i);
+                // Cache edges to avoid repeated rotation during constraint filtering
+                rp.edge_up = up_part;
+                rp.edge_right = right_part;
+                rp.edge_down = down_part;
+                rp.edge_left = left_part;
+                domain.push_back(rp);
             }
         }
     }
@@ -363,19 +358,13 @@ std::vector<RotatedPiece> DomainManager::compute_initial_domain(Index index) con
 }
 
 PiecePart DomainManager::get_edge_constraint(const RotatedPiece& piece, int direction) const {
-    Piece rotated = rotate_piece_right(piece.piece, piece.rotation);
-
+    // OPTIMIZATION: Use cached edges instead of recomputing rotation
     switch (direction) {
-        case DIR_UP:
-            return get_piece_part(rotated, UP_MASK);
-        case DIR_RIGHT:
-            return get_piece_part(rotated, RIGHT_MASK);
-        case DIR_DOWN:
-            return get_piece_part(rotated, DOWN_MASK);
-        case DIR_LEFT:
-            return get_piece_part(rotated, LEFT_MASK);
-        default:
-            return EMPTY;
+        case DIR_UP:    return piece.edge_up;
+        case DIR_RIGHT: return piece.edge_right;
+        case DIR_DOWN:  return piece.edge_down;
+        case DIR_LEFT:  return piece.edge_left;
+        default:        return EMPTY;
     }
 }
 
@@ -385,34 +374,32 @@ void DomainManager::filter_domain_by_constraint(Index index, int direction, Piec
 
     if (domain.is_assigned) return;  // Don't filter assigned positions
 
-    // Determine which mask to use for this direction
-    Piece mask;
-    switch (direction) {
-        case DIR_UP:    mask = UP_MASK; break;
-        case DIR_RIGHT: mask = RIGHT_MASK; break;
-        case DIR_DOWN:  mask = DOWN_MASK; break;
-        case DIR_LEFT:  mask = LEFT_MASK; break;
-        default: return;
-    }
-
-    // Collect pieces to remove (for trail)
-    std::vector<RotatedPiece> removed;
+    // OPTIMIZATION: Use scratch buffer instead of allocating new vector
+    scratch_removed_.clear();
 
     // Filter out pieces that don't match the constraint
+    // OPTIMIZATION: Use cached edges instead of rotate_piece_right + get_piece_part
     auto it = std::remove_if(domain.valid_pieces.begin(), domain.valid_pieces.end(),
         [&](const RotatedPiece& rp) {
             // Check if this piece is still available (using bitset)
             if (!piece_availability_.test(rp.index)) {
-                removed.push_back(rp);
+                scratch_removed_.push_back(rp);
                 return true;  // Remove unavailable pieces
             }
 
-            Piece rotated = rotate_piece_right(rp.piece, rp.rotation);
-            PiecePart edge = get_piece_part(rotated, mask);
+            // Use cached edges instead of recomputing rotation
+            PiecePart edge;
+            switch (direction) {
+                case DIR_UP:    edge = rp.edge_up; break;
+                case DIR_RIGHT: edge = rp.edge_right; break;
+                case DIR_DOWN:  edge = rp.edge_down; break;
+                case DIR_LEFT:  edge = rp.edge_left; break;
+                default:        edge = 0; break;
+            }
 
             // Edge must match the constraint
             if (edge != constraint) {
-                removed.push_back(rp);
+                scratch_removed_.push_back(rp);
                 return true;
             }
             return false;
@@ -422,16 +409,15 @@ void DomainManager::filter_domain_by_constraint(Index index, int direction, Piec
     domain.valid_pieces.erase(it, domain.valid_pieces.end());
 
     // Record removed pieces in trail for backtracking
-    record_domain_shrink(idx, removed);
+    record_domain_shrink(idx, scratch_removed_);
 }
 
 bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiece& placed_piece) {
-    // Get edge values from placed piece
-    Piece rotated = rotate_piece_right(placed_piece.piece, placed_piece.rotation);
-    PiecePart up_edge = get_piece_part(rotated, UP_MASK);
-    PiecePart right_edge = get_piece_part(rotated, RIGHT_MASK);
-    PiecePart down_edge = get_piece_part(rotated, DOWN_MASK);
-    PiecePart left_edge = get_piece_part(rotated, LEFT_MASK);
+    // OPTIMIZATION: Use cached edges from placed_piece instead of recomputing
+    PiecePart up_edge = placed_piece.edge_up;
+    PiecePart right_edge = placed_piece.edge_right;
+    PiecePart down_edge = placed_piece.edge_down;
+    PiecePart left_edge = placed_piece.edge_left;
 
     // Propagate to up neighbor (they need matching DOWN edge)
     if (placed_index.second > 0) {
@@ -469,17 +455,22 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         }
     }
 
-    // Also filter out the used piece from all other domains
+    // Remove the placed piece from all other domains
+    // Note: Inverted index approach was tried but hurt performance due to stale entries
+    // Simple iteration is fast enough with the other optimizations
+    const int piece_idx = placed_piece.index;
     for (size_t i = 0; i < domains_.size(); ++i) {
         if (domains_[i].is_assigned) continue;
 
         auto& valid = domains_[i].valid_pieces;
-        std::vector<RotatedPiece> removed;
+
+        // OPTIMIZATION: Use scratch buffer instead of allocating new vector per domain
+        scratch_removed_propagate_.clear();
 
         auto it = std::remove_if(valid.begin(), valid.end(),
             [&](const RotatedPiece& rp) {
-                if (rp.index == placed_piece.index) {
-                    removed.push_back(rp);
+                if (rp.index == piece_idx) {
+                    scratch_removed_propagate_.push_back(rp);
                     return true;
                 }
                 return false;
@@ -488,7 +479,7 @@ bool DomainManager::propagate_to_neighbors(Index placed_index, const RotatedPiec
         valid.erase(it, valid.end());
 
         // Record domain shrink in trail
-        record_domain_shrink(i, removed);
+        record_domain_shrink(i, scratch_removed_propagate_);
 
         if (valid.empty()) return false;
     }
