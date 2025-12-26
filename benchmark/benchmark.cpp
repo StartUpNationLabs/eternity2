@@ -181,31 +181,25 @@ BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
     BenchmarkComparison comparison;
     comparison.puzzle_file = puzzle_file;
 
-    if (config_.show_progress) {
-        std::cout << "Benchmarking: " << puzzle_file << std::endl;
+    // Run V1 (if enabled)
+    if (config_.run_v1) {
+        comparison.v1_result = run_v1(puzzle_file);
+    } else {
+        comparison.v1_result.puzzle_file = puzzle_file;
+        comparison.v1_result.solver_name = "V1 (Skipped)";
     }
 
-    // Run V1
-    if (config_.verbose) {
-        std::cout << "  Running V1..." << std::flush;
-    }
-    comparison.v1_result = run_v1(puzzle_file);
-    if (config_.verbose) {
-        std::cout << " done (" << std::fixed << std::setprecision(2)
-                  << comparison.v1_result.elapsed_ms << "ms)" << std::endl;
+    // Run V2 (if enabled)
+    if (config_.run_v2) {
+        comparison.v2_result = run_v2(puzzle_file);
+    } else {
+        comparison.v2_result.puzzle_file = puzzle_file;
+        comparison.v2_result.solver_name = "V2 (Skipped)";
     }
 
-    // Run V2
-    if (config_.verbose) {
-        std::cout << "  Running V2..." << std::flush;
-    }
-    comparison.v2_result = run_v2(puzzle_file);
-    if (config_.verbose) {
-        std::cout << " done (" << std::fixed << std::setprecision(2)
-                  << comparison.v2_result.elapsed_ms << "ms)" << std::endl;
-    }
-
-    comparison.board_size = comparison.v1_result.board_size;
+    // Set board size from whichever solver ran
+    comparison.board_size = config_.run_v1 ? comparison.v1_result.board_size
+                                           : comparison.v2_result.board_size;
     
     // Export solutions if configured
     if (config_.export_solutions) {
@@ -239,7 +233,35 @@ std::vector<BenchmarkComparison> Benchmark::run_all(const std::vector<std::strin
     std::vector<BenchmarkComparison> results;
     results.resize(puzzle_files.size());
 
-    // Determine number of threads to use (use all available cores)
+    // Sequential mode
+    if (!config_.parallel) {
+        if (config_.show_progress) {
+            std::cout << "Processing " << puzzle_files.size() << " puzzle(s) sequentially" << std::endl;
+        }
+
+        for (size_t i = 0; i < puzzle_files.size(); ++i) {
+            if (config_.show_progress) {
+                std::cout << "[" << (i + 1) << "/" << puzzle_files.size() << "] "
+                          << "Benchmarking: " << puzzle_files[i] << "..." << std::flush;
+            }
+
+            results[i] = run_comparison(puzzle_files[i]);
+
+            if (config_.show_progress) {
+                std::cout << " done";
+                if (config_.verbose) {
+                    std::cout << " (V1: " << std::fixed << std::setprecision(1)
+                              << results[i].v1_result.elapsed_ms << "ms, V2: "
+                              << results[i].v2_result.elapsed_ms << "ms)";
+                }
+                std::cout << std::endl;
+            }
+        }
+
+        return results;
+    }
+
+    // Parallel mode
     size_t num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) {
         num_threads = 4;  // Fallback if hardware_concurrency() returns 0
@@ -255,6 +277,7 @@ std::vector<BenchmarkComparison> Benchmark::run_all(const std::vector<std::strin
     std::vector<std::thread> threads;
     threads.reserve(num_threads);
     std::atomic<size_t> next_index{0};
+    std::atomic<size_t> completed_count{0};
     std::mutex progress_mutex;
 
     // Launch worker threads
@@ -271,8 +294,9 @@ std::vector<BenchmarkComparison> Benchmark::run_all(const std::vector<std::strin
 
                 // Print progress (thread-safe)
                 if (config_.show_progress) {
+                    size_t done = completed_count.fetch_add(1) + 1;
                     std::lock_guard<std::mutex> lock(progress_mutex);
-                    std::cout << "[" << (i + 1) << "/" << puzzle_files.size() << "] "
+                    std::cout << "[" << done << "/" << puzzle_files.size() << "] "
                               << puzzle_files[i] << " completed" << std::endl;
                 }
             }
@@ -464,7 +488,9 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
                   << std::setw(12) << comp.v2_result.elapsed_ms;
 
         if (comp.v1_result.solved && comp.v2_result.solved) {
-            std::cout << std::setw(10) << (std::to_string(static_cast<int>(comp.speedup() * 100) / 100) + "x");
+            std::ostringstream speedup_str;
+            speedup_str << std::fixed << std::setprecision(1) << comp.speedup() << "x";
+            std::cout << std::setw(10) << speedup_str.str();
         } else {
             std::cout << std::setw(10) << "-";
         }
@@ -473,7 +499,9 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
                   << std::setw(12) << comp.v2_result.nodes_explored;
 
         if (comp.v1_result.solved && comp.v2_result.solved && comp.v2_result.nodes_explored > 0) {
-            std::cout << std::setw(12) << (std::to_string(static_cast<int>(comp.node_reduction() * 100) / 100) + "x");
+            std::ostringstream reduction_str;
+            reduction_str << std::fixed << std::setprecision(1) << comp.node_reduction() << "x";
+            std::cout << std::setw(12) << reduction_str.str();
         } else {
             std::cout << std::setw(12) << "-";
         }

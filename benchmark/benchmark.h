@@ -16,23 +16,23 @@ namespace eternity2_benchmark {
 struct BenchmarkResult {
     std::string solver_name;
     std::string puzzle_file;
-    size_t board_size;
+    size_t board_size = 0;
 
     // Timing
-    double elapsed_ms;
+    double elapsed_ms = 0.0;
 
     // Solution status
-    bool solved;
-    size_t pieces_placed;
-    
+    bool solved = false;
+    size_t pieces_placed = 0;
+
     // Solution board (if solved)
     std::optional<Board> solution_board;
 
     // Search statistics
-    size_t nodes_explored;
-    size_t backtracks;
-    size_t hash_hits;           // V1 only
-    size_t domain_wipeouts;     // V2 only
+    size_t nodes_explored = 0;
+    size_t backtracks = 0;
+    size_t hash_hits = 0;           // V1 only
+    size_t domain_wipeouts = 0;     // V2 only
 
     // Derived metrics
     double nodes_per_ms() const {
@@ -72,6 +72,10 @@ struct BenchmarkConfig {
     // Multiple runs for averaging
     size_t num_runs = 1;
 
+    // Solver selection
+    bool run_v1 = true;                 // Run V1 solver (can disable for V2-only)
+    bool run_v2 = true;                 // Run V2 solver
+
     // V2 heuristic configuration
     bool v2_use_mrv = true;
     bool v2_use_degree = true;
@@ -80,10 +84,13 @@ struct BenchmarkConfig {
     // V1 configuration
     size_t v1_thread_count = 1;         // Single thread for fair comparison
 
+    // Execution options
+    bool parallel = true;               // Run puzzles in parallel
+
     // Output options
     bool verbose = false;
     bool show_progress = true;
-    bool export_solutions = false;  // Export solved boards to files
+    bool export_solutions = false;      // Export solved boards to files
     std::string solution_output_dir = "solutions";  // Directory for exported solutions
 };
 

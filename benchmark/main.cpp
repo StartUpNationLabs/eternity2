@@ -19,7 +19,9 @@ void print_usage(const char* program_name) {
     std::cout << "  --no-mrv           Disable MRV heuristic in V2" << std::endl;
     std::cout << "  --no-degree        Disable degree heuristic in V2" << std::endl;
     std::cout << "  --no-lcv           Disable LCV heuristic in V2" << std::endl;
+    std::cout << "  --v1-only          Run V1 only" << std::endl;
     std::cout << "  --v2-only          Run V2 only (for ablation studies)" << std::endl;
+    std::cout << "  --sequential       Run puzzles sequentially (default: parallel)" << std::endl;
     std::cout << "  --table            Show results as table (default)" << std::endl;
     std::cout << "  --detailed         Show detailed comparison for each puzzle" << std::endl;
     std::cout << "  --export-solutions Export solved boards to CSV files" << std::endl;
@@ -65,7 +67,6 @@ int main(int argc, char* argv[]) {
     std::string input_path;
     std::string csv_output;
     bool show_detailed = false;
-    bool v2_only = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -89,8 +90,14 @@ int main(int argc, char* argv[]) {
             config.v2_use_degree = false;
         } else if (arg == "--no-lcv") {
             config.v2_use_lcv = false;
+        } else if (arg == "--v1-only") {
+            config.run_v1 = true;
+            config.run_v2 = false;
         } else if (arg == "--v2-only") {
-            v2_only = true;
+            config.run_v1 = false;
+            config.run_v2 = true;
+        } else if (arg == "--sequential") {
+            config.parallel = false;
         } else if (arg == "--table") {
             show_detailed = false;
         } else if (arg == "--detailed") {
@@ -124,16 +131,31 @@ int main(int argc, char* argv[]) {
     std::cout << "============================" << std::endl;
     std::cout << "Found " << puzzle_files.size() << " puzzle(s) to benchmark" << std::endl;
     std::cout << "Timeout: " << config.timeout_ms << "ms per puzzle" << std::endl;
+    std::cout << "Mode: " << (config.parallel ? "parallel" : "sequential") << std::endl;
 
-    // Show V2 configuration
-    std::cout << "V2 Heuristics: ";
-    std::cout << (config.v2_use_mrv ? "MRV " : "");
-    std::cout << (config.v2_use_degree ? "Degree " : "");
-    std::cout << (config.v2_use_lcv ? "LCV " : "");
-    if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv) {
-        std::cout << "(none - random ordering)";
+    // Show which solvers are being run
+    std::cout << "Solvers: ";
+    if (config.run_v1 && config.run_v2) {
+        std::cout << "V1 vs V2 comparison";
+    } else if (config.run_v1) {
+        std::cout << "V1 only";
+    } else if (config.run_v2) {
+        std::cout << "V2 only";
     }
-    std::cout << std::endl << std::endl;
+    std::cout << std::endl;
+
+    // Show V2 configuration if V2 is enabled
+    if (config.run_v2) {
+        std::cout << "V2 Heuristics: ";
+        std::cout << (config.v2_use_mrv ? "MRV " : "");
+        std::cout << (config.v2_use_degree ? "Degree " : "");
+        std::cout << (config.v2_use_lcv ? "LCV " : "");
+        if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv) {
+            std::cout << "(none - random ordering)";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
 
     // Run benchmarks
     eternity2_benchmark::Benchmark benchmark(config);
