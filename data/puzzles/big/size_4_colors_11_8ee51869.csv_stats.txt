@@ -1,7 +1,0 @@
-Puzzle: ../../puzzles/big/size_4_colors_11_8ee51869.csv
-  Boards analyzed: 19
-  Max pieces placed: 16
-  Hash hits: 0
-  Bloom filter hits: 0
-  Total time: 1.00 seconds
-  Status: Solved

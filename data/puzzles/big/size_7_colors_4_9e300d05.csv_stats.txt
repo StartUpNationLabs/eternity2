@@ -1,7 +1,0 @@
-Puzzle: ../../puzzles/big/size_7_colors_4_9e300d05.csv
-  Boards analyzed: 56217583
-  Max pieces placed: 48
-  Hash hits: 0
-  Bloom filter hits: 0
-  Total time: 10.05 seconds
-  Status: Timeout

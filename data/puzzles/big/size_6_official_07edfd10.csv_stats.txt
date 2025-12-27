@@ -1,7 +1,0 @@
-Puzzle: ../../puzzles/big/size_6_official_07edfd10.csv
-  Boards analyzed: 38
-  Max pieces placed: 36
-  Hash hits: 0
-  Bloom filter hits: 0
-  Total time: 1.00 seconds
-  Status: Solved

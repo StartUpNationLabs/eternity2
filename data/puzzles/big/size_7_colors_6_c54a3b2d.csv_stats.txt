@@ -1,7 +1,0 @@
-Puzzle: ../../puzzles/big/size_7_colors_6_c54a3b2d.csv
-  Boards analyzed: 1157636
-  Max pieces placed: 49
-  Hash hits: 0
-  Bloom filter hits: 0
-  Total time: 1.00 seconds
-  Status: Solved

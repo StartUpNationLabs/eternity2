@@ -1,7 +1,0 @@
-Puzzle: ../../puzzles/big/size_5_official_7877637a.csv
-  Boards analyzed: 26
-  Max pieces placed: 25
-  Hash hits: 0
-  Bloom filter hits: 0
-  Total time: 1.01 seconds
-  Status: Solved
