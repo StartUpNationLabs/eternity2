@@ -1095,10 +1095,10 @@ void Benchmark::export_solution(const BenchmarkResult& result, const std::string
     
     // Create output filename
     std::string output_file = output_dir + "/" + puzzle_name + "_solved.csv";
-    
-    // Export the solution
-    std::string solution_csv = export_board_to_csv_string(result.solution_board.value());
-    
+
+    // Export the solution with BUCAS URL
+    std::string solution_csv = export_board_to_csv_string(result.solution_board.value(), puzzle_name);
+
     std::ofstream file(output_file);
     if (file.is_open()) {
         file << solution_csv;

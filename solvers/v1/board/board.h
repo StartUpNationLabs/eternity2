@@ -62,7 +62,13 @@ void log_board(const Board &board, const std::string &description);
 
 void export_board(const Board &board);
 
-std::string export_board_to_csv_string(const Board &board);
+std::string export_board_to_csv_string(const Board &board, const std::string &puzzle_name = "puzzle");
+
+// BUCAS URL generation functions
+char binary_to_bucas_letter(uint16_t binary_value);
+std::string extract_puzzle_name(const std::string &filepath);
+std::string generate_bucas_url(const Board &board, const std::string &puzzle_name);
+
 size_t get_1d_board_index(const Board &board, Index index);
 Index get_2d_board_index(const Board &board, int index);
 #endif //ETERNITY2_BOARD_H

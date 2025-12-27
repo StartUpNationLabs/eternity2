@@ -122,6 +122,80 @@ void log_board(const Board &board, const std::string &description)
 #endif
 }
 
+auto binary_to_bucas_letter(uint16_t binary_value) -> char
+{
+    // Convert a 16-bit binary value to a BUCAS letter (a-w)
+    // 0 or 65535 represent border/grey pieces -> 'a'
+    // 1-22 represent different patterns -> 'b'-'w'
+    if (binary_value == 0 || binary_value == 65535)
+    {
+        return 'a';
+    }
+    else if (binary_value >= 1 && binary_value <= 22)
+    {
+        return static_cast<char>('a' + binary_value);
+    }
+    else
+    {
+        throw std::runtime_error(eternity2::format("Invalid pattern value: {}", binary_value));
+    }
+}
+
+auto extract_puzzle_name(const std::string &filepath) -> std::string
+{
+    // Extract the puzzle name from a file path
+    // Example: "/path/to/size_7_colors_4_9e300d05.csv" -> "size_7_colors_4_9e300d05"
+
+    // Find the last path separator (/ or \)
+    size_t last_slash = filepath.find_last_of("/\\");
+    std::string filename = (last_slash == std::string::npos) ? filepath : filepath.substr(last_slash + 1);
+
+    // Find the last dot to remove extension
+    size_t last_dot = filename.find_last_of('.');
+    std::string name = (last_dot == std::string::npos) ? filename : filename.substr(0, last_dot);
+
+    // Return the name, or default to "puzzle" if empty
+    return name.empty() ? "puzzle" : name;
+}
+
+auto generate_bucas_url(const Board &board, const std::string &puzzle_name) -> std::string
+{
+    // Generate a BUCAS website URL from board data
+    // Format: https://e2.bucas.name/#puzzle=NAME&board_w=W&board_h=H&board_edges=EDGES&motifs_order=jblackwood
+
+    size_t board_w = board.size;
+    size_t board_h = board.size;
+    std::string board_edges;
+    board_edges.reserve(board_w * board_h * 4); // 4 letters per piece
+
+    // Iterate through all pieces in the board
+    for (const auto &rotated_piece : board.board)
+    {
+        // Apply rotation to get the actual piece orientation
+        Piece piece = apply_rotation(rotated_piece);
+
+        // Extract 4x 16-bit segments from the 64-bit piece value
+        // The piece is stored as 4 concatenated 16-bit values (top, right, bottom, left)
+        std::bitset<64> bits(piece);
+
+        // Extract each 16-bit segment
+        uint16_t top    = static_cast<uint16_t>(std::bitset<16>(bits.to_string().substr(0, 16)).to_ulong());
+        uint16_t right  = static_cast<uint16_t>(std::bitset<16>(bits.to_string().substr(16, 16)).to_ulong());
+        uint16_t bottom = static_cast<uint16_t>(std::bitset<16>(bits.to_string().substr(32, 16)).to_ulong());
+        uint16_t left   = static_cast<uint16_t>(std::bitset<16>(bits.to_string().substr(48, 16)).to_ulong());
+
+        // Convert each edge to a BUCAS letter and append
+        board_edges += binary_to_bucas_letter(top);
+        board_edges += binary_to_bucas_letter(right);
+        board_edges += binary_to_bucas_letter(bottom);
+        board_edges += binary_to_bucas_letter(left);
+    }
+
+    // Build the complete BUCAS URL
+    return eternity2::format("https://e2.bucas.name/#puzzle={}&board_w={}&board_h={}&board_edges={}&motifs_order=jblackwood",
+                            puzzle_name, board_w, board_h, board_edges);
+}
+
 void export_board(const Board &board)
 {
     // function to export the board to a csv file
@@ -133,10 +207,12 @@ void export_board(const Board &board)
     }
 }
 
-auto export_board_to_csv_string(const Board &board) -> std::string
+auto export_board_to_csv_string(const Board &board, const std::string &puzzle_name) -> std::string
 {
-    // function to export the board to a csv string
-    std::string csv_string;
+    // function to export the board to a csv string with BUCAS URL on the first line
+    std::string bucas_url = generate_bucas_url(board, puzzle_name);
+    std::string csv_string = bucas_url + "\n";
+
     for (const auto &piece : board.board)
     {
         csv_string += csv_piece(piece) + "\n";

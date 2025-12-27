@@ -21,13 +21,14 @@
 
 /**
  * @brief Execute the solver with the given configuration
- * 
+ *
  * @param config Solver configuration
  * @param board_pieces Board and pieces to solve
  * @param board_size Size of the board
  * @param partition_depth Partition depth for parallel mode
  * @param quiet Whether to suppress output
  * @param print_stats Whether to print statistics
+ * @param puzzle_name Name of the puzzle for BUCAS URL generation
  * @return SolveResult The result of the solving process
  */
 eternity2_v2::SolveResult execute_solver(const eternity2_v2::SolverConfig& config,
@@ -35,7 +36,8 @@ eternity2_v2::SolveResult execute_solver(const eternity2_v2::SolverConfig& confi
                                          size_t board_size,
                                          size_t partition_depth,
                                          bool quiet,
-                                         bool print_stats) {
+                                         bool print_stats,
+                                         const std::string& puzzle_name = "puzzle") {
     // Setup solver
     std::mutex mutex;
     Board max_board = create_board(static_cast<int>(board_size));
@@ -83,7 +85,7 @@ eternity2_v2::SolveResult execute_solver(const eternity2_v2::SolverConfig& confi
             eternity2_logger::info("=== SOLUTION FOUND ===");
         }
         std::cout << "==" << std::endl;
-        std::cout << export_board_to_csv_string(shared_data.max_board);
+        std::cout << export_board_to_csv_string(shared_data.max_board, puzzle_name);
         std::cout << "=time=" << elapsed.count() << std::endl;
     } else {
         if (!quiet) {
@@ -171,8 +173,11 @@ int main(int argc, char* argv[]) {
         eternity2_logger::info("Solving...");
     }
 
+    // Extract puzzle name for BUCAS URL generation
+    std::string puzzle_name = extract_puzzle_name(filename);
+
     // Execute solver
-    auto result = execute_solver(config, board_pieces, board_size, partition_depth, quiet, print_stats);
+    auto result = execute_solver(config, board_pieces, board_size, partition_depth, quiet, print_stats, puzzle_name);
 
     return (result == eternity2_v2::SolveResult::SOLVED) ? 0 : 1;
 }

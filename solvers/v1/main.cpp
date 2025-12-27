@@ -22,7 +22,10 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         filename = argv[1];
     }
-    
+
+    // Extract puzzle name for BUCAS URL generation
+    std::string puzzle_name = extract_puzzle_name(filename);
+
     try {
         auto board_pieces = load_from_csv(filename);
         auto board_size = board_pieces.first.size;
@@ -58,7 +61,7 @@ int main(int argc, char *argv[]) {
             if (current_max_count == target_count) {
                 eternity2_logger::info("Solution found!");
                 std::cout << "==" << std::endl;
-                std::string board_lines = export_board_to_csv_string(shared_data.max_board);
+                std::string board_lines = export_board_to_csv_string(shared_data.max_board, puzzle_name);
                 std::cout << board_lines;
                 auto end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> elapsed = end - start;
@@ -81,7 +84,7 @@ int main(int argc, char *argv[]) {
             if (last_max_count != current_max_count) {
                 last_max_count = current_max_count;
                 std::cout << "==" << std::endl;
-                std::string board_lines = export_board_to_csv_string(shared_data.max_board);
+                std::string board_lines = export_board_to_csv_string(shared_data.max_board, puzzle_name);
                 std::cout << board_lines;
             }
         }
