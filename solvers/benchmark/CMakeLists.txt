@@ -26,8 +26,9 @@ target_include_directories(benchmark PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..  # Add solvers/ to include path so we can use "common/", "v1/", "v2/" directly
 )
 
-# Link to both solver libraries
+# Link to all solver libraries
 target_link_libraries(benchmark
+    solver_v0_lib
     solver_v2_lib
     solver_lib
 )

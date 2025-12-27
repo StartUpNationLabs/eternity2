@@ -95,6 +95,7 @@ struct SharedDataV2 {
 
     // Control
     std::atomic<bool> stop{false};              // Stop signal
+    std::chrono::steady_clock::time_point global_start_time{};  // Global start time for timeout checks
 
     // Callbacks
     std::function<void(const Board&)> on_board_update = [](const Board&) {};

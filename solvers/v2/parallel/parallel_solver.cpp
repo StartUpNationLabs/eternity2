@@ -91,6 +91,9 @@ ParallelSolverV2::ParallelSolverV2(const std::vector<Piece>& pieces,
 SolveResult ParallelSolverV2::solve() {
     auto start_time = std::chrono::steady_clock::now();
 
+    // Set global start time for timeout checks across all worker threads
+    shared_data_.global_start_time = start_time;
+
     // Calculate partition depth (or use provided value)
     size_t target_depth = (partition_depth_ > 0) ? partition_depth_ : calculate_partition_depth();
 

@@ -107,6 +107,7 @@ SolveResult SolverV2::solve() {
     // Initialize
     shared_data_.stats.reset();
     start_time_ = std::chrono::steady_clock::now();
+    shared_data_.global_start_time = start_time_;  // Set global start time for non-parallel case
 
     // Initialize domains
     domain_manager_.initialize_domains();
@@ -288,7 +289,7 @@ bool SolverV2::limits_reached() const {
 
     if (config.max_time_ms > 0) {
         auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time_).count();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - shared_data_.global_start_time).count();
         if (static_cast<size_t>(elapsed) >= config.max_time_ms) {
             return true;
         }

@@ -10,32 +10,46 @@ namespace fs = std::filesystem;
 
 void print_usage(const char* program_name) {
     std::cout << "Eternity II Solver Benchmark Tool" << std::endl;
-    std::cout << "Compares V1 (baseline) and V2 (MAC+MRV+LCV) solvers\n" << std::endl;
+    std::cout << "Compares solver variants: V0, V1, V2-Std, V2-BorderFirst, V2-Parallel, V2-Parallel-BorderFirst\n" << std::endl;
 
     std::cout << "Usage: " << program_name << " [options] <puzzle_file_or_directory>" << std::endl;
-    std::cout << "\nOptions:" << std::endl;
+    std::cout << "\nGeneral Options:" << std::endl;
     std::cout << "  --timeout <ms>     Timeout per puzzle (default: 60000ms)" << std::endl;
     std::cout << "  --csv <file>       Export results to CSV file" << std::endl;
     std::cout << "  --verbose          Show detailed progress" << std::endl;
     std::cout << "  --quiet            Minimal output (results only)" << std::endl;
-    std::cout << "  --no-mrv           Disable MRV heuristic in V2" << std::endl;
-    std::cout << "  --no-degree        Disable degree heuristic in V2" << std::endl;
-    std::cout << "  --no-lcv           Disable LCV heuristic in V2" << std::endl;
-    std::cout << "  --border-first     Use border-first strategy in V2" << std::endl;
-    std::cout << "  --v2-parallel      Use V2 parallel solver (multi-threaded)" << std::endl;
-    std::cout << "  --v1-only          Run V1 only" << std::endl;
-    std::cout << "  --v2-only          Run V2 only (for ablation studies)" << std::endl;
     std::cout << "  --sequential       Run puzzles sequentially (default: parallel)" << std::endl;
     std::cout << "  --table            Show results as table (default)" << std::endl;
     std::cout << "  --detailed         Show detailed comparison for each puzzle" << std::endl;
     std::cout << "  --export-solutions Export solved boards to CSV files" << std::endl;
-    std::cout << "                     (creates 'solutions' directory next to puzzle files)" << std::endl;
     std::cout << "  --help             Show this help message" << std::endl;
 
+    std::cout << "\nSolver Selection (default: all enabled):" << std::endl;
+    std::cout << "  --v0-only          Run only V0" << std::endl;
+    std::cout << "  --v1-only          Run only V1" << std::endl;
+    std::cout << "  --v1-par-only      Run only V1 parallel" << std::endl;
+    std::cout << "  --v2-std-only      Run only V2 standard" << std::endl;
+    std::cout << "  --v2-bf-only       Run only V2 border-first" << std::endl;
+    std::cout << "  --v2-par-only      Run only V2 parallel" << std::endl;
+    std::cout << "  --v2-par-bf-only   Run only V2 parallel border-first" << std::endl;
+    std::cout << "  --no-v0            Disable V0" << std::endl;
+    std::cout << "  --no-v1            Disable V1" << std::endl;
+    std::cout << "  --no-v1-par        Disable V1 parallel" << std::endl;
+    std::cout << "  --no-v2-std        Disable V2 standard" << std::endl;
+    std::cout << "  --no-v2-bf         Disable V2 border-first" << std::endl;
+    std::cout << "  --no-v2-par        Disable V2 parallel" << std::endl;
+    std::cout << "  --no-v2-par-bf     Disable V2 parallel border-first" << std::endl;
+
+    std::cout << "\nV2 Heuristic Configuration:" << std::endl;
+    std::cout << "  --no-mrv           Disable MRV heuristic (default: enabled)" << std::endl;
+    std::cout << "  --no-degree        Disable degree heuristic (default: enabled)" << std::endl;
+    std::cout << "  --no-lcv           Disable LCV heuristic (default: enabled)" << std::endl;
+
     std::cout << "\nExamples:" << std::endl;
-    std::cout << "  " << program_name << " puzzle.csv" << std::endl;
-    std::cout << "  " << program_name << " --timeout 30000 data/puzzles/" << std::endl;
-    std::cout << "  " << program_name << " --csv results.csv --verbose data/puzzles/" << std::endl;
+    std::cout << "  " << program_name << " puzzle.csv                    # Run all solvers" << std::endl;
+    std::cout << "  " << program_name << " --v2-par-only data/          # Only V2 parallel" << std::endl;
+    std::cout << "  " << program_name << " --no-v1 --no-v2-std data/    # Skip V1 and V2-std" << std::endl;
+    std::cout << "  " << program_name << " --csv results.csv data/      # Export to CSV" << std::endl;
 }
 
 std::vector<std::string> find_puzzle_files(const std::string& path) {
@@ -99,20 +113,82 @@ int main(int argc, char* argv[]) {
             config.v2_use_degree = false;
         } else if (arg == "--no-lcv") {
             config.v2_use_lcv = false;
-        } else if (arg == "--border-first") {
-            config.v2_border_first = true;
-        } else if (arg == "--v2-parallel") {
-            config.run_v2_parallel = true;
+
+        // Solver selection - "*-only" options
+        } else if (arg == "--v0-only") {
+            config.run_v0 = true;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
         } else if (arg == "--v1-only") {
+            config.run_v0 = false;
             config.run_v1 = true;
-            config.run_v2 = false;
-        } else if (arg == "--v2-only") {
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+        } else if (arg == "--v1-par-only") {
+            config.run_v0 = false;
             config.run_v1 = false;
-            config.run_v2 = true;
-        } else if (arg == "--v2-parallel-only") {
+            config.run_v1_parallel = true;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+        } else if (arg == "--v2-std-only") {
+            config.run_v0 = false;
             config.run_v1 = false;
-            config.run_v2 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = true;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+        } else if (arg == "--v2-bf-only") {
+            config.run_v0 = false;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = true;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+        } else if (arg == "--v2-par-only") {
+            config.run_v0 = false;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
             config.run_v2_parallel = true;
+            config.run_v2_parallel_border_first = false;
+        } else if (arg == "--v2-par-bf-only") {
+            config.run_v0 = false;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = true;
+
+        // Solver selection - "no-*" options
+        } else if (arg == "--no-v0") {
+            config.run_v0 = false;
+        } else if (arg == "--no-v1") {
+            config.run_v1 = false;
+        } else if (arg == "--no-v1-par") {
+            config.run_v1_parallel = false;
+        } else if (arg == "--no-v2-std") {
+            config.run_v2_standard = false;
+        } else if (arg == "--no-v2-bf") {
+            config.run_v2_border_first = false;
+        } else if (arg == "--no-v2-par") {
+            config.run_v2_parallel = false;
+        } else if (arg == "--no-v2-par-bf") {
+            config.run_v2_parallel_border_first = false;
+
+        // Other options
         } else if (arg == "--sequential") {
             config.parallel = false;
         } else if (arg == "--table") {
@@ -152,26 +228,34 @@ int main(int argc, char* argv[]) {
 
     // Show which solvers are being run
     std::cout << "Solvers: ";
-    if (config.run_v1 && config.run_v2) {
-        std::cout << "V1 vs V2 comparison";
-    } else if (config.run_v1) {
-        std::cout << "V1 only";
-    } else if (config.run_v2) {
-        std::cout << "V2 only";
+    std::vector<std::string> enabled_solvers;
+    if (config.run_v0) enabled_solvers.push_back("V0");
+    if (config.run_v1) enabled_solvers.push_back("V1");
+    if (config.run_v1_parallel) enabled_solvers.push_back("V1-Par");
+    if (config.run_v2_standard) enabled_solvers.push_back("V2-Std");
+    if (config.run_v2_border_first) enabled_solvers.push_back("V2-BF");
+    if (config.run_v2_parallel) enabled_solvers.push_back("V2-Par");
+    if (config.run_v2_parallel_border_first) enabled_solvers.push_back("V2-Par-BF");
+
+    if (enabled_solvers.empty()) {
+        std::cerr << "Error: No solvers enabled!" << std::endl;
+        return 1;
     }
-    if (config.run_v2_parallel) {
-        std::cout << " + V2 Parallel";
+
+    for (size_t i = 0; i < enabled_solvers.size(); ++i) {
+        std::cout << enabled_solvers[i];
+        if (i < enabled_solvers.size() - 1) std::cout << ", ";
     }
     std::cout << std::endl;
 
-    // Show V2 configuration if V2 is enabled
-    if (config.run_v2) {
+    // Show V2 configuration if any V2 variant is enabled
+    if (config.run_v2_standard || config.run_v2_border_first ||
+        config.run_v2_parallel || config.run_v2_parallel_border_first) {
         std::cout << "V2 Heuristics: ";
         std::cout << (config.v2_use_mrv ? "MRV " : "");
         std::cout << (config.v2_use_degree ? "Degree " : "");
         std::cout << (config.v2_use_lcv ? "LCV " : "");
-        std::cout << (config.v2_border_first ? "BorderFirst " : "");
-        if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv && !config.v2_border_first) {
+        if (!config.v2_use_mrv && !config.v2_use_degree && !config.v2_use_lcv) {
             std::cout << "(none - random ordering)";
         }
         std::cout << std::endl;
