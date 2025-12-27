@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <utility>
+#include <cstddef>
+#include <string>
 
 namespace eternity2_common {
 
