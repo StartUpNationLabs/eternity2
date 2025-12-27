@@ -1,3 +1,0 @@
-numpy
-grpcio-tools
-pyhumps
