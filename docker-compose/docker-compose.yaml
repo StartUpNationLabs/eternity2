@@ -17,8 +17,15 @@ services:
     #   dockerfile: Dockerfile
     environment:
       - SOLVER_API=grpc-server
+      - SOLVER_API_PORT=50051
+      - NGINX_FRONTEND_PORT=80
+      - NGINX_FRONTEND=frontend
+      - SOLVER_API_PREFIX=${BASE_PREFIX:-/eternity2}/api/
+      - FRONTEND_PREFIX=${BASE_PREFIX:-/eternity2}/
     ports:
       - "50052:50052"
+      - "80:50052"
+      - "9901:9901"
     networks:
       - eternity2
 
@@ -29,14 +36,10 @@ services:
     # build:
     #   context: frontend
     #   dockerfile: Dockerfile
-    ports:
-      - "80:80"
     environment:
       # SERVER_BASE_URL is the URL of the Envoy proxy from the frontend's perspective (client-side)
-      - SERVER_BASE_URL=http://localhost:50052
-      # BASE_PATH is the path prefix for deployment behind a reverse proxy (e.g., /eternity2)
-      # Leave empty or unset for root path deployment
-      - BASE_PATH=${BASE_PATH:-}
+      - SERVER_BASE_URL=${BASE_PREFIX:-/eternity2}/api
+      - PREFIX=${BASE_PREFIX:-/eternity2}
     networks:
       - eternity2
 

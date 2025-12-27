@@ -4,7 +4,7 @@
 # for runtime configuration in the browser
 {
   env | grep 'SERVER_BASE_URL'
-  env | grep 'BASE_PATH'
+  env | grep 'PREFIX'
 } > /usr/share/nginx/html/env
 
 # If BASE_PATH is set, update nginx configuration to serve from that path

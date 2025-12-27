@@ -21,12 +21,17 @@ static_resources:
                     - name: local_service
                       domains: ["*"]
                       routes:
-                        - match: { prefix: "/" }
+                        - match: { prefix: "${SOLVER_API_PREFIX}" }
                           route:
-                            cluster: go_grpc_cluster
+                            cluster: grpc_solver_api
                             timeout: 0s
                             max_stream_duration:
                               grpc_timeout_header_max: 0s
+                            prefix_rewrite: "/"
+                        - match: { prefix: "${FRONTEND_PREFIX}" }
+                          route:
+                            cluster: nginx_frontend_cluster
+                            prefix_rewrite: "/"
                       cors:
                         allow_origin_string_match:
                           - prefix: "*"
@@ -45,17 +50,30 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
-    - name: go_grpc_cluster
+    - name: grpc_solver_api
       connect_timeout: 0.25s
       type: logical_dns
       http2_protocol_options: {}
       lb_policy: round_robin
       load_assignment:
-        cluster_name: go_grpc_cluster
+        cluster_name: grpc_solver_api
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address:
                       address: ${SOLVER_API}
-                      port_value: 50051
+                      port_value: ${SOLVER_API_PORT}
+    - name: nginx_frontend_cluster
+      connect_timeout: 0.25s
+      type: logical_dns
+      lb_policy: round_robin
+      load_assignment:
+        cluster_name: nginx_frontend_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${NGINX_FRONTEND}
+                      port_value: ${NGINX_FRONTEND_PORT}

@@ -5,9 +5,7 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // Support deployment under a path prefix (e.g., /eternity2)
-  // Set via BASE_PATH environment variable, defaults to root
-  base: process.env.BASE_PATH || '/',
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

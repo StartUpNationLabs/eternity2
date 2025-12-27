@@ -81,7 +81,7 @@ vcpkg_installed
 build
 build-release
 
-.env
+.env.prod
 .secure.local.env
 data/
 
