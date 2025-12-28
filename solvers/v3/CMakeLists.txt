@@ -69,6 +69,37 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
     # Debug flags
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+    
+    # RelWithDebInfo: Optimized with debug symbols (good for profiling)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+    if(V3_ARCH_FLAGS)
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${V3_ARCH_FLAGS}")
+    endif()
+    
+    # Profile build type: Optimized with debug symbols and frame pointers
+    # Frame pointers are needed for accurate profiling
+    set(CMAKE_CXX_FLAGS_PROFILE "-O2 -g -DNDEBUG -fno-omit-frame-pointer")
+    if(V3_ARCH_FLAGS)
+        set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} ${V3_ARCH_FLAGS}")
+    endif()
+    
+    # Check if gprof is available (GCC only)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        check_cxx_compiler_flag("-pg" HAS_GPROF)
+        if(HAS_GPROF)
+            set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_PROFILE} -pg")
+            set(CMAKE_EXE_LINKER_FLAGS_PROFILE "-pg")
+            message(STATUS "V3 Profiling: gprof support enabled")
+        endif()
+    endif()
+endif()
+
+# Register Profile build type
+if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    endif()
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "Profile")
 endif()
 
 # Export SIMD type as compile definition

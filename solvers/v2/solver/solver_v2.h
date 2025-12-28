@@ -65,6 +65,9 @@ struct SolverConfig {
     bool export_partial = false;   // Enable exporting partial solutions
     std::string export_dir = ".";  // Directory to save partial exports
     std::string export_prefix = "partial_solution"; // Prefix for export filenames
+
+    // Hint options
+    bool use_hints = true;         // Use pre-placed pieces (hints) from the board if present
 };
 
 // Statistics collected during solving

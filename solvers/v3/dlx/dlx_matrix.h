@@ -12,6 +12,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <functional>
 
 namespace eternity2_v3 {
 
@@ -94,9 +95,11 @@ public:
      * Implements Knuth's S-heuristic: choose the column with the
      * fewest remaining rows. This minimizes branching factor.
      *
+     * @param random_tiebreak If true, randomly select among columns with same size
+     * @param random_func Function to generate random numbers (for tie-breaking)
      * @return Column header with minimum size, or nullptr if empty
      */
-    DLXNode* choose_column();
+    DLXNode* choose_column(bool random_tiebreak = false, std::function<float()> random_func = nullptr);
 
     /**
      * @brief Choose column with border-first + S-heuristic
@@ -105,10 +108,13 @@ public:
      * 1. Prioritize position columns over piece columns
      * 2. Within positions: corners > edges > interior
      * 3. Use S-heuristic (min size) as tiebreaker
+     * 4. Optional random tie-breaking for diversification
      *
+     * @param random_tiebreak If true, randomly select among columns with same score
+     * @param random_func Function to generate random numbers (for tie-breaking)
      * @return Column header selected by border-first heuristic
      */
-    DLXNode* choose_column_smart();
+    DLXNode* choose_column_smart(bool random_tiebreak = false, std::function<float()> random_func = nullptr);
 
     /**
      * @brief Get position type for a given position

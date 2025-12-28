@@ -151,6 +151,32 @@ int main(int argc, char* argv[]) {
     }
     auto board_size = board_pieces.first.size;
 
+    // Clear hints if disabled
+    if (!config.use_hints) {
+        // Extract pieces from the board and add them back to the pieces vector
+        size_t hints_removed = 0;
+        for (size_t y = 0; y < board_size; ++y) {
+            for (size_t x = 0; x < board_size; ++x) {
+                Index idx = {static_cast<int>(x), static_cast<int>(y)};
+                const RotatedPiece* piece = get_piece(board_pieces.first, idx);
+                if (piece != nullptr && piece->piece != EMPTY && piece->piece != 0) {
+                    // Extract the base piece (unrotated) and add to pieces vector
+                    Piece base_piece = piece->piece;
+                    // Unrotate to get original piece: rotate left by the rotation amount
+                    int rotation = piece->rotation;
+                    base_piece = eternity2_common::rotate_piece_left(base_piece, rotation);
+                    board_pieces.second.push_back(base_piece);
+                    hints_removed++;
+                    remove_piece(board_pieces.first, idx);
+                }
+            }
+        }
+        if (!quiet) {
+            eternity2_logger::info("Hints disabled - removed {} pre-placed pieces, total pieces: {}", 
+                                   hints_removed, board_pieces.second.size());
+        }
+    }
+
     // Set num_threads to hardware concurrency if auto-detect (0)
     if (config.parallel_enabled && config.num_threads == 0) {
         config.num_threads = std::thread::hardware_concurrency();

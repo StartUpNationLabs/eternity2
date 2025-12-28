@@ -156,6 +156,14 @@ private:
         return (rng_state_ >> 16) & 0x7fff;
     }
 
+    // Initialize RNG with seed (called from constructor or setter)
+    void init_rng(uint32_t seed);
+    
+    // Get random float in [0, 1)
+    float random_float() {
+        return static_cast<float>(next_random()) / 32768.0f;
+    }
+
     // Direction constants
     static constexpr int DIR_UP = 0;
     static constexpr int DIR_RIGHT = 1;

@@ -100,6 +100,10 @@ struct SolverConfig {
     bool use_edge_propagation = true;  // Check edge compatibility during search
     HeuristicProfile heuristic_profile = HeuristicProfile::BORDER_FIRST_LCV;  // Column/row selection strategy
 
+    // Randomization
+    uint32_t random_seed = 0;           // Random seed (0 = use time-based seed, each thread gets unique seed)
+    float randomization_strength = 0.3f; // 0.0 = deterministic, 1.0 = fully random (default: 0.3 = light randomization)
+
     // Limits
     size_t max_time_ms = 0;            // 0 = unlimited
     size_t max_nodes = 0;              // 0 = unlimited
@@ -118,6 +122,9 @@ struct SolverConfig {
 
     // Puzzle name for BUCAS URL
     std::string puzzle_name = "puzzle";
+
+    // Hint options
+    bool use_hints = true;         // Use pre-placed pieces (hints) from the board if present
 };
 
 /**

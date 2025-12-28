@@ -406,6 +406,19 @@ void ParallelDLXSolver::worker_thread(size_t thread_id) {
         local_shared.max_board = create_board(static_cast<int>(board_size_));
         local_shared.config = shared_data_.config;
         local_shared.config.verbose = false;  // No per-worker output
+        
+        // Set thread-specific random seed for diversification
+        // If seed is 0 (default), use thread_id + time-based seed
+        // If seed is set, use seed + thread_id for variation
+        if (local_shared.config.random_seed == 0) {
+            // Use thread_id + time-based component
+            auto time_seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+            local_shared.config.random_seed = static_cast<uint32_t>(time_seed) + static_cast<uint32_t>(thread_id * 1000000);
+        } else {
+            // Use base seed + thread_id for variation
+            local_shared.config.random_seed = shared_data_.config.random_seed + static_cast<uint32_t>(thread_id * 1000000);
+        }
+        
         // Initialize local stats (will be aggregated later)
         local_shared.stats.reset();
         // CRITICAL: Link stop signal to main shared_data so solver sees global stop

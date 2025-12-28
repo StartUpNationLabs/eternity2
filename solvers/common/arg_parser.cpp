@@ -27,6 +27,7 @@ void print_v2_usage(const char* program_name) {
     std::cout << "  --export-partial  Enable exporting partial solutions as they progress\n";
     std::cout << "  --export-dir <dir>    Directory for partial exports (default: .)\n";
     std::cout << "  --export-prefix <prefix>  Prefix for export filenames (default: partial_solution)\n";
+    std::cout << "  --no-hints       Ignore pre-placed pieces (hints) from the puzzle file\n";
     std::cout << "  --help          Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program_name << " puzzle.csv              # Solve with all optimizations\n";
@@ -105,6 +106,8 @@ bool parse_v2_arguments(int argc, char* argv[],
             config.export_dir = argv[++i];
         } else if (arg == "--export-prefix" && i + 1 < argc) {
             config.export_prefix = argv[++i];
+        } else if (arg == "--no-hints") {
+            config.use_hints = false;
         } else if (arg[0] != '-') {
             filename = arg;
         } else {

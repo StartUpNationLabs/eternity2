@@ -43,6 +43,7 @@ void print_v3_usage(const char* program_name) {
     std::cout << "  --export-partial     Enable exporting partial solutions\n";
     std::cout << "  --export-dir <dir>   Directory for partial exports (default: .)\n";
     std::cout << "  --export-prefix <p>  Prefix for export filenames\n";
+    std::cout << "  --no-hints           Ignore pre-placed pieces (hints) from the puzzle file\n";
     std::cout << "  --help, -h           Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program_name << " puzzle.csv               # Solve with DLX\n";
@@ -116,6 +117,8 @@ bool parse_v3_arguments(int argc, char* argv[],
             config.export_dir = argv[++i];
         } else if (arg == "--export-prefix" && i + 1 < argc) {
             config.export_prefix = argv[++i];
+        } else if (arg == "--no-hints") {
+            config.use_hints = false;
         } else if (arg[0] != '-') {
             filename = arg;
         } else {
@@ -134,7 +137,7 @@ bool parse_v3_arguments(int argc, char* argv[],
  * @brief Execute the DLX solver
  */
 SolveResult execute_solver(const SolverConfig& config,
-                           const std::pair<Board, std::vector<Piece>>& board_pieces,
+                           std::pair<Board, std::vector<Piece>>& board_pieces,
                            size_t board_size,
                            bool quiet,
                            bool print_stats,
@@ -167,6 +170,46 @@ SolveResult execute_solver(const SolverConfig& config,
     // Start timer
     auto start = std::chrono::high_resolution_clock::now();
 
+    // Clear hints if disabled - work with the board directly from the pair
+    if (!config.use_hints) {
+        // Extract pieces from the board and add them back to the pieces vector
+        size_t hints_removed = 0;
+        for (size_t y = 0; y < board_size; ++y) {
+            for (size_t x = 0; x < board_size; ++x) {
+                Index idx = {static_cast<int>(x), static_cast<int>(y)};
+                const RotatedPiece* piece = get_piece(board_pieces.first, idx);
+                if (piece != nullptr && piece->piece != EMPTY && piece->piece != 0) {
+                    // Extract the base piece (unrotated) and add to pieces vector
+                    Piece base_piece = piece->piece;
+                    // Unrotate to get original piece: rotate left by the rotation amount
+                    int rotation = piece->rotation;
+                    base_piece = rotate_piece_left(base_piece, rotation);
+                    board_pieces.second.push_back(base_piece);
+                    hints_removed++;
+                    remove_piece(board_pieces.first, idx);
+                }
+            }
+        }
+        if (!quiet) {
+            eternity2_logger::info("Hints disabled - removed {} pre-placed pieces, total pieces: {}", 
+                                   hints_removed, board_pieces.second.size());
+        }
+    }
+
+    // Check if board has hints (after potential clearing)
+    bool has_hints = false;
+    for (size_t y = 0; y < board_size; ++y) {
+        for (size_t x = 0; x < board_size; ++x) {
+            Index idx = {static_cast<int>(x), static_cast<int>(y)};
+            const RotatedPiece* piece = get_piece(board_pieces.first, idx);
+            if (piece != nullptr && piece->piece != EMPTY && piece->piece != 0) {
+                has_hints = true;
+                break;
+            }
+        }
+        if (has_hints) break;
+    }
+
     // Create and run solver (parallel or single-threaded)
     SolveResult result;
     if (config.parallel_enabled) {
@@ -174,10 +217,16 @@ SolveResult execute_solver(const SolverConfig& config,
         if (partition_depth > 0) {
             solver.set_partition_depth(partition_depth);
         }
+        // Parallel solver always starts from empty board (hints not supported in parallel mode)
+        // If hints are needed, use single-threaded mode
         result = solver.solve();
     } else {
         DLXSolver solver(board_pieces.second, board_size, shared_data);
-        result = solver.solve();
+        if (has_hints && config.use_hints) {
+            result = solver.solve_from_partial(board_pieces.first);
+        } else {
+            result = solver.solve();
+        }
     }
 
     auto end = std::chrono::high_resolution_clock::now();

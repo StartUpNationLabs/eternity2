@@ -33,6 +33,22 @@ DLXSolver::DLXSolver(const std::vector<Piece>& pieces, size_t board_size, Shared
     solution_.reserve(num_positions);
     propagation_trail_.reserve(num_positions * 4);  // Generous estimate
     propagation_queue_.reserve(num_positions);
+
+    // Initialize RNG with seed from config (or default)
+    uint32_t seed = shared_data_.config.random_seed;
+    if (seed == 0) {
+        // Use time-based seed if not specified
+        seed = static_cast<uint32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    }
+    init_rng(seed);
+}
+
+void DLXSolver::init_rng(uint32_t seed) {
+    rng_state_ = seed;
+    // Warm up RNG a bit to avoid correlation with seed
+    for (int i = 0; i < 10; ++i) {
+        next_random();
+    }
 }
 
 SolveResult DLXSolver::solve() {
@@ -480,6 +496,10 @@ void DLXSolver::undo_propagation(size_t count) {
 }
 
 DLXNode* DLXSolver::choose_column_for_profile() {
+    // Check if randomization is enabled
+    bool use_random = shared_data_.config.randomization_strength > 0.0f;
+    auto random_func = use_random ? [this]() { return random_float(); } : std::function<float()>();
+
     switch (heuristic_profile_) {
         case HeuristicProfile::BORDER_FIRST_LCV:
         case HeuristicProfile::BORDER_FIRST_RANDOM:
@@ -487,12 +507,12 @@ DLXNode* DLXSolver::choose_column_for_profile() {
         case HeuristicProfile::RARE_COLOR_FIRST:
         case HeuristicProfile::REVERSE_LCV:
             // All these use border-first column selection
-            return matrix_.choose_column_smart();
+            return matrix_.choose_column_smart(use_random, random_func);
 
         case HeuristicProfile::S_HEURISTIC_LCV:
         default:
             // Pure S-heuristic (original behavior)
-            return matrix_.choose_column();
+            return matrix_.choose_column(use_random, random_func);
     }
 }
 
@@ -510,6 +530,10 @@ void DLXSolver::collect_and_order_rows(DLXNode* column, std::vector<DLXNode*>& o
         }
     }
 
+    // Check if partial randomization is enabled
+    float rand_strength = shared_data_.config.randomization_strength;
+    bool use_partial_random = (rand_strength > 0.0f && rand_strength < 1.0f);
+
     // Order based on heuristic profile
     switch (heuristic_profile_) {
         case HeuristicProfile::BORDER_FIRST_LCV:
@@ -520,6 +544,35 @@ void DLXSolver::collect_and_order_rows(DLXNode* column, std::vector<DLXNode*>& o
                 [this](DLXNode* a, DLXNode* b) {
                     return matrix_.get_row_metadata(a).lcv_score > matrix_.get_row_metadata(b).lcv_score;
                 });
+            
+            // Partial randomization: shuffle within LCV buckets
+            if (use_partial_random) {
+                // Group rows by LCV score (within tolerance)
+                // Shuffle rows with similar LCV scores
+                if (ordered_rows.size() > 1) {
+                    int16_t bucket_size = static_cast<int16_t>(rand_strength * 10.0f); // Bucket size based on strength
+                    if (bucket_size > 0) {
+                        for (size_t i = 0; i < ordered_rows.size(); ) {
+                            int16_t current_score = matrix_.get_row_metadata(ordered_rows[i]).lcv_score;
+                            size_t bucket_start = i;
+                            
+                            // Find end of bucket (rows with similar LCV scores)
+                            while (i < ordered_rows.size() && 
+                                   std::abs(matrix_.get_row_metadata(ordered_rows[i]).lcv_score - current_score) <= bucket_size) {
+                                i++;
+                            }
+                            
+                            // Shuffle within bucket if it has multiple elements
+                            if (i - bucket_start > 1) {
+                                for (size_t j = bucket_start; j < i - 1; ++j) {
+                                    size_t k = j + (next_random() % (i - j));
+                                    std::swap(ordered_rows[j], ordered_rows[k]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             break;
 
         case HeuristicProfile::RARE_COLOR_FIRST:
@@ -529,6 +582,31 @@ void DLXSolver::collect_and_order_rows(DLXNode* column, std::vector<DLXNode*>& o
                 [this](DLXNode* a, DLXNode* b) {
                     return matrix_.get_row_metadata(a).lcv_score < matrix_.get_row_metadata(b).lcv_score;
                 });
+            
+            // Partial randomization: shuffle within reverse LCV buckets
+            if (use_partial_random) {
+                if (ordered_rows.size() > 1) {
+                    int16_t bucket_size = static_cast<int16_t>(rand_strength * 10.0f);
+                    if (bucket_size > 0) {
+                        for (size_t i = 0; i < ordered_rows.size(); ) {
+                            int16_t current_score = matrix_.get_row_metadata(ordered_rows[i]).lcv_score;
+                            size_t bucket_start = i;
+                            
+                            while (i < ordered_rows.size() && 
+                                   std::abs(matrix_.get_row_metadata(ordered_rows[i]).lcv_score - current_score) <= bucket_size) {
+                                i++;
+                            }
+                            
+                            if (i - bucket_start > 1) {
+                                for (size_t j = bucket_start; j < i - 1; ++j) {
+                                    size_t k = j + (next_random() % (i - j));
+                                    std::swap(ordered_rows[j], ordered_rows[k]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             break;
 
         case HeuristicProfile::BORDER_FIRST_RANDOM:

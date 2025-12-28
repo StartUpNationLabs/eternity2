@@ -305,23 +305,37 @@ void DLXMatrix::uncover(DLXNode* column) {
     column->left->right = column;
 }
 
-DLXNode* DLXMatrix::choose_column() {
+DLXNode* DLXMatrix::choose_column(bool random_tiebreak, std::function<float()> random_func) {
     DLXNode* best = nullptr;
     int min_size = std::numeric_limits<int>::max();
+    std::vector<DLXNode*> candidates;  // For random tie-breaking
 
     for (DLXNode* col = root_.right; col != &root_; col = col->right) {
         if (col->size < min_size) {
             min_size = col->size;
-            best = col;
+            candidates.clear();
+            candidates.push_back(col);
 
-            // Early exit for size 0 or 1 (can't do better)
+            // Early exit for size 0 or 1 (can't do better, no tie-breaking needed)
             if (min_size <= 1) {
-                break;
+                return col;
             }
+        } else if (random_tiebreak && col->size == min_size) {
+            candidates.push_back(col);
         }
     }
 
-    return best;
+    if (candidates.empty()) {
+        return nullptr;
+    }
+
+    // If random tie-breaking enabled and multiple candidates, pick randomly
+    if (random_tiebreak && candidates.size() > 1 && random_func) {
+        size_t idx = static_cast<size_t>(random_func() * candidates.size());
+        return candidates[idx];
+    }
+
+    return candidates[0];
 }
 
 const RowMetadata& DLXMatrix::get_row_metadata(const DLXNode* node) const {
@@ -389,9 +403,10 @@ void DLXMatrix::compute_color_frequencies() {
     }
 }
 
-DLXNode* DLXMatrix::choose_column_smart() {
+DLXNode* DLXMatrix::choose_column_smart(bool random_tiebreak, std::function<float()> random_func) {
     DLXNode* best = nullptr;
     int best_score = std::numeric_limits<int>::max();
+    std::vector<DLXNode*> candidates;  // For random tie-breaking
 
     for (DLXNode* col = root_.right; col != &root_; col = col->right) {
         int32_t col_id = col->column_id;
@@ -421,16 +436,31 @@ DLXNode* DLXMatrix::choose_column_smart() {
 
         if (score < best_score) {
             best_score = score;
-            best = col;
+            candidates.clear();
+            candidates.push_back(col);
 
-            // Early exit if we found a size-1 corner position
+            // Early exit if we found a size-1 corner position (no tie-breaking needed)
             if (col->size == 1 && best_score < 1000) {
-                break;
+                return col;
             }
+        } else if (random_tiebreak && score == best_score) {
+            candidates.push_back(col);
         }
     }
 
-    return best;
+    if (candidates.empty()) {
+        return nullptr;
+    }
+
+    // If random tie-breaking enabled and multiple candidates, pick randomly
+    if (random_tiebreak && candidates.size() > 1 && random_func) {
+        size_t idx = static_cast<size_t>(random_func() * candidates.size());
+        return candidates[idx];
+    }
+
+    return candidates[0];
 }
 
 } // namespace eternity2_v3
+
+
