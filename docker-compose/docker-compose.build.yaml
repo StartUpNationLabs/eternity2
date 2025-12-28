@@ -15,7 +15,7 @@ services:
     container_name: grpc-server
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: ../api/Dockerfile
       args:
         # Use cached base image to speed up builds
         - BASE_IMAGE=${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/base:${DOCKER_TAG:-latest}
@@ -25,7 +25,7 @@ services:
 
   envoy:
     build:
-      context: envoy
+      context: ../envoy
       dockerfile: Dockerfile
     image: ${DOCKER_REGISTRY:-ghcr.io/startupnationlabs/eternity2}/envoy:${DOCKER_TAG:-latest}
     environment:
@@ -38,7 +38,7 @@ services:
   frontend:
     container_name: frontend
     build:
-      context: frontend
+      context: ../frontend
       dockerfile: Dockerfile
       args:
         # Pass build-time environment variables

@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 void print_usage(const char* program_name) {
     std::cout << "Eternity II Solver Benchmark Tool" << std::endl;
-    std::cout << "Compares solver variants: V0, V1, V2-Std, V2-BorderFirst, V2-Parallel, V2-Parallel-BorderFirst\n" << std::endl;
+    std::cout << "Compares solver variants: V0, V1, V2-Std, V2-BorderFirst, V2-Parallel, V2-Parallel-BorderFirst, V3, V3-Parallel\n" << std::endl;
 
     std::cout << "Usage: " << program_name << " [options] <puzzle_file_or_directory>" << std::endl;
     std::cout << "\nGeneral Options:" << std::endl;
@@ -32,6 +32,8 @@ void print_usage(const char* program_name) {
     std::cout << "  --v2-bf-only       Run only V2 border-first" << std::endl;
     std::cout << "  --v2-par-only      Run only V2 parallel" << std::endl;
     std::cout << "  --v2-par-bf-only   Run only V2 parallel border-first" << std::endl;
+    std::cout << "  --v3-only          Run only V3 DLX" << std::endl;
+    std::cout << "  --v3-par-only      Run only V3 parallel" << std::endl;
     std::cout << "  --no-v0            Disable V0" << std::endl;
     std::cout << "  --no-v1            Disable V1" << std::endl;
     std::cout << "  --no-v1-par        Disable V1 parallel" << std::endl;
@@ -39,6 +41,8 @@ void print_usage(const char* program_name) {
     std::cout << "  --no-v2-bf         Disable V2 border-first" << std::endl;
     std::cout << "  --no-v2-par        Disable V2 parallel" << std::endl;
     std::cout << "  --no-v2-par-bf     Disable V2 parallel border-first" << std::endl;
+    std::cout << "  --no-v3            Disable V3" << std::endl;
+    std::cout << "  --no-v3-par        Disable V3 parallel" << std::endl;
 
     std::cout << "\nV2 Heuristic Configuration:" << std::endl;
     std::cout << "  --no-mrv           Disable MRV heuristic (default: enabled)" << std::endl;
@@ -123,6 +127,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v1-only") {
             config.run_v0 = false;
             config.run_v1 = true;
@@ -131,6 +137,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v1-par-only") {
             config.run_v0 = false;
             config.run_v1 = false;
@@ -139,6 +147,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v2-std-only") {
             config.run_v0 = false;
             config.run_v1 = false;
@@ -147,6 +157,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v2-bf-only") {
             config.run_v0 = false;
             config.run_v1 = false;
@@ -155,6 +167,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = true;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v2-par-only") {
             config.run_v0 = false;
             config.run_v1 = false;
@@ -163,6 +177,8 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = true;
             config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
         } else if (arg == "--v2-par-bf-only") {
             config.run_v0 = false;
             config.run_v1 = false;
@@ -171,6 +187,28 @@ int main(int argc, char* argv[]) {
             config.run_v2_border_first = false;
             config.run_v2_parallel = false;
             config.run_v2_parallel_border_first = true;
+            config.run_v3 = false;
+            config.run_v3_parallel = false;
+        } else if (arg == "--v3-only") {
+            config.run_v0 = false;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+            config.run_v3 = true;
+            config.run_v3_parallel = false;
+        } else if (arg == "--v3-par-only") {
+            config.run_v0 = false;
+            config.run_v1 = false;
+            config.run_v1_parallel = false;
+            config.run_v2_standard = false;
+            config.run_v2_border_first = false;
+            config.run_v2_parallel = false;
+            config.run_v2_parallel_border_first = false;
+            config.run_v3 = false;
+            config.run_v3_parallel = true;
 
         // Solver selection - "no-*" options
         } else if (arg == "--no-v0") {
@@ -187,6 +225,10 @@ int main(int argc, char* argv[]) {
             config.run_v2_parallel = false;
         } else if (arg == "--no-v2-par-bf") {
             config.run_v2_parallel_border_first = false;
+        } else if (arg == "--no-v3") {
+            config.run_v3 = false;
+        } else if (arg == "--no-v3-par") {
+            config.run_v3_parallel = false;
 
         // Other options
         } else if (arg == "--sequential") {
@@ -236,6 +278,8 @@ int main(int argc, char* argv[]) {
     if (config.run_v2_border_first) enabled_solvers.push_back("V2-BF");
     if (config.run_v2_parallel) enabled_solvers.push_back("V2-Par");
     if (config.run_v2_parallel_border_first) enabled_solvers.push_back("V2-Par-BF");
+    if (config.run_v3) enabled_solvers.push_back("V3");
+    if (config.run_v3_parallel) enabled_solvers.push_back("V3-Par");
 
     if (enabled_solvers.empty()) {
         std::cerr << "Error: No solvers enabled!" << std::endl;

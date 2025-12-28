@@ -30,6 +30,7 @@ target_include_directories(benchmark PUBLIC
 target_link_libraries(benchmark
     solver_v0_lib
     solver_v2_lib
+    solver_v3_lib
     solver_lib
 )
 

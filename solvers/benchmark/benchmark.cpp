@@ -5,6 +5,8 @@
 #include "v1/solver/solver.h"
 #include "v2/solver/solver_v2.h"
 #include "v2/parallel/parallel_solver.h"
+#include "v3/solver/dlx_solver.h"
+#include "v3/parallel/parallel_dlx_solver.h"
 
 #include <iostream>
 #include <iomanip>
@@ -449,6 +451,125 @@ BenchmarkResult Benchmark::run_v2_parallel(const std::string& puzzle_file, bool 
     return result;
 }
 
+BenchmarkResult Benchmark::run_v3(const std::string& puzzle_file) {
+    BenchmarkResult result;
+    result.solver_name = "V3 (DLX)";
+    result.puzzle_file = puzzle_file;
+    result.solved = false;
+    result.pieces_placed = 0;
+    result.nodes_explored = 0;
+    result.backtracks = 0;
+    result.hash_hits = 0;
+    result.domain_wipeouts = 0;
+
+    try {
+        // Load puzzle
+        auto board_pieces = load_from_csv(puzzle_file);
+        result.board_size = board_pieces.first.size;
+
+        // Setup shared data
+        eternity2_v3::SharedData shared_data;
+        shared_data.max_board = create_board(static_cast<int>(result.board_size));
+        shared_data.config.max_time_ms = config_.timeout_ms;
+        shared_data.config.verbose = config_.verbose;
+        shared_data.config.portfolio_enabled = false;  // Single-threaded uses default profile
+
+        // Start timing
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Run solver
+        eternity2_v3::DLXSolver solver(board_pieces.second, result.board_size, shared_data);
+        eternity2_v3::SolveResult solve_result = solver.solve();
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        // Collect results
+        result.elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
+        result.pieces_placed = static_cast<size_t>(shared_data.max_count.load());
+        result.solved = (solve_result == eternity2_v3::SolveResult::SOLVED);
+        result.nodes_explored = shared_data.stats.nodes_explored.load();
+        result.backtracks = shared_data.stats.backtracks.load();
+        result.domain_wipeouts = shared_data.stats.edge_incompatible.load();
+
+        // Store solution board if solved
+        if (result.solved) {
+            result.solution_board = solver.get_solution();
+        }
+
+    } catch (const std::exception& e) {
+        if (config_.verbose) {
+            std::cerr << "V3 error on " << puzzle_file << ": " << e.what() << std::endl;
+        }
+    }
+
+    return result;
+}
+
+BenchmarkResult Benchmark::run_v3_parallel(const std::string& puzzle_file) {
+    BenchmarkResult result;
+
+    // Determine thread count
+    size_t num_threads = config_.v3_num_threads;
+    if (num_threads == 0) {
+        num_threads = std::thread::hardware_concurrency();
+        if (num_threads == 0) {
+            num_threads = 4;  // Fallback
+        }
+    }
+
+    result.solver_name = "V3 Parallel (" + std::to_string(num_threads) + " threads)";
+    result.puzzle_file = puzzle_file;
+    result.solved = false;
+    result.pieces_placed = 0;
+    result.nodes_explored = 0;
+    result.backtracks = 0;
+    result.hash_hits = 0;
+    result.domain_wipeouts = 0;
+
+    try {
+        // Load puzzle
+        auto board_pieces = load_from_csv(puzzle_file);
+        result.board_size = board_pieces.first.size;
+
+        // Setup shared data
+        eternity2_v3::SharedData shared_data;
+        shared_data.max_board = create_board(static_cast<int>(result.board_size));
+        shared_data.config.max_time_ms = config_.timeout_ms;
+        shared_data.config.verbose = config_.verbose;
+        shared_data.config.num_threads = num_threads;
+        shared_data.config.portfolio_enabled = config_.v3_portfolio_enabled;
+
+        // Start timing
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Run parallel solver
+        eternity2_v3::ParallelDLXSolver solver(board_pieces.second, result.board_size, shared_data);
+        eternity2_v3::SolveResult solve_result = solver.solve();
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        // Collect results
+        result.elapsed_ms = std::chrono::duration<double, std::milli>(end - start).count();
+        result.pieces_placed = static_cast<size_t>(shared_data.max_count.load());
+        result.solved = (solve_result == eternity2_v3::SolveResult::SOLVED);
+        result.nodes_explored = shared_data.stats.nodes_explored.load();
+        result.backtracks = shared_data.stats.backtracks.load();
+        result.domain_wipeouts = shared_data.stats.edge_incompatible.load();
+
+        // Store solution board if solved
+        if (result.solved) {
+            result.solution_board = shared_data.max_board;
+        }
+
+    } catch (const std::exception& e) {
+        if (config_.verbose) {
+            std::cerr << "V3 Parallel error on " << puzzle_file << ": " << e.what() << std::endl;
+        }
+    }
+
+    return result;
+}
+
 BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
     BenchmarkComparison comparison;
     comparison.puzzle_file = puzzle_file;
@@ -509,13 +630,31 @@ BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
         comparison.v2_parallel_border_first.solver_name = "V2 Parallel Border-First (Skipped)";
     }
 
+    // Run V3 DLX (if enabled)
+    if (config_.run_v3) {
+        comparison.v3_result = run_v3(puzzle_file);
+    } else {
+        comparison.v3_result.puzzle_file = puzzle_file;
+        comparison.v3_result.solver_name = "V3 (Skipped)";
+    }
+
+    // Run V3 parallel (if enabled)
+    if (config_.run_v3_parallel) {
+        comparison.v3_parallel = run_v3_parallel(puzzle_file);
+    } else {
+        comparison.v3_parallel.puzzle_file = puzzle_file;
+        comparison.v3_parallel.solver_name = "V3 Parallel (Skipped)";
+    }
+
     // Set board size from whichever solver ran
     comparison.board_size = config_.run_v0 ? comparison.v0_result.board_size
                           : (config_.run_v1 ? comparison.v1_result.board_size
                           : (config_.run_v2_standard ? comparison.v2_standard.board_size
                           : (config_.run_v2_border_first ? comparison.v2_border_first.board_size
                           : (config_.run_v2_parallel ? comparison.v2_parallel.board_size
-                                                     : comparison.v2_parallel_border_first.board_size))));
+                          : (config_.run_v2_parallel_border_first ? comparison.v2_parallel_border_first.board_size
+                          : (config_.run_v3 ? comparison.v3_result.board_size
+                                            : comparison.v3_parallel.board_size))))));
     
     // Export solutions if configured
     if (config_.export_solutions) {
@@ -565,6 +704,20 @@ BenchmarkComparison Benchmark::run_comparison(const std::string& puzzle_file) {
             Benchmark::export_solution(comparison.v2_parallel_border_first, v2_dir);
             if (config_.verbose) {
                 std::cout << "  V2 Parallel Border-First solution exported to: " << v2_dir << std::endl;
+            }
+        }
+        if (comparison.v3_result.solved && comparison.v3_result.solution_board.has_value()) {
+            std::string v3_dir = (solutions_dir / "v3").string();
+            Benchmark::export_solution(comparison.v3_result, v3_dir);
+            if (config_.verbose) {
+                std::cout << "  V3 solution exported to: " << v3_dir << std::endl;
+            }
+        }
+        if (comparison.v3_parallel.solved && comparison.v3_parallel.solution_board.has_value()) {
+            std::string v3_dir = (solutions_dir / "v3_parallel").string();
+            Benchmark::export_solution(comparison.v3_parallel, v3_dir);
+            if (config_.verbose) {
+                std::cout << "  V3 Parallel solution exported to: " << v3_dir << std::endl;
             }
         }
     }
@@ -671,6 +824,8 @@ BenchmarkSummary Benchmark::summarize(const std::vector<BenchmarkComparison>& re
         if (comp.v2_border_first.solved) summary.v2_bf_solved++;
         if (comp.v2_parallel.solved) summary.v2_par_solved++;
         if (comp.v2_parallel_border_first.solved) summary.v2_par_bf_solved++;
+        if (comp.v3_result.solved) summary.v3_solved++;
+        if (comp.v3_parallel.solved) summary.v3_par_solved++;
 
         // Accumulate times
         summary.avg_v0_time_ms += comp.v0_result.elapsed_ms;
@@ -680,6 +835,8 @@ BenchmarkSummary Benchmark::summarize(const std::vector<BenchmarkComparison>& re
         summary.avg_v2_bf_time_ms += comp.v2_border_first.elapsed_ms;
         summary.avg_v2_par_time_ms += comp.v2_parallel.elapsed_ms;
         summary.avg_v2_par_bf_time_ms += comp.v2_parallel_border_first.elapsed_ms;
+        summary.avg_v3_time_ms += comp.v3_result.elapsed_ms;
+        summary.avg_v3_par_time_ms += comp.v3_parallel.elapsed_ms;
 
         // Accumulate nodes and backtracks for legacy compatibility
         summary.total_v1_nodes += comp.v1_result.nodes_explored;
@@ -719,6 +876,8 @@ BenchmarkSummary Benchmark::summarize(const std::vector<BenchmarkComparison>& re
         summary.avg_v2_bf_time_ms /= results.size();
         summary.avg_v2_par_time_ms /= results.size();
         summary.avg_v2_par_bf_time_ms /= results.size();
+        summary.avg_v3_time_ms /= results.size();
+        summary.avg_v3_par_time_ms /= results.size();
     }
 
     if (speedup_count > 0) {
@@ -814,7 +973,7 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
 
     // Check which variants have results
     bool has_v0 = false, has_v1 = false, has_v1_par = false, has_v2_std = false, has_v2_bf = false;
-    bool has_v2_par = false, has_v2_par_bf = false;
+    bool has_v2_par = false, has_v2_par_bf = false, has_v3 = false, has_v3_par = false;
 
     for (const auto& comp : comparisons) {
         if (comp.v0_result.elapsed_ms > 0) has_v0 = true;
@@ -824,11 +983,13 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
         if (comp.v2_border_first.elapsed_ms > 0) has_v2_bf = true;
         if (comp.v2_parallel.elapsed_ms > 0) has_v2_par = true;
         if (comp.v2_parallel_border_first.elapsed_ms > 0) has_v2_par_bf = true;
+        if (comp.v3_result.elapsed_ms > 0) has_v3 = true;
+        if (comp.v3_parallel.elapsed_ms > 0) has_v3_par = true;
     }
 
     // Calculate table width based on active columns
     int num_solver_cols = (has_v0 ? 1 : 0) + (has_v1 ? 1 : 0) + (has_v1_par ? 1 : 0) + (has_v2_std ? 1 : 0) + (has_v2_bf ? 1 : 0) +
-                          (has_v2_par ? 1 : 0) + (has_v2_par_bf ? 1 : 0);
+                          (has_v2_par ? 1 : 0) + (has_v2_par_bf ? 1 : 0) + (has_v3 ? 1 : 0) + (has_v3_par ? 1 : 0);
     int table_width = 36 + (num_solver_cols * 15);  // puzzle + size + (time+solved per solver)
 
     // Header
@@ -846,13 +1007,15 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
     if (has_v2_bf) std::cout << std::setw(15) << "V2-BF";
     if (has_v2_par) std::cout << std::setw(15) << "V2-Par";
     if (has_v2_par_bf) std::cout << std::setw(15) << "V2-Par-BF";
+    if (has_v3) std::cout << std::setw(15) << "V3";
+    if (has_v3_par) std::cout << std::setw(15) << "V3-Par";
     std::cout << std::endl;
 
     // Column headers - Row 2 (Units)
     std::cout << std::left << std::setw(30) << ""
               << std::right << std::setw(6) << "";
     int cols = (has_v0 ? 1 : 0) + (has_v1 ? 1 : 0) + (has_v1_par ? 1 : 0) + (has_v2_std ? 1 : 0) + (has_v2_bf ? 1 : 0) +
-               (has_v2_par ? 1 : 0) + (has_v2_par_bf ? 1 : 0);
+               (has_v2_par ? 1 : 0) + (has_v2_par_bf ? 1 : 0) + (has_v3 ? 1 : 0) + (has_v3_par ? 1 : 0);
     for (int i = 0; i < cols; ++i) {
         std::cout << std::setw(15) << "Time(ms)/Slv";
     }
@@ -894,6 +1057,8 @@ void Benchmark::print_table(const std::vector<BenchmarkComparison>& comparisons)
         if (has_v2_bf) print_result(comp.v2_border_first);
         if (has_v2_par) print_result(comp.v2_parallel);
         if (has_v2_par_bf) print_result(comp.v2_parallel_border_first);
+        if (has_v3) print_result(comp.v3_result);
+        if (has_v3_par) print_result(comp.v3_parallel);
 
         std::cout << std::endl;
     }
@@ -947,6 +1112,10 @@ void Benchmark::print_summary(const BenchmarkSummary& summary) {
         std::cout << "V2-Par:           " << summary.v2_par_solved << "/" << summary.total_puzzles << std::endl;
     if (summary.v2_par_bf_solved > 0)
         std::cout << "V2-Par-BF:        " << summary.v2_par_bf_solved << "/" << summary.total_puzzles << std::endl;
+    if (summary.v3_solved > 0)
+        std::cout << "V3:               " << summary.v3_solved << "/" << summary.total_puzzles << std::endl;
+    if (summary.v3_par_solved > 0)
+        std::cout << "V3-Par:           " << summary.v3_par_solved << "/" << summary.total_puzzles << std::endl;
 
     std::cout << "\n--- Average Times ---" << std::endl;
     if (summary.avg_v0_time_ms > 0)
@@ -970,6 +1139,12 @@ void Benchmark::print_summary(const BenchmarkSummary& summary) {
     if (summary.avg_v2_par_bf_time_ms > 0)
         std::cout << "V2-Par-BF:        " << std::fixed << std::setprecision(2)
                   << summary.avg_v2_par_bf_time_ms << " ms" << std::endl;
+    if (summary.avg_v3_time_ms > 0)
+        std::cout << "V3:               " << std::fixed << std::setprecision(2)
+                  << summary.avg_v3_time_ms << " ms" << std::endl;
+    if (summary.avg_v3_par_time_ms > 0)
+        std::cout << "V3-Par:           " << std::fixed << std::setprecision(2)
+                  << summary.avg_v3_par_time_ms << " ms" << std::endl;
 
     if (summary.max_speedup > 0) {
         std::cout << "\n--- Speedup (Best V2 vs V1) ---" << std::endl;
@@ -997,6 +1172,8 @@ std::string Benchmark::to_csv(const std::vector<BenchmarkComparison>& comparison
         << "v2_bf_solved,v2_bf_time_ms,v2_bf_nodes,v2_bf_backtracks,v2_bf_domain_wipeouts,"
         << "v2_par_solved,v2_par_time_ms,v2_par_nodes,v2_par_backtracks,v2_par_domain_wipeouts,"
         << "v2_par_bf_solved,v2_par_bf_time_ms,v2_par_bf_nodes,v2_par_bf_backtracks,v2_par_bf_domain_wipeouts,"
+        << "v3_solved,v3_time_ms,v3_nodes,v3_backtracks,v3_domain_wipeouts,"
+        << "v3_par_solved,v3_par_time_ms,v3_par_nodes,v3_par_backtracks,v3_par_domain_wipeouts,"
         << "best_v2_variant,best_v2_time_ms,speedup_vs_v1\n";
 
     // Data
@@ -1037,6 +1214,20 @@ std::string Benchmark::to_csv(const std::vector<BenchmarkComparison>& comparison
             << comp.v2_parallel_border_first.nodes_explored << ","
             << comp.v2_parallel_border_first.backtracks << ","
             << comp.v2_parallel_border_first.domain_wipeouts << ",";
+
+        // V3 results
+        csv << (comp.v3_result.solved ? "true" : "false") << ","
+            << std::fixed << std::setprecision(4) << comp.v3_result.elapsed_ms << ","
+            << comp.v3_result.nodes_explored << ","
+            << comp.v3_result.backtracks << ","
+            << comp.v3_result.domain_wipeouts << ",";
+
+        // V3 Parallel results
+        csv << (comp.v3_parallel.solved ? "true" : "false") << ","
+            << std::fixed << std::setprecision(4) << comp.v3_parallel.elapsed_ms << ","
+            << comp.v3_parallel.nodes_explored << ","
+            << comp.v3_parallel.backtracks << ","
+            << comp.v3_parallel.domain_wipeouts << ",";
 
         // Best V2 variant
         const auto& best = comp.best_v2();
@@ -1118,6 +1309,7 @@ void Benchmark::export_all_solutions(const std::vector<BenchmarkComparison>& com
         fs::create_directories(output_dir);
         fs::create_directories(output_dir + "/v1");
         fs::create_directories(output_dir + "/v2");
+        fs::create_directories(output_dir + "/v3");
     } catch (const std::exception& e) {
         std::cerr << "Error creating directories: " << e.what() << std::endl;
         return;
@@ -1139,6 +1331,12 @@ void Benchmark::export_all_solutions(const std::vector<BenchmarkComparison>& com
         }
         if (comp.v2_parallel_border_first.solved && comp.v2_parallel_border_first.solution_board.has_value()) {
             export_solution(comp.v2_parallel_border_first, output_dir + "/v2_parallel_border_first");
+        }
+        if (comp.v3_result.solved && comp.v3_result.solution_board.has_value()) {
+            export_solution(comp.v3_result, output_dir + "/v3");
+        }
+        if (comp.v3_parallel.solved && comp.v3_parallel.solution_board.has_value()) {
+            export_solution(comp.v3_parallel, output_dir + "/v3_parallel");
         }
     }
     

@@ -15,6 +15,8 @@ import {
 } from "@mui/material";
 import Button from "@mui/material/Button";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 
 import { useRecoilState, useRecoilValue } from "recoil";
 import {
@@ -30,6 +32,7 @@ import {
 import { SolverVersion } from "../../proto/solver/v1/solver.ts";
 import { convertToPieces, createBoard } from "../../utils/logic.tsx";
 import { isSolvingState, isSolvingStepByStepState } from "../solver/atoms.ts";
+import { parsePuzzleCSV, exportPuzzleToCSV } from "../../utils/utils.tsx";
 import {
   BOARD_COLOR_DEFAULT,
   BOARD_COLOR_MAX,
@@ -223,6 +226,86 @@ export const RequestForm = () => {
     }
   };
 
+  const handleImportPuzzle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileContent = await file.text();
+      const { pieces, boardSize, hints: importedHints } = parsePuzzleCSV(fileContent);
+
+      // Update board with imported pieces
+      setBoard(pieces);
+      setSelectedBoard(null);
+      setOriginalBoard(null);
+
+      // Update settings to match imported puzzle
+      const scanRowPaths = paths.filter(
+        (path) => path.label === SCAN_ROW_PATH_NAME
+      );
+      const scanRowPath = scanRowPaths.find(
+        (path) => path.path.length === boardSize ** 2
+      );
+
+      // Calculate number of colors from pieces
+      const allColors = new Set<number>();
+      pieces.forEach(piece => {
+        if (piece.top !== 65535) allColors.add(piece.top);
+        if (piece.right !== 65535) allColors.add(piece.right);
+        if (piece.bottom !== 65535) allColors.add(piece.bottom);
+        if (piece.left !== 65535) allColors.add(piece.left);
+      });
+      const nbColors = allColors.size;
+
+      setSettings({
+        ...settings,
+        boardSize,
+        boardColors: nbColors,
+        path: scanRowPath || DEFAULT_SPIRAL_PATH,
+      });
+
+      // Set hints if any
+      if (importedHints.length > 0) {
+        setHints(importedHints);
+      } else {
+        setHints([]);
+      }
+
+      setSelectedHintsTemplate(null);
+    } catch (error) {
+      console.error('Error importing puzzle:', error);
+      alert(`Failed to import puzzle: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const handleExportPuzzle = () => {
+    if (board.length === 0) {
+      alert('No puzzle to export. Please generate or import a puzzle first.');
+      return;
+    }
+
+    try {
+      const csvContent = exportPuzzleToCSV(board, settings.boardSize, hints);
+      
+      // Create a blob and download it
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `puzzle_size_${settings.boardSize}_colors_${settings.boardColors}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting puzzle:', error);
+      alert(`Failed to export puzzle: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <Stack spacing={4}>
       {/* Essential Controls */}
@@ -357,6 +440,60 @@ export const RequestForm = () => {
         >
           Unshuffle
         </Button>
+            </Stack>
+
+            {/* Import/Export Puzzle Buttons */}
+            <Stack direction="row" spacing={2}>
+              <Box sx={{ flex: 1 }}>
+                <input
+                  accept=".csv"
+                  style={{ display: 'none' }}
+                  id="import-puzzle-input"
+                  type="file"
+                  onChange={handleImportPuzzle}
+                />
+                <label htmlFor="import-puzzle-input">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    fullWidth
+                    startIcon={<UploadFileIcon />}
+                    sx={{
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      '&:hover': {
+                        borderColor: 'primary.dark',
+                        bgcolor: 'action.hover',
+                      },
+                    }}
+                  >
+                    Import Puzzle
+                  </Button>
+                </label>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExportPuzzle}
+                  disabled={board.length === 0}
+                  sx={{
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    '&:hover': {
+                      borderColor: 'primary.dark',
+                      bgcolor: 'action.hover',
+                    },
+                    '&.Mui-disabled': {
+                      borderColor: 'action.disabled',
+                      color: 'action.disabled',
+                    },
+                  }}
+                >
+                  Export Puzzle
+                </Button>
+              </Box>
             </Stack>
 
             {/* Solve Buttons - Moved up */}

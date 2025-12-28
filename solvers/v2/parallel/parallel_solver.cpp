@@ -177,8 +177,8 @@ void ParallelSolverV2::collect_recursive(Board& board,
                                           size_t depth,
                                           size_t target_depth,
                                           std::vector<WorkUnit>& units) {
-    // Check for stop signal
-    if (shared_data_.stop || solution_found_) {
+    // Check for stop signal or timeout
+    if (shared_data_.stop || solution_found_ || limits_reached()) {
         return;
     }
 
@@ -227,7 +227,7 @@ void ParallelSolverV2::collect_recursive(Board& board,
 
     // Try each value
     for (const auto& piece : values) {
-        if (shared_data_.stop || solution_found_) {
+        if (shared_data_.stop || solution_found_ || limits_reached()) {
             return;
         }
 
@@ -358,6 +358,10 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
         SolverConfig config = config_from_profile(unit.profile);
         // IMPORTANT: Copy strategy from main config (for border-first support)
         config.strategy = shared_data_.config.strategy;
+        // IMPORTANT: Copy timeout and limits from main config
+        config.max_time_ms = shared_data_.config.max_time_ms;
+        config.max_backtracks = shared_data_.config.max_backtracks;
+        config.max_nodes = shared_data_.config.max_nodes;
 
         // Create a temporary SharedDataV2 for this solver instance
         // (shares the stop flag, mutex, max_count, and callbacks but has local config)
@@ -369,6 +373,7 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
         };
         local_shared.stop.store(shared_data_.stop.load());
         local_shared.config = config;
+        local_shared.global_start_time = shared_data_.global_start_time;  // Copy global start time for timeout checks
 
         // Copy the progress callback from main shared_data and wrap it to update main max_count
         auto original_callback = shared_data_.on_board_update;
@@ -396,6 +401,12 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
                 if (piece_count > shared_data_.max_count.load()) {
                     shared_data_.max_count = piece_count;
                     shared_data_.max_board = board;
+
+                    // Export partial solution if enabled
+                    export_partial_solution(board,
+                                          static_cast<size_t>(piece_count),
+                                          shared_data_.config,
+                                          shared_data_.puzzle_name);
                 }
             }
 
@@ -427,6 +438,13 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
             if (local_shared.max_count.load() > shared_data_.max_count.load()) {
                 shared_data_.max_count = local_shared.max_count.load();
                 shared_data_.max_board = local_shared.max_board;
+
+                // Export partial solution if enabled
+                export_partial_solution(local_shared.max_board,
+                                      static_cast<size_t>(local_shared.max_count.load()),
+                                      shared_data_.config,
+                                      shared_data_.puzzle_name);
+
                 // Trigger callback to show progress
                 if (shared_data_.on_board_update) {
                     shared_data_.on_board_update(local_shared.max_board);
@@ -455,6 +473,18 @@ void ParallelSolverV2::worker_thread(size_t thread_id) {
                     std::cout << "Thread " << thread_id << " FOUND SOLUTION with profile "
                               << static_cast<int>(unit.profile) << std::endl;
                 }
+            }
+            break;
+        }
+
+        // Check if timeout or limit was reached
+        if (result == SolveResult::TIMEOUT || result == SolveResult::LIMIT_REACHED) {
+            // Timeout or limit reached - stop all threads
+            shared_data_.stop = true;
+            work_queue_.abort();
+
+            if (shared_data_.config.verbose) {
+                std::cout << "Thread " << thread_id << " stopping (timeout/limit reached)" << std::endl;
             }
             break;
         }

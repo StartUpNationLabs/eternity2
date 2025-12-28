@@ -48,14 +48,18 @@ eternity2_v2::SolveResult execute_solver(const eternity2_v2::SolverConfig& confi
         mutex
     };
     shared_data.config = config;
+    shared_data.puzzle_name = puzzle_name;
 
     // Progress callback
+    auto progress_start = std::chrono::high_resolution_clock::now();
     if (config.verbose) {
-        shared_data.on_board_update = [&](const Board& board) {
+        shared_data.on_board_update = [&, progress_start](const Board& board) {
             static long long last_count = -1;
             if (shared_data.max_count.load() > last_count) {
                 last_count = shared_data.max_count.load();
-                eternity2_logger::info("Progress: {}/{} pieces placed", last_count, board_size * board_size);
+                auto now = std::chrono::high_resolution_clock::now();
+                auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - progress_start).count();
+                eternity2_logger::info("[{}ms] Progress: {}/{} pieces placed", elapsed_ms, last_count, board_size * board_size);
             }
         };
     }
@@ -169,6 +173,11 @@ int main(int argc, char* argv[]) {
         }
         if (config.max_time_ms > 0) {
             eternity2_logger::info("  Timeout: {} ms", config.max_time_ms);
+        }
+        if (config.export_partial) {
+            eternity2_logger::info("  Partial export: enabled");
+            eternity2_logger::info("    Export dir: {}", config.export_dir);
+            eternity2_logger::info("    Export prefix: {}", config.export_prefix);
         }
         eternity2_logger::info("Solving...");
     }

@@ -24,6 +24,9 @@ void print_v2_usage(const char* program_name) {
     std::cout << "  --parallel      Enable parallel search mode\n";
     std::cout << "  --threads <n>   Set number of worker threads (default: auto-detect)\n";
     std::cout << "  --partition-depth <n>  Set partition depth for parallel mode (default: auto)\n";
+    std::cout << "  --export-partial  Enable exporting partial solutions as they progress\n";
+    std::cout << "  --export-dir <dir>    Directory for partial exports (default: .)\n";
+    std::cout << "  --export-prefix <prefix>  Prefix for export filenames (default: partial_solution)\n";
     std::cout << "  --help          Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program_name << " puzzle.csv              # Solve with all optimizations\n";
@@ -31,6 +34,7 @@ void print_v2_usage(const char* program_name) {
     std::cout << "  " << program_name << " --verbose puzzle.csv    # Verbose output\n";
     std::cout << "  " << program_name << " --parallel puzzle.csv   # Use all CPU cores\n";
     std::cout << "  " << program_name << " --threads 4 puzzle.csv  # Use 4 threads\n";
+    std::cout << "  " << program_name << " --export-partial puzzle.csv  # Export partial solutions as progress is made\n";
 }
 
 bool parse_v2_arguments(int argc, char* argv[],
@@ -95,6 +99,12 @@ bool parse_v2_arguments(int argc, char* argv[],
             } catch (const eternity2_utils::ConversionError& e) {
                 throw std::runtime_error("Invalid partition depth: " + std::string(e.what()));
             }
+        } else if (arg == "--export-partial") {
+            config.export_partial = true;
+        } else if (arg == "--export-dir" && i + 1 < argc) {
+            config.export_dir = argv[++i];
+        } else if (arg == "--export-prefix" && i + 1 < argc) {
+            config.export_prefix = argv[++i];
         } else if (arg[0] != '-') {
             filename = arg;
         } else {

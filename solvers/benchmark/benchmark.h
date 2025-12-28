@@ -56,6 +56,8 @@ struct BenchmarkComparison {
     BenchmarkResult v2_border_first;          // V2 with border-first strategy
     BenchmarkResult v2_parallel;              // V2 parallel with standard strategy
     BenchmarkResult v2_parallel_border_first; // V2 parallel with border-first strategy
+    BenchmarkResult v3_result;                // V3 (DLX with border-first + LCV)
+    BenchmarkResult v3_parallel;              // V3 parallel (portfolio search)
 
     // Speedup metrics - V2 standard vs V1
     double speedup() const {
@@ -123,6 +125,8 @@ struct BenchmarkConfig {
     bool run_v2_border_first = true;             // Run V2 with border-first strategy
     bool run_v2_parallel = true;                 // Run V2 parallel with standard strategy
     bool run_v2_parallel_border_first = true;    // Run V2 parallel with border-first strategy
+    bool run_v3 = true;                          // Run V3 DLX solver
+    bool run_v3_parallel = true;                 // Run V3 parallel DLX solver
 
     // V2 heuristic configuration (applies to all V2 variants)
     bool v2_use_mrv = true;
@@ -131,6 +135,10 @@ struct BenchmarkConfig {
 
     // V2 parallel configuration
     size_t v2_num_threads = 0;          // 0 = auto-detect
+
+    // V3 configuration
+    size_t v3_num_threads = 0;          // 0 = auto-detect
+    bool v3_portfolio_enabled = true;   // Enable portfolio search with diverse heuristics
 
     // V1 configuration
     size_t v1_thread_count = 1;         // Single thread
@@ -160,6 +168,8 @@ struct BenchmarkSummary {
     size_t v2_bf_solved = 0;
     size_t v2_par_solved = 0;
     size_t v2_par_bf_solved = 0;
+    size_t v3_solved = 0;
+    size_t v3_par_solved = 0;
 
     // Average times
     double avg_v0_time_ms = 0.0;
@@ -169,6 +179,8 @@ struct BenchmarkSummary {
     double avg_v2_bf_time_ms = 0.0;
     double avg_v2_par_time_ms = 0.0;
     double avg_v2_par_bf_time_ms = 0.0;
+    double avg_v3_time_ms = 0.0;
+    double avg_v3_par_time_ms = 0.0;
 
     // Best V2 variant per puzzle (average speedup vs V1)
     double avg_best_speedup = 0.0;
@@ -228,6 +240,8 @@ private:
     BenchmarkResult run_v1_parallel(const std::string& puzzle_file);
     BenchmarkResult run_v2(const std::string& puzzle_file, bool border_first = false);
     BenchmarkResult run_v2_parallel(const std::string& puzzle_file, bool border_first = false);
+    BenchmarkResult run_v3(const std::string& puzzle_file);
+    BenchmarkResult run_v3_parallel(const std::string& puzzle_file);
 };
 
 } // namespace eternity2_benchmark

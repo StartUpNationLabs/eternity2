@@ -60,6 +60,11 @@ struct SolverConfig {
     // Parallelization options
     size_t num_threads = 1;        // Number of worker threads (1 = single-threaded)
     bool parallel_enabled = false; // Enable parallel search mode
+
+    // Partial export options
+    bool export_partial = false;   // Enable exporting partial solutions
+    std::string export_dir = ".";  // Directory to save partial exports
+    std::string export_prefix = "partial_solution"; // Prefix for export filenames
 };
 
 // Statistics collected during solving
@@ -106,6 +111,9 @@ struct SharedDataV2 {
 
     // Config
     SolverConfig config;
+
+    // Puzzle metadata for exports
+    std::string puzzle_name = "puzzle";
 };
 
 // Result of solving
@@ -172,6 +180,10 @@ private:
 
 // Convenience function to solve (mimics v1 interface)
 void solve_board_v2(Board& board, const std::vector<Piece>& pieces, SharedDataV2& shared_data);
+
+// Export partial solution (used by both single and parallel solvers)
+void export_partial_solution(const Board& board, size_t pieces_placed,
+                            const SolverConfig& config, const std::string& puzzle_name);
 
 } // namespace eternity2_v2
 

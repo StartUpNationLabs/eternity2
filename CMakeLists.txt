@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_subdirectory(solvers/v0)
 add_subdirectory(solvers/v1)
 add_subdirectory(solvers/v2)
+add_subdirectory(solvers/v3)
 add_subdirectory(solvers/benchmark)
 
 # API is optional - only build if dependencies are available

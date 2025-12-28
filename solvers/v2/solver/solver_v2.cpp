@@ -17,6 +17,9 @@ using eternity2_common::rotate_piece_right;
 using eternity2_common::get_piece_part;
 #include "../parallel/parallel_solver.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 namespace eternity2_v2 {
 
@@ -28,6 +31,45 @@ const char* solve_result_to_string(SolveResult result) {
         case SolveResult::TIMEOUT: return "TIMEOUT";
         case SolveResult::LIMIT_REACHED: return "LIMIT_REACHED";
         default: return "UNKNOWN";
+    }
+}
+
+/**
+ * @brief Export a partial solution to a CSV file
+ *
+ * @param board The board to export
+ * @param pieces_placed Number of pieces placed so far
+ * @param config Solver configuration with export settings
+ * @param puzzle_name Name of the puzzle for BUCAS URL
+ */
+void export_partial_solution(const Board& board, size_t pieces_placed,
+                            const SolverConfig& config, const std::string& puzzle_name) {
+    if (!config.export_partial) {
+        return;
+    }
+
+    // Generate filename with timestamp and piece count
+    std::ostringstream filename;
+    filename << config.export_dir << "/"
+             << config.export_prefix << "_"
+             << std::setfill('0') << std::setw(4) << pieces_placed
+             << "_pieces.csv";
+
+    // Export to file
+    std::ofstream file(filename.str());
+    if (!file.is_open()) {
+        std::cerr << "Warning: Failed to open file for partial export: " << filename.str() << std::endl;
+        return;
+    }
+
+    // Export board as CSV string with BUCAS URL
+    std::string csv_content = export_board_to_csv_string(board, puzzle_name);
+    file << csv_content;
+    file.close();
+
+    if (config.verbose) {
+        std::cout << "Exported partial solution with " << pieces_placed
+                  << " pieces to " << filename.str() << std::endl;
     }
 }
 
@@ -305,6 +347,9 @@ void SolverV2::update_best_board(size_t depth) {
             shared_data_.max_count = static_cast<long long>(depth);
             shared_data_.max_board = board_;
             shared_data_.stats.best_depth = depth;
+
+            // Export partial solution if enabled
+            export_partial_solution(board_, depth, shared_data_.config, shared_data_.puzzle_name);
         }
     }
 }
