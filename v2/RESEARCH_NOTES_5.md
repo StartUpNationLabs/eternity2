@@ -453,6 +453,66 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### DEEPER STRUCTURAL FINDING 00:14 — asymmetric hint creates strain cascade
+
+**Hypothesis**: the official 5 hints have specific positions on the
+board. Checked their 180-rotational symmetry:
+
+| Hint pos | (x,y) | 180-mirror pos | Mirror also hint? |
+|---|---|---|---|
+| 34 | (2,2) | 221 = (13,13) | YES |
+| 45 | (13,2) | 210 = (2,13) | YES |
+| 210 | (2,13) | 45 = (13,2) | YES (= dual of above) |
+| 221 | (13,13) | 34 = (2,2) | YES |
+| **135** | **(7,8)** | **120 = (8,7)** | **NO** |
+
+**The 5th hint at (7,8) breaks 180-symmetry**. Four hints form a
+symmetric corner-ish constellation; the 5th hint is in the south-
+central interior and has NO mirror counterpart.
+
+**Result**: I cross-checked the universal-mismatch list against
+180-mirrors. Of top-20 universal mismatches, only ONE pair has
+mirror-symmetry (`(h,91)` ↔ `(h,163)` at ranks 2 and 25). The other
+~19 are clustered SOUTH-CENTRAL with no NORTH-CENTRAL counterpart.
+
+**Mechanism (hypothesized)**:
+1. Hint at (7,8) creates a local color anchor.
+2. Pieces adjacent must conform — their colors are dictated by
+   contact with (7,8) on one side, and by the remaining pieces
+   on the other 3 sides.
+3. The "cascade" propagates outward as each ring of pieces locks
+   in its compatible options.
+4. ~3 rings out (rows 10-12, the universal-mismatch hotspots), the
+   cascade meets the constraints from the corner-hint-anchors. The
+   intersection of these strain fields has insufficient flexibility,
+   producing structural defects.
+
+**Verification**: edges DIRECTLY incident to hint (7,8) are NOT in
+top-30. They successfully match (because the hint pins one side and
+the other piece adapts). The defects appear 3-5 rows AWAY from the
+hint — exactly where I'd expect a strain cascade to break down.
+
+**Implications for tonight**:
+
+1. **Frame-first decomposition WORKS** because it changes the border,
+   which changes the directions of the corner-cascade strain fields.
+   The 450 breakthrough is consistent with this — a different border
+   geometry meets the (7,8) hint's strain field at different points,
+   resolving 1 more edge.
+
+2. **Future: PROTECT-PROPAGATE strategy**. Pin the (7,8) hint's
+   immediate ring of pieces (5×5 around it = 25 cells) at their
+   strain-optimal configurations, then search the OUTER region. This
+   is implementable as a custom region-search.
+
+3. **Hard limit**: if the structural minimum of mismatches is set
+   by the asymmetric hint cascade, no soft-penalty PT can dissolve
+   it. The 31-mismatch budget is a property of THIS hint set.
+
+This is the **deepest structural insight of vol-5**. The universal-
+mismatch lever (top-6, top-12, top-30) is real but operates DOWNSTREAM
+of the asymmetric-hint cause.
+
 ### NEW STRUCTURAL FINDING 00:08 — defect REDISTRIBUTION at constrained-449
 
 **Setup**: analyzed the 31 mismatches in the NE2 swap-only K=10 result
