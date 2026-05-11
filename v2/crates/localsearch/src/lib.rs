@@ -728,7 +728,8 @@ pub fn run_sa_steps_fixed_temp(
         //   3..4  rotate 3×3 interior block CW/CCW        (10%)  ← larger cluster
         //   4..6  targeted swap (picks bad cells first)   (20%)  ← informed proposal
         //   6..7  region swap (swap two 2×2 blocks)       (10%)  ← non-rigid multi-piece move
-        //   7..10 random swap two same-class pieces       (30%)
+        //   7..9  random swap two same-class pieces       (20%)
+        //   9     3-cycle swap A→B→C→A                    (10%)  ← breaks frustrated triples
         let move_kind = rng.gen_range(10);
 
         // ---- 3x3 cluster rotation ----
@@ -803,6 +804,68 @@ pub fn run_sa_steps_fixed_temp(
                     let (pid, rot) = cells_pid[idx].unwrap();
                     board.place(cells_pos[idx], pid, rot);
                 }
+            }
+            continue;
+        }
+
+        // ---- 3-cycle swap: A→B→C→A piece permutation ----
+        // Can fix frustrated triples that pair-swaps cannot. Mixed
+        // with the random swap pool.
+        if move_kind == 9 {
+            let class_pick = rng.gen_range(3);
+            let cells = match class_pick {
+                0 => &state.corner_cells,
+                1 => &state.edge_cells,
+                _ => &state.interior_cells,
+            };
+            if cells.len() < 3 { continue; }
+            let n = cells.len() as u32;
+            let i = rng.gen_range(n) as usize;
+            let mut j = rng.gen_range(n) as usize;
+            while j == i { j = rng.gen_range(n) as usize; }
+            let mut k = rng.gen_range(n) as usize;
+            while k == i || k == j { k = rng.gen_range(n) as usize; }
+            let p_a = cells[i]; let p_b = cells[j]; let p_c = cells[k];
+            let Some((pid_a, rot_a)) = board.get(p_a) else { continue; };
+            let Some((pid_b, rot_b)) = board.get(p_b) else { continue; };
+            let Some((pid_c, rot_c)) = board.get(p_c) else { continue; };
+            // Old local score for the 3 cells.
+            let old_local_a = local_match_count(state, board, p_a);
+            let old_local_b = local_match_count(state, board, p_b);
+            let old_local_c = local_match_count(state, board, p_c);
+            // Subtract double-counted adjacencies among (A,B), (A,C), (B,C).
+            let dbl = adjacent_match(state, board, p_a, p_b)
+                    + adjacent_match(state, board, p_a, p_c)
+                    + adjacent_match(state, board, p_b, p_c);
+            let old_local = old_local_a + old_local_b + old_local_c - dbl;
+            // 3-cycle: A.piece → B, B.piece → C, C.piece → A.
+            board.place(p_b, pid_a, rot_a);
+            board.place(p_c, pid_b, rot_b);
+            board.place(p_a, pid_c, rot_c);
+            // Best-rotation refine each cell.
+            let br_a = best_rotation(state, board, p_a, pid_c);
+            board.place(p_a, pid_c, br_a);
+            let br_b = best_rotation(state, board, p_b, pid_a);
+            board.place(p_b, pid_a, br_b);
+            let br_c = best_rotation(state, board, p_c, pid_b);
+            board.place(p_c, pid_b, br_c);
+            let new_local_a = local_match_count(state, board, p_a);
+            let new_local_b = local_match_count(state, board, p_b);
+            let new_local_c = local_match_count(state, board, p_c);
+            let new_dbl = adjacent_match(state, board, p_a, p_b)
+                        + adjacent_match(state, board, p_a, p_c)
+                        + adjacent_match(state, board, p_b, p_c);
+            let new_local = new_local_a + new_local_b + new_local_c - new_dbl;
+            let delta = (new_local as i64) - (old_local as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                board.place(p_a, pid_a, rot_a);
+                board.place(p_b, pid_b, rot_b);
+                board.place(p_c, pid_c, rot_c);
             }
             continue;
         }
