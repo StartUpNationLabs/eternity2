@@ -124,6 +124,17 @@ pub fn write_report(
     let placed = board.cells().iter().filter(|c| c.is_some()).count() as u32;
     let url = bucas_url(puzzle, board, puzzle_name);
 
+    // Per-cell placement: required by downstream plateau analysis so tools
+    // don't need to re-derive piece IDs from the bucas board_edges blob.
+    let placement: Vec<Value> = board
+        .cells()
+        .iter()
+        .map(|c| match c {
+            Some((pid, rot)) => json!({"piece_id": *pid, "rotation": rot.as_u8()}),
+            None => Value::Null,
+        })
+        .collect();
+
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -151,6 +162,7 @@ pub fn write_report(
             "total_cells": puzzle.cell_count(),
         },
         "bucas_url": url,
+        "placement": placement,
         "details": extra,
     });
 

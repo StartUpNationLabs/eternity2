@@ -72,6 +72,14 @@ path = "src/bin/prefix_compare.rs"
 name = "edge_cp_e2"
 path = "src/bin/edge_cp_e2.rs"
 
+[[bin]]
+name = "plateau_analyze"
+path = "src/bin/plateau_analyze.rs"
+
+[[bin]]
+name = "component_repair"
+path = "src/bin/component_repair.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-edge-solver = { path = "../edge-solver" }
