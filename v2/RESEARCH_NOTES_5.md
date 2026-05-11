@@ -293,4 +293,70 @@ Do not stop until the user is back in the morning.
 
 ## Notes section (night-Claude fills as you go)
 
-(Empty — first entry will be your first experiment result.)
+### 23:30 — Session start, planning, and parallel dispatch
+
+**State at start**: clean CPU, no inflight jobs (both day-Claude jobs were
+killed at handoff). Three pending experiments: NE1 (top-6-filter funnel),
+NE2 (forbidden-mismatch constrained PT), NE3 (EvalMaxSAT). Output JSONs
+live under `output/archive/`, not `output/` — note for path-aware tooling.
+
+**First-hour plan (committed)**:
+1. Re-launch EvalMaxSAT in background (single-thread, ~1.5 GB RSS, no
+   contention with PT compute) — DONE, pid 49265.
+2. Spawn 3 cross-domain research agents in parallel (Survey Propagation;
+   IsingFormer + ML-PT; FPGA/GPU SAT) — DONE, all dispatched.
+3. While agents run, implement NE2 (constrained PT soft mode) — IN PROGRESS.
+
+### A1-night — Survey Propagation viability — NEGATIVE RESULT (DOC-ONLY)
+
+**Hypothesis**: Survey Propagation (Mézard-Parisi-Zecchina 2002) might
+break the 449/450 plateau by computing per-variable surveys and decimating
+frozen edges. Plateau structure resembles 1RSB; SP was designed exactly
+for that regime in random k-SAT.
+
+**Setup**: Cross-domain research agent dispatched with explicit "honest
+verdict" framing. Agent had to (a) survey the SP literature beyond random
+k-SAT, (b) check whether SP has *ever* worked on structured (non-random)
+problems, (c) propose an honest 48-hour POC plan.
+
+**Result**: Verdict 1.5/5 stars — **do not pursue SP tonight**. Key
+arguments (verifiable by reading the literature):
+
+1. SP's cavity-method foundation assumes a *locally tree-like* factor
+   graph. E2's edge-color factor graph is a 2D grid: every interior 2×2
+   cell-cycle is a length-8 loop in the factor graph. Short-cycle density
+   is high; cavity approximation breaks at the level of the equations,
+   not just numerically.
+
+2. **Direct empirical analog**: Edwards-Anderson spin glasses on 2D/3D
+   grids have rich 1RSB-like phenomenology AND glassy plateaus, AND SP
+   famously fails on them. PT and cluster Monte Carlo dominate. E2
+   structurally resembles EA-on-grid much more than random 3-SAT at α≈4.27.
+
+3. **Zero published successes** for SP on Latin squares, sudoku, jigsaw,
+   edge-matching, or any structured combinatorial puzzle. Maneva-Mossel-
+   Wainwright tried Latin squares (cs/0506053): no gain over walkSAT.
+
+4. The 5-hint E2 instance is almost certainly **below the rigidity
+   threshold** (solution count ≥ 1, constraint density 480/256 = 1.875
+   per cell ≪ random-CSP rigidity for q=22, k=4). SP would degenerate
+   to BP and report uniform surveys = useless for decimation.
+
+**Verdict**: Save the 48-hour SP POC for never. The honest path is the
+one already in motion: frame-first decomposition, GA on unfrozen interior,
+and the universal-mismatch lever (NE2). Logged the recommended path:
+**edge-color encoding** (480 vars × 22 colors, 256 cell constraints) is
+the right one for ANY future message-passing attempt — far better than
+the cell-place-rotation SAT encoding we currently have.
+
+**Falsifying observation**: if EvalMaxSAT (running now) produces an
+`o <cost>` line that descends past 30 missed edges (= ≥450 raw matches)
+WITHOUT any SP-style decomposition, that confirms direct MaxSAT on the
+existing CNF is competitive and SP is doubly redundant.
+
+**References to keep on file**: arXiv:cs/0212002 (Braunstein-Mézard-Zecchina
+SP code), arXiv:cs/0506053 (Maneva et al. SP-as-weighted-BP, includes
+negative results), Krzakala et al. PNAS 104 (2007) 10318 = arXiv:cond-mat/0612365
+(rigidity thresholds — the theoretical reason SP needs the rigid phase).
+
+
