@@ -182,6 +182,29 @@ fn piece_edges_rotated(
     piece.edges.rotated(rot).as_array()
 }
 
+/// Per-call context passed to constrained SA inner loops. Owned by
+/// the PT loop, threaded by-reference into `run_sa_steps_fixed_temp`.
+///
+/// Holds borrowed references because the SA inner loop is performance-
+/// critical; we want zero allocation per move and zero cloning of the
+/// forbidden list.
+pub struct ForbiddenContext<'a> {
+    pub edges: &'a [ForbiddenEdge],
+    /// `edges_by_cell[cell] = list of edge indices`. Precomputed.
+    pub edges_by_cell: &'a [Vec<u16>],
+    pub k: i64,
+}
+
+impl<'a> ForbiddenContext<'a> {
+    /// Compute the forbidden-mismatch count over edges incident to any
+    /// of the given `touched` cells. Each edge counted at most once.
+    /// O(|touched| × max_incidence_per_cell), with |edges| ≤ 64.
+    #[inline]
+    pub fn fmm_at(&self, puzzle: &Puzzle, board: &Board, touched: &[Position]) -> u32 {
+        fmm_touched(puzzle, board, self.edges, self.edges_by_cell, touched)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

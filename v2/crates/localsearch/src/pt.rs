@@ -30,10 +30,10 @@ use std::time::Instant;
 use eternity2_core::{Board, Position, Puzzle};
 
 use crate::{
-    forbidden::{fmm_full, ForbiddenEdge},
+    forbidden::{build_edges_by_cell, fmm_full, ForbiddenContext, ForbiddenEdge},
     houdayer::{apply_proposal, enumerate_proposals},
     repair::{repair_region, worst_region},
-    run_sa_steps_fixed_temp, RngHandle, SaOutcome, StateRef,
+    run_sa_steps_fixed_temp, run_sa_steps_fixed_temp_constrained, RngHandle, SaOutcome, StateRef,
 };
 
 /// Configuration for parallel tempering.
@@ -234,6 +234,13 @@ pub fn run_pt_from(
         .map(|b| fmm_full(puzzle, b, &cfg.forbidden_edges))
         .collect();
     let forbidden_active = !cfg.forbidden_edges.is_empty() && cfg.forbidden_penalty_k > 0;
+    // Precompute edges-by-cell for the inner-loop constrained variant.
+    // Sized to puzzle.cell_count() = width * height. Empty rows when
+    // forbidden is empty — cheap allocation.
+    let edges_by_cell: Vec<Vec<u16>> = build_edges_by_cell(
+        &cfg.forbidden_edges,
+        (puzzle.width * puzzle.height) as usize,
+    );
 
     // Swap-acceptance bookkeeping for diagnostics.
     let mut pair_proposals = vec![0u64; n - 1];
@@ -276,9 +283,27 @@ pub fn run_pt_from(
                 .zip(temps_ref.iter().copied())
                 .map(|(((((b, s), bb), bs), rng), t)| (b, s, bb, bs, rng, t))
                 .collect();
-        bundles.par_iter_mut().for_each(|(b, s, bb, bs, rng, t)| {
-            run_sa_steps_fixed_temp(state_ref, b, s, bb, bs, rng, *t, cfg.inner_iters);
-        });
+        // Dispatch: constrained vs unconstrained SA inner loop.
+        // The constrained variant applies the forbidden-mismatch
+        // soft penalty inside the simple-move Metropolis steps; the
+        // unconstrained variant is the historical code path.
+        if forbidden_active {
+            let fctx = ForbiddenContext {
+                edges: &cfg.forbidden_edges,
+                edges_by_cell: &edges_by_cell,
+                k: cfg.forbidden_penalty_k,
+            };
+            let fctx_ref = &fctx;
+            bundles.par_iter_mut().for_each(|(b, s, bb, bs, rng, t)| {
+                run_sa_steps_fixed_temp_constrained(
+                    state_ref, b, s, bb, bs, rng, *t, cfg.inner_iters, fctx_ref,
+                );
+            });
+        } else {
+            bundles.par_iter_mut().for_each(|(b, s, bb, bs, rng, t)| {
+                run_sa_steps_fixed_temp(state_ref, b, s, bb, bs, rng, *t, cfg.inner_iters);
+            });
+        }
 
         // Recompute current-state fmm per replica after the SA round.
         // |forbidden| ≤ 20 so this is O(n_replicas * |forbidden|) per

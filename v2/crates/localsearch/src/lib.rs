@@ -37,8 +37,8 @@ pub mod pt;
 pub mod repair;
 pub use alns::{run_alns, AlnsConfig, AlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
                RandomRegion, WorstWindow, ConflictDriven, MwpmDefectPair, RepairKind};
-pub use forbidden::{ForbiddenEdge, parse_forbidden_json, build_edges_by_cell,
-                    fmm_full, fmm_touched};
+pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
+                    build_edges_by_cell, fmm_full, fmm_touched};
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
 pub use repair::{repair_region, worst_region};
 pub use directed::{run_directed, DirectedConfig};
@@ -752,7 +752,47 @@ pub fn run_sa_steps_fixed_temp(
     temp: f64,
     n_iters: u64,
 ) {
+    run_sa_steps_fixed_temp_inner(state, board, score, best_board, best_score, rng, temp, n_iters, None);
+}
+
+/// Constrained variant: applies forbidden-mismatch soft penalty to the
+/// Metropolis acceptance for the SIMPLE move kinds (single-rotate,
+/// plain swap, targeted swap). Cluster moves (2x2, 3x3, region-swap,
+/// 3-cycle) remain unconstrained — they're multi-cell moves where
+/// computing per-touched-set fmm-delta is more expensive and the
+/// penalty's discriminative power weaker. NE2 swap-level penalty at
+/// the PT-exchange step still catches bad cluster outcomes.
+///
+/// Effective Metropolis delta: `eff_delta = raw_delta - K * fmm_delta`,
+/// where fmm_delta = (new_fmm - old_fmm) over touched cells. Tracked
+/// `*score` and `*best_score` remain RAW edge-match counts.
+pub fn run_sa_steps_fixed_temp_constrained(
+    state: &StateRef<'_>,
+    board: &mut Board,
+    score: &mut u32,
+    best_board: &mut Board,
+    best_score: &mut u32,
+    rng: &mut RngHandle,
+    temp: f64,
+    n_iters: u64,
+    forbidden: &ForbiddenContext<'_>,
+) {
+    run_sa_steps_fixed_temp_inner(state, board, score, best_board, best_score, rng, temp, n_iters, Some(forbidden));
+}
+
+fn run_sa_steps_fixed_temp_inner(
+    state: &StateRef<'_>,
+    board: &mut Board,
+    score: &mut u32,
+    best_board: &mut Board,
+    best_score: &mut u32,
+    rng: &mut RngHandle,
+    temp: f64,
+    n_iters: u64,
+    forbidden: Option<&ForbiddenContext<'_>>,
+) {
     let state = &state.0;
+    let puzzle: &Puzzle = state.puzzle;
     let rng = &mut rng.0;
     for _ in 0..n_iters {
         // Move-kind mix (in tenths):
@@ -1203,8 +1243,21 @@ pub fn run_sa_steps_fixed_temp(
             let e_new = state.edges_for(pid, new_rot);
             let new_local = match_count_with(state, board, pos, e_new);
             let delta = (new_local as i64) - (old_local as i64);
-            let accept = if delta >= 0 { true }
-                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            // Forbidden-mismatch delta (NE2.1 inner-loop penalty).
+            // Touched = [pos]. Need to PROVISIONALLY place to compute
+            // new_fmm, then revert if not accepted. For single-rotation
+            // the only edges affected are the 4 sides of `pos`, so
+            // fmm_at([pos]) captures them.
+            let eff_delta = if let Some(fctx) = forbidden {
+                let old_fmm = fctx.fmm_at(puzzle, board, &[pos]);
+                board.place(pos, pid, new_rot);
+                let new_fmm = fctx.fmm_at(puzzle, board, &[pos]);
+                // Revert; we'll re-place if accepted.
+                board.place(pos, pid, old_rot);
+                delta - fctx.k * ((new_fmm as i64) - (old_fmm as i64))
+            } else { delta };
+            let accept = if eff_delta >= 0 { true }
+                else { let p = (eff_delta as f64 / temp).exp(); rng.next_f64() < p };
             if accept {
                 board.place(pos, pid, new_rot);
                 *score = (*score as i64 + delta) as u32;
@@ -1240,8 +1293,25 @@ pub fn run_sa_steps_fixed_temp(
             let new_adj = adjacent_match(state, board, p_i, p_j);
             let new_local = new_local_i + new_local_j - new_adj;
             let delta = (new_local as i64) - (old_local as i64);
-            let accept = if delta >= 0 { true }
-                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            // Forbidden-mismatch delta on touched cells {p_i, p_j}.
+            // The swap is already applied at this point (with rotations
+            // re-optimized via best_rotation); revert is a single
+            // place() per cell at the original rot.
+            let eff_delta = if let Some(fctx) = forbidden {
+                // new_fmm uses current board (swap+best_rot applied).
+                let new_fmm = fctx.fmm_at(puzzle, board, &[p_i, p_j]);
+                // To compute old_fmm we'd need to revert and re-evaluate.
+                // Cheaper trick: revert via temporary local swap, compute, restore.
+                board.place(p_i, pid_i, rot_i);
+                board.place(p_j, pid_j, rot_j);
+                let old_fmm = fctx.fmm_at(puzzle, board, &[p_i, p_j]);
+                // Restore the swapped+best-rot state.
+                board.place(p_i, pid_j, best_rot_i);
+                board.place(p_j, pid_i, best_rot_j);
+                delta - fctx.k * ((new_fmm as i64) - (old_fmm as i64))
+            } else { delta };
+            let accept = if eff_delta >= 0 { true }
+                else { let p = (eff_delta as f64 / temp).exp(); rng.next_f64() < p };
             if accept {
                 *score = (*score as i64 + delta) as u32;
                 if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
