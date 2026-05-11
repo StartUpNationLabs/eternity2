@@ -335,7 +335,10 @@ name = "eternity2-localsearch"
 version = "0.1.0"
 dependencies = [
  "eternity2-core",
+ "eternity2-events",
  "eternity2-generator",
+ "eternity2-solver-engine",
+ "eternity2-solver-trait",
  "rayon",
 ]
 

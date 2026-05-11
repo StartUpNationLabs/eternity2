@@ -11,6 +11,9 @@ workspace = true
 
 [dependencies]
 eternity2-core = { path = "../core" }
+eternity2-events = { path = "../events" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-trait = { path = "../solver-trait" }
 rayon = "1.10"
 
 [dev-dependencies]

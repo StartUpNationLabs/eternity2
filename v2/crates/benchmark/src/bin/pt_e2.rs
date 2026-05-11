@@ -53,6 +53,18 @@ struct Args {
     /// Skip the single-T SA comparison run.
     #[arg(long, default_value_t = false)]
     skip_sa_compare: bool,
+
+    /// Run mini-CP region repair every N PT rounds (0=disable).
+    #[arg(long, default_value_t = 0)]
+    repair_every: u64,
+
+    /// Repair region size (k×k).
+    #[arg(long, default_value_t = 4)]
+    repair_k: u32,
+
+    /// CP budget per repair attempt (milliseconds).
+    #[arg(long, default_value_t = 200)]
+    repair_budget_ms: u64,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -145,6 +157,9 @@ fn main() {
         verbose: true,
         greedy_fill: true,
         diversify_fill: false,
+        repair_every: args.repair_every,
+        repair_k: args.repair_k,
+        repair_budget_ms: args.repair_budget_ms,
     };
     let t1 = Instant::now();
     let (pt_out, pt_stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);

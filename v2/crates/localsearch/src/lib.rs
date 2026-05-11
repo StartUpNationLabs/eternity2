@@ -30,7 +30,9 @@ use eternity2_core::{
 };
 
 pub mod pt;
+pub mod repair;
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
+pub use repair::{repair_region, worst_region};
 
 /// Configuration for the simulated-annealing local search.
 #[derive(Debug, Clone, Copy)]

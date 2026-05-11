@@ -30,6 +30,7 @@ use std::time::Instant;
 use eternity2_core::{Board, Puzzle};
 
 use crate::{
+    repair::{repair_region, worst_region},
     run_sa_steps_fixed_temp, RngHandle, SaOutcome, StateRef,
 };
 
@@ -63,6 +64,14 @@ pub struct PtConfig {
     /// (deterministic given seed), trading off some chain diversity
     /// for guaranteed good starting score.
     pub diversify_fill: bool,
+    /// If > 0, every `repair_every` rounds, do a mini-CP repair on
+    /// the cold chain (find worst k×k region, re-solve with CP).
+    /// Set to 0 to disable.
+    pub repair_every: u64,
+    /// Size of the region (k×k) to attempt mini-CP repair on.
+    pub repair_k: u32,
+    /// Wall-clock budget for each mini-CP repair attempt (milliseconds).
+    pub repair_budget_ms: u64,
 }
 
 impl Default for PtConfig {
@@ -78,6 +87,9 @@ impl Default for PtConfig {
             verbose: false,
             greedy_fill: true,
             diversify_fill: false,
+            repair_every: 0,
+            repair_k: 4,
+            repair_budget_ms: 200,
         }
     }
 }
@@ -254,6 +266,44 @@ pub fn run_pt_from(
         }
 
         rounds += 1;
+
+        // ---- mini-CP region repair on the cold chain ----
+        if cfg.repair_every > 0 && rounds % cfg.repair_every == 0 {
+            // Find worst k×k region on the cold chain's current board.
+            if let Some((rx, ry)) = worst_region(puzzle, &boards[0], cfg.repair_k) {
+                let before = scores[0];
+                let repair_out = repair_region(
+                    puzzle, &boards[0], rx, ry, cfg.repair_k, cfg.repair_budget_ms,
+                );
+                let outcome_str = match &repair_out {
+                    None => "FAIL (CP didn't complete region)".to_string(),
+                    Some(b) => {
+                        let s = state.score(b);
+                        format!("CP returned score={} (delta={:+})", s, (s as i64) - (before as i64))
+                    }
+                };
+                if cfg.verbose {
+                    eprintln!("[PT round {:4}] repair@({},{}) k={} before={} → {}",
+                        rounds, rx, ry, cfg.repair_k, before, outcome_str);
+                }
+                if let Some(new_board) = repair_out {
+                    let new_score = state.score(&new_board);
+                    if new_score > before {
+                        boards[0] = new_board.clone();
+                        scores[0] = new_score;
+                        if new_score > best_scores[0] {
+                            best_scores[0] = new_score;
+                            best_boards[0] = new_board.clone();
+                        }
+                        if new_score > global_best_score {
+                            global_best_score = new_score;
+                            global_best_idx = 0;
+                            global_best_board = new_board;
+                        }
+                    }
+                }
+            }
+        }
 
         if cfg.verbose && rounds % 5 == 0 {
             let elapsed_s = started.elapsed().as_secs_f64();
