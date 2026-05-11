@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/benchmark",
     "crates/core",
+    "crates/edge-solver",
     "crates/events",
     "crates/generator",
     "crates/localsearch",

@@ -316,6 +316,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-edge-solver"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-events",
+ "eternity2-generator",
+ "eternity2-solver-trait",
+]
+
+[[package]]
 name = "eternity2-events"
 version = "0.1.0"
 dependencies = [
