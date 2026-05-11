@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
 use eternity2_core::{Board, Hints, Piece, PieceId, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_localsearch::{run_pt_from, run_sa_from, PtConfig, SaConfig};
@@ -210,5 +211,40 @@ fn main() {
     eprintln!("CP:        {}/{} ({:.1}%)", cp_score, total, pct(cp_score, total));
     eprintln!("PT:        {}/{} ({:.1}%)", pt_out.best_score, total, pct(pt_out.best_score, total));
     eprintln!("Community: 467/480 (97.3%)");
+
+    let output_dir = std::path::PathBuf::from("output");
+    let puzzle_name = puzzle_name_from_path(&args.puzzle);
+    let extra = serde_json::json!({
+        "cp": {
+            "score": cp_score,
+            "elapsed_s": cp_elapsed.as_secs_f64(),
+            "budget_s": args.cp_seconds,
+        },
+        "pt": {
+            "score": pt_out.best_score,
+            "elapsed_s": pt_elapsed.as_secs_f64(),
+            "budget_s": args.pt_seconds,
+            "n_replicas": args.n_replicas,
+            "inner_iters": args.inner_iters,
+            "t_min": args.t_min,
+            "t_max": args.t_max,
+            "rounds": pt_stats.rounds,
+            "swap_proposals": pt_stats.total_swap_proposals,
+            "swap_accepts": pt_stats.total_swap_accepts,
+            "pair_proposals": pt_stats.pair_proposals,
+            "pair_accepts": pt_stats.pair_accepts,
+            "final_replica_scores": pt_stats.final_scores,
+            "repair_every": args.repair_every,
+            "kick_every": args.kick_every,
+        },
+        "seed": args.seed,
+    });
+    match write_report(&output_dir, "pt_e2", &puzzle, &puzzle_name, &pt_out.best_board, extra) {
+        Ok(r) => {
+            eprintln!("\nReport: {}", r.json_path.display());
+            eprintln!("Bucas:  {}", r.url);
+        }
+        Err(e) => eprintln!("warning: failed to write report: {e}"),
+    }
     let _ = (file_hints, Hints::default());
 }

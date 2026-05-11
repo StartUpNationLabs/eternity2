@@ -14,6 +14,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
 use eternity2_core::{Board, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_localsearch::{run_sa_from, SaConfig};
@@ -133,9 +134,21 @@ fn main() {
         if total > 0 { (cp_score * 100) / total } else { 0 },
     );
 
+    let output_dir = std::path::PathBuf::from("output");
+    let puzzle_name = puzzle_name_from_path(&args.puzzle);
+
     // -------- LS phase --------
     if args.ls_seconds == 0 {
         eprintln!("(LS phase skipped)");
+        let extra = serde_json::json!({
+            "cp": { "score": cp_score, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },
+            "ls": null,
+            "seed": args.seed,
+        });
+        match write_report(&output_dir, "official_e2", &puzzle, &puzzle_name, &cp_board, extra) {
+            Ok(r) => { eprintln!("\nReport: {}", r.json_path.display()); eprintln!("Bucas:  {}", r.url); }
+            Err(e) => eprintln!("warning: failed to write report: {e}"),
+        }
         return;
     }
     eprintln!();
@@ -161,4 +174,14 @@ fn main() {
     eprintln!("CP phase:  {}/{} edges ({}%)", cp_score, total, if total > 0 { (cp_score * 100) / total } else { 0 });
     eprintln!("LS phase:  {}/{} edges ({}%)", ls_out.best_score, ls_out.total_edges, (ls_out.best_score * 100) / ls_out.total_edges);
     eprintln!("Community record (Verhaard 2008): 467/480 (97%)");
+
+    let extra = serde_json::json!({
+        "cp": { "score": cp_score, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },
+        "ls": { "score": ls_out.best_score, "elapsed_s": ls_elapsed.as_secs_f64(), "iters": ls_out.iterations, "budget_s": args.ls_seconds },
+        "seed": args.seed,
+    });
+    match write_report(&output_dir, "official_e2", &puzzle, &puzzle_name, &ls_out.best_board, extra) {
+        Ok(r) => { eprintln!("\nReport: {}", r.json_path.display()); eprintln!("Bucas:  {}", r.url); }
+        Err(e) => eprintln!("warning: failed to write report: {e}"),
+    }
 }

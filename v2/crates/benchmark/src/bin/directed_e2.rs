@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
 use eternity2_core::{Board, Piece, PieceId, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_localsearch::{
@@ -124,12 +125,25 @@ fn main() {
         t1.elapsed().as_secs_f64(), pt_out.best_score, pt_out.total_edges,
         pct(pt_out.best_score, pt_out.total_edges));
 
+    let output_dir = std::path::PathBuf::from("output");
+    let puzzle_name = puzzle_name_from_path(&args.puzzle);
+
     // ----- Directed phase -----
     if args.directed_seconds == 0 {
         eprintln!("\n=== SUMMARY ===");
         eprintln!("CP: {}/{} ({:.1}%)  PT: {}/{} ({:.1}%)",
             cp_s, total, pct(cp_s, total),
             pt_out.best_score, pt_out.total_edges, pct(pt_out.best_score, pt_out.total_edges));
+        let extra = serde_json::json!({
+            "cp": { "score": cp_s, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },
+            "pt": { "score": pt_out.best_score, "budget_s": args.pt_seconds },
+            "directed": null,
+            "seed": args.seed,
+        });
+        match write_report(&output_dir, "directed_e2", &puzzle, &puzzle_name, &pt_out.best_board, extra) {
+            Ok(r) => { eprintln!("\nReport: {}", r.json_path.display()); eprintln!("Bucas:  {}", r.url); }
+            Err(e) => eprintln!("warning: failed to write report: {e}"),
+        }
         return;
     }
     eprintln!("\n--- Directed phase ({}s) ---", args.directed_seconds);
@@ -153,4 +167,15 @@ fn main() {
     eprintln!("PT:        {}/{} ({:.1}%)", pt_out.best_score, total, pct(pt_out.best_score, total));
     eprintln!("Directed:  {}/{} ({:.1}%)", dir_out.best_score, total, pct(dir_out.best_score, total));
     eprintln!("Community: 467/480 (97.3%)");
+
+    let extra = serde_json::json!({
+        "cp": { "score": cp_s, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },
+        "pt": { "score": pt_out.best_score, "budget_s": args.pt_seconds },
+        "directed": { "score": dir_out.best_score, "iters": dir_out.iterations, "budget_s": args.directed_seconds, "temperature": args.directed_temp, "pad": args.directed_pad },
+        "seed": args.seed,
+    });
+    match write_report(&output_dir, "directed_e2", &puzzle, &puzzle_name, &dir_out.best_board, extra) {
+        Ok(r) => { eprintln!("\nReport: {}", r.json_path.display()); eprintln!("Bucas:  {}", r.url); }
+        Err(e) => eprintln!("warning: failed to write report: {e}"),
+    }
 }

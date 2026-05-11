@@ -26,6 +26,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
 use eternity2_core::{Board, Hint, Hints, Piece, PieceId, Position, Puzzle, Rotation, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_solver_engine::EngineSolver;
@@ -425,4 +426,24 @@ fn main() {
         global_start.elapsed().as_secs_f64(), iter);
     eprintln!("final score: {}/{} ({}%)", best_score, total, (best_score * 100) / total);
     eprintln!("Community record: 467/480 (97%)");
+
+    let output_dir = std::path::PathBuf::from("output");
+    let puzzle_name = puzzle_name_from_path(&args.puzzle);
+    let extra = serde_json::json!({
+        "rtcp": {
+            "iterations": iter,
+            "wall_clock_s": global_start.elapsed().as_secs_f64(),
+            "cp_seconds": args.cp_seconds,
+            "repair_seconds": args.repair_seconds,
+            "max_iterations": args.max_iterations,
+            "total_seconds": args.total_seconds,
+            "min_component_size": args.min_component_size,
+            "shrink_factor": args.shrink_factor,
+        },
+    });
+    match write_report(&output_dir, "rtcp", &puzzle, &puzzle_name, &best_board, extra) {
+        Ok(r) => { eprintln!("\nReport: {}", r.json_path.display()); eprintln!("Bucas:  {}", r.url); }
+        Err(e) => eprintln!("warning: failed to write report: {e}"),
+    }
+    let _ = pairs;
 }
