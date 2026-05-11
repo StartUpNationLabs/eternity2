@@ -1720,3 +1720,163 @@ could steal solutions etc..."
 Candidate 9 in PT phase (seed 0xCAFEFEF5). ~13 min remaining (3
 more candidates × ~4.5 min each). Will let it finish before
 starting E1.
+
+### Agent A2 returned — MWPM operationalization (CRITICAL FRAMING UPDATE)
+
+Key correction to my mental model. Surface codes have **defects on
+CELLS, errors on EDGES**. My naive "defect = mismatched edge"
+framing was the wrong dual.
+
+**Right primitive for E2**: defect = **piece (cell) incident to ≥1
+mismatch**. Pair cells, not edges. A matched pair (p, q) defines
+a chain in the cell-adjacency dual; destroy the strip/rectangle
+spanning {p, q}. This generalizes my edge-midpoint greedy but
+respects the cell/edge duality.
+
+**PyMatching v2 is plug-and-play**: `add_edge`, `add_boundary_edge`,
+`decode_to_edges_array`. Python wheel, no QEC machinery needed.
+Handles >10k nodes in ms.
+
+**Odd-parity virtual boundary**: `add_boundary_edge(v, weight=w_v)`
+absorbs unmatchable defects. Boundary weight α is a
+**destroy-set-size knob**:
+- Low α → small destroys (many defects "ignored")
+- High α → large globally-coherent destroys
+
+**Weight hierarchy** (in order of expected strength):
+1. Manhattan distance (current; weak)
+2. Manhattan + color-frustration along path (cheap win)
+3. **Bipartite-feasibility weights** — for each candidate
+   defect-pair, run a quick supply/demand check on the bounded
+   rectangle; weight = −log(matching_slack). Infeasible → +∞.
+   Reuses our existing edge-CP feasibility code.
+4. Learned weights via NMWPM-style GNN (high effort)
+
+**Most likely path past 449 from A2**: cell-defect MWPM with
+bipartite-feasibility weights. Build it, then sweep boundary
+weight α.
+
+### Agent A1 returned — MaxSAT solver landscape
+
+**Recommendation: install EvalMaxSAT** via:
+```
+git clone https://github.com/FlorentAvellaneda/EvalMaxSAT
+cd EvalMaxSAT && mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j$(sysctl -n hw.ncpu)
+```
+Estimated build time: ~5 min on M-series. Streams `o <cost>` lines
+during search (the intermediate bounds I wanted). Accepts both old
+and new WCNF formats.
+
+UWrMaxSat is the second pick if EvalMaxSAT chokes.
+
+**Critical caveat from A1**: "If kissat times out on the hard-only
+CNF, no MaxSAT solver will either — the MaxSAT layer is free once
+SAT is solvable."
+
+Implication: **before committing 30+ min to MaxSAT compilation,
+strip the WCNF to its hard clauses and run `kissat` on the
+resulting CNF as a sanity check.** If kissat returns UNSAT in
+~minutes, it means the encoding is over-constrained somewhere
+(probably the official hints). If kissat finds a model
+quickly, MaxSAT will too. If kissat runs forever, encoding is the
+bottleneck and MaxSAT won't help.
+
+### Night sequence revision
+
+Given A1+A2 already inform the strategy:
+
+**Tonight's revised priority order**:
+- (E1, queued) Frame-first deep PT on 450-seed. ~75 min.
+- (E1.5, in parallel) **Build EvalMaxSAT** — independent of E1 (no
+  CPU conflict if I keep it in the foreground), takes ~5 min.
+- (E1.6) **kissat-on-hard-only sanity check** — strip the WCNF
+  before launching EvalMaxSAT. ~10 min budget.
+- (E1.7) **EvalMaxSAT on the full 16x16 WCNF** — IF kissat
+  finds something useful or doesn't immediately prove UNSAT. Up to
+  60 min budget.
+- (E2) Universal-mismatch constrained PT — build + test. ~45 min.
+- (A3 pending) Wait for ML-for-puzzles agent. Whatever it finds
+  may shift priorities.
+
+E1 = the main compute. Other items run in foreground when the
+compute slot is idle or in parallel when they don't use CPU.
+
+### Agent A3 returned — ML for tile puzzles (SOBERING)
+
+Headline negative result from A3: **Wu et al. 2025 "Time to Rethink
+AI for Combinatorial Optimization"** (arXiv 2502.03669, position
+paper) benchmarked DIFUSCO / DiffUCO / GFlowNet variants against
+KaMIS on MIS. **Every learning-based method is consistently beaten
+by KaMIS, and several fail to beat a degree-greedy heuristic.**
+
+Direct implication: my own earlier survey (vol. 4 session 1
+Track B) recommended DIFUSCO-style diffusion CO as a "GO PURSUE"
+direction. Wu et al. invalidates this. **Drop diffusion CO from
+the menu.**
+
+What A3 recommends instead:
+
+**Primary bet — IsingFormer (arXiv 2509.23043, Sep 2025)**:
+- Transformer trained on PT trajectories at multiple temperatures.
+- Generates entire configurations as PT proposal moves.
+- Metropolis acceptance still gates them → correctness preserved.
+- Reports "substantially lower-energy" states on 3D spin glasses.
+- Transferable across distributions (semiprime factorization test).
+- 10-15 days to replicate.
+- Predicted gain: **+3 to +6 edges**.
+
+**Cheap parallel bet — DR-ALNS (Reijnen et al., ICAPS 2024)**:
+- RL-trained destroy policy for LNS.
+- Code at https://github.com/RobbertReijnen/DR-ALNS
+- Reuses our existing edge-CP propagator as repair sub-solver.
+- 7-10 days.
+- Predicted gain: **+1 to +4 edges**.
+
+**Skipped from A3**: AlphaZero (action space too big), NeuroSAT
+(detour), JPDVT (relies on visual content E2 lacks).
+
+### Updated night plan (post-3-agents)
+
+What I'm acting on tonight:
+1. **E1 — Frame-first deep PT** (~75 min). Test if 450 → 455+
+   with longer PT on the known good border.
+2. **E1.5 — Compile EvalMaxSAT** (parallel, ~5 min). Sets up the
+   SAT escape hatch.
+3. **E1.6 — kissat-on-hard-only sanity check** (~10 min budget).
+4. **If E1 doesn't break 452** → E2 universal-mismatch
+   constrained PT (~30-45 min).
+5. **If E1.6 says hard-only is satisfiable / quick UNSAT** →
+   E1.7 EvalMaxSAT on full WCNF (up to 60 min).
+
+What I'm deferring to subsequent sessions (too large for tonight):
+- IsingFormer (10-15 days)
+- DR-ALNS neural-LNS (7-10 days)
+- Cell-defect MWPM with bipartite-feasibility weights (3-5 days,
+  but A2's framework is well-defined — can prototype later)
+- NMWPM-style GNN (very speculative)
+
+These are documented as the **session-4+ priority queue**.
+
+### Session-4+ priority queue (post-3-agents synthesis)
+
+In order of expected payoff/effort:
+
+1. **DR-ALNS neural-LNS** — 7-10 days. Reuses our edge-CP as
+   repair. Learns destroy policy by RL on our own solver
+   trajectories. Cheapest path with non-trivial expected gain.
+2. **Cell-defect MWPM with bipartite-feasibility weights** —
+   3-5 days. PyMatching v2 ready-made; we already have the
+   feasibility-weight machinery in edge-CP. Likely the cheapest
+   *correct* MWPM implementation.
+3. **IsingFormer** — 10-15 days. Transformer-augmented PT.
+   Highest predicted gain (+3 to +6 edges). High effort.
+4. **EvalMaxSAT + iterative encoding refinement** — variable.
+   If E1.7 finds a useful bound, push harder on encoding compact-
+   ness (skip-pinned-cells optimization).
+
+Deprioritized (high effort + low expected gain or invalidated):
+- Diffusion CO (DIFUSCO et al.) — Wu et al. 2025 says no.
+- Frame-first beyond ~458 — diminishing returns past 2012 SOTA.
+- Custom GNN training without IsingFormer-style PT integration.
