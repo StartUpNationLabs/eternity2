@@ -1,0 +1,425 @@
+syntax = "proto3";
+
+package solver.v2;
+
+import "google/protobuf/empty.proto";
+
+// Eternity II v2 solver wire contract.
+//
+// Single source of truth for the gRPC API and the persisted event-trace
+// format. See V2_DESIGN.md for the architectural rationale.
+//
+// Compatibility rules:
+//   - Every SolverEvent carries schema_version. Clients that see a higher
+//     version log a warning and drop unknown oneof variants.
+//   - Field numbers are append-only. Never renumber, never reuse.
+//   - solver_id / heuristic_profile are stable string identifiers; new
+//     strategies opt in by adding values to ListSolvers, not by changing
+//     the proto.
+//
+// Solver registry (canonical, returned by ListSolvers):
+//   (naive,  row_by_row)            educational default — no propagation
+//   (naive,  spiral)                educational alternative ordering
+//   (engine, border_first_lcv)      research default — edge-color propagation
+//                                   + class-balance + border-first MRV
+//   (engine, rare_color_first)      border-first; ties by rare-color heuristic
+//   (engine, border_first_random)   border-first; ties broken randomly (seeded)
+//   (engine, border_first_parity)   adds checkerboard parity propagator
+//   (engine, border_first_full)     all available propagators (parity + island)
+//
+// Implementation note: the legacy `dlx` and `csp` families collapsed into
+// a single "engine" once written cleanly in Rust — they share the search
+// loop and edge-color propagator. Future propagators (parity, island,
+// AC-3) ship as new `engine/*` profiles, not new solver_ids.
+
+// =============================================================================
+// Service
+// =============================================================================
+
+service SolverService {
+  // Stream a solve. Server emits SolverEvents until a terminal event
+  // (Solved / Exhausted / TimedOut / Cancelled) or the client drops the
+  // stream (treated as cancel).
+  rpc Solve(SolveRequest) returns (stream SolverEvent);
+
+  // Cooperative cancel of an in-flight solve. Idempotent: cancelling a
+  // run that has already terminated returns already_terminal=true.
+  rpc Cancel(CancelRequest) returns (CancelResponse);
+
+  // Enumerate the server's solver portfolio so the frontend renders the
+  // support matrix without hardcoded knowledge.
+  rpc ListSolvers(ListSolversRequest) returns (ListSolversResponse);
+
+  rpc Health(google.protobuf.Empty) returns (HealthResponse);
+}
+
+// =============================================================================
+// Catalog: puzzle, pieces, board
+// =============================================================================
+
+// A puzzle piece. Edge colors are listed clockwise starting from the top
+// edge: edges[0]=top, edges[1]=right, edges[2]=bottom, edges[3]=left.
+// Color 0 is reserved for the gray border ("outside") edge.
+message Piece {
+  uint32 id = 1;
+  repeated uint32 edges = 2;
+}
+
+// A puzzle: width * height pieces, a color alphabet, and a stable hash
+// of the catalog used to correlate runs and benchmark traces.
+message Puzzle {
+  uint32 width = 1;
+  uint32 height = 2;
+  repeated Piece pieces = 3;
+  uint32 color_count = 4;       // includes the gray-border color
+  string puzzle_hash = 5;       // SHA-256 hex of canonical encoding
+}
+
+// A piece placed at a board position. position is row-major: y*width + x.
+// rotation in {0,1,2,3} = {0°, 90°, 180°, 270°} clockwise.
+message CellAssignment {
+  uint32 position = 1;
+  uint32 piece_id = 2;
+  uint32 rotation = 3;
+}
+
+message Board {
+  repeated CellAssignment cells = 1;
+}
+
+// =============================================================================
+// Path policy
+// =============================================================================
+
+// Empty placeholders are intentional: keep field numbers reserved for
+// future per-policy options without churning the oneof.
+message StrictPath        {}
+message OrderingPriorPath {}
+message IgnoredPath       {}
+
+message PrefixConstraintPath {
+  uint32 k = 1;  // first K cells of the path are forced; solver continues
+}
+
+message PathConfig {
+  // The ordering itself (row-major positions). Interpreted per `policy`.
+  repeated uint32 path = 1;
+
+  // User-provided hints. Parallel arrays: hint_positions[i] is filled
+  // with hint_pieces[i] at hint_rotations[i]. Honored by all solvers
+  // regardless of policy.
+  repeated uint32 hint_positions = 2;
+  repeated uint32 hint_pieces    = 3;
+  repeated uint32 hint_rotations = 4;
+
+  oneof policy {
+    StrictPath           strict            = 5;
+    OrderingPriorPath    ordering_prior    = 6;
+    PrefixConstraintPath prefix_constraint = 7;
+    IgnoredPath          ignored           = 8;
+  }
+}
+
+// =============================================================================
+// Solve request
+// =============================================================================
+
+// Selection of one solver run within a portfolio submission. SolveRequest
+// carries a repeated SolverSelection so the server fans out and merges
+// event streams demuxed by solver_run_id.
+message SolverSelection {
+  string solver_id         = 1;  // e.g. "dlx"
+  string heuristic_profile = 2;  // e.g. "border_first_lcv"
+  uint64 seed              = 3;  // 0 ⇒ server picks and reports via Started
+
+  // Typed per-family options. Absent ⇒ family defaults.
+  oneof options {
+    NaiveOptions  naive  = 4;
+    EngineOptions engine = 5;
+  }
+}
+
+enum NaiveTraversal {
+  NAIVE_TRAVERSAL_UNSPECIFIED = 0;
+  NAIVE_TRAVERSAL_ROW_BY_ROW  = 1;  // default
+  NAIVE_TRAVERSAL_SPIRAL      = 2;
+}
+
+message NaiveOptions {
+  bool allow_rotation     = 1;   // default true
+  NaiveTraversal traversal = 2;  // UNSPECIFIED ⇒ ROW_BY_ROW
+}
+
+message EngineOptions {
+  bool edge_propagation          = 1;  // default true; turning off only useful for teaching/A-B
+  bool parity_propagator         = 2;  // default false (v2.1)
+  bool island_propagator         = 3;  // default false (v2.1)
+  bool ac3_propagator            = 4;  // default false (v2.1)
+}
+
+enum SolveMode {
+  SOLVE_MODE_UNSPECIFIED   = 0;
+  SOLVE_MODE_FIRST_SOLUTION = 1;
+  SOLVE_MODE_ALL_SOLUTIONS  = 2;
+  SOLVE_MODE_COUNT_ONLY     = 3;  // exhaust + return count, no boards
+}
+
+message SolveRequest {
+  Puzzle puzzle = 1;
+  repeated SolverSelection selections = 2;
+  PathConfig path_config = 3;
+  ThrottleConfig throttle_config = 4;
+  SolveMode mode = 5;
+  uint64 time_budget_ms = 6;     // 0 ⇒ no limit
+  uint32 max_solutions  = 7;     // for ALL_SOLUTIONS; 0 ⇒ no cap
+}
+
+// =============================================================================
+// Throttling
+// =============================================================================
+
+enum EventCategory {
+  EVENT_CATEGORY_UNSPECIFIED        = 0;
+  EVENT_CATEGORY_VARIABLE_SELECTED  = 1;
+  EVENT_CATEGORY_VALUE_TRIED        = 2;
+  EVENT_CATEGORY_CONSTRAINT_PROPAGATED = 3;
+  EVENT_CATEGORY_DOMAIN_WIPEOUT     = 4;
+  EVENT_CATEGORY_BACKTRACK_SHALLOW  = 5;
+  EVENT_CATEGORY_BACKTRACK_DEEP     = 6;  // depth > server-side threshold
+  EVENT_CATEGORY_PARTIAL_SOLUTION   = 7;
+  EVENT_CATEGORY_STATS              = 8;
+  // Terminal events (Started/Solved/Exhausted/TimedOut/Cancelled) and
+  // deep backtracks are not throttle-configurable from the client.
+}
+
+// Per-category throttle. All zero ⇒ "fall back to server default for
+// this category." Categories not listed inherit defaults too.
+message ThrottleRule {
+  EventCategory category   = 1;
+  uint32 first_n_full      = 2;  // emit every event for the first N nodes
+  uint32 then_one_in_k     = 3;  // afterwards sample 1/K; 0 ⇒ suppress
+  uint32 min_interval_ms   = 4;  // time floor between emits
+  uint32 max_per_window    = 5;  // cap per min_interval_ms window
+}
+
+message ThrottleConfig {
+  repeated ThrottleRule rules = 1;
+}
+
+// =============================================================================
+// Event envelope
+// =============================================================================
+
+message SolverEvent {
+  uint32 schema_version = 1;     // currently 1
+  uint64 solver_run_id  = 2;     // server-assigned, unique per selection
+  uint64 node_id        = 3;     // solver-local monotonic counter
+  uint32 depth          = 4;
+  uint64 timestamp_us   = 5;     // relative to solve start
+
+  oneof body {
+    Started               started               = 10;
+    VariableSelected      variable_selected     = 11;
+    ValueTried            value_tried           = 12;
+    ConstraintPropagated  constraint_propagated = 13;
+    DomainWipeout         domain_wipeout        = 14;
+    Backtrack             backtrack             = 15;
+    PartialSolution       partial_solution      = 16;
+    Stats                 stats                 = 17;
+    Solved                solved                = 18;
+    Exhausted             exhausted             = 19;
+    TimedOut              timed_out             = 20;
+    Cancelled             cancelled             = 21;
+    SampledOut            sampled_out           = 22;
+  }
+}
+
+message Started {
+  string solver_id         = 1;
+  string heuristic_profile = 2;
+  string puzzle_hash       = 3;
+  uint64 seed              = 4;   // resolved seed (echoed even if client sent 0)
+  uint64 started_wall_us   = 5;   // wall-clock anchor for cross-run alignment
+  EffectiveConfig config   = 6;   // resolved options after server defaults
+}
+
+message EffectiveConfig {
+  string heuristic_profile = 1;
+  SolveMode mode           = 2;
+  uint64 time_budget_ms    = 3;
+  // Family-specific resolved options mirror the SolverSelection oneof.
+  oneof options {
+    NaiveOptions  naive  = 4;
+    EngineOptions engine = 5;
+  }
+}
+
+enum SelectionReason {
+  SELECTION_REASON_UNSPECIFIED = 0;
+  SELECTION_REASON_MRV         = 1;
+  SELECTION_REASON_DEGREE      = 2;
+  SELECTION_REASON_BORDER_FIRST = 3;
+  SELECTION_REASON_RARE_COLOR  = 4;
+  SELECTION_REASON_PATH_STRICT = 5;
+  SELECTION_REASON_PATH_PRIOR  = 6;
+  SELECTION_REASON_PATH_PREFIX = 7;
+  SELECTION_REASON_RANDOM      = 8;
+  SELECTION_REASON_DLX_COLUMN  = 9;
+}
+
+message VariableSelected {
+  uint32 position    = 1;
+  uint32 domain_size = 2;
+  double score       = 3;     // heuristic score (lower = chosen, by convention)
+  SelectionReason reason = 4;
+}
+
+message ValueTried {
+  uint32 position = 1;
+  uint32 piece_id = 2;
+  uint32 rotation = 3;
+}
+
+message ConstraintPropagated {
+  uint32 from_pos      = 1;
+  uint32 to_pos        = 2;
+  uint32 removed_count = 3;
+}
+
+message DomainWipeout {
+  uint32 position = 1;
+}
+
+enum BacktrackCause {
+  BACKTRACK_CAUSE_UNSPECIFIED      = 0;
+  BACKTRACK_CAUSE_DOMAIN_WIPEOUT   = 1;
+  BACKTRACK_CAUSE_NO_MATCH         = 2;
+  BACKTRACK_CAUSE_PARITY_FAIL      = 3;
+  BACKTRACK_CAUSE_ISLAND_FAIL      = 4;
+  BACKTRACK_CAUSE_EXHAUSTED_BRANCH = 5;
+}
+
+message Backtrack {
+  uint32 from_depth     = 1;
+  uint32 to_depth       = 2;
+  BacktrackCause cause  = 3;
+}
+
+// Sparse delta since the last PartialSolution/Started. position_cleared
+// holds positions vacated by recent backtracks; cells holds new
+// placements. Frontend applies in order.
+message PartialSolution {
+  uint64 snapshot_id              = 1;
+  repeated uint32 positions_cleared = 2;
+  repeated CellAssignment cells   = 3;
+}
+
+message Stats {
+  uint64 time_ms          = 1;
+  uint64 nodes            = 2;
+  uint64 backtracks       = 3;
+  uint64 propagations     = 4;
+  uint64 domain_wipeouts  = 5;
+  uint32 current_depth    = 6;
+  uint32 max_depth_seen   = 7;
+  uint64 solutions_found  = 8;     // for ALL_SOLUTIONS mode
+}
+
+// Periodic summary of events suppressed by the sink so the UI can show
+// "8,432 backtracks (42 displayed)".
+message SampledOut {
+  uint64 since_timestamp_us = 1;
+  repeated CategoryCount counts = 2;
+}
+
+message CategoryCount {
+  EventCategory category = 1;
+  uint64 count           = 2;
+}
+
+message FinalStats {
+  uint64 time_ms            = 1;
+  uint64 nodes              = 2;
+  uint64 backtracks         = 3;
+  uint64 propagations       = 4;
+  uint64 domain_wipeouts    = 5;
+  uint32 max_depth_seen     = 6;
+  uint64 solutions_found    = 7;
+}
+
+message Solved {
+  Board board            = 1;
+  FinalStats final_stats = 2;
+}
+
+message Exhausted {
+  FinalStats final_stats = 1;
+  uint64 solutions_found = 2;  // 0 for "no solution", >0 for ALL_SOLUTIONS
+}
+
+message TimedOut {
+  FinalStats final_stats = 1;
+  Board best_partial     = 2;
+  uint32 best_depth      = 3;
+}
+
+message Cancelled {
+  FinalStats final_stats     = 1;
+  Board best_partial         = 2;  // deepest valid placement reached
+  uint32 best_depth          = 3;
+  repeated Board solutions_so_far = 4;  // populated in ALL_SOLUTIONS mode
+}
+
+// =============================================================================
+// Cancel / List / Health
+// =============================================================================
+
+message CancelRequest {
+  uint64 solver_run_id = 1;  // 0 ⇒ cancel all runs on this connection
+}
+
+message CancelResponse {
+  bool already_terminal = 1;
+}
+
+message ListSolversRequest {}
+
+enum SupportedPathPolicy {
+  SUPPORTED_PATH_POLICY_UNSPECIFIED        = 0;
+  SUPPORTED_PATH_POLICY_STRICT             = 1;
+  SUPPORTED_PATH_POLICY_ORDERING_PRIOR     = 2;
+  SUPPORTED_PATH_POLICY_PREFIX_CONSTRAINT  = 3;
+  SUPPORTED_PATH_POLICY_IGNORED            = 4;
+}
+
+message SolverEntry {
+  string solver_id                              = 1;
+  string display_name                           = 2;
+  string description                            = 3;
+  repeated SupportedPathPolicy supported_path_policies = 4;
+  repeated HeuristicProfileEntry heuristic_profiles    = 5;
+}
+
+message HeuristicProfileEntry {
+  string id           = 1;   // e.g. "border_first_lcv"
+  string display_name = 2;
+  string description  = 3;
+  bool   is_default   = 4;
+}
+
+message ListSolversResponse {
+  repeated SolverEntry entries = 1;
+  uint32 schema_version        = 2;
+}
+
+enum ServingStatus {
+  SERVING_STATUS_UNSPECIFIED = 0;
+  SERVING_STATUS_SERVING     = 1;
+  SERVING_STATUS_NOT_SERVING = 2;
+}
+
+message HealthResponse {
+  ServingStatus status = 1;
+  string version       = 2;   // server build version
+  uint32 schema_version = 3;  // proto schema version
+}

@@ -1,0 +1,15 @@
+{
+  "name": "proto-verify-ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen": "buf generate",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "1.45.0",
+    "@bufbuild/protobuf": "2.2.0",
+    "@bufbuild/protoc-gen-es": "2.2.0",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,30 @@
+# Multi-stage: build the WASM bundle, then the JS bundle, then serve.
+FROM rust:1.85-bookworm AS wasm
+WORKDIR /workspace
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        protobuf-compiler binaryen \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustup target add wasm32-unknown-unknown \
+    && cargo install --locked wasm-pack
+COPY Cargo.toml Cargo.lock* ./
+COPY proto ./proto
+COPY crates ./crates
+COPY wasm ./wasm
+COPY server ./server
+RUN bash wasm/build.sh
+
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /workspace
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml* ./frontend/
+WORKDIR /workspace/frontend
+RUN pnpm install --frozen-lockfile || pnpm install
+COPY proto /workspace/proto
+COPY frontend /workspace/frontend
+COPY --from=wasm /workspace/wasm/pkg /workspace/wasm/pkg
+RUN pnpm gen:proto && pnpm build
+
+FROM nginx:1.27-alpine
+COPY --from=frontend /workspace/frontend/dist /usr/share/nginx/html
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080

@@ -1,0 +1,25 @@
+FROM rust:1.85-bookworm AS build
+WORKDIR /workspace
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        protobuf-compiler ca-certificates pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+COPY Cargo.toml Cargo.lock* ./
+COPY proto ./proto
+COPY crates ./crates
+COPY server ./server
+COPY wasm ./wasm
+# Building the binary pulls all transitively-needed crates.
+RUN cargo build --release --bin eternity2-server
+
+FROM debian:bookworm-slim AS grpc-health
+ADD https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.34/grpc_health_probe-linux-amd64 /grpc_health_probe
+RUN chmod +x /grpc_health_probe
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /workspace/target/release/eternity2-server /usr/local/bin/eternity2-server
+COPY --from=grpc-health /grpc_health_probe /usr/local/bin/grpc_health_probe
+EXPOSE 50051
+ENTRYPOINT ["/usr/local/bin/eternity2-server"]

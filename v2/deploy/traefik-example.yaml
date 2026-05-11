@@ -1,0 +1,34 @@
+# Worked example for serving Eternity II v2 behind Traefik. Drop into
+# your existing Traefik dynamic config or use as a docker-compose
+# overlay alongside deploy/docker-compose.yaml.
+#
+# Requires: Traefik 3.x with the gRPC entrypoint enabled.
+
+http:
+  routers:
+    eternity2-frontend:
+      rule: "Host(`eternity2.example.org`)"
+      service: eternity2-frontend
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: lets-encrypt
+
+    eternity2-grpc:
+      rule: "Host(`eternity2.example.org`) && PathPrefix(`/grpc.solver.v2.SolverService/`)"
+      service: eternity2-server
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: lets-encrypt
+
+  services:
+    eternity2-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://eternity2-frontend:8080"
+
+    eternity2-server:
+      loadBalancer:
+        servers:
+          - url: "h2c://eternity2-server:50051"

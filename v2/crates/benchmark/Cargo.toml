@@ -1,0 +1,38 @@
+[package]
+name = "eternity2-benchmark"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "eternity2-benchmark"
+path = "src/main.rs"
+
+[[bin]]
+name = "official_e2"
+path = "src/bin/official_e2.rs"
+
+[[bin]]
+name = "rtcp"
+path = "src/bin/rtcp.rs"
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-events = { path = "../events" }
+eternity2-generator = { path = "../generator" }
+eternity2-localsearch = { path = "../localsearch" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-naive = { path = "../solver-naive" }
+eternity2-solver-trait = { path = "../solver-trait" }
+clap = { version = "4", features = ["derive"] }
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

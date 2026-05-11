@@ -1,0 +1,36 @@
+[package]
+name = "eternity2-server"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "eternity2-server"
+path = "src/main.rs"
+
+[dependencies]
+eternity2-core = { path = "../crates/core" }
+eternity2-events = { path = "../crates/events" }
+eternity2-generator = { path = "../crates/generator" }
+eternity2-solver-engine = { path = "../crates/solver-engine" }
+eternity2-solver-naive = { path = "../crates/solver-naive" }
+eternity2-solver-portfolio = { path = "../crates/solver-portfolio" }
+eternity2-solver-trait = { path = "../crates/solver-trait" }
+wire = { path = "../crates/wire" }
+prost = "0.13"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
+tokio-stream = "0.1"
+tonic = "0.12"
+tonic-web = "0.12"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+http = "1"
+
+[dev-dependencies]
+tokio-stream = { version = "0.1", features = ["net"] }

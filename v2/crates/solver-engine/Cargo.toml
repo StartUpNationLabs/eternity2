@@ -1,0 +1,27 @@
+[package]
+name = "eternity2-solver-engine"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-events = { path = "../events" }
+eternity2-propagators = { path = "../propagators" }
+eternity2-solver-trait = { path = "../solver-trait" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+crossbeam-channel = "0.5"
+rayon = "1.10"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+
+[dev-dependencies]
+eternity2-generator = { path = "../generator" }
+rayon = "1.10"

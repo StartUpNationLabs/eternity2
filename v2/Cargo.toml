@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/benchmark",
+    "crates/core",
+    "crates/events",
+    "crates/generator",
+    "crates/localsearch",
+    "crates/propagators",
+    "crates/solver-engine",
+    "crates/solver-naive",
+    "crates/solver-portfolio",
+    "crates/solver-trait",
+    "crates/wire",
+    "server",
+    "wasm",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery  = { level = "warn", priority = -1 }
+# Allow lints that are noisy without paying for themselves in this codebase.
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+# Build profile tuned for the WASM bundle (V2_DESIGN.md "WASM scope" —
+# classroom Wi-Fi, kid-friendly load time). Server crates also benefit.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

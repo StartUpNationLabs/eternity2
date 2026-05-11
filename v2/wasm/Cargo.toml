@@ -1,0 +1,36 @@
+[package]
+name = "eternity2-wasm"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Disable wasm-pack's bundled wasm-opt (often outdated vs. current rustc
+# output). We run /opt/homebrew/bin/wasm-opt as a post-step instead — see
+# wasm/README in the deploy plan.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = false
+
+[dependencies]
+eternity2-core = { path = "../crates/core" }
+eternity2-events = { path = "../crates/events" }
+eternity2-generator = { path = "../crates/generator" }
+eternity2-solver-naive = { path = "../crates/solver-naive" }
+eternity2-solver-trait = { path = "../crates/solver-trait" }
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+

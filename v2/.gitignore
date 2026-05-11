@@ -1,0 +1,7 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# TS verification output
+/proto/_gen-ts
+node_modules

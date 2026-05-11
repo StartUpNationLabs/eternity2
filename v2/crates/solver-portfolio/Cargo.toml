@@ -1,0 +1,22 @@
+[package]
+name = "eternity2-solver-portfolio"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-events = { path = "../events" }
+eternity2-solver-trait = { path = "../solver-trait" }
+crossbeam-channel = "0.5"
+rayon = "1.10"
+
+[dev-dependencies]
+eternity2-generator = { path = "../generator" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-naive = { path = "../solver-naive" }
