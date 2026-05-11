@@ -425,7 +425,6 @@ fn main() {
     eprintln!("total wall-clock: {:.1}s   iterations: {}",
         global_start.elapsed().as_secs_f64(), iter);
     eprintln!("final score: {}/{} ({}%)", best_score, total, (best_score * 100) / total);
-    eprintln!("Community record: 467/480 (97%)");
 
     let output_dir = std::path::PathBuf::from("output");
     let puzzle_name = puzzle_name_from_path(&args.puzzle);

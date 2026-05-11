@@ -170,7 +170,6 @@ fn main() {
     eprintln!("CP:        {}/{} ({:.1}%)", cp_s, total, pct(cp_s, total));
     eprintln!("PT:        {}/{} ({:.1}%)", pt_out.best_score, total, pct(pt_out.best_score, total));
     eprintln!("Directed:  {}/{} ({:.1}%)", dir_out.best_score, total, pct(dir_out.best_score, total));
-    eprintln!("Community: 467/480 (97.3%)");
 
     let extra = serde_json::json!({
         "cp": { "score": cp_s, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },

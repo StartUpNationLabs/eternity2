@@ -173,7 +173,6 @@ fn main() {
     eprintln!("=== SUMMARY ===");
     eprintln!("CP phase:  {}/{} edges ({}%)", cp_score, total, if total > 0 { (cp_score * 100) / total } else { 0 });
     eprintln!("LS phase:  {}/{} edges ({}%)", ls_out.best_score, ls_out.total_edges, (ls_out.best_score * 100) / ls_out.total_edges);
-    eprintln!("Community record (Verhaard 2008): 467/480 (97%)");
 
     let extra = serde_json::json!({
         "cp": { "score": cp_score, "elapsed_s": cp_elapsed.as_secs_f64(), "budget_s": args.cp_seconds },

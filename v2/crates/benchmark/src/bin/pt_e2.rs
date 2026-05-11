@@ -241,7 +241,6 @@ fn main() {
     eprintln!("\n=== SUMMARY ===");
     eprintln!("CP:        {}/{} ({:.1}%)", cp_score, total, pct(cp_score, total));
     eprintln!("PT:        {}/{} ({:.1}%)", pt_out.best_score, total, pct(pt_out.best_score, total));
-    eprintln!("Community: 467/480 (97.3%)");
 
     let output_dir = std::path::PathBuf::from("output");
     let puzzle_name = puzzle_name_from_path(&args.puzzle);
