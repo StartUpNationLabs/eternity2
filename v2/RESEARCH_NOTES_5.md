@@ -453,6 +453,34 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE1 STAGE 1 RESULT 01:33 — second 450 board found (different basin)
+
+**Setup**: NE1 funnel stage 1 ran 30 borders × 90s PT each (top-6
+filter on selection for stage 2). Started 00:36, finished 01:33.
+
+**Best**: 450/480 at seed 0xcafeff09. Beats canonical 449 by 1.
+
+**Verification**: this 450 board is **structurally DIFFERENT** from
+the vol-4 frame-first 450 (only 19% bucas-string overlap). Same
+score, different basin.
+
+**13 candidate boards** matched all 6/6 of the NEW top-6 universal
+mismatches at scores 445-449. The top-6 filter is functional and
+selects MANY structural candidates.
+
+**Stage 2 next**: top 8 of these (3 at 449, 5 at 448, 3 at 447) get
+200s PT each. With longer compute, any of them MIGHT push past 450.
+
+**Key implication**: frame-first is reproducibly producing 450 boards
+across base-seeds (0xCAFEFEED → 450 in vol-4; 0xCAFEFEEC → 450 here).
+The algorithm is reliable, not lucky. **The 450 plateau may be
+reachable from many borders, but breaking PAST 450 is the open
+question.**
+
+**Falsifying observation**: if no NE1 stage gets above 450 even with
+the longer PT budget, this re-confirms the moat-depth-≥-5 finding —
+even frame-first basin diversity can't break the local-search ceiling.
+
 ### 4-CYCLE SAMPLE 01:27 — moat-depth even ≥ 5
 
 **Setup**: random sample 200 quadruples of mismatch-incident interior
