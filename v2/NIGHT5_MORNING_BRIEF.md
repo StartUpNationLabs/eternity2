@@ -5,7 +5,10 @@
 
 ## TL;DR
 
-- **Score unchanged: 450/480** (frame-first vol-4 result remains best).
+- **Score: 450/480 (matches vol-4 best)**. NE1 funnel produced a
+  STRUCTURALLY DIFFERENT 450 (19% overlap with vol-4's 450) at seed
+  0xcafeff09 — confirming frame-first reaches 450 reproducibly from
+  multiple base-seeds. Stage 2 / 3 still running.
 - BUT **the night discovered TWO important structural facts**:
   1. **Asymmetric hint at (7,8) creates the south-central strain
      cascade** that produces all universal-mismatch hotspots.
