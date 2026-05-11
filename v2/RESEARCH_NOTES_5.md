@@ -453,6 +453,54 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### CORPUS-LEVEL VERIFICATION 01:21 — abundant-only mismatch invariance
+
+**Setup**: scan all 29 plateau boards (score ≥ 440) across the corpus
+(output/archive/ + output/). Classify each mismatch as:
+- rare-both: both sides ∈ {1..5}.
+- abundant-both: both sides ∈ {6..22}.
+- mixed: one rare, one abundant.
+
+**Result**: **29/29 boards have 100% abundant-only mismatches.**
+Zero rare-rare, zero mixed. Across solvers, seeds, methods, scores.
+
+Solvers covered in corpus:
+- pt_e2 (canonical CP→PT) at 440-449.
+- alns_e2 (ALNS+MWPM) at 449.
+- edge_cp_e2 (edge-coloring-first CP) at 444-446.
+- frame_first_e2 (frame-first decomp) at 443-450.
+- worst_region_repair at 450.
+- (the new ones from tonight's NE2/NE2.1 sweeps).
+
+This is a **robust empirical regularity**. The rare-vs-abundant
+inversion is **structural at the plateau, independent of method**.
+
+**Strengthened structural picture of E2**:
+1. The 5 rare colors (1-5, 24 edges each = 12 internal matches) are
+   so constrained that any reasonable optimizer matches them all.
+   They're the EASY part of the puzzle.
+2. The 17 abundant colors (6-22, 48-50 edges each) have combinatorial
+   near-degeneracy: many pieces can supply many configurations of
+   their edges, creating dense local-optimum traps.
+3. The 31-mismatch budget at the 449 plateau is exactly the
+   "abundant-color slack" — the portion of the puzzle where pieces
+   are nearly-interchangeable and the optimizer settles on the wrong
+   choice.
+
+**Implication for algorithmic design**:
+- Future algorithms should focus EXCLUSIVELY on abundant-color
+  placements. Rare-color pieces can be PRE-PLACED (a CP-like seed
+  step) and held fixed.
+- The 196 interior cells have piece domains of varying restrictiveness;
+  cells whose 4 neighbors are abundant-colored have huge piece-
+  rotation domains and are the "soft" cells.
+
+**Quantitative invariance to report**: across 29 boards from 6
+different solvers, mismatch counts are exactly (480 - score), with
+100% abundant-only composition. This is the empirical signature of
+the abundant-color combinatorial trap as the genuine source of E2
+hardness.
+
 ### STRUCTURAL ANALYSIS 00:54 — rare colors are EASY, not hard
 
 **Setup**: `scripts/puzzle_structural_analysis.py` analyzes the static
