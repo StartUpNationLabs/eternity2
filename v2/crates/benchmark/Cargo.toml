@@ -68,8 +68,13 @@ path = "src/bin/worst_region_repair.rs"
 name = "prefix_compare"
 path = "src/bin/prefix_compare.rs"
 
+[[bin]]
+name = "edge_cp_e2"
+path = "src/bin/edge_cp_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
+eternity2-edge-solver = { path = "../edge-solver" }
 eternity2-events = { path = "../events" }
 eternity2-generator = { path = "../generator" }
 eternity2-localsearch = { path = "../localsearch" }

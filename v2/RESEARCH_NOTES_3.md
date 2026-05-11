@@ -486,4 +486,156 @@ on 16×16 plateaus at the same 449 as cell-CP, the *formulation*
 isn't the lever — the plateau is in piece-color-distribution, not
 search-space-shape. Document and move to Inversion 5 or 6.
 
-## (entries follow as experiments run)
+---
+
+## 2026-05-11 — Inversion 2 v1 experiment 1: edge-CP on 16×16 E2
+
+**H**: edge-as-variable CP can find a full 480/480 edge-coloring on
+official E2 within seconds, but recovering a feasible board (with
+piece-uniqueness) is where most of the score is lost.
+
+**Setup**: new crate `eternity2-edge-solver`, v1 alldiff-deferred (no
+piece-uniqueness propagation during search). Run via new bin
+`edge_cp_e2 --seconds 30`. Edge-MRV heuristic (tightest adjacent cell
+first); insertion-order value (color) ordering. Greedy alldiff at
+recovery time.
+
+**Result** (`v2/output/edge_cp_e2_1778523407_117of480.{json,url.txt}`):
+
+| metric | value |
+|---|---|
+| outcome | AllAssigned |
+| search edge-score | 480/480 |
+| nodes | 15,908,030 |
+| backtracks | 0 |
+| elapsed | 23.9s |
+| placed cells (after greedy recovery) | 104/256 |
+| matched edges (after recovery) | 117/480 |
+
+For comparison, cell-CP (`gacolor_ac3_par`) reaches 449/480 on the
+same puzzle. Cell-CP solves *both* edge-coloring AND piece-uniqueness
+simultaneously and plateaus high; edge-CP solves edge-coloring
+trivially but only 21.6% of the assigned colors translate into
+feasible piece placements via greedy recovery.
+
+**Verdict (qualitative)**: this is exactly the result the design
+predicted: **edge-coloring is the easy half; the alldiff is where
+E2's hardness lives**. The 480-edge search has zero backtracks — the
+constraints aren't binding. The real engine is piece-uniqueness.
+
+This reframes the entire research question. In cell-CP, alldiff and
+edge-color matching are entangled — we couldn't separate their
+contributions to the plateau. Now we can. The 449-vs-117 gap shows
+how much *coupling* between alldiff and edge-matching contributes to
+finding feasible boards.
+
+**Next steps**:
+  1. Smarter recovery: bipartite max-matching instead of greedy. This
+     might lift 117 to several hundred without changing search.
+  2. v1.1 sound alldiff propagator: Hall's condition / per-cell
+     piece-set + global matching feasibility. Naïve cell-collapse is
+     unsound (single-cell experiment confirmed: dies at 5/480).
+  3. Hint translation: pin the 5 official hints into edge-variable
+     assignments. Will shrink the search space and might force
+     piece-conflicts earlier.
+
+**Note on the "0 backtracks" data**: the search ran 15.9M nodes
+without backtracking because **MRV + insertion order happens to find
+a self-consistent coloring trivially** on this puzzle. That's evidence
+that the edge-coloring problem on 22 colors with our heuristic is
+loosely constrained. The total of 31.8M propagations is essentially
+forward-checking work; the algorithm walks the DAG of choice points
+once.
+
+---
+
+## 2026-05-11 — Inversion 2 v1.1: SOUND Hall-1 alldiff propagator
+
+**Diagnostic from experiment 1**: every cell was fully-determined and
+had exactly 1 piece candidate, but matching only placed 104/256
+because *many cells claimed the same piece*. The edge-coloring was a
+big lie — most "matches" used overlapping pieces. **The unsound naïve
+piece-commit propagator was the right impulse but wrong mechanism.**
+
+### Hall-1 design
+
+Sound propagator: after each `assign`, scan all cells; for each cell
+whose `cell_rows_alive[c] ∩ available_rows` has bits from exactly one
+piece, record that cell→piece claim. If two distinct cells claim the
+same piece, **the partial is infeasible** — fail. This is the
+*pigeonhole-singleton* slice of Hall's condition: when |N(S)| < |S|
+because |S|=2 and |N(S)|=1.
+
+Compact, sound, conservative. It catches the obvious alldiff
+violations without committing pieces eagerly (the unsound move).
+
+### Result (`v2/output/edge_cp_e2_1778523779_335of480.{json,url.txt}`)
+
+60-second run:
+| metric | v1 (no alldiff) | v1.1 (Hall-1) |
+|---|---|---|
+| outcome | AllAssigned | TimedOut |
+| best edge-score (search) | 480/480 | 360/480 |
+| matched edges (recovered) | 117 | **335** |
+| placed cells | 104 | **185** |
+| nodes | 15.9M | 3.3M |
+| backtracks | 0 | 2.4M |
+
+**2.86× improvement on recovered edge score, 1.78× on placed cells.**
+
+180-second budget yields the same 360 edge-score, 335 recovered —
+**the propagator finds a plateau by 60s and doesn't budge with 3× more
+budget**. The plateau is real, not budget-limited.
+
+### Comparison to cell-CP
+
+Cell-CP (gacolor_ac3_par): 449/480 in ~10s.
+Edge-CP (Hall-1): 335/480 in 60s, plateaus there.
+
+Cell-CP wins on this puzzle. Why? Cell-CP enforces alldiff *natively*
+in its branching: every commit picks a piece and removes it from
+circulation. Edge-CP's Hall-1 catches the simplest alldiff violations
+(pigeonhole-2) but misses subtler ones (e.g., 3 cells claiming 2
+pieces). The search exhausts feasibility through Hall-1 but the
+search tree is still polluted with infeasible-but-Hall-1-passing
+states.
+
+### Smaller puzzles (validation)
+
+8×8 generated (interior_colors=6, 30s): 111/112 edges, 55/64 cells.
+10×10 generated (interior_colors=8, 60s): 174/180 edges, 85/100 cells.
+
+Edge-CP gets very close to complete on small puzzles but plateaus
+just below perfect. Same dynamic as 16×16: alldiff weak-propagation
+keeps the search churning on infeasible partials.
+
+### Verdict
+
+**Inversion 2 v1.1 is *not* better than cell-CP** on E2's 5-clue
+problem. But:
+
+1. The cell-CP plateau (449) and the edge-CP plateau (335) are at
+   *different scores*. They're solving genuinely different
+   relaxations, and they have **different failure modes**:
+   - Cell-CP: piece-uniqueness enforced; some edge-color constraints
+     unsatisfiable in the canonical search order.
+   - Edge-CP+Hall-1: edge-color satisfiable; piece-uniqueness violated
+     in subtler-than-pigeonhole-2 ways.
+2. The 335 score is **higher than any single-pass non-cell-CP method
+   we've tried**. PT+Houdayer on a cell-CP seed plateaus at 449.
+   Random SA on a CP seed: ~390. Edge-CP+Hall-1 alone: 335. We
+   haven't yet *seeded* PT with an edge-CP partial.
+
+### Next steps
+
+1. **Stronger alldiff**: bipartite-matching feasibility check during
+   search (real Hall's condition). Run after every K assigns; if no
+   feasible matching exists, prune. O(V·E) per check, K~10-100.
+2. **Seed PT/SA with the edge-CP partial**: the 185 placed cells from
+   edge-CP could be a *different* local minimum basin than cell-CP's
+   449-partials. Cross-pollinating may exit either basin.
+3. **Hint translation**: pin the 5 official hints into edge colors at
+   the start. The hint cells force 16-20 edge values, shrinking
+   search space.
+
+

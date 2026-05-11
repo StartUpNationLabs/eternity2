@@ -297,6 +297,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "eternity2-core",
+ "eternity2-edge-solver",
  "eternity2-events",
  "eternity2-generator",
  "eternity2-localsearch",

@@ -23,15 +23,21 @@ use crate::topology::Topology;
 pub struct SearchConfig {
     pub time_budget_ms: u64,
     pub seed: u64,
-    /// If true, commit pieces during edge-search when a cell's
-    /// row-mask collapses onto a single piece (across rotations).
-    /// Without this, the search treats piece-uniqueness as a recovery-
-    /// time problem, which collapses many "valid edge colorings" onto
-    /// unrealisable boards.
+    /// UNSOUND: commit a piece when a cell's row-mask collapses to
+    /// exactly that piece's rotations. Causes premature commits.
     pub propagate_piece_uniqueness: bool,
-    /// Stop on first complete assignment (n_edges == assigned). When
-    /// false, search continues — useful for exhausting all solutions
-    /// or for benchmarking branching dynamics.
+    /// Sound Hall-1 alldiff check: detect when two distinct cells'
+    /// row-masks (intersected with available_rows) both collapse to
+    /// the same piece. That implies piece-uniqueness violation. Fail.
+    /// Cheap, conservative, sound.
+    pub hall1_check: bool,
+    /// Sound: tighten each cell's row-mask by AND with available_rows
+    /// after every assign. Without this, cell_rows_alive can leak
+    /// rows of pieces that have been committed elsewhere.
+    /// (Currently unused: we always do the AND on read in cell_pop and
+    /// edge_live_colors. Reserved for a later persistent-AND fast path.)
+    pub tighten_with_available: bool,
+    /// Stop on first complete assignment (n_edges == assigned).
     pub stop_on_first: bool,
     /// Emit per-decision tracing to stderr. Slow; only for debugging.
     pub trace: bool,
@@ -42,7 +48,9 @@ impl Default for SearchConfig {
         Self {
             time_budget_ms: 0,
             seed: 0,
-            propagate_piece_uniqueness: true,
+            propagate_piece_uniqueness: false,
+            hall1_check: true,
+            tighten_with_available: false,
             stop_on_first: true,
             trace: false,
         }
@@ -230,22 +238,14 @@ impl<'a> Search<'a> {
             dirty.push(c);
         }
 
-        // Step 2: propagate-to-fixpoint. For each dirty cell, intersect
-        // with available_rows and check empty/collapsed. On collapse,
-        // commit the piece — clearing its rows from available_rows —
-        // which dirties every other cell. Iterate.
+        // Step 2: per-cell feasibility. For each dirty cell, intersect
+        // cell_rows_alive with available_rows; fail if empty.
         while let Some(c) = dirty.pop() {
-            // Skip cells that already have a committed piece — they're
-            // fully decided.
             if self.cell_committed_piece[c as usize].is_some() {
                 continue;
             }
-            // Compute the cell's "live" rows = cell_rows_alive[c] ∩ available_rows.
-            // (cell_rows_alive itself isn't kept narrowed by `available_rows`
-            // automatically; intersecting on read is cheap.)
             let wpm = self.tables.words_per_mask;
             let i = c as usize * wpm;
-            // Compute popcount of (cell_rows_alive[c] AND available_rows).
             let mut all_zero = true;
             for w in 0..wpm {
                 if self.cell_rows_alive[i + w] & self.available_rows[w] != 0 {
@@ -256,43 +256,62 @@ impl<'a> Search<'a> {
             if all_zero {
                 return Err(undo);
             }
-            if !self.config.propagate_piece_uniqueness {
-                continue;
+        }
+
+        // Step 3: SOUND Hall-1 alldiff check. Scan all cells; if two
+        // distinct cells both collapse to the same piece (mask ∩
+        // available has bits from only one piece, identical across
+        // both cells), the partial is infeasible.
+        if self.config.hall1_check {
+            let wpm = self.tables.words_per_mask;
+            let mut piece_claim: Vec<Option<u32>> = vec![None; self.tables.max_piece_id as usize + 1];
+            for c in 0..self.topology.n_cells {
+                if self.cell_committed_piece[c as usize].is_some() { continue; }
+                let i = c as usize * wpm;
+                let masked: Vec<u64> = (0..wpm)
+                    .map(|w| self.cell_rows_alive[i + w] & self.available_rows[w])
+                    .collect();
+                if let Some(pid) = self.collapsed_to_piece(&masked) {
+                    let p_idx = u32::from(pid) as usize;
+                    match piece_claim[p_idx] {
+                        None => piece_claim[p_idx] = Some(c),
+                        Some(_other) => {
+                            self.stats.propagations += 1;
+                            return Err(undo);
+                        }
+                    }
+                }
             }
-            // Check if collapsed to a single piece.
-            let mask_slice: Vec<u64> = (0..wpm)
-                .map(|w| self.cell_rows_alive[i + w] & self.available_rows[w])
-                .collect();
-            if let Some(pid) = self.collapsed_to_piece(&mask_slice) {
-                // Commit. Skip if this piece is the same as the cell's
-                // shape — but it shouldn't be assigned already (we checked above).
-                self.snapshot_available(&mut undo);
-                let piece_mask = self.tables.piece_mask(pid);
-                // Clear piece_mask from available_rows.
-                for w in 0..wpm {
-                    self.available_rows[w] &= !piece_mask[w];
-                }
-                debug_assert!(
-                    self.piece_committed_at[u32::from(pid) as usize].is_none(),
-                    "double-commit piece {pid}"
-                );
-                debug_assert!(
-                    self.cell_committed_piece[c as usize].is_none(),
-                    "double-commit cell {c}"
-                );
-                self.piece_committed_at[u32::from(pid) as usize] = Some(c);
-                self.cell_committed_piece[c as usize] = Some(pid);
-                undo.pieces_committed.push((pid, c));
-                self.stats.piece_commits += 1;
-                if self.config.trace {
-                    eprintln!("  commit piece {pid} → cell {c}");
-                }
-                // Every other cell with assigned-edges might now be
-                // affected. Conservatively, dirty all uncommitted cells.
-                for other in 0..self.topology.n_cells {
-                    if other == c { continue; }
-                    if self.cell_committed_piece[other as usize].is_some() { continue; }
-                    dirty.push(other);
+        }
+
+        // Step 4: optional UNSOUND eager piece-commit propagator (A/B testing).
+        if self.config.propagate_piece_uniqueness {
+            let mut work: Vec<u32> = (0..self.topology.n_cells).collect();
+            let wpm = self.tables.words_per_mask;
+            while let Some(c) = work.pop() {
+                if self.cell_committed_piece[c as usize].is_some() { continue; }
+                let i = c as usize * wpm;
+                let mask_slice: Vec<u64> = (0..wpm)
+                    .map(|w| self.cell_rows_alive[i + w] & self.available_rows[w])
+                    .collect();
+                if let Some(pid) = self.collapsed_to_piece(&mask_slice) {
+                    if self.piece_committed_at[u32::from(pid) as usize].is_some() {
+                        return Err(undo);
+                    }
+                    self.snapshot_available(&mut undo);
+                    let piece_mask: Vec<u64> = self.tables.piece_mask(pid).to_vec();
+                    for w in 0..wpm {
+                        self.available_rows[w] &= !piece_mask[w];
+                    }
+                    self.piece_committed_at[u32::from(pid) as usize] = Some(c);
+                    self.cell_committed_piece[c as usize] = Some(pid);
+                    undo.pieces_committed.push((pid, c));
+                    self.stats.piece_commits += 1;
+                    for other in 0..self.topology.n_cells {
+                        if other == c { continue; }
+                        if self.cell_committed_piece[other as usize].is_some() { continue; }
+                        work.push(other);
+                    }
                 }
             }
         }

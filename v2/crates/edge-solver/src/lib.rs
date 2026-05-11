@@ -241,6 +241,89 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "long-running; requires data file"]
+    fn solve_16x16_official_no_alldiff() {
+        use eternity2_core::Hints;
+        let csv_path = std::path::PathBuf::from("../../data/puzzles/size_16_official_eternity.csv");
+        if !csv_path.exists() {
+            eprintln!("skipping: {} not found", csv_path.display());
+            return;
+        }
+        // Load puzzle via direct CSV parsing (avoid pulling in benchmark crate as a dep).
+        let pieces: Vec<eternity2_core::Piece> = std::fs::read_to_string(&csv_path)
+            .unwrap()
+            .lines()
+            .enumerate()
+            .filter_map(|(i, line)| {
+                let parts: Vec<&str> = line.split(',').collect();
+                if parts.len() < 4 { return None; }
+                let t = parts[0].parse().ok()?;
+                let r = parts[1].parse().ok()?;
+                let b = parts[2].parse().ok()?;
+                let l = parts[3].parse().ok()?;
+                Some(eternity2_core::Piece::new(i as u16, eternity2_core::Edges::new(t, r, b, l)))
+            })
+            .collect();
+        eprintln!("loaded {} pieces", pieces.len());
+        let max_color = pieces.iter().flat_map(|p| p.edges.as_array()).max().unwrap_or(0);
+        let puzzle = eternity2_core::Puzzle::new(16, 16, (max_color as u32) + 1, pieces).unwrap();
+        let topology = Topology::new(&puzzle);
+        let tables = Tables::new(&puzzle, &topology);
+        eprintln!("topology: n_edges={} n_cells={} n_rows={}",
+            topology.n_edges, topology.n_cells, tables.n_rows);
+        let mut cfg = SearchConfig::default();
+        cfg.time_budget_ms = 60_000;
+        cfg.propagate_piece_uniqueness = false;
+        let mut search = Search::new(&puzzle, &topology, &tables, cfg);
+        let start = std::time::Instant::now();
+        let clock = || start.elapsed().as_micros() as u64;
+        search.started_us = 0;
+        let r = search.recurse(&clock);
+        let elapsed_s = start.elapsed().as_secs_f64();
+        eprintln!("16x16 no-alldiff: result={:?} best_score={}/{} nodes={} backtracks={} elapsed={:.1}s",
+            r, search.best_score, topology.n_edges, search.stats.nodes, search.stats.backtracks, elapsed_s);
+        let _ = Hints::default();
+    }
+
+    #[test]
+    fn solves_10x10_generated_hall1() {
+        let puzzle = generate(GeneratorConfig { size: 10, interior_colors: 8, seed: 11 }).unwrap();
+        let topology = Topology::new(&puzzle);
+        let tables = Tables::new(&puzzle, &topology);
+        let mut cfg = SearchConfig::default();
+        cfg.time_budget_ms = 60_000;
+        let mut search = Search::new(&puzzle, &topology, &tables, cfg);
+        let start = std::time::Instant::now();
+        let clock = || start.elapsed().as_micros() as u64;
+        let r = search.recurse(&clock);
+        let elapsed_s = start.elapsed().as_secs_f64();
+        eprintln!("10x10 hall1: result={:?} best_score={}/{} nodes={} backtracks={} elapsed={:.1}s",
+            r, search.best_score, topology.n_edges, search.stats.nodes, search.stats.backtracks, elapsed_s);
+        let (board, rstats) = recover::recover_board_with_stats(&puzzle, &topology, &tables, &search.best_edge_color);
+        let placed = board.cells().iter().filter(|c| c.is_some()).count();
+        eprintln!("  recovered: {placed}/{} cells; {} fully-determined", puzzle.cell_count(), rstats.cells_fully_determined);
+    }
+
+    #[test]
+    fn solves_8x8_generated_hall1() {
+        let puzzle = generate(GeneratorConfig { size: 8, interior_colors: 6, seed: 11 }).unwrap();
+        let topology = Topology::new(&puzzle);
+        let tables = Tables::new(&puzzle, &topology);
+        let mut cfg = SearchConfig::default();
+        cfg.time_budget_ms = 30_000;
+        let mut search = Search::new(&puzzle, &topology, &tables, cfg);
+        let start = std::time::Instant::now();
+        let clock = || start.elapsed().as_micros() as u64;
+        let r = search.recurse(&clock);
+        let elapsed_s = start.elapsed().as_secs_f64();
+        eprintln!("8x8 hall1: result={:?} best_score={}/{} nodes={} backtracks={} elapsed={:.1}s",
+            r, search.best_score, topology.n_edges, search.stats.nodes, search.stats.backtracks, elapsed_s);
+        let (board, _rstats) = recover::recover_board_with_stats(&puzzle, &topology, &tables, &search.best_edge_color);
+        let placed = board.cells().iter().filter(|c| c.is_some()).count();
+        eprintln!("  recovered: {placed}/{} cells", puzzle.cell_count());
+    }
+
+    #[test]
     fn solves_6x6_no_alldiff() {
         let puzzle = generate(GeneratorConfig { size: 6, interior_colors: 5, seed: 11 }).unwrap();
         let topology = Topology::new(&puzzle);

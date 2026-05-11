@@ -2,23 +2,36 @@
 //
 // For each cell, if all 4 surrounding edges are determined (boundary
 // sides are fixed BORDER, interior sides are pinned by the assignment),
-// look up the (piece, rotation) row whose 4-tuple matches. The
-// piece-alldiff is solved by a greedy assignment: cells with the
-// smallest candidate set first.
+// look up the (piece, rotation) row whose 4-tuple matches.
+//
+// Piece-alldiff: solve the bipartite matching (cells × pieces) with
+// edges = "this piece can satisfy this cell." Maximum matching gives
+// the most pieces placeable. Augmenting-path algorithm — O(V·E) which
+// for E2 is well under a millisecond.
 //
 // Cells with any unassigned interior edge are left empty in the
 // recovered Board — they're the "broken" cells the partial doesn't cover.
 
-use std::collections::BTreeMap;
-
-use eternity2_core::{Board, Color, Position, BORDER};
+use eternity2_core::{Board, Color, PieceId, Position, Rotation, BORDER};
 
 use crate::tables::Tables;
-use crate::topology::{Topology, SIDE_BOTTOM, SIDE_LEFT, SIDE_RIGHT, SIDE_TOP};
+use crate::topology::Topology;
 
-/// Convert an edge-color assignment into a Board with pieces placed.
-/// Cells with under-determined edges are left empty. Piece-uniqueness
-/// is respected via a greedy assignment over fully-determined cells.
+/// Diagnostic counts about an edge-color assignment.
+#[derive(Debug, Clone, Copy)]
+pub struct RecoveryStats {
+    pub cells_fully_determined: u32,
+    pub cells_with_any_candidates: u32,
+    pub cells_with_zero_candidates: u32,
+    pub total_candidate_count: u64,
+    pub max_candidate_count: u32,
+    pub cells_placed: u32,
+}
+
+/// Convert an edge-color assignment into a Board with maximum piece
+/// placements respecting the alldiff. Solves the bipartite matching
+/// (fully-determined-cells × pieces) via augmenting paths, then
+/// records one rotation per matched piece-cell pair.
 #[must_use]
 pub fn recover_board(
     puzzle: &eternity2_core::Puzzle,
@@ -26,10 +39,29 @@ pub fn recover_board(
     tables: &Tables,
     edge_color: &[Option<Color>],
 ) -> Board {
+    recover_board_with_stats(puzzle, topology, tables, edge_color).0
+}
+
+#[must_use]
+pub fn recover_board_with_stats(
+    puzzle: &eternity2_core::Puzzle,
+    topology: &Topology,
+    tables: &Tables,
+    edge_color: &[Option<Color>],
+) -> (Board, RecoveryStats) {
     let mut board = Board::empty(puzzle);
-    // For each cell, build the 4-tuple of edges (using BORDER for
-    // boundary sides). Skip cells where any interior side is None.
-    let mut candidates_per_cell: Vec<(u32, Vec<(eternity2_core::PieceId, eternity2_core::Rotation)>)> =
+    let mut stats = RecoveryStats {
+        cells_fully_determined: 0,
+        cells_with_any_candidates: 0,
+        cells_with_zero_candidates: 0,
+        total_candidate_count: 0,
+        max_candidate_count: 0,
+        cells_placed: 0,
+    };
+
+    // Per-cell candidate (piece, rotation) lists. Cells with any
+    // unassigned interior edge are skipped (no entry).
+    let mut candidates_per_cell: Vec<(u32, Vec<(PieceId, Rotation)>)> =
         Vec::with_capacity(topology.n_cells as usize);
     for c in 0..topology.n_cells {
         let sides = topology.cell_sides[c as usize];
@@ -47,33 +79,79 @@ pub fn recover_board(
         if !all_known {
             continue;
         }
-        // Find rows matching this 4-tuple.
-        let mut matches: Vec<(eternity2_core::PieceId, eternity2_core::Rotation)> = Vec::new();
+        let mut matches: Vec<(PieceId, Rotation)> = Vec::new();
         for row in &tables.rows {
             if row.edges == edges_known {
                 matches.push((row.piece_id, row.rotation));
             }
         }
-        candidates_per_cell.push((c, matches));
+        stats.cells_fully_determined += 1;
+        let n_cand = matches.len() as u32;
+        if n_cand == 0 {
+            stats.cells_with_zero_candidates += 1;
+        } else {
+            stats.cells_with_any_candidates += 1;
+            stats.total_candidate_count += u64::from(n_cand);
+            if n_cand > stats.max_candidate_count {
+                stats.max_candidate_count = n_cand;
+            }
+            candidates_per_cell.push((c, matches));
+        }
     }
 
-    // Greedy assignment: cells with smallest candidate count first.
-    candidates_per_cell.sort_by_key(|(_, m)| m.len());
-    let mut used: Vec<bool> = vec![false; tables.max_piece_id as usize + 1];
-    for (cell, candidates) in candidates_per_cell {
+    // Bipartite max-matching via Hopcroft-Karp-style augmenting paths.
+    // Left = candidate cells (indexed 0..n_left). Right = pieces.
+    // Edges = "piece can satisfy cell." Track piece→cell mapping.
+    let n_left = candidates_per_cell.len();
+    let n_pieces = tables.max_piece_id as usize + 1;
+    let mut piece_to_left: Vec<Option<usize>> = vec![None; n_pieces];
+
+    // For each left node, augmenting-path DFS.
+    fn try_augment(
+        left: usize,
+        candidates_per_cell: &[(u32, Vec<(PieceId, Rotation)>)],
+        piece_to_left: &mut Vec<Option<usize>>,
+        visited: &mut Vec<bool>,
+    ) -> bool {
+        for (pid, _rot) in &candidates_per_cell[left].1 {
+            let p_idx = u32::from(*pid) as usize;
+            if visited[p_idx] {
+                continue;
+            }
+            visited[p_idx] = true;
+            let free = match piece_to_left[p_idx] {
+                None => true,
+                Some(other_left) => try_augment(other_left, candidates_per_cell, piece_to_left, visited),
+            };
+            if free {
+                piece_to_left[p_idx] = Some(left);
+                return true;
+            }
+        }
+        false
+    }
+
+    for left in 0..n_left {
+        let mut visited = vec![false; n_pieces];
+        let _ = try_augment(left, &candidates_per_cell, &mut piece_to_left, &mut visited);
+    }
+
+    // Build inverse: cell → (piece, rotation). For each matched piece,
+    // pick the first rotation that fits (there may be multiple; they
+    // produce the same 4-tuple since rotations were dedup'd at row build).
+    for (p_idx, maybe_left) in piece_to_left.iter().enumerate() {
+        let Some(left) = maybe_left else { continue; };
+        let (cell, candidates) = &candidates_per_cell[*left];
         for (pid, rot) in candidates {
-            if !used[u32::from(pid) as usize] {
-                used[u32::from(pid) as usize] = true;
-                board.place(cell as Position, pid, rot);
+            if u32::from(*pid) as usize == p_idx {
+                board.place(*cell as Position, *pid, *rot);
+                stats.cells_placed += 1;
                 break;
             }
         }
-        // If no unused candidate, leave cell empty — caller can score
-        // the partial via the standard edge-matching metric.
     }
-    let _ = (SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM, SIDE_LEFT);
-    let _ = BTreeMap::<u32, u32>::new();
-    board
+
+    (board, stats)
 }
 
 #[cfg(test)]
