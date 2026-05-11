@@ -1505,6 +1505,86 @@ long enough — but it would need to actually finish.
 Side-tools added this session:
 - `scripts/compare_boards.py`: pairwise board similarity
   (border, interior, mismatch overlap).
-- (Inline Python, not yet committed as a script): universal
-  mismatch frequency analysis. Worth promoting to a proper bin
-  if we revisit.
+- `scripts/universal_mismatches.py`: structural-hard edge
+  detection across many plateau JSONs (committed).
+
+### Z3 attempt on 10×10 center: timeout
+
+Z3 -wcnf -T:300 on the 120 MB old-format WCNF (pin everything
+outside the 10×10 center, all other cells pinned from the
+canonical 449 plateau). Result: timeout. Z3 used 1.84 GB RSS
+and produced no output in 5 min. The encoder emits all 256
+cells × all (piece, rotation) variables, even when 156 are
+pinned — the SAT solver still has to propagate through them.
+
+Lesson: a *minimal* encoder that only emits the 100 free
+cells would shrink the instance dramatically. Would need to
+restructure VarMap to skip pinned cells. Future work.
+
+Native MaxSAT solvers (EvalMaxSAT, CashWMaxSAT-Core,
+UWrMaxSAT) would handle the current instance, but none are
+available on this system. Compiling from source = session-3+
+work.
+
+### Frame-first big run intermediate
+
+12-border run started 22:08. Each candidate: 60s border-gen +
+30s interior CP + 180s PT = ~4.5 min.
+
+```
+Candidate 1 (seed 0xCAFEFEED): border 60/60 in 60s,
+            interior CP 286/480, PT 446/480.  NEW BEST 446.
+Candidate 2 (seed 0xCAFEFEEE): border 60/60 in 60s,
+            interior CP 270/480, PT 447/480.  NEW BEST 447.
+Candidate 3 (in flight)
+...
+```
+
+**Pattern emerging**: each border gives a slightly different PT
+final score in the 444-447 band. Below our 449 canonical, but
+within ±5 — borders DO matter, but not enormously. 12 borders
+sampled with longer PT should give us the variance distribution.
+
+If best ≤ 449 after 12 borders: borders don't break the
+plateau on their own; need GA or native MaxSAT.
+If any > 449: we've crossed it via border variation alone.
+
+### Mid-run synthesis (decision-ready summary)
+
+**What this session 2 has established**:
+
+1. **The 449 plateau is structurally hard at multiple scales**:
+   - Outer ring: trivially 100% across all PT runs.
+   - 14×14 interior: ~91% ceiling.
+   - 12×12 interior: ~88% ceiling.
+   - 10×10 center: ~87% ceiling.
+
+2. **Universal-mismatch edges exist** (e.g., (4,11)-(5,11)
+   mismatched in 63% of plateaus across 19 boards). These are
+   genuinely structural — different pieces consistently fail to
+   match across them.
+
+3. **Borders matter, but not by much**. Different borders give
+   different basins (smoke test: 4 borders → 444/444/445/446
+   scores). Whether 12 borders can find one above 449 is the
+   current experiment.
+
+4. **Pinned-boundary local repair fails universally**. ALNS+MWPM
+   confirmed for the 449 regime: no destroy-set whose pinned
+   boundary comes from a plateau state admits an interior
+   improvement.
+
+**What this implies for session 3+**:
+
+- **If frame-first reaches >449**: borders WERE the bottleneck.
+  Push that approach harder. (Schaus-Deville reached 458 with
+  more sophisticated frame-first; we'd target that.)
+- **If frame-first plateaus at 444-449**: the structural ceiling
+  is independent of border choice. Then:
+  - Try **GA with block crossover** (different mechanism,
+    can cross basins).
+  - Compile a native MaxSAT solver (EvalMaxSAT, ~1 day).
+  - Try **universally-hard-mismatch-constrained CP**: hard-pin
+    the top-20 universal mismatches to match, see if a solution
+    exists. If yes, +20 edges. If no, those edges are
+    *provably* unsolvable jointly — a strong negative result.
