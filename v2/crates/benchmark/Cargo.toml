@@ -80,9 +80,14 @@ path = "src/bin/plateau_analyze.rs"
 name = "component_repair"
 path = "src/bin/component_repair.rs"
 
+[[bin]]
+name = "sat_e2"
+path = "src/bin/sat_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-edge-solver = { path = "../edge-solver" }
+eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-events = { path = "../events" }
 eternity2-generator = { path = "../generator" }
 eternity2-localsearch = { path = "../localsearch" }

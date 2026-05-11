@@ -66,10 +66,9 @@ struct Args {
     /// Free ALL mismatch components simultaneously (default true). The
     /// solver-engine refuses hint sets where the pinned cells contain
     /// any color mismatch, so pinning cells from non-target components
-    /// fails. Set to false to test only the target component (will fail
-    /// if other components contain mismatches in pinned cells).
-    #[arg(long, default_value_t = true)]
-    free_all_mismatch: bool,
+    /// fails. Pass --target-only to test only the target component.
+    #[arg(long, default_value_t = false)]
+    target_only: bool,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -274,12 +273,13 @@ fn main() {
 
     let target_cells = load_component_cells(&analysis_v, args.component);
     eprintln!("target component {}: {} cells", args.component, target_cells.len());
-    let cells: Vec<u32> = if args.free_all_mismatch {
-        let all = load_all_mismatch_cells(&analysis_v);
-        eprintln!("free_all_mismatch=true: freeing all {} mismatch-incident cells", all.len());
-        all
-    } else {
+    let cells: Vec<u32> = if args.target_only {
+        eprintln!("target_only=true: freeing only the target component");
         target_cells.clone()
+    } else {
+        let all = load_all_mismatch_cells(&analysis_v);
+        eprintln!("freeing all {} mismatch-incident cells (default)", all.len());
+        all
     };
 
     let w = puzzle.width;

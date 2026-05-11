@@ -316,10 +316,128 @@ not AC3-consistent." Even with 60+ freed cells.
   unrepairable) is equally a fall-back signal: localization is
   spatial only, not algorithmic. **Recommend Option C (SAT) next.**
 
-Pending checks before committing to Option C:
-1. Run F2 on the *fresh* 449 (different basin entry, currently
-   training in background) — verifies the obstruction isn't a
-   property of just the canonical state.
-2. Run F2 on the smaller components (6, 5, 2 cells). If even those
-   AC3-wipe, the pinned-ring obstruction is global to the basin,
-   not just an artifact of the south blob.
+### 2026-05-11 — F2 on fresh 449 (different basin) — confirms basin-invariance of wipeout
+
+Fresh `output/pt_e2_1778526208_449of480.json` produced by a 60s+600s
+cell-CP→PT run with the same seed. **Same score (449), different
+basin** (different bucas board_edges blob, different component
+structure).
+
+`plateau_analyze` on the fresh state:
+- **5 components** (vs 4 in canonical), sizes **23/16/6/3/2**.
+- Localization ratio: **0.460** (vs 0.745 — fresh basin is more
+  multi-clustered).
+- Largest component is 23 cells, in a different region than the
+  canonical's 38-cell south blob.
+
+`component_repair` with `--free-all-mismatch` (default, frees the
+union of all 50 mismatch-incident cells) targeting each component
+in turn: **all 5 components AC3-wipe** in < 0.1s. Wipeout is at
+position 103 (row 6, col 7) — a *pinned non-mismatch* cell. Same
+mechanism as canonical: AC3 finds the pinned ring inconsistent.
+
+`--target-only` (freeing only the 2-cell smallest component): AC3
+wipes at position 92 in 0.05s, but this is the expected case — the
+48 mismatch-edge-incident cells in *other* components are still
+pinned and inherently contradict each other.
+
+**Cross-basin conclusion**:
+- The component structure of the 31 mismatches *changes* between
+  basins (4-comp 38/6/5/2 vs 5-comp 23/16/6/3/2), but
+- The AC3-unsatisfiability of the pinned ring is **basin-invariant**
+  — both 449 states fail the same way.
+- This rules out "the canonical basin happens to be locally
+  unrepairable; other basins are better" as a hypothesis. Local
+  CP repair fails *across distinct basins of the 449 plateau*.
+
+### Final Option A verdict
+
+1. **Spatial localization of mismatches is real but basin-dependent**
+   (0.745 vs 0.460). The plateau is not a uniform-failure regime.
+2. **AC3-unsatisfiability of the plateau pinned ring is universal**
+   across the 2 distinct basins tested. Mini-CP local repair cannot
+   improve any of these states — the obstruction is structural to
+   the plateau's cell placements, not to any single basin.
+3. **Recommendation: Option C (SAT).** The structural-localization
+   finding alone doesn't break the plateau; we need an authoritative
+   feasibility answer to know whether 450+ is reachable *at all* on
+   this 5-clue puzzle. CDCL is the right tool — it can prove
+   infeasibility (≤449 is the ceiling) or find a witness (≥450 is
+   reachable).
+
+---
+
+## Option C — SAT encoding (vol. 4 session 1)
+
+### Design
+
+Model: piece-rotation-at-cell (Ansótegui-Sellmann-Tabar 2008 lineage).
+
+**Piece variables**: `x_{c,p,r}` = 1 iff piece p is placed at cell c
+in rotation r. Class-filtered (only corner pieces at corners, edge
+pieces on the boundary ring, interior pieces in the interior) and
+border-matched (the piece's BORDER sides must align with the cell's
+BORDER sides).
+
+**Edge-match auxiliary variables**: For each interior edge e and each
+non-border color k ∈ {1..=22}, `m_{e,k}` = 1 iff both incident cells
+project color k onto edge e. Encoded via:
+  m_{e,k} → ∨_{(p,r): emit(p,r,side_a)=k} x_{c_a,p,r}
+  m_{e,k} → ∨_{(p,r): emit(p,r,side_b)=k} x_{c_b,p,r}
+
+The reverse direction is implicit: the soft objective ranks models
+by # satisfied "∨_k m_{e,k}" clauses.
+
+**AMO encoding**: bimander (Hölldobler-Nguyen 2013) with √n groups
+for n > 6, pairwise otherwise. Strictly better than pairwise for the
+n ≈ 100-700 sizes per cell at the 16×16 scale.
+
+**Hints**: unit clauses pinning the 5 official hint cells.
+
+**MaxSAT objective**: maximize the number of satisfied
+"∨_k m_{e,k}" clauses (one per interior edge). The optimum
+equals the maximum matched-edge count achievable under the
+puzzle's hard constraints.
+
+### 16×16 official encoding sizes
+
+```
+piece-vars            156 816
+edge-match aux         10 560
+AMO aux                 ~3 736
+total vars            171 112
+hard clauses        5 796 245
+soft clauses              480
+WCNF file              108.8 MB
+```
+
+### Validation ladder
+
+- **3×3 generated** (4 colors, splr): SAT, decoded board scores 100%.
+- **4×4 generated** (5 colors, splr): SAT, 100%.
+- **5×5 generated** (6 colors, splr): SAT, 100%.
+- **5×5 generated** WCNF → RC2: optimum = 40/40 satisfied in 0.0s.
+  End-to-end pipeline (encode → WCNF → pysat → RC2 → optimal) works.
+
+### 16×16 official run
+
+WCNF emitted to `output/sat_e2_size_16_official_eternity_1778526730.wcnf`
+(108.8 MB). RC2 launched with 30-minute budget on backend Glucose-3.
+Result pending; the instance is large and may exhaust budget.
+
+The result is meaningful in either direction:
+- **Optimum reported = 480**: a perfect solution exists — our local
+  search has been leaving 31 edges on the table. Big result.
+- **Optimum reported < 480 and proved**: the structural ceiling is
+  authoritative. If ≤ 449, the cell-CP→PT pipeline is at the optimum.
+  If 450-479, there's headroom local search hasn't reached.
+- **No proof within budget**: most likely outcome at this scale.
+  Would need state-of-the-art native MaxSAT solvers (EvalMaxSAT,
+  CashWMaxSAT) and/or several hours.
+
+### Code added
+
+- New crate `crates/sat-encoder/` (lib + integration tests).
+- New bin `crates/benchmark/src/bin/sat_e2.rs` (encode 16×16 or
+  generated puzzles to CNF/WCNF).
+- New script `scripts/run_maxsat.py` (load WCNF, run RC2 with budget).

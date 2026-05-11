@@ -301,6 +301,7 @@ dependencies = [
  "eternity2-events",
  "eternity2-generator",
  "eternity2-localsearch",
+ "eternity2-sat-encoder",
  "eternity2-solver-engine",
  "eternity2-solver-naive",
  "eternity2-solver-trait",
@@ -358,6 +359,15 @@ name = "eternity2-propagators"
 version = "0.1.0"
 dependencies = [
  "eternity2-core",
+]
+
+[[package]]
+name = "eternity2-sat-encoder"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-generator",
+ "splr",
 ]
 
 [[package]]
@@ -1178,6 +1188,15 @@ checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "splr"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6c8d72268886573a95520ff76c282876c69d3776e02a0b4ac8eea2b310d69ca"
+dependencies = [
+ "bitflags",
 ]
 
 [[package]]
