@@ -291,12 +291,17 @@ fn main() {
     let t_global = Instant::now();
     let mut seen: BTreeMap<BorderSig, u32> = BTreeMap::new();
     let mut best: (u32, u32, Option<Board>, u64) = (0, 0, None, 0); // (score, total, board, seed_used)
-    let mut interior_stats: Vec<(u64, u32, u32, u32)> = Vec::new(); // (seed, border_filled, cp_score, pt_score)
+    // (seed, border_filled, cp_score, pt_score, bucas_url_of_final_board).
+    // Adding the bucas URL is what enables downstream filtering (e.g. by
+    // top-6 universal-mismatch matches). The URL is the canonical
+    // serialisation we use everywhere; it's 1 KB per board so the
+    // checkpoint stays small even for 100 candidates.
+    let mut interior_stats: Vec<(u64, u32, u32, u32, String)> = Vec::new();
 
     // Helper to (re)write the checkpoint. Called after every successful
     // candidate AND once before the loop so jq always has a parseable
     // file even if every candidate fails.
-    let write_checkpoint = |interior_stats: &Vec<(u64, u32, u32, u32)>,
+    let write_checkpoint = |interior_stats: &Vec<(u64, u32, u32, u32, String)>,
                             best: &(u32, u32, Option<Board>, u64),
                             t_global: &Instant| {
         let best_url = best.2.as_ref().map(|b| {
@@ -320,9 +325,10 @@ fn main() {
                 "seed_hex": format!("0x{:x}", best.3),
                 "bucas_url": best_url,
             },
-            "per_border": interior_stats.iter().map(|(s, b, c, p)| serde_json::json!({
+            "per_border": interior_stats.iter().map(|(s, b, c, p, url)| serde_json::json!({
                 "seed": s, "seed_hex": format!("0x{:x}", s),
                 "border_filled": b, "cp_score": c, "pt_score": p,
+                "bucas_url": url,
             })).collect::<Vec<_>>(),
         });
         let tmp = args.checkpoint_path.with_extension("json.tmp");
@@ -390,10 +396,14 @@ fn main() {
             eprintln!("  PT elapsed: {:.1}s, score: {}/{} ({:.1}%)",
                 t3.elapsed().as_secs_f64(), pt_s, pt_t, pct(pt_s, pt_t));
             flush_err();
-            interior_stats.push((seed, n_filled, cp_s, pt_s));
+            let url = eternity2_benchmark::report::bucas_url(
+                &puzzle, &pt_board, &puzzle_name_from_path(&args.puzzle));
+            interior_stats.push((seed, n_filled, cp_s, pt_s, url));
             pt_board
         } else {
-            interior_stats.push((seed, n_filled, cp_s, cp_s));
+            let url = eternity2_benchmark::report::bucas_url(
+                &puzzle, &cp_board, &puzzle_name_from_path(&args.puzzle));
+            interior_stats.push((seed, n_filled, cp_s, cp_s, url));
             cp_board
         };
 
@@ -411,7 +421,7 @@ fn main() {
     eprintln!("best overall: {}/{} ({:.1}%) at seed=0x{:x}",
         best.0, best.1, pct(best.0, best.1), best.3);
     eprintln!("per-border (seed, border_filled, cp_score, pt_score):");
-    for (s, b, c, p) in &interior_stats {
+    for (s, b, c, p, _url) in &interior_stats {
         eprintln!("  seed=0x{:x} border={} cp={} pt={}", s, b, c, p);
     }
 
@@ -426,8 +436,8 @@ fn main() {
                 "cp_seconds": args.cp_seconds,
                 "pt_seconds": args.pt_seconds,
                 "best_seed": best.3,
-                "per_border": interior_stats.iter().map(|(s, b, c, p)| {
-                    serde_json::json!({"seed": s, "border_filled": b, "cp_score": c, "pt_score": p})
+                "per_border": interior_stats.iter().map(|(s, b, c, p, url)| {
+                    serde_json::json!({"seed": s, "border_filled": b, "cp_score": c, "pt_score": p, "bucas_url": url})
                 }).collect::<Vec<_>>(),
             },
             "base_seed": args.base_seed,
