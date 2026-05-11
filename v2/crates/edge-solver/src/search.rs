@@ -31,6 +31,11 @@ pub struct SearchConfig {
     /// the same piece. That implies piece-uniqueness violation. Fail.
     /// Cheap, conservative, sound.
     pub hall1_check: bool,
+    /// Full bipartite-matching alldiff feasibility, run after every
+    /// K-th assign. K=0 disables. Strongest sound alldiff propagator
+    /// short of Régin's CP-style alldiff (which would also prune
+    /// individual rows from cell domains). Cost: O(V·E) per check.
+    pub matching_check_every: u32,
     /// Sound: tighten each cell's row-mask by AND with available_rows
     /// after every assign. Without this, cell_rows_alive can leak
     /// rows of pieces that have been committed elsewhere.
@@ -50,6 +55,7 @@ impl Default for SearchConfig {
             seed: 0,
             propagate_piece_uniqueness: false,
             hall1_check: true,
+            matching_check_every: 0,
             tighten_with_available: false,
             stop_on_first: true,
             trace: false,
@@ -63,6 +69,8 @@ pub struct SearchStats {
     pub backtracks: u64,
     pub propagations: u64,
     pub piece_commits: u64,
+    pub matching_failures: u64,
+    pub matching_checks: u64,
     pub edges_assigned_best: u32,
     pub time_us: u64,
 }
@@ -296,6 +304,19 @@ impl<'a> Search<'a> {
             }
         }
 
+        // Step 3.5: optional full bipartite-matching alldiff check.
+        // Sound; strongest alldiff propagator we have. Periodic (every
+        // matching_check_every assigns) to amortize cost.
+        if self.config.matching_check_every > 0
+            && (self.stats.nodes as u32) % self.config.matching_check_every == 0
+        {
+            self.stats.matching_checks += 1;
+            if !self.has_complete_matching() {
+                self.stats.matching_failures += 1;
+                return Err(undo);
+            }
+        }
+
         // Step 4: optional UNSOUND eager piece-commit propagator (A/B testing).
         if self.config.propagate_piece_uniqueness {
             let mut work: Vec<u32> = (0..self.topology.n_cells).collect();
@@ -407,6 +428,84 @@ impl<'a> Search<'a> {
             }
         }
         colors
+    }
+
+    /// Check if there is a system of distinct representatives — i.e.,
+    /// can every uncommitted cell be paired with a distinct piece such
+    /// that the piece is in the cell's mask ∩ available_rows? This is
+    /// bipartite max-matching. Returns true iff matching covers all
+    /// uncommitted cells.
+    fn has_complete_matching(&self) -> bool {
+        let wpm = self.tables.words_per_mask;
+        let n_cells = self.topology.n_cells as usize;
+        let n_pieces = self.tables.max_piece_id as usize + 1;
+
+        // Build cell → piece-candidate-list for uncommitted cells.
+        // (Each cell can be represented as the set of piece ids whose
+        // rows are in mask ∩ available_rows.)
+        let mut cells: Vec<u32> = Vec::with_capacity(n_cells);
+        let mut adj: Vec<Vec<u32>> = Vec::with_capacity(n_cells); // adj[idx] = piece ids
+        for c in 0..n_cells {
+            if self.cell_committed_piece[c].is_some() { continue; }
+            let i = c * wpm;
+            let mut pieces_set: Vec<u32> = Vec::new();
+            let mut seen = vec![false; n_pieces];
+            for w in 0..wpm {
+                let word = self.cell_rows_alive[i + w] & self.available_rows[w];
+                if word == 0 { continue; }
+                let mut x = word;
+                while x != 0 {
+                    let bit = x.trailing_zeros();
+                    let rid = (w as u32) * 64 + bit;
+                    let pid = u32::from(self.tables.rows[rid as usize].piece_id);
+                    if !seen[pid as usize] {
+                        seen[pid as usize] = true;
+                        pieces_set.push(pid);
+                    }
+                    x &= x - 1;
+                }
+            }
+            if pieces_set.is_empty() {
+                // No piece for this cell — infeasible regardless of matching.
+                return false;
+            }
+            cells.push(c as u32);
+            adj.push(pieces_set);
+        }
+
+        // Augmenting-path bipartite matching.
+        let mut piece_to_cell: Vec<i32> = vec![-1; n_pieces];
+        fn try_augment(
+            left: usize,
+            adj: &[Vec<u32>],
+            piece_to_cell: &mut [i32],
+            visited: &mut [bool],
+        ) -> bool {
+            for &pid in &adj[left] {
+                if visited[pid as usize] { continue; }
+                visited[pid as usize] = true;
+                if piece_to_cell[pid as usize] < 0 ||
+                    try_augment(
+                        piece_to_cell[pid as usize] as usize,
+                        adj,
+                        piece_to_cell,
+                        visited,
+                    )
+                {
+                    piece_to_cell[pid as usize] = left as i32;
+                    return true;
+                }
+            }
+            false
+        }
+        let mut matched = 0;
+        for left in 0..cells.len() {
+            let mut visited = vec![false; n_pieces];
+            if try_augment(left, &adj, &mut piece_to_cell, &mut visited) {
+                matched += 1;
+            }
+        }
+        matched == cells.len()
     }
 
     /// Translate engine-level hints into edge-CP terms and pin them.

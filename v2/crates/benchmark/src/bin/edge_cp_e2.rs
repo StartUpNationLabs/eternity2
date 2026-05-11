@@ -41,6 +41,11 @@ struct Args {
     /// Apply the 5 official hints from the CSV (pin pieces + edges).
     #[arg(long, default_value_t = true)]
     apply_hints: bool,
+
+    /// Run full bipartite-matching alldiff check every K assigns (0 = off).
+    /// Strongest sound alldiff propagator; expensive O(V·E) per check.
+    #[arg(long, default_value_t = 0)]
+    matching_every: u32,
 }
 
 fn translate_hint(
@@ -127,6 +132,7 @@ fn main() {
     let mut cfg = SearchConfig::default();
     cfg.time_budget_ms = args.seconds * 1000;
     cfg.propagate_piece_uniqueness = args.propagate_alldiff;
+    cfg.matching_check_every = args.matching_every;
     cfg.stop_on_first = true;
 
     let start = Instant::now();
@@ -155,6 +161,8 @@ fn main() {
     eprintln!("nodes={} backtracks={} propagations={} piece_commits={}",
         search.stats.nodes, search.stats.backtracks,
         search.stats.propagations, search.stats.piece_commits);
+    eprintln!("matching_checks={} matching_failures={}",
+        search.stats.matching_checks, search.stats.matching_failures);
     eprintln!("elapsed: {:.1}s", elapsed.as_secs_f64());
 
     let (board, rstats) = recover::recover_board_with_stats(&puzzle, &topology, &tables, &search.best_edge_color);
