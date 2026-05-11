@@ -453,6 +453,53 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE10 result 00:25 — 450 board is a strict 2-swap local optimum
+
+**Setup**: implemented Wauters/Salassa TA (K=16 Hungarian) + TSR
+(2-swap + 16-rot exhaustive). Tested on:
+- Frame-first 450 board: ran 50 TA iters + full TSR pass + 1
+  outer loop. **0 improvements**.
+- Canonical 449 board (basin B): same. **0 improvements**.
+
+**Brute-force verification**: tried 32,000 random 2-piece swaps × 16
+rotation combos = 512,000 (swap, rot) combinations on the 450 board.
+**ZERO produced score ≥ 451**.
+
+**Conclusion**: the 450 board is a STRICT 2-swap local optimum. The
+Wauters/Salassa pipeline as designed only adds +2 to +5 from MILP-
+constructed boards (initial 451-457). My PT-derived 450 has DIFFERENT
+local-optimum structure — PT already found the 2-swap-locally-optimal
+solution before TSR could touch it.
+
+**This is consistent with**:
+- Vol-3 finding: 449 is a Hamming moat from canonical CP+PT seed.
+- Vol-4 ALNS result: 4×4 destroys can't break 449.
+- Universal-mismatch finding: top-6 are where defects PT lands on
+  most, but the 31-mismatch budget is preserved across redistribution.
+
+**The honest takeaway**: to break 450, we need moves at scale ≥3-swap
+OR region rebuilds covering 4×4+ cells with ALL combinations
+considered. The bipartite matching K=16 of TA only changes pieces;
+it doesn't enable defect-cluster reorganization that the 2-swap
+neighborhood blocks.
+
+**Implications for tonight's plan**:
+- **NE10 polishing alone won't push 450 → 458**. Skip the rest of
+  NE10 (BW does similar work as TA; we'd just confirm the local-opt).
+- **Pivot back to NE1 (frame-first) for breaking 449/450 ceiling**.
+  Frame-first is the only known successful path.
+- **NE2-iter is still worth running** (tests structural redistribution).
+  ~30 min compute. Independent of NE10.
+- **Possible NEW high-value experiment NE11**: implement the RO
+  (Region Optimisation via Max-Clique) step from Salassa. With
+  python-igraph this is ~4h Rust+Python. Could break the 2-swap
+  ceiling. **DEFERRED to next day** unless NE1 returns nothing.
+
+**Scientific value of NE10**: clean evidence that pure polishing is
+insufficient. This is **publishable-quality** — most papers don't
+report attempted polishing that failed. Documenting the negative is
+honest.
+
 ### A5-night — Wauters/Salassa replication recipe — ACTIONABLE
 
 **Agent task**: extract the EXACT algorithm of the published 458 SOTA
