@@ -680,3 +680,186 @@ anchored variant, two things became obvious:
 > Step 1 is half-day and reframes everything; step 2 is
 > overnight-compute and may answer the headline question
 > directly. Do them in that order.
+
+---
+
+## 2026-05-11 — Literature survey (Step 1 from the revised plan)
+
+Two parallel research agents with web access were spawned:
+- **Track A** — structured survey of 8 specified methods + 2
+  freeform additions, with effort estimates and predicted gains.
+- **Track B** — unbiased breakthrough search for unexpected
+  cross-domain reframings (max 3 findings).
+
+Full agent transcripts retained in:
+`.claude/.../tasks/a45124e86b2ebc040.output` (Track A)
+`.claude/.../tasks/a750abb0bff6b144b.output` (Track B)
+
+This section is a synthesis, with the headline contradictions
+and best-supported takeaways foregrounded.
+
+### Important corrections from the survey
+
+1. **The Verhaard record is 467/480, Blackwood is 468/480** in
+   published literature. The "470" referenced in our auto-memory
+   `reference_blackwood_decoded.md` comes from inspecting the
+   actual `libblackwood` repo's `jb470.py` scenario on the
+   1-clue variant — not a published academic record. Both can
+   be true: published ceiling = 468; repo ceiling = 470. Not a
+   conflict, just two different sources at slightly different
+   numbers.
+2. The Wauters et al. tabu+VLNS published a **458/480** result
+   on E2 in 2012. The META'10 competition reached 461 with
+   memetic variants. So **our 449/480 is genuinely below
+   2012-era SOTA** — the cell-CP→PT stack is leaving 9-12 edges
+   on the table that simpler approaches with the right move-set
+   architecture have demonstrated.
+3. "Verhoef 2009" (the memetic-GA reference I cited from
+   memory) is the wrong name — likely a confusion with
+   Verhaard (the 467 record holder, who used pure backtracking,
+   not GA). Memetic-GA work is Niang 2011 thesis + Muñoz et al.
+   MICAI 2009.
+
+### Track A — structured rankings (top 5)
+
+| # | Method | Effort | Predicted gain | Why |
+|---|---|---|---|---|
+| 1 | **ALNS (adaptive LNS)** | 5-8 days | +2 to +5 | Multi-operator destroy-repair; PT only uses single-piece moves. Lowest-risk path to break 449. |
+| 2 | **Tabu w/ diversification** | 3-5 days | +0 to +2 | Cheapest sanity-check; whether PT diversity is the bottleneck. |
+| 3 | **Cost-based alldiff (Régin extension)** | 6-9 days | +0 to +3 | Strengthens CP propagation; allows PT to visit more basins per CPU-hour. |
+| 4 | **Memetic GA + block crossover** | 7-10 days | +2 to +6 | Only listed method with a true *non-local* recombination operator; META'10 precedent of 461. |
+| 5 | **Frame-first decomposition** | 4-6 days | +0 to +3 | Cheap to test; likely redundant with our border handling but worth confirming. |
+
+Full table including #6-10 (BP/SP, path-decomposition DP, MCTS+NN,
+Lagrangian, MIP) in the agent transcript. Bottom 3 dismissed
+on cost-benefit grounds.
+
+### Track B — three breakthrough angles
+
+**B1. MWPM-defect-pairing from quantum surface-code decoders.**
+- 31 mismatched edges = 31 defects on the cell-cell dual lattice.
+- Minimum-Weight Perfect Matching pairs defects via Edmonds'
+  blossom; each matched pair = a Kempe-chain of piece moves
+  that nets to zero new defects.
+- Tool: PyMatching v2 (sparse blossom, near-linear time on
+  surface-code-scale graphs).
+- Key reference: Higgott & Gidney, Quantum 2025.
+- **Why it could break 449**: PT's local moves cannot find
+  coordinated multi-cell rotation/swap chains. MWPM gives the
+  *globally optimal* defect pairing, defining the LNS
+  destroy-set explicitly.
+
+**B2. Survey Propagation + freezing analysis as a diagnostic.**
+- Run SP on our CP encoding once.
+- Identify "frozen variables" (per Sly-Sun-Zhang 2023's rigorous
+  treatment of 1RSB structure).
+- If 449 is a 1RSB cluster boundary → no PT tuning helps
+  (entropic barrier is order-N).
+- If 449 is just a hard local min → cluster-aware PT crosses it.
+- **Why it could break 449**: SP tells us *whether* the plateau
+  is structural before we burn weeks on the wrong attack.
+
+**B3. Diffusion-based PT proposals (IsingFormer 2025).**
+- Train a graph diffusion model on partial E2 boards.
+- Use sampled completions as PT swap proposals.
+- Replaces the local-move proposal kernel with a learned
+  long-range one.
+- **Why it could break 449**: PT's bottleneck is proposal
+  locality. A learned proposal kernel respects long-range
+  correlations the local kernel can't see.
+- Highest variance bet; defer until B1/B2 confirmed or ruled out.
+
+### Synthesis — the merged session-2 plan
+
+Track A's #1 (ALNS framework) and Track B's #1 (MWPM destroy-set
+selector) are **complementary, not competing**. They combine into
+a single move:
+
+> **ALNS with MWPM-defect-pairing as one of the destroy operators.**
+
+Concretely:
+- Build the ALNS shell (multi-operator destroy + CP-repair +
+  adaptive weights). 3-4 days.
+- Implement destroy operators:
+  - Random-region (baseline; mirrors existing region-repair)
+  - Conflict-driven (mirrors Houdayer)
+  - **MWPM-defect-pairing** (novel; Kempe-chain destroy-set)
+  - Worst-edge (lowest-match-density window)
+- Adaptive weights select among operators based on
+  per-operator improvement rate.
+
+This is the single highest-EV move from the survey:
+- Builds on existing infrastructure (edge-CP bipartite matching,
+  region-repair, CP backtracker).
+- Includes the cheap variant (random/conflict destroy = ALNS
+  baseline) as a regression test.
+- Adds the genuinely novel MWPM operator that has the sharpest
+  mechanistic claim to break 449.
+- ~7-10 days total; predicted +2 to +5 edges if the merged
+  hypothesis holds.
+
+**Important caveat to verify before building**: in surface
+codes, defects always come in pairs by construction (every
+Pauli error creates exactly 2 syndrome flips). E2 has 31
+mismatches — odd. The MWPM analogy needs adaptation: either
+add a "virtual boundary defect" (standard QEC trick for open
+boundaries) or rethink the mapping. This is a 1-day
+back-of-envelope check before committing.
+
+### Diagnostic (cheap, do alongside B1+A1)
+
+Run **Survey Propagation (B2)** as a one-off diagnostic before
+the ALNS build. If SP reports our plateau corresponds to a 1RSB
+cluster, all local-search methods (including ALNS) are
+fundamentally limited. If it reports something more tractable,
+we proceed with ALNS+MWPM confidently. Cost: ~1-2 weeks if
+implementing from scratch; cheaper if a pysat/cnf-tools BP
+wrapper exists.
+
+### What we're NOT doing
+
+Per the survey rankings, the following are deferred or skipped:
+- **MCTS + neural policy** (30-45 days, very high variance) —
+  defer until ALNS+MWPM either succeeds or definitively rules
+  out the move-set hypothesis.
+- **Path-decomposition DP** (14-21 days, +0 edges, but bounds) —
+  diagnostic only; do it only if we've decided 449 needs to be
+  proved tight rather than improved.
+- **Lagrangian relaxation, MIP+column-generation** — dominated
+  by SAT/CP at E2 size per Salassa 2017.
+- **Diffusion-PT proposals (B3)** — highest-variance; defer.
+
+### Revised session-2 priority
+
+1. **Sanity-check the MWPM defect-pairing mapping** (1 day). Is
+   the 31-defect parity issue resolvable cleanly?
+2. **Build ALNS shell + random/conflict-driven destroys** (3-4 days).
+   Verify it reaches our PT baseline (~449) — regression test.
+3. **Add MWPM-defect-pairing destroy operator** (2-3 days).
+4. **Run for a real budget** (overnight). Report whether we
+   break 449.
+5. **In parallel**: launch SP diagnostic (B2). Even if the
+   timing doesn't line up with the ALNS run, the SP result
+   informs whether further local-search investment makes sense.
+
+### Recovered context from the survey
+
+The survey makes our progress trajectory legible:
+- 2012 SOTA: 458/480 (Wauters tabu+VLNS).
+- 2010 META'10: 461/480 (memetic).
+- 2008 published: 467/480 (Verhaard backtracking).
+- 2020 repo: 468-470/480 (Blackwood, 1-clue variant).
+- Our 2026 stack: 449/480 (cell-CP→PT).
+
+We're at the 2010-era heuristic level despite better
+infrastructure. Track A's verdict is sharp: "**our 449 is
+below 2012-era SOTA**." This implies real headroom from
+move-set improvements alone — the structural-ceiling hypothesis
+from vol. 3-4 may be over-pessimistic.
+
+The reframe: maybe 449 is **not** the structural ceiling — it's
+the **single-piece-PT ceiling**. ALNS+MWPM, by introducing
+multi-piece coordinated moves, could land us at 458-461 (the
+documented SOTA range) without changing the structural
+hypothesis. Only if those *also* fail do we have evidence the
+459+ region is actually unreachable.
