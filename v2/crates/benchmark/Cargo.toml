@@ -56,6 +56,14 @@ path = "src/bin/houdayer_offline.rs"
 name = "audit_hints"
 path = "src/bin/audit_hints.rs"
 
+[[bin]]
+name = "central_repair"
+path = "src/bin/central_repair.rs"
+
+[[bin]]
+name = "worst_region_repair"
+path = "src/bin/worst_region_repair.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
