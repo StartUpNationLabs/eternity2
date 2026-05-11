@@ -863,3 +863,190 @@ multi-piece coordinated moves, could land us at 458-461 (the
 documented SOTA range) without changing the structural
 hypothesis. Only if those *also* fail do we have evidence the
 459+ region is actually unreachable.
+
+---
+
+## SESSION 2 PLAN (vol. 4, building starts now)
+
+### MWPM-mapping sanity check (paper derivation)
+
+In a surface code:
+- Lattice = cells; syndromes = parities of Pauli errors on
+  incident edges.
+- A single qubit error on an edge flips both adjacent cell
+  syndromes → **defects always come in pairs (Z2 parity)**.
+- MWPM pairs defects; each pair = a "correction string"
+  connecting them; flipping the string's edges restores zero
+  syndromes.
+
+In E2:
+- Lattice = cells; mismatches = interior edges where two cells
+  disagree on color.
+- A single piece-rotation/swap at cell c can change 0-4
+  incident-edge match states simultaneously → **no Z2 parity
+  conservation**. The count of mismatches can change by any
+  amount in {-4, ..., +4} per move.
+
+**Direct surface-code analogy fails on parity.** Defects in E2
+do NOT come in pairs by construction; we have 31 mismatches at
+the canonical plateau (odd).
+
+**But the core idea survives, weakened:** matching on the
+mismatched-edge graph is a *heuristic destroy-set selector*,
+not a correction algorithm. Specifically:
+
+- **Nodes** = the n mismatched edges of the current board
+  (n ≈ 31 on a 449-plateau).
+- **Edges** between two mismatches = shortest cell-path between
+  them. Weight = path length (Manhattan / hop count).
+- Compute a min-weight matching (regular matching, Edmonds
+  blossom). If n is odd, leave one defect unmatched.
+- The **destroy-set** = union of cells on the matched paths.
+  These are the cells whose simultaneous re-placement
+  *could* jointly resolve their incident mismatches.
+
+This is provably *not* a correction algorithm:
+- Re-placing the destroy-set cells doesn't guarantee fewer
+  mismatches (the repair-CP may not find a better assignment).
+- Defects can be "boundary defects" (adjacent to a cell that's
+  also wrong but to a different defect) — the matching
+  ignores this.
+
+It IS a *principled* destroy-set selector:
+- Cells on short defect-defect paths are exactly where the
+  current placement is locally incoherent.
+- CP repair on these cells, with neighbors pinned, asks:
+  "can we re-place these cells to remove both endpoint
+  mismatches at once?"
+- The minimality of the matching ensures the destroy-set is
+  small enough for fast CP repair, large enough to give CP
+  freedom.
+
+**Verdict on sanity check**: ✓ proceed, but with the
+understanding that MWPM is a *destroy-set heuristic for ALNS*,
+not a stand-alone correction algorithm. The Track-B agent's
+framing as "the exact algorithm QEC uses" was too strong; the
+real claim is "a principled, cheap, defect-aware destroy
+selector that single-piece moves can't replicate."
+
+### Architecture
+
+We need:
+
+```
+ALNS loop:
+  current_board ← starting board (e.g., from cell-CP → PT seed)
+  best_board ← current_board
+  operator_weights ← uniform initial weights
+  loop until budget:
+    op ← roulette-select(destroy operators, operator_weights)
+    free_set ← op(current_board)               // 30-100 cells typically
+    new_board ← cp_repair(current_board, free_set, time_budget_ms=200)
+    if new_board is None: continue              // repair failed
+    Δ = score(new_board) - score(current_board)
+    if accept(Δ): current_board ← new_board
+    if score(new_board) > score(best_board): best_board ← new_board
+    operator_weights[op] += reward(Δ)
+```
+
+**Destroy operators** (Rust trait):
+
+```rust
+pub trait DestroyOperator {
+    fn destroy(&mut self, board: &Board, rng: &mut Rng) -> BTreeSet<Position>;
+    fn name(&self) -> &str;
+}
+```
+
+Implementations:
+1. `RandomRegion { k: u32 }` — uniform-random k×k window.
+2. `WorstWindow { k: u32 }` — pick window with lowest matched-edge density.
+3. `ConflictDriven { radius: u32 }` — start from a random mismatched edge; grow set by 4-grid-adjacency until size cap.
+4. `MwpmDefectPairing { matching_cost_cap: u32 }` — build mismatched-edge graph; min-cost matching; union of paths on matched pairs.
+
+**Repair operator** (Rust function):
+
+```rust
+pub fn cp_repair(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_set: &BTreeSet<Position>,
+    budget_ms: u64,
+) -> Option<Board>
+```
+
+Reuses `eternity2_localsearch::repair::repair_region` logic
+but accepts an arbitrary free-set (not just a rectangle).
+Returns `None` if CP fails / times out without completing.
+
+**Acceptance criterion** (Rust enum):
+
+```rust
+pub enum AcceptanceCriterion {
+    Greedy,                          // accept only Δ > 0
+    SimulatedAnnealing { t: f64 },   // Metropolis with cooling
+    RecordToRecord { d: f64 },       // accept if score ≥ best - d
+}
+```
+
+Default: SA-style with linear cooling, starting at T=2.0,
+ending at T=0.05 (matches our PT temperature range).
+
+**Adaptive weights** (Rust struct):
+
+```rust
+pub struct AdaptiveWeights {
+    weights: Vec<f64>,              // one per operator
+    rewards: Vec<f64>,              // cumulative reward this segment
+    counts: Vec<u32>,
+    segment_iters: u32,             // recompute weights every N iters
+}
+```
+
+Reward schedule (per Ropke-Pisinger 2006):
+- `σ1` for new best score
+- `σ2` for accepted move with Δ > 0
+- `σ3` for accepted move with Δ ≤ 0
+- `σ4` for rejected move
+Typical: σ1=33, σ2=9, σ3=13, σ4=0. Decay weights by factor
+`r = 0.1` per segment to prevent runaway dominance.
+
+### Crate layout
+
+Add `crates/localsearch/src/alns.rs` (new module in existing
+crate; doesn't justify a new crate yet — shares board/CP
+infrastructure with PT and SA).
+
+New bin `crates/benchmark/src/bin/alns_e2.rs` parallel to
+`pt_e2.rs`:
+- CLI args: time budget, starting board (from a plateau JSON
+  or fresh CP seed), operator selection, log verbosity.
+- Reports best board + per-operator stats at end.
+
+### Validation strategy
+
+1. **Regression**: ALNS with only `RandomRegion` destroy
+   should reproduce performance similar to vol. 2's
+   `repair_region` — confirms the shell is wired up.
+2. **Operator-comparison**: run with each destroy operator
+   alone, then with the full portfolio. Per-operator
+   improvement count is reported.
+3. **MWPM-specific test**: on a known 449 plateau, verify
+   that MWPM picks cells that overlap with our plateau
+   analysis's 4 components from vol. 4. If MWPM picks
+   *different* cells, that's interesting — its
+   defect-distance metric sees structure the
+   connected-component analysis missed.
+4. **Final overnight run**: 6-12h on the canonical 449
+   plateau, full operator portfolio, with adaptive weights.
+   Target: any improvement past 449. Stretch target:
+   reach 458 (Wauters 2012) or 461 (META'10).
+
+### Out of scope this session
+
+- Survey Propagation diagnostic (Track B #2). Deferred to a
+  later session; this session is for actually breaking 449.
+- Frame-first decomposition (Track A #1 alt). Different
+  workstream — would change the entire pipeline architecture.
+- Memetic GA (Track A #3). Would compete with ALNS rather
+  than complement; defer until we see ALNS results.
