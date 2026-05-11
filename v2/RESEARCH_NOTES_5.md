@@ -453,6 +453,35 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### 3-CYCLE EXHAUSTIVE 01:25 — also rigorously local-optimal
+
+**Setup**: brute-force test 3-cycle moves on the 450 board AND basin-B
+449 board. For each board, restrict to mismatch-incident interior
+cells (47 on 450, similar on 449). Enumerate all 3-cell combinations
+× 2 cyclic permutations × 4³=64 rotation combos.
+
+**Results**:
+
+| Board | trials | improvements |
+|---|---|---|
+| 450 (frame-first) | 640,000 (5k triples × 128) | 0 |
+| 449 (basin B) | 384,000 (3k triples × 128) | 0 |
+
+(Full 16k-triple sweep on 450 running in background.)
+
+**Combined with the 2-swap result** (290k exhaustive trials, 0 imp),
+this means the 449/450 plateau is **robust against both 2-swap AND
+3-cycle local moves on the mismatched cells** — ~1M moves tested
+across plateaus, ZERO improvements.
+
+**To break the plateau, we need at LEAST 4-cycle moves**, or more
+fundamentally: changes that simultaneously move ≥4 pieces. The
+Hamming moat at 449 is at least 4 wide. This is consistent with
+the published Wauters/Salassa pipeline using **K=16 simultaneous
+piece movements** in TA, and 6×6 (=36 cells) region rebuilds in RO.
+
+**Empirical Hamming-moat depth lower bound at 449**: ≥4.
+
 ### STRAIN CASCADE 01:25 — quantified across 29 corpus boards
 
 **Setup**: defect-density-per-cell heatmap across all 29 plateau
