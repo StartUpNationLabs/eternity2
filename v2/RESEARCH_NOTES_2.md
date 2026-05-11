@@ -195,4 +195,100 @@ still permitted (the score wobbles 446-449, not flat 449).
 **Smoke check (N=3, 5s PT each):** q_oriented values {0.67, 0.68, 0.86}.
 Already non-trivial spread; N=20 should give resolution.
 
+---
+
+## 2026-05-11 — First RSB / topology / Houdayer results (UNPINNED puzzle)
+
+**H** — (a) Plateau states cluster in configuration space (multi-modal P(q))
+or (b) share a color-flow invariant — at least one should give signal.
+
+**Setup** — `rsb_n20_pt90`: 20 plateau states from 30s CP + 90s PT × 8
+replicas, distinct seeds, **hint pinning OFF** (this was the harvest in
+flight when we discovered pinning wasn't implemented). Scores spread
+447–451 (mean 449.1). 190 unordered pairs.
+
+**Results.**
+
+*Hint preservation*: `audit_hints` confirms 0/20 samples preserve ANY of
+the 5 official hints. Confirms our 449 baseline is on the unconstrained
+puzzle. Pinning is now wired but harvest needs a re-run.
+
+*Overlap P(q)*: q_oriented (190 pairs) is **multi-modal**.
+- Main mode 0.67–0.75 (141 pairs, 74%).
+- Tail 0.58–0.67 (33 pairs).
+- Distinct peak 0.92–1.00 with 8 pairs at q ≈ 1.0 — different seeds
+  occasionally converge to **identical** plateau boards.
+- Smaller mass at 0.75–0.92 (8 pairs total).
+This is consistent with 1-RSB or full RSB: discrete basins with some
+seeds finding the same basin.
+
+*Topology*:
+- **Colors 1–5 (the freq=24 "edge-strip" colors) are TOTALLY invariant**
+  in both h_total and v_total across all 20 states. Border edges fully
+  locked.
+- v_per_row: 55.2% of (color, row) cells invariant; h_per_col 40.0%.
+- High-variance cells are concentrated in rows 4–9, cols 6–10 — the
+  central ≈6×6 region. **The plateau is a center-of-board phenomenon.**
+
+*Houdayer offline (per pair, on all 190 pairs)*:
+- 225 disagreement components (size ≥ 2) found. Mean size 64.3 cells.
+- **151 of 225 are piece-multiset swappable.**
+- **ALL 151 swappable proposals have joint_delta = 0.**
+- 0/190 pairs admit any improving Houdayer swap.
+- Component sizes are HUGE (mean 80.7 for swappable): essentially the
+  whole interior disagrees as one connected blob, surrounded by the
+  perfectly-agreed border.
+
+**Verdict**.
+1. **Border edges are solved.** The plateau lives in the interior.
+2. **Multi-modal P(q) supports 1-RSB.** Different seeds reach different
+   basins; some basins are revisited.
+3. **Houdayer alone won't beat 449** — every swappable region swap is
+   zero-delta. But this is the published "swappable but not improving"
+   regime: Houdayer is a *diversifier* whose value comes from combining
+   with intra-replica SA moves, not from the cluster delta itself.
+4. **The "right" next experiment** has shifted:
+   - (a) Re-harvest with `--pin-hints` so we measure the actual constrained
+     plateau. Numbers will likely drop because pinning removes flexibility.
+   - (b) Implement Houdayer-in-PT (not just offline): after the cluster
+     swap reshuffles, SA continues at that T. The zero-delta swap moves
+     each replica to a different local optimum that intra-replica SA
+     might then improve.
+   - (c) Focus search effort on the central 6×6 region — try local-CP
+     repair restricted to that area.
+
+**Open question.** Is the q=1.0 peak (seeds converging to *identical*
+boards) evidence that the deterministic CP partial dominates? With CP
+shared across all 20 seeds, every replica starts from the same partial.
+Most variation comes from PT's stochastic moves on top of that partial.
+Re-running with `--reuse-cp=false` would test how much of the multi-
+modality is intrinsic vs. CP-driven.
+
+## 2026-05-11 — Color labeling and Bucas rendering
+
+The user pointed at pieces.txt and clues.txt from e2.bucas.name. Investigation:
+
+- `pieces.txt` is 256 tokens in Bucas 4-letter form, sorted alphabetically
+  by canonical (lex-min over rotations).
+- `clues.txt` URL encodes the official 5 clues at positions (2,2), (13,2),
+  (7,8), (2,13), (13,13) with 1-indexed piece IDs into pieces.txt.
+- Three URLs in the wild use **three different color labelings** of the
+  same physical puzzle: pieces.txt's own, Joshua's `motifs_order=jblackwood`,
+  and clues.txt's `motifs_order=jef`. All three have the same color
+  frequency multiset (1 color×64 border + 5×24 + 5×48 + 12×50) but the
+  labels-to-colors permutation differs.
+- **Our existing CSV ALREADY uses pieces.txt's labeling**: piece 138 has
+  edges (8,9,9,12) at rot 0, hint at (7,8) rot 0 — verified identical to
+  what pieces.txt would generate.
+- The hint rotations (R0, R270, R0, R270, R180) for (7,8), (2,2), (13,2),
+  (2,13), (13,13) were solved via constraint-satisfaction on the partial
+  color bijection — only ONE rotation tuple gave 13 consistent (out of
+  22) σ mappings. These match the official rotations.
+
+**Effect on Bucas rendering**: our generated URLs use pieces.txt's labels,
+which Bucas renders as motifs A–V. The board is internally consistent and
+matched edges share colors in the viewer. The visual color theme will
+differ from Joshua's URL byte-for-byte (different motifs_order ⇒ different
+letter→pattern mapping) but the **puzzle** is the same.
+
 ## (entries follow as experiments run)
