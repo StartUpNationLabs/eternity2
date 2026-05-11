@@ -11,7 +11,7 @@ use std::time::Instant;
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
-use eternity2_core::{Board, Hints, Piece, PieceId, Puzzle, BORDER};
+use eternity2_core::{Board, Hints, Piece, PieceId, Puzzle, Rotation, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_localsearch::{run_pt_from, run_sa_from, parse_forbidden_json, PtConfig, SaConfig};
 use eternity2_solver_engine::EngineSolver;
@@ -103,6 +103,43 @@ struct Args {
     /// 0 = off.
     #[arg(long, default_value_t = 0)]
     forbidden_k: i64,
+
+    /// Path to a prior pt_e2 / frame_first_e2 result JSON. When set,
+    /// SKIP the CP phase entirely and start PT from this board. Useful
+    /// for chaining PT runs: e.g. run a constrained PT to a fmm=0
+    /// basin, then restart unconstrained PT from there to explore
+    /// without the penalty. Reads the `placement` array; falls back
+    /// to bucas_url decode if `placement` is missing.
+    #[arg(long)]
+    start_from: Option<PathBuf>,
+}
+
+/// Read a board from a pt_e2/frame_first_e2 result JSON's `placement`
+/// array (the canonical per-cell {piece_id, rotation} | null format).
+fn read_board_from_json(puzzle: &Puzzle, path: &std::path::Path) -> Result<Board, String> {
+    let s = std::fs::read_to_string(path)
+        .map_err(|e| format!("read {}: {e}", path.display()))?;
+    let j: serde_json::Value = serde_json::from_str(&s)
+        .map_err(|e| format!("parse JSON {}: {e}", path.display()))?;
+    let placement = j.get("placement")
+        .and_then(|p| p.as_array())
+        .ok_or_else(|| format!("no `placement` array in {}", path.display()))?;
+    if placement.len() != puzzle.cell_count() as usize {
+        return Err(format!("placement len {} != puzzle cell_count {}",
+            placement.len(), puzzle.cell_count()));
+    }
+    let mut board = Board::empty(puzzle);
+    for (pos, cell) in placement.iter().enumerate() {
+        if cell.is_null() { continue; }
+        let pid = cell.get("piece_id").and_then(|v| v.as_u64())
+            .ok_or_else(|| format!("cell {pos} missing piece_id"))? as PieceId;
+        let rot_u8 = cell.get("rotation").and_then(|v| v.as_u64())
+            .ok_or_else(|| format!("cell {pos} missing rotation"))? as u8;
+        let rot = Rotation::from_u8(rot_u8)
+            .ok_or_else(|| format!("cell {pos} bad rotation {rot_u8}"))?;
+        board.place(pos as u32, pid, rot);
+    }
+    Ok(board)
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -160,27 +197,40 @@ fn main() {
         puzzle.width, puzzle.height, puzzle.pieces().len(),
         puzzle.color_count - 1, file_hints.hints.len());
 
-    // ----- CP phase -----
-    eprintln!("\n--- CP phase ({}s) ---", args.cp_seconds);
-    let mut solver = EngineSolver::gacolor_ac3_par();
-    let mut sink = BufferSink::new();
-    let mut opts = SolveOpts::default();
-    opts.time_budget_ms = args.cp_seconds * 1000;
-    opts.hints = file_hints.clone();
-    let t0 = Instant::now();
-    let cp_out = solver.solve(&puzzle, &opts, &mut sink);
-    let cp_elapsed = t0.elapsed();
-    let cp_board: Board = match cp_out {
-        SolveOutcome::Solved(b) | SolveOutcome::TimedOut { best_partial: b, .. }
-        | SolveOutcome::Cancelled { best_partial: b, .. } => b,
-        SolveOutcome::AllSolutions(bs) => bs.into_iter().next().unwrap_or_else(|| Board::empty(&puzzle)),
-        SolveOutcome::Exhausted => Board::empty(&puzzle),
-        SolveOutcome::Error(e) => { eprintln!("CP err: {e}"); Board::empty(&puzzle) }
+    // ----- CP phase (or load prior board) -----
+    let (cp_board, cp_elapsed_secs, cp_skipped) = if let Some(p) = args.start_from.as_ref() {
+        eprintln!("\n--- LOADING prior board from {} (CP phase SKIPPED) ---", p.display());
+        let b = read_board_from_json(&puzzle, p).expect("load --start-from board");
+        (b, 0.0_f64, true)
+    } else {
+        eprintln!("\n--- CP phase ({}s) ---", args.cp_seconds);
+        let mut solver = EngineSolver::gacolor_ac3_par();
+        let mut sink = BufferSink::new();
+        let mut opts = SolveOpts::default();
+        opts.time_budget_ms = args.cp_seconds * 1000;
+        opts.hints = file_hints.clone();
+        let t0 = Instant::now();
+        let cp_out = solver.solve(&puzzle, &opts, &mut sink);
+        let cp_elapsed = t0.elapsed();
+        let cp_board: Board = match cp_out {
+            SolveOutcome::Solved(b) | SolveOutcome::TimedOut { best_partial: b, .. }
+            | SolveOutcome::Cancelled { best_partial: b, .. } => b,
+            SolveOutcome::AllSolutions(bs) => bs.into_iter().next().unwrap_or_else(|| Board::empty(&puzzle)),
+            SolveOutcome::Exhausted => Board::empty(&puzzle),
+            SolveOutcome::Error(e) => { eprintln!("CP err: {e}"); Board::empty(&puzzle) }
+        };
+        (cp_board, cp_elapsed.as_secs_f64(), false)
     };
     let (cp_score, total) = score_board(&puzzle, &cp_board);
-    eprintln!("CP done in {:.1}s: placed={}/{}, edges={}/{} ({:.1}%)",
-        cp_elapsed.as_secs_f64(), placed_count(&cp_board),
-        puzzle.cell_count(), cp_score, total, pct(cp_score, total));
+    if cp_skipped {
+        eprintln!("loaded board: placed={}/{}, edges={}/{} ({:.1}%)",
+            placed_count(&cp_board), puzzle.cell_count(), cp_score, total, pct(cp_score, total));
+    } else {
+        eprintln!("CP done in {:.1}s: placed={}/{}, edges={}/{} ({:.1}%)",
+            cp_elapsed_secs, placed_count(&cp_board),
+            puzzle.cell_count(), cp_score, total, pct(cp_score, total));
+    }
+    let cp_elapsed = std::time::Duration::from_secs_f64(cp_elapsed_secs);
 
     // ----- PT phase -----
     eprintln!("\n--- PT phase ({}s, {} replicas) ---", args.pt_seconds, args.n_replicas);
