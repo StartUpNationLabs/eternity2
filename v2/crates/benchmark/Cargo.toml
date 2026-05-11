@@ -48,6 +48,10 @@ path = "src/bin/analyze_overlap.rs"
 name = "analyze_topology"
 path = "src/bin/analyze_topology.rs"
 
+[[bin]]
+name = "houdayer_offline"
+path = "src/bin/houdayer_offline.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
