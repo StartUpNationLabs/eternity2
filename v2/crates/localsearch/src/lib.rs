@@ -29,6 +29,9 @@ use eternity2_core::{
     Board, Color, PieceId, Position, Puzzle, Rotation, BORDER,
 };
 
+pub mod pt;
+pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
+
 /// Configuration for the simulated-annealing local search.
 #[derive(Debug, Clone, Copy)]
 pub struct SaConfig {
@@ -382,6 +385,128 @@ impl<'a> State<'a> {
         board
     }
 
+    /// Like `fill_in_initial`, but for each empty cell pick the leftover
+    /// piece + rotation that MAXIMISES local matches with currently-placed
+    /// neighbours. Iterates over empties in order of "most constrained
+    /// first" (most placed neighbours) so each greedy decision has more
+    /// information. Falls back to random pick when no leftover offers
+    /// any match.
+    ///
+    /// This is the right initialization for CP→LS / CP→PT hybrids: the
+    /// CP partial is preserved exactly, and the freed cells start at a
+    /// near-optimal configuration relative to the partial. Single-T SA
+    /// from a randomly-filled start spends most of its budget recovering
+    /// the score that random destruction created.
+    fn greedy_fill_initial(&self, initial: &Board, rng: &mut Rng) -> Board {
+        let mut board = initial.clone();
+        let n_pieces = self.piece_class.len();
+        let mut used = vec![false; n_pieces];
+        for c in board.cells() {
+            if let Some((pid, _rot)) = c {
+                used[usize::from(*pid)] = true;
+            }
+        }
+        // Leftover pools per class.
+        let mut leftover_corner: Vec<PieceId> = Vec::new();
+        let mut leftover_edge: Vec<PieceId> = Vec::new();
+        let mut leftover_interior: Vec<PieceId> = Vec::new();
+        for (pid_idx, was_used) in used.iter().enumerate() {
+            if *was_used { continue; }
+            let pid_u16 = pid_idx as u16;
+            match self.piece_class[pid_idx] {
+                PieceClass::Corner => leftover_corner.push(pid_u16),
+                PieceClass::Edge => leftover_edge.push(pid_u16),
+                PieceClass::Interior => leftover_interior.push(pid_u16),
+            }
+        }
+
+        // Process empties class-by-class, greedy on best-piece-best-rot.
+        // Within a class, fill in order of fewest empty neighbours first
+        // (so when we decide, we know more of our context). Use a stable
+        // tie-breaker on position.
+        let w = self.puzzle.width;
+        let h = self.puzzle.height;
+        let empty_neighbour_count = |b: &Board, pos: Position| -> u32 {
+            let (x, y) = (pos % w, pos / w);
+            let mut c = 0;
+            if y > 0 && b.get((y - 1) * w + x).is_none() { c += 1; }
+            if x + 1 < w && b.get(y * w + (x + 1)).is_none() { c += 1; }
+            if y + 1 < h && b.get((y + 1) * w + x).is_none() { c += 1; }
+            if x > 0 && b.get(y * w + (x - 1)).is_none() { c += 1; }
+            c
+        };
+
+        // Pick best (piece, rot) from `pool` for `pos`, returning (piece_index_in_pool, rot, local_match_count).
+        // For interior cells try all 4 rotations; for border cells only border-compatible rotation.
+        let pick_best = |b: &Board, pool: &[PieceId], pos: Position, st: &State| -> Option<(usize, Rotation, u32)> {
+            if pool.is_empty() { return None; }
+            let mask = st.puzzle.border_mask(pos);
+            let [tb, rb, bb, lb] = mask;
+            let is_interior = matches!(st.cell_class[pos as usize], CellClass::Interior);
+            let mut best: Option<(usize, Rotation, u32)> = None;
+            for (idx, &pid) in pool.iter().enumerate() {
+                for r in 0..4u8 {
+                    let rot = Rotation::from_u8(r).unwrap();
+                    let e = st.edges_for(pid, rot);
+                    if !is_interior {
+                        if (e[0] == BORDER) != tb
+                            || (e[1] == BORDER) != rb
+                            || (e[2] == BORDER) != bb
+                            || (e[3] == BORDER) != lb
+                        { continue; }
+                    }
+                    let mc = match_count_with(st, b, pos, e);
+                    match best {
+                        None => best = Some((idx, rot, mc)),
+                        Some((_, _, bm)) if mc > bm => best = Some((idx, rot, mc)),
+                        _ => {}
+                    }
+                }
+            }
+            best
+        };
+
+        let do_class = |pool: &mut Vec<PieceId>, st: &State, b: &mut Board, rng: &mut Rng| {
+            let _ = rng; // currently unused; kept for symmetry / future jitter
+            loop {
+                if pool.is_empty() { break; }
+                // Find the empty cell with FEWEST empty neighbours (= most known context).
+                let mut best_pos: Option<Position> = None;
+                let mut best_empties = u32::MAX;
+                let n = b.cells().len() as Position;
+                for pos in 0..n {
+                    if b.get(pos).is_some() { continue; }
+                    // Restrict to this class.
+                    let class = st.cell_class[pos as usize];
+                    let class_ok = match class {
+                        CellClass::Corner => pool.iter().any(|p| matches!(st.piece_class[usize::from(*p)], PieceClass::Corner)),
+                        CellClass::Edge => pool.iter().any(|p| matches!(st.piece_class[usize::from(*p)], PieceClass::Edge)),
+                        CellClass::Interior => pool.iter().any(|p| matches!(st.piece_class[usize::from(*p)], PieceClass::Interior)),
+                    };
+                    if !class_ok { continue; }
+                    let en = empty_neighbour_count(b, pos);
+                    if en < best_empties {
+                        best_empties = en;
+                        best_pos = Some(pos);
+                    }
+                }
+                let Some(pos) = best_pos else { break; };
+                match pick_best(b, pool, pos, st) {
+                    Some((idx, rot, _mc)) => {
+                        let pid = pool.swap_remove(idx);
+                        b.place(pos, pid, rot);
+                    }
+                    None => break, // no piece in pool can validly land at pos
+                }
+            }
+        };
+
+        do_class(&mut leftover_corner, self, &mut board, rng);
+        do_class(&mut leftover_edge, self, &mut board, rng);
+        do_class(&mut leftover_interior, self, &mut board, rng);
+        board
+    }
+
     /// Count matching interior edges (the maximisation target).
     ///
     /// An interior edge between two adjacent cells matches iff the
@@ -555,6 +680,230 @@ fn match_count_with(state: &State, board: &Board, pos: Position, e_hypo: [Color;
     m
 }
 
+/// Returns 1 if the edge on side `side` (0=top, 1=right, 2=bottom, 3=left)
+/// of the piece at `pos` matches the corresponding neighbour edge.
+/// Returns 0 if the side is at the board border, the neighbour is empty,
+/// or the colors mismatch.
+fn partial_edge_match(state: &State, board: &Board, pos: Position, side: u8) -> u32 {
+    let w = state.puzzle.width;
+    let h = state.puzzle.height;
+    let (x, y) = (pos % w, pos / w);
+    let Some((pid, rot)) = board.get(pos) else { return 0; };
+    let e = state.edges_for(pid, rot);
+    let (nx, ny, opp): (i32, i32, usize) = match side {
+        0 => (x as i32, y as i32 - 1, 2),
+        1 => (x as i32 + 1, y as i32, 3),
+        2 => (x as i32, y as i32 + 1, 0),
+        _ => (x as i32 - 1, y as i32, 1),
+    };
+    if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 { return 0; }
+    let np = (ny as u32) * w + nx as u32;
+    let Some((npid, nrot)) = board.get(np) else { return 0; };
+    let ne = state.edges_for(npid, nrot);
+    if e[side as usize] != 0 && e[side as usize] == ne[opp] { 1 } else { 0 }
+}
+
+/// Run `n_iters` SA steps at a FIXED temperature (no cooling, no re-anneal).
+/// Used by the parallel-tempering driver to advance each replica between
+/// exchange proposals. Updates `board`, `score`, and `best_*` in place;
+/// returns the final score.
+///
+/// This is a deliberate code-twin of the body of `run_sa_loop`: it must
+/// stay byte-for-byte equivalent on a single step so any bug fix here
+/// applies there too. (We did NOT collapse them into a shared inner
+/// because run_sa_loop's cooling / re-anneal / timed-out checks straddle
+/// the iteration in non-trivial ways.)
+pub fn run_sa_steps_fixed_temp(
+    state: &StateRef<'_>,
+    board: &mut Board,
+    score: &mut u32,
+    best_board: &mut Board,
+    best_score: &mut u32,
+    rng: &mut RngHandle,
+    temp: f64,
+    n_iters: u64,
+) {
+    let state = &state.0;
+    let rng = &mut rng.0;
+    for _ in 0..n_iters {
+        // Move-kind mix:
+        //   0..2  rotate single interior piece     (30%)
+        //   2..3  rotate 2×2 interior block CW/CCW (10%)  ← cluster move (Wolff-flavored)
+        //   3..10 swap two same-class pieces       (70%)
+        let move_kind = rng.gen_range(10);
+        if move_kind == 2 {
+            // CLUSTER ROTATE: pick an interior-only 2×2 block, rotate
+            // CW or CCW. Each of the 4 pieces moves one cell around
+            // the cycle and its rotation parameter changes accordingly.
+            // The 4 internal edges are preserved (they still touch but
+            // with rotated-piece colors, which net-match the same way
+            // since the whole block rotated rigidly); the 8 external
+            // edges change. Score delta = sum of new boundary matches
+            // minus old boundary matches.
+            let w = state.puzzle.width;
+            let h = state.puzzle.height;
+            // Interior-only 2x2 means TL is at (x,y) with x ∈ [1, w-3],
+            // y ∈ [1, h-3] so that all 4 cells are interior.
+            if w < 4 || h < 4 { continue; }
+            let x = 1 + rng.gen_range(w - 3);
+            let y = 1 + rng.gen_range(h - 3);
+            let p_tl = y * w + x;
+            let p_tr = y * w + (x + 1);
+            let p_bl = (y + 1) * w + x;
+            let p_br = (y + 1) * w + (x + 1);
+            let Some((id_tl, r_tl)) = board.get(p_tl) else { continue; };
+            let Some((id_tr, r_tr)) = board.get(p_tr) else { continue; };
+            let Some((id_bl, r_bl)) = board.get(p_bl) else { continue; };
+            let Some((id_br, r_br)) = board.get(p_br) else { continue; };
+
+            // Old block score = boundary matches at the 4 cells (sum
+            // of local_match_count over the 4 cells, minus 2× the 4
+            // internal edges which are counted twice — but internal
+            // edges are preserved under rigid rotation. To simplify:
+            // measure ONLY the 8 boundary edges before and after.
+            let bnd = |s: &State, b: &Board| -> u32 {
+                let mut m = 0;
+                // TL: top + left
+                m += partial_edge_match(s, b, p_tl, 0); // top
+                m += partial_edge_match(s, b, p_tl, 3); // left
+                // TR: top + right
+                m += partial_edge_match(s, b, p_tr, 0);
+                m += partial_edge_match(s, b, p_tr, 1);
+                // BL: bottom + left
+                m += partial_edge_match(s, b, p_bl, 2);
+                m += partial_edge_match(s, b, p_bl, 3);
+                // BR: bottom + right
+                m += partial_edge_match(s, b, p_br, 2);
+                m += partial_edge_match(s, b, p_br, 1);
+                m
+            };
+            let old_bnd = bnd(state, board);
+
+            // Direction: CW (1) or CCW (3).
+            let dir = if rng.gen_range(2) == 0 { 1u8 } else { 3u8 };
+            let rot_incr = |r: Rotation, d: u8| -> Rotation {
+                Rotation::from_u8((r.as_u8() + d) & 0b11).unwrap()
+            };
+            if dir == 1 {
+                // CW: TL→TR, TR→BR, BR→BL, BL→TL. Each piece gets +1 rot.
+                board.place(p_tr, id_tl, rot_incr(r_tl, 1));
+                board.place(p_br, id_tr, rot_incr(r_tr, 1));
+                board.place(p_bl, id_br, rot_incr(r_br, 1));
+                board.place(p_tl, id_bl, rot_incr(r_bl, 1));
+            } else {
+                // CCW: TL→BL, BL→BR, BR→TR, TR→TL. Each piece gets +3 rot.
+                board.place(p_bl, id_tl, rot_incr(r_tl, 3));
+                board.place(p_br, id_bl, rot_incr(r_bl, 3));
+                board.place(p_tr, id_br, rot_incr(r_br, 3));
+                board.place(p_tl, id_tr, rot_incr(r_tr, 3));
+            }
+            let new_bnd = bnd(state, board);
+            let delta = (new_bnd as i64) - (old_bnd as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                // Revert: restore original placements exactly.
+                board.place(p_tl, id_tl, r_tl);
+                board.place(p_tr, id_tr, r_tr);
+                board.place(p_bl, id_bl, r_bl);
+                board.place(p_br, id_br, r_br);
+            }
+            continue;
+        }
+        if move_kind < 3 {
+            let n_cells = state.puzzle.cell_count();
+            let pos = rng.gen_range(n_cells);
+            let Some((pid, old_rot)) = board.get(pos) else { continue; };
+            let cell_is_interior = matches!(state.cell_class[pos as usize], CellClass::Interior);
+            if !cell_is_interior { continue; }
+            let mut new_r = rng.gen_range(4) as u8;
+            if new_r == old_rot.as_u8() { new_r = (new_r + 1) & 0b11; }
+            let new_rot = Rotation::from_u8(new_r).unwrap();
+            let old_local = local_match_count(state, board, pos);
+            let e_new = state.edges_for(pid, new_rot);
+            let new_local = match_count_with(state, board, pos, e_new);
+            let delta = (new_local as i64) - (old_local as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                board.place(pos, pid, new_rot);
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            }
+        } else {
+            let class_pick = rng.gen_range(3);
+            let cells = match class_pick {
+                0 => &state.corner_cells,
+                1 => &state.edge_cells,
+                _ => &state.interior_cells,
+            };
+            if cells.len() < 2 { continue; }
+            let i = rng.gen_range(cells.len() as u32) as usize;
+            let mut j = rng.gen_range(cells.len() as u32) as usize;
+            if i == j { j = (j + 1) % cells.len(); }
+            let p_i = cells[i];
+            let p_j = cells[j];
+            let Some((pid_i, rot_i)) = board.get(p_i) else { continue; };
+            let Some((pid_j, rot_j)) = board.get(p_j) else { continue; };
+            let old_local_i = local_match_count(state, board, p_i);
+            let old_local_j = local_match_count(state, board, p_j);
+            let adj_old = adjacent_match(state, board, p_i, p_j);
+            let old_local = old_local_i + old_local_j - adj_old;
+            board.place(p_i, pid_j, rot_j);
+            board.place(p_j, pid_i, rot_i);
+            let best_rot_i = best_rotation(state, board, p_i, pid_j);
+            board.place(p_i, pid_j, best_rot_i);
+            let best_rot_j = best_rotation(state, board, p_j, pid_i);
+            board.place(p_j, pid_i, best_rot_j);
+            let new_local_i = local_match_count(state, board, p_i);
+            let new_local_j = local_match_count(state, board, p_j);
+            let new_adj = adjacent_match(state, board, p_i, p_j);
+            let new_local = new_local_i + new_local_j - new_adj;
+            let delta = (new_local as i64) - (old_local as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                board.place(p_i, pid_i, rot_i);
+                board.place(p_j, pid_j, rot_j);
+            }
+        }
+    }
+}
+
+/// Opaque handle to the precomputed SA state. Sharable across replicas.
+pub struct StateRef<'a>(State<'a>);
+
+impl<'a> StateRef<'a> {
+    pub fn new(puzzle: &'a Puzzle) -> Self { Self(State::new(puzzle)) }
+    pub fn score(&self, b: &Board) -> u32 { self.0.score(b) }
+    pub fn total_interior_edges(&self) -> u32 { self.0.total_interior_edges() }
+    pub fn random_initial(&self, rng: &mut RngHandle) -> Board {
+        self.0.random_initial(&mut rng.0)
+    }
+    pub fn fill_in_initial(&self, initial: &Board, rng: &mut RngHandle) -> Board {
+        self.0.fill_in_initial(initial, &mut rng.0)
+    }
+    pub fn greedy_fill_initial(&self, initial: &Board, rng: &mut RngHandle) -> Board {
+        self.0.greedy_fill_initial(initial, &mut rng.0)
+    }
+}
+
+/// Opaque RNG handle. Cheap to clone; each replica owns its own.
+#[derive(Clone)]
+pub struct RngHandle(Rng);
+
+impl RngHandle {
+    pub fn new(seed: u64) -> Self { Self(Rng::new(seed)) }
+    pub fn next_u64(&mut self) -> u64 { self.0.next_u64() }
+    pub fn next_f64(&mut self) -> f64 { self.0.next_f64() }
+}
+
 /// Variant of `run_sa` that starts from a caller-supplied initial board.
 /// Used by the CP+LS hybrid: seed LS with the CP solver's `best_partial`
 /// (filling any unplaced cells randomly with class-matching pieces).
@@ -656,7 +1005,7 @@ fn run_sa_loop(
             let accept = if delta >= 0 {
                 true
             } else {
-                let p = (-(delta as f64) / temp).exp();
+                let p = (delta as f64 / temp).exp();
                 rng.next_f64() < p
             };
             if accept {
@@ -721,7 +1070,7 @@ fn run_sa_loop(
             let accept = if delta >= 0 {
                 true
             } else {
-                let p = (-(delta as f64) / temp).exp();
+                let p = (delta as f64 / temp).exp();
                 rng.next_f64() < p
             };
             if accept {

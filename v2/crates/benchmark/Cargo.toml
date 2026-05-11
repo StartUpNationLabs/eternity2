@@ -24,6 +24,14 @@ path = "src/bin/official_e2.rs"
 name = "rtcp"
 path = "src/bin/rtcp.rs"
 
+[[bin]]
+name = "pt_e2"
+path = "src/bin/pt_e2.rs"
+
+[[bin]]
+name = "greedy_diag"
+path = "src/bin/greedy_diag.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }

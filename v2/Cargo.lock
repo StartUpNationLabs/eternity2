@@ -336,6 +336,7 @@ version = "0.1.0"
 dependencies = [
  "eternity2-core",
  "eternity2-generator",
+ "rayon",
 ]
 
 [[package]]

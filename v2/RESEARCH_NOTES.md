@@ -989,3 +989,58 @@ Search-space bits: 480·log₂(22) ≈ 2143 vs 256·log₂(1024) = 2560. Edge fo
 1. First test the *cheaper* hypothesis: does sub-region cooperative inference (k=2 SRGL) prune the cell-first formulation? If yes, the cooperative-inference family of ideas is fertile. If no, pivot.
 2. If 2×2 SRGL helps, scale to k=3 and to LP-based edge-color planning.
 3. If neither helps, the bottleneck isn't propagation strength — it's something else (heuristic ordering? value selection?).
+
+---
+
+## Experiment P+Q+greedy-fill — HEADLINE RESULT
+
+Three changes shipped together:
+1. **Parallel Tempering** with 4-8 replicas at T ∈ [0.05, 0.4], replica-exchange every 30k-50k inner iters (`pt::run_pt_from`).
+2. **Cluster moves**: 2×2 interior-block rotation (CW/CCW), 10% of SA iterations (Wolff-flavored cluster algorithm).
+3. **Greedy initial fill**: when seeding from CP partial, fill empty cells with the leftover piece+rotation maximising local match count (vs the previous random fill, which destroyed CP progress).
+
+**Headline**: 87.9% (422/480 edges) on official Eternity II, in 14 seconds of PT after a 10-second CP phase. Up from 65% baseline (best from earlier hybrid).
+
+Replicates of the discovery:
+- 4 replicas, T=[0.05, 0.4], 30k inner iters, cluster moves: 422 in 14s
+- 8 replicas, T=[0.05, 0.4], 50k inner iters: TBD (running)
+
+**Attribution**: the dominant contributor is almost certainly the **greedy fill**, not PT itself — the per-chain scores during PT walk in [40, 80] regardless of temperature, but `global_best` jumps to 422 within the first few rounds. That means *one* chain's INITIAL fill already produced a board near 422, and the rest of PT hasn't beaten it (yet). The greedy fill alone produces a strong locally-optimal placement of the leftover pieces given the CP partial — something the random fill never achieved.
+
+**Lesson**: random initial state is *catastrophically* expensive for CP+SA hybrids on hard puzzles. The 79 empty cells in our CP partial, randomly filled, broke ~200 boundary edges with the CP-placed neighbors — net score went from 289 down to ~80. SA could only climb back to ~305 in 60s. Greedy fill keeps the 289 *and* recovers most of the freed-region matches in a single sweep.
+
+**Verdict**: keeping all three. Need to verify which of {PT, clusters} adds incremental value on top of greedy fill alone.
+
+---
+
+## CRITICAL BUG FIXED — Metropolis sign error in SA acceptance
+
+The original `run_sa_loop` in `crates/localsearch/src/lib.rs` had a sign error in the SA Metropolis criterion that had been silently destroying optimization:
+
+```rust
+// WRONG — accepted ALL score-decreasing moves with prob > 1
+let p = (-(delta as f64) / temp).exp();
+```
+
+For `delta < 0` (move decreases score) and any positive `temp`:
+- `-delta > 0`, divided by temp gives positive, exp gives value > 1
+- `rng.next_f64() < p` is ALWAYS true (since rng ∈ [0,1) < any p > 1)
+
+**Result**: SA was running with *anti-Metropolis* — every score-decreasing move was accepted, every score-improving move was accepted. Effective behavior = pure random walk regardless of temperature.
+
+Correct formulation: accept prob for ΔE = -delta_score (we minimize energy = maximize score) is exp(-ΔE/T) = exp(delta_score / T). For delta=-1, T=0.05: exp(-20) ≈ 2e-9 — properly rejects.
+
+Fix:
+```rust
+let p = (delta as f64 / temp).exp();
+```
+
+Applied to all 5 occurrences (rotate-step in run_sa_loop, swap-step in run_sa_loop, rotate-step in run_sa_steps_fixed_temp, swap-step in run_sa_steps_fixed_temp, cluster-rotate in run_sa_steps_fixed_temp).
+
+**Headline result post-fix**: PT with 4 replicas, 30s on official E2 → **442/480 (92.1%)**. Cold chain converges to 442; hotter chains explore lower scores.
+
+**Honest assessment**: prior to this fix, *our entire SA baseline (the "65% in 4min" result) was sampling from an essentially-random walk and producing whatever near-random configuration happened to be locally-optimal-after-greedy-fill*. The CP+SA "65%" was almost entirely the CP partial plus the side-effect of random shuffling around it. Real SA was never doing useful annealing.
+
+This explains why earlier our SA never broke ceiling regardless of temperature, schedule, or operator mix — none of the parameters mattered.
+
+**Re-validation needed**: the existing "Experiment L v1 — SA baseline 65%" result in this notes file is invalid. With Metropolis fixed, single-T SA should reach much higher.

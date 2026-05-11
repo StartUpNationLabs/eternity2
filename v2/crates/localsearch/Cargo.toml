@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 eternity2-core = { path = "../core" }
+rayon = "1.10"
 
 [dev-dependencies]
 eternity2-generator = { path = "../generator" }
