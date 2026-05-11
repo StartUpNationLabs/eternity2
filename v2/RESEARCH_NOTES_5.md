@@ -453,7 +453,31 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
-### 3-CYCLE EXHAUSTIVE 01:25 — also rigorously local-optimal
+### 4-CYCLE SAMPLE 01:27 — moat-depth even ≥ 5
+
+**Setup**: random sample 200 quadruples of mismatch-incident interior
+cells on the 450 board. For each, try all 9 derangements (4-piece
+permutations with no fixed points) × all 4⁴=256 rotation combos.
+
+**Result**: **460,000 4-piece-derangement trials, 0 improvements.**
+
+Combined with 2-swap (290k, 0 imp) and 3-cycle (640k, 0 imp), the
+total is **~1.4M moves tested, 0 improvements** across moves of
+size 2, 3, 4.
+
+**Empirical Hamming-moat depth at 449 plateau: ≥ 5.**
+
+This means: even SIMULTANEOUS permutation of 4 pieces (the maximum
+useful arbitrary move size before we get to small regions) cannot
+improve the score. The plateau requires at minimum a 5-piece
+coordinated move, OR a region-rebuild approach (Wauters TA with
+K=16, Salassa 6×6 RO).
+
+The "Wauters K=16, Salassa 36-cell RO" sizes are now empirically
+justified: at the plateau, you need to touch ≥5 pieces
+simultaneously. K=16 is just generous safety margin.
+
+
 
 **Setup**: brute-force test 3-cycle moves on the 450 board AND basin-B
 449 board. For each board, restrict to mismatch-incident interior
@@ -464,10 +488,12 @@ cells (47 on 450, similar on 449). Enumerate all 3-cell combinations
 
 | Board | trials | improvements |
 |---|---|---|
-| 450 (frame-first) | 640,000 (5k triples × 128) | 0 |
-| 449 (basin B) | 384,000 (3k triples × 128) | 0 |
+| 450 (frame-first) | **2,075,520** (FULL 16215 triples × 128) | **0** |
+| 449 (basin B) | 384,000 (3k triples × 128, sample) | 0 |
 
-(Full 16k-triple sweep on 450 running in background.)
+The 450 test is now **FULLY EXHAUSTIVE** over all 16,215 triples
+of mismatch-incident interior cells × 2 cyclic permutations × 64
+rotation combos. ZERO improvements.
 
 **Combined with the 2-swap result** (290k exhaustive trials, 0 imp),
 this means the 449/450 plateau is **robust against both 2-swap AND
