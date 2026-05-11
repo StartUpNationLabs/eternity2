@@ -88,6 +88,10 @@ path = "src/bin/sat_e2.rs"
 name = "alns_e2"
 path = "src/bin/alns_e2.rs"
 
+[[bin]]
+name = "frame_first_e2"
+path = "src/bin/frame_first_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-edge-solver = { path = "../edge-solver" }
