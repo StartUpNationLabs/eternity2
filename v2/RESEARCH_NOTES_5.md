@@ -461,9 +461,12 @@ forbidden.rs already).
   outer loop. **0 improvements**.
 - Canonical 449 board (basin B): same. **0 improvements**.
 
-**Brute-force verification**: tried 32,000 random 2-piece swaps × 16
-rotation combos = 512,000 (swap, rot) combinations on the 450 board.
-**ZERO produced score ≥ 451**.
+**Brute-force verification**: exhaustively tested **all 18,145
+interior-pair × 16 rotation combos = 290,320 (swap, rot) combinations**
+on the 450 board. **ZERO produced score ≥ 451**. (Plus a separate
+random-sample run of 32,000 random pair swaps also produced zero.)
+**The 450 board is rigorously a 2-swap local optimum across the
+entire neighborhood.**
 
 **Conclusion**: the 450 board is a STRICT 2-swap local optimum. The
 Wauters/Salassa pipeline as designed only adds +2 to +5 from MILP-
