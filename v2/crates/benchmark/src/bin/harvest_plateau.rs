@@ -68,6 +68,10 @@ struct Args {
     /// but keeping it lets each sample timestamp realistic end-to-end times.
     #[arg(long, default_value_t = true)]
     reuse_cp: bool,
+
+    /// Pin the official-E2 hint positions during PT.
+    #[arg(long, default_value_t = true)]
+    pin_hints: bool,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -167,6 +171,9 @@ fn main() {
             b
         };
 
+        let pinned: Vec<u32> = if args.pin_hints {
+            file_hints.hints.iter().map(|h| h.position).collect()
+        } else { Vec::new() };
         let pt_cfg = PtConfig {
             n_replicas: args.n_replicas,
             t_min: args.t_min,
@@ -183,6 +190,7 @@ fn main() {
             repair_budget_ms: 200,
             kick_every: 0,
             kick_n_swaps: 6,
+            pinned_positions: pinned,
         };
         let t = Instant::now();
         let (pt_out, _stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);

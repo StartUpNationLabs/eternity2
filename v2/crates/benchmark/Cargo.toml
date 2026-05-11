@@ -52,6 +52,10 @@ path = "src/bin/analyze_topology.rs"
 name = "houdayer_offline"
 path = "src/bin/houdayer_offline.rs"
 
+[[bin]]
+name = "audit_hints"
+path = "src/bin/audit_hints.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }

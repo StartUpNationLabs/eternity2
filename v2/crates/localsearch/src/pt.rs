@@ -27,7 +27,7 @@
 
 use std::time::Instant;
 
-use eternity2_core::{Board, Puzzle};
+use eternity2_core::{Board, Position, Puzzle};
 
 use crate::{
     repair::{repair_region, worst_region},
@@ -78,6 +78,10 @@ pub struct PtConfig {
     pub kick_every: u64,
     /// Number of random swap perturbations per kick.
     pub kick_n_swaps: u32,
+    /// Cell positions that must NEVER move (piece and rotation preserved).
+    /// Used to honour the official E2 hint pieces during local search. Empty
+    /// by default — solver runs unconstrained.
+    pub pinned_positions: Vec<Position>,
 }
 
 impl Default for PtConfig {
@@ -98,6 +102,7 @@ impl Default for PtConfig {
             repair_budget_ms: 200,
             kick_every: 0,
             kick_n_swaps: 20,
+            pinned_positions: Vec::new(),
         }
     }
 }
@@ -126,7 +131,7 @@ pub fn run_pt_from(
     assert!(cfg.n_replicas >= 2, "PT needs ≥ 2 replicas");
     assert!(cfg.t_min > 0.0 && cfg.t_max > cfg.t_min, "bad temperature range");
     let started = Instant::now();
-    let state = StateRef::new(puzzle);
+    let state = StateRef::new_with_pinned(puzzle, &cfg.pinned_positions);
     let total_edges = state.total_interior_edges();
 
     // Geometric temperature ladder. Standard for PT: equal acceptance

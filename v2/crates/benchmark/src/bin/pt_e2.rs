@@ -74,6 +74,12 @@ struct Args {
     /// Number of unconditional random swaps per kick.
     #[arg(long, default_value_t = 20)]
     kick_n_swaps: u32,
+
+    /// Pin the official-E2 hint positions during PT (default true). When
+    /// false, PT may freely move the hint pieces — useful to compare to
+    /// unconstrained scores but means our score isn't the official E2 score.
+    #[arg(long, default_value_t = true)]
+    pin_hints: bool,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -155,6 +161,14 @@ fn main() {
 
     // ----- PT phase -----
     eprintln!("\n--- PT phase ({}s, {} replicas) ---", args.pt_seconds, args.n_replicas);
+    let pinned: Vec<u32> = if args.pin_hints {
+        file_hints.hints.iter().map(|h| h.position).collect()
+    } else { Vec::new() };
+    if args.pin_hints {
+        eprintln!("pinning {} hint positions during PT: {:?}", pinned.len(), pinned);
+    } else {
+        eprintln!("pin_hints=false: PT may move hint pieces (UNOFFICIAL E2)");
+    }
     let pt_cfg = PtConfig {
         n_replicas: args.n_replicas,
         t_min: args.t_min,
@@ -171,6 +185,7 @@ fn main() {
         repair_budget_ms: args.repair_budget_ms,
         kick_every: args.kick_every,
         kick_n_swaps: args.kick_n_swaps,
+        pinned_positions: pinned,
     };
     let t1 = Instant::now();
     let (pt_out, pt_stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);

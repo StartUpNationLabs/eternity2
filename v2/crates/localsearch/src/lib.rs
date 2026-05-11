@@ -38,7 +38,7 @@ pub use repair::{repair_region, worst_region};
 pub use directed::{run_directed, DirectedConfig};
 
 /// Configuration for the simulated-annealing local search.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct SaConfig {
     /// Initial temperature. Wauters et al. used 5000 for E2 specifically.
     pub temperature_start: f64,
@@ -54,6 +54,10 @@ pub struct SaConfig {
     pub time_budget_ms: u64,
     /// PRNG seed for reproducibility.
     pub seed: u64,
+    /// Cell positions that must NEVER move (piece and rotation preserved).
+    /// Used to honour the official E2 hint pieces during local search. Empty
+    /// by default — solver runs unconstrained.
+    pub pinned_positions: Vec<Position>,
 }
 
 impl Default for SaConfig {
@@ -72,6 +76,7 @@ impl Default for SaConfig {
             max_iters: 0,
             time_budget_ms: 0,
             seed: 0xE2_E2_E2_E2,
+            pinned_positions: Vec::new(),
         }
     }
 }
@@ -180,10 +185,18 @@ pub(crate) struct State<'a> {
     pub(crate) corner_cells: Vec<Position>,
     pub(crate) edge_cells: Vec<Position>,
     pub(crate) interior_cells: Vec<Position>,
+    // pinned[pos] == true ⇒ no move may touch this cell. Used to honour
+    // official E2 hint pieces during PT/SA. Cluster moves (2×2, 3×3, region
+    // swap) must abort if ANY cell they would touch is pinned.
+    pub(crate) pinned: Vec<bool>,
 }
 
 impl<'a> State<'a> {
     fn new(puzzle: &'a Puzzle) -> Self {
+        Self::new_with_pinned(puzzle, &[])
+    }
+
+    fn new_with_pinned(puzzle: &'a Puzzle, pinned_positions: &[Position]) -> Self {
         let pieces = puzzle.pieces();
         let max_piece_index = pieces.iter().map(|p| usize::from(p.id) + 1).max().unwrap_or(0);
         let mut piece_rot_edges = vec![[0u8; 4]; max_piece_index * 4];
@@ -208,6 +221,13 @@ impl<'a> State<'a> {
         }
 
         let n_cells = puzzle.cell_count() as usize;
+        let mut pinned = vec![false; n_cells];
+        for &pos in pinned_positions {
+            if (pos as usize) < n_cells {
+                pinned[pos as usize] = true;
+            }
+        }
+
         let mut cell_class = Vec::with_capacity(n_cells);
         let mut corner_cells = Vec::new();
         let mut edge_cells = Vec::new();
@@ -215,6 +235,11 @@ impl<'a> State<'a> {
         for pos in 0..puzzle.cell_count() {
             let c = classify_cell(puzzle, pos);
             cell_class.push(c);
+            // Pinned cells are removed from the per-class pools so random
+            // picks never select them. Cluster moves consult `pinned` directly.
+            if pinned[pos as usize] {
+                continue;
+            }
             match c {
                 CellClass::Corner => corner_cells.push(pos),
                 CellClass::Edge => edge_cells.push(pos),
@@ -233,6 +258,7 @@ impl<'a> State<'a> {
             corner_cells,
             edge_cells,
             interior_cells,
+            pinned,
         }
     }
 
@@ -754,6 +780,9 @@ pub fn run_sa_steps_fixed_temp(
             }
             // If any cell is empty, bail.
             if cells_pid.iter().any(|c| c.is_none()) { continue; }
+            // If any cell is pinned (official-E2 hint), bail — cluster rotation
+            // would move the hint piece off its mandated cell.
+            if cells_pos.iter().any(|&p| state.pinned[p as usize]) { continue; }
 
             // Boundary score for the 3×3: 12 outward-facing edges.
             // For TL row: top sides at (0,0),(1,0),(2,0).
@@ -908,6 +937,11 @@ pub fn run_sa_steps_fixed_temp(
                 }
             }
             if orig_a.len() != (KSWAP * KSWAP) as usize || orig_b.len() != (KSWAP * KSWAP) as usize {
+                continue;
+            }
+            // Skip if any cell in either block is pinned — region swap would move it.
+            if orig_a.iter().any(|&(pos, _, _)| state.pinned[pos as usize])
+                || orig_b.iter().any(|&(pos, _, _)| state.pinned[pos as usize]) {
                 continue;
             }
 
@@ -1085,6 +1119,11 @@ pub fn run_sa_steps_fixed_temp(
             let Some((id_tr, r_tr)) = board.get(p_tr) else { continue; };
             let Some((id_bl, r_bl)) = board.get(p_bl) else { continue; };
             let Some((id_br, r_br)) = board.get(p_br) else { continue; };
+            // Honour pinned cells (official-E2 hints).
+            if state.pinned[p_tl as usize] || state.pinned[p_tr as usize]
+                || state.pinned[p_bl as usize] || state.pinned[p_br as usize] {
+                continue;
+            }
 
             // Old block score = boundary matches at the 4 cells (sum
             // of local_match_count over the 4 cells, minus 2× the 4
@@ -1147,6 +1186,8 @@ pub fn run_sa_steps_fixed_temp(
             let n_cells = state.puzzle.cell_count();
             let pos = rng.gen_range(n_cells);
             let Some((pid, old_rot)) = board.get(pos) else { continue; };
+            // Skip pinned cells (official-E2 hints).
+            if state.pinned[pos as usize] { continue; }
             let cell_is_interior = matches!(state.cell_class[pos as usize], CellClass::Interior);
             if !cell_is_interior { continue; }
             let mut new_r = rng.gen_range(4) as u8;
@@ -1211,6 +1252,9 @@ pub struct StateRef<'a>(State<'a>);
 
 impl<'a> StateRef<'a> {
     pub fn new(puzzle: &'a Puzzle) -> Self { Self(State::new(puzzle)) }
+    pub fn new_with_pinned(puzzle: &'a Puzzle, pinned: &[Position]) -> Self {
+        Self(State::new_with_pinned(puzzle, pinned))
+    }
     pub fn score(&self, b: &Board) -> u32 { self.0.score(b) }
     pub fn total_interior_edges(&self) -> u32 { self.0.total_interior_edges() }
     pub fn random_initial(&self, rng: &mut RngHandle) -> Board {
@@ -1247,7 +1291,7 @@ impl RngHandle {
 /// during search (we do NOT pin user placements).
 pub fn run_sa_from(puzzle: &Puzzle, initial: &Board, cfg: &SaConfig) -> SaOutcome {
     let started = std::time::Instant::now();
-    let state = State::new(puzzle);
+    let state = State::new_with_pinned(puzzle, &cfg.pinned_positions);
     let mut rng = Rng::new(cfg.seed);
 
     let mut board = state.fill_in_initial(initial, &mut rng);
@@ -1272,7 +1316,7 @@ pub fn run_sa_from(puzzle: &Puzzle, initial: &Board, cfg: &SaConfig) -> SaOutcom
 ///   alone instead of re-scanning the whole board.
 pub fn run_sa(puzzle: &Puzzle, cfg: &SaConfig) -> SaOutcome {
     let started = std::time::Instant::now();
-    let state = State::new(puzzle);
+    let state = State::new_with_pinned(puzzle, &cfg.pinned_positions);
     let mut rng = Rng::new(cfg.seed);
 
     let mut board = state.random_initial(&mut rng);
@@ -1317,6 +1361,12 @@ fn run_sa_loop(
             let n_cells = state.puzzle.cell_count();
             let pos = rng.gen_range(n_cells);
             let Some((pid, old_rot)) = board.get(pos) else { continue; };
+            // Skip pinned cells (official-E2 hints).
+            if state.pinned[pos as usize] {
+                iters += 1;
+                since_cool += 1;
+                continue;
+            }
             let cell_is_interior = matches!(state.cell_class[pos as usize], CellClass::Interior);
             if !cell_is_interior {
                 // Border cells have a single valid rotation, rotate-only
