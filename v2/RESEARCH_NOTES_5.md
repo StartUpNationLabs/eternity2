@@ -453,6 +453,70 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE-BP 23:27 — Belief propagation on edge-color encoding — POSITIVE NEGATIVE RESULT
+
+**Hypothesis**: Despite SP agent's negative verdict (cavity assumption
+fails on short-cycle factor graph → BP non-convergence), test
+empirically by running BP on the cell-compatibility relaxation of E2.
+Two competing predictions:
+- Agent's prediction: BP fails to converge OR converges to wrong
+  marginals (paramagnetic).
+- Optimist: BP converges and produces useful frozen-mass info on
+  structural defects.
+
+**Setup**: `scripts/edge_color_bp.py` (~250 lines).
+- Variables: 544 edge slots, each ∈ {0..22}. BORDER (=0) clamped on
+  84 perimeter+hint edges; 460 free.
+- Factors: 256 cell-compatibility factors, each indicates whether the
+  surrounding 4-edge quad equals some piece-rotation.
+- All-different over piece usage **DELIBERATELY OMITTED** — too dense
+  for BP. Relaxation only.
+- Damped synchronous BP, max 500 iters, tol 1e-6.
+
+**Result**:
+
+1. **BP CONVERGES.** Convergence in 24 iters @ damping 0.1, 49 iters
+   @ damping 0.5. Cavity assumption is *operationally* tolerable on
+   this graph despite short cycles. **One claim from the SP agent
+   falsified**: BP doesn't fail to converge here.
+
+2. **Marginals are paramagnetic.** Median normalized entropy 0.90 of
+   max log(23) ≈ 3.14. Zero (0%) of free edges have any single color
+   with prob > 0.99 (= no frozen mass). Only 1% have any color with
+   prob > 0.5.
+
+3. **Top-6 universal-mismatch edges look identical to random edges**:
+   max-prob 0.07-0.08, entropy 0.90, no statistical signal.
+
+**Verdict**: Empirically validates the SP agent's overall verdict but
+via a **different mechanism than predicted**. The failure mode here
+is "convergence to the paramagnetic fixed point" (= the rigidity
+threshold isn't crossed), NOT "non-convergence due to short cycles".
+
+The structural insight: **all the rigidity of E2 lives in the all-
+different-over-pieces constraint**, not in the cell-compatibility
+constraints. Cell-compatibility alone is satisfiable in many ways
+(1024 valid quads / 22^4 = 0.4% density, but high enough that
+combinations are loose). The puzzle is hard because the 256 pieces
+must each be used exactly once — which is a global combinatorial
+constraint, not amenable to local message passing.
+
+**Implication for future work**:
+- Pure BP/SP at the edge-color level is NOT useful. The agent was
+  right.
+- A useful message-passing approach would need to encode piece
+  uniqueness, probably via a piece-place-rotation encoding with
+  bipartite-matching messages — that's essentially what cell-defect
+  MWPM already does in our ALNS.
+- The universal-mismatch lever continues to be the right structural
+  observation; BP can't see it.
+
+**Negative result documented**. ~30 min Python work, clean
+falsifiable test, useful for closing off a line of inquiry that
+multiple research agents had flagged with varying confidence. Total
+science gain: one falsified prediction, one validated prediction,
+one mechanism clarified.
+
 ### NE2-sweep 23:20 — launched (background)
 
 **Hypothesis**: forbidden-mismatch penalty steers PT toward the "good
