@@ -614,3 +614,69 @@ remain hard, but the plateau-anchored variant has very few
 degrees of freedom and is likely to produce an authoritative
 bound quickly. That settles the structural ceiling question for
 the documented basin.
+
+---
+
+## 2026-05-11 — Post-session cleanup (user-driven)
+
+After running pysat RC2 on the full 16×16 WCNF and the plateau-
+anchored variant, two things became obvious:
+
+1. **pysat RC2 is the wrong tool.** It runs the OLL algorithm
+   without printing any intermediate bound. Either you get the
+   answer or you don't; there's no progress signal. For a 5.8M-
+   clause instance this is a near-useless mode — you'd burn an
+   overnight budget and learn nothing if it didn't finish.
+
+2. **The 205-cell plateau-anchored mode was the wrong question.**
+   It asks "can we improve from *this specific basin*?", and
+   vol. 4's F2 wipeout already says no (AC3 thinks the 205 are
+   unsatisfiable). The headline question is "what's the puzzle's
+   ceiling under the 5 *official* hints?" — and that's what the
+   stock encoder already produces.
+
+**Cleanup done in this commit:**
+- Deleted `scripts/run_maxsat.py` and the python-sat detour. All
+  SAT pipeline stays in Rust; the next session shells out to a
+  *native* solver.
+- Removed `--anchor-plateau` / `--anchor-analysis` flags from
+  `sat_e2`. The bin is now focused on emitting the official
+  5-clue puzzle as CNF/WCNF.
+- Added a short user-facing hint at the end of `sat_e2` output
+  pointing to the native solvers to try (kissat, cadical,
+  EvalMaxSAT, cashwmaxsat-core, uwrmaxsat).
+
+**Revised recommendation for vol. 4 session 2:**
+
+> **Step 1**: literature survey. Use web research to systematically
+> identify E2-relevant methods we haven't tried. The auto-memory
+> standing instruction says "innovate, take time, reformulate
+> across fields" — this is exactly the moment to reach outside
+> our toolbox. Candidates to actually investigate:
+> - Frame-first decomposition (Wenslowe / 1-clue 470 record).
+>   Solve the border ring first (60 cells, much smaller),
+>   freeze it, then attack interior. We haven't tried this.
+> - Belief Propagation / Survey Propagation. Random-CSP
+>   literature; may help on the high-Z plateau geometry.
+> - Lagrangian relaxation of alldiff. Bound-tightening.
+> - GA with Lamarckian local search (Verhoef 2009 family).
+> - MCTS + neural-policy (AlphaZero-style). Latest E2 attempts
+>   in 2023+ literature reportedly use this.
+> - Path/branch decomposition + DP with explicit boundary state.
+>   Treewidth on a grid is √n = 16, so full DP is intractable,
+>   but path-decomposition tracks just the cut. Possibly works
+>   for plateau-region-fixed problems.
+> - Tabu Search with diversification (Schaus & Deville 2008).
+>   We did SA + PT; tabu is a different escape mechanism.
+>
+> **Step 2**: native MaxSAT with the official 5-hint encoding.
+> Install one of EvalMaxSAT / CashWMaxSAT-Core / UWrMaxSAT.
+> Pick the highest-streaming-verbosity option. Run on the
+> existing 108.8 MB WCNF that this session already produced.
+> If it converges → authoritative ceiling answer. If it gets
+> stuck at the same plateau → independent confirmation of the
+> 449 structural limit.
+>
+> Step 1 is half-day and reframes everything; step 2 is
+> overnight-compute and may answer the headline question
+> directly. Do them in that order.
