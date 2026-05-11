@@ -895,4 +895,173 @@ constraint" combined with our edge-CP's per-cell row-mask is a candidate.
   variables (the Ansótegui 2008 dual encoding); throw a modern SAT
   solver at it; see if it can find the 480 SOTA or 470.
 
+---
+
+## 2026-05-11 — SESSION CLOSE (vol. 3 first session)
+
+### Headline deliverables
+
+1. **New crate `eternity2-edge-solver`** — Inversion 2 from the agenda
+   built end-to-end. 480 interior edges as variables, domain
+   {1..n_colors-1}, cell-consistency via precomputed
+   (piece × rotation) bitmasks. Self-contained; does NOT modify
+   `solver-engine` so the existing cell-CP / pt_e2 pipeline is
+   preserved for side-by-side comparison.
+
+2. **Three propagator variants implemented and characterized**:
+   - v1 (no alldiff): finds 480/480 edge-coloring trivially in 24s,
+     but recovery only places 104/256 cells (massive collisions).
+   - v1.1 (Hall-1, sound singleton-pigeonhole alldiff): 335/480
+     recovered, 185/256 cells.
+   - v1.2 (full bipartite-matching feasibility): 303/480 recovered,
+     174/256 cells with hints. *Same plateau* as Hall-1 — the
+     stronger propagator catches more violations but doesn't move
+     the search-tree-plateau.
+
+3. **Bipartite-matching board recovery** replacing greedy
+   (Hopcroft-Karp-style augmenting paths).
+
+4. **Hint translation** — the 5 official hints become 20 pinned
+   edge colors + 5 committed pieces.
+
+5. **Cross-pollination experiment**: edge-CP→PT seeded with edge-CP
+   partial. Best result: 446/480 (cell-CP→PT plateaus at 449).
+   Edge-CP and cell-CP basins are *different but ceiling-similar*.
+
+6. **Graph-theoretic reframing** of the plateau (this section, above).
+   Identified 4 graphs in play; plateau = Hamming moat in joint
+   feasibility region of (Graph 1 ∩ Graph 2).
+
+### Files added / changed
+
+  v2/crates/edge-solver/                          (new crate)
+    Cargo.toml, src/lib.rs
+    src/topology.rs        — board edge-cell adjacency
+    src/tables.rs          — piece-rotation row tables + bitmasks
+    src/search.rs          — B&B + Hall-1 + matching propagators
+    src/recover.rs         — bipartite-matching board recovery
+  v2/crates/benchmark/
+    Cargo.toml             — added edge-solver dep, edge_cp_e2 bin
+    src/bin/edge_cp_e2.rs  — CLI with --pt-seconds for cross-pollination
+  v2/Cargo.toml            — workspace member entry
+
+Reports under `v2/output/edge_cp_e2_*.{json,url.txt}` (multiple
+configurations); the post-cross-pollination 446 result is at
+`v2/output/edge_cp_e2_1778524966_446of480.json`.
+
+### Hard-won lessons
+
+1. **The plateau is graph-structural, not solver-structural.**
+   Stronger alldiff (Hall-1 → full matching), different basin
+   (cell-CP → edge-CP seeds), more PT budget (60s → 240s) all yield
+   the same band (444-449). Single-swap local search cannot cross
+   the moat.
+
+2. **Edge-coloring is loose; alldiff is binding.** This was vol. 3's
+   most concrete finding. Vol. 2 couldn't separate the two
+   contributions; edge-CP isolates edge-coloring and shows it's
+   easy. The hardness is in piece-uniqueness.
+
+3. **Unsound propagators are *very* misleading.** The naïve
+   "commit piece when cell-mask narrows to it" propagator dies at
+   5/480 on 6×6 *and* on 16×16. Looks plausible at first; fails
+   because cell-collapse to piece P doesn't prove other cells don't
+   also need P. Sound Hall-1 was the right replacement.
+
+4. **Don't trust "AllAssigned" without recovery.** v1 reported
+   480/480 in 24s with zero backtracks; that "solution" had 152
+   collision cells. Always score the *recovered board*, not the
+   search's internal score, when alldiff isn't enforced during
+   search.
+
+5. **Cross-pollination yields *close* but not *equal* basins.** PT
+   from edge-CP seed (446) vs PT from cell-CP seed (449) within
+   5 edges. Useful diagnostic; not a breakthrough.
+
+### Verified state for next session
+
+- Cell-CP baseline on 5-clue official E2: **449-450/480**
+- Edge-CP v1 (no alldiff): **117/480** recovered
+- Edge-CP v1.1/1.2 (sound alldiff): **303-335/480** recovered
+- Edge-CP→PT (60s+60s):   **444/480**
+- Edge-CP→PT (60s+240s):  **446/480**  ← session best from this branch
+- Cell-CP→PT (megarun from vol. 2): **449/480**
+- 1-clue community SOTA (Blackwood): **470/480** (different puzzle)
+- 5-clue community SOTA: unknown
+
+### Three concrete next-step options (user-selected for vol. 3 cont.)
+
+These are documented here so the next Claude session has a clean
+choice-set without re-deriving it. They differ in cost, novelty,
+and odds of breaking the 449 plateau. Pick one per session.
+
+**Option A — Spectral diagnostic of plateau (CHEAP, half-day)**
+
+  Extract Graph 2 (cell × piece compatibility) at a known 449-state
+  plateau (e.g., `output/pt_e2_1778519359_449of480.json`). Build the
+  bipartite graph; find the Hall-violating subgraph (the "deficient
+  set" via König's theorem). Analyze:
+    - Is the deficient set spatially localized (e.g., a 4×4 region) or
+      spread across the board?
+    - Spectral gap of the induced cell-cell co-occurrence graph?
+    - Treewidth?
+  Outcome shapes future work:
+    - Localized → mini-CP can repair that region exactly; build it.
+    - Distributed → confirms 449 is a hard structural limit, falls back
+      to deeper algorithmic changes.
+  Risk: low. Cost: low. Information value: high.
+
+**Option B — Régin-coupled alldiff + edge-CP propagator (DEEP, 3-5 days)**
+
+  Combine bipartite-matching alldiff (Régin '94's full propagator,
+  which prunes individual rows from cell domains, not just checks
+  feasibility) WITH our edge-CP row-mask machinery. Today they're
+  separate propagators called in sequence. Coupled: each row pruned
+  from cell c's mask via alldiff feeds back into the side-color
+  projection that constrains adjacent edges. Vice versa.
+  Implementation: extend `propagate_ac3` in search.rs to also call
+  Régin's row-pruning every K assigns; share the same row-mask
+  arrays. Sound, strictly stronger than Hall-1 OR feasibility-only
+  matching alone.
+  Why it might work: vol. 3 confirmed alldiff and edge-coloring
+  don't decouple. Today's solvers treat them as independent
+  constraints. Joint enforcement is the unexplored lever.
+  Risk: medium (might still plateau at 449 — would be a hard
+  structural result either way). Cost: high. Novelty: high — no
+  E2 solver in the literature does this.
+
+**Option C — SAT encoding via Ansótegui 2008 dual (MEDIUM, 1-2 days)**
+
+  Encode E2 as CNF using both edge variables (480) and piece
+  variables (256 × 4 rotation slots), with channeling constraints
+  between them. Run a modern CDCL solver (CryptoMiniSat or Kissat)
+  with the 5 hints as unit clauses and a time budget. Authoritative
+  answer: either the solver proves a high score reachable, finds
+  one we missed, or proves the joint constraints infeasible.
+  Why valuable: independent confirmation of our plateau analysis.
+  If a SAT solver beats 449, our CP+PT stack is leaving something on
+  the table. If SAT also plateaus, the 449 ceiling is fundamental
+  for *all* exact-search methods.
+  Risk: low (well-trodden tooling). Cost: medium (encoding is
+  fiddly). Novelty: low (replication of known approach) — but
+  vol. 3 cared more about *resolving the question* than *being new*.
+
+### Recommendation if next session has limited time
+
+Start with Option A — half a day, definitively shapes B vs C. If
+A reveals localized Hall failures: build a targeted mini-CP repair
+(maps onto vol. 2's region-repair idea but now informed by what
+actually breaks). If A reveals distributed failures: skip B, do C
+to get an authoritative bound, then accept the result.
+
+### Punted items still on the agenda
+
+  - Houdayer-in-PT no-op observation (vol. 2 mid-session). Inv. 2
+    didn't address it. Still worth investigating if 449 turns out to
+    be the SOTA — Houdayer fixes might add a fraction of an edge.
+  - Edge-CP LCV value ordering (try colors by least-constraining
+    first). Easy add; could help reach a better 480-edge basin.
+  - Edge-CP variable-ordering experiments. Current MRV may be
+    suboptimal for the actual structure of edge-CP.
+
 
