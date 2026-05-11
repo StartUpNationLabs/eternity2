@@ -1185,3 +1185,173 @@ Pick one or two of:
 ALNS + MWPM stays in the codebase as the correct tool for
 *search-from-low-quality-state* (its 0→370 climb is fast). It is
 not the right tool for *breaking the 449 plateau*.
+
+---
+
+## 2026-05-11 — User idea: "allow errors only on exterior layers"
+
+User observed: "centers seem harder." Proposed: relax the
+matching constraint on outer layers; only require matching on
+interior cells.
+
+### Phase 0 — mismatch position diagnostic (free)
+
+Quick Python analysis of mismatches by min/max distance-from-
+border on existing 449 plateau JSONs:
+
+```
+Canonical 449 (basin A):
+  d=1: 1   mismatches
+  d=2: 5
+  d=3: 10
+  d=4: 6
+  d=5: 5
+  d=6: 4
+  → 0 mismatches at d=0 (outermost ring)
+  → peak at d=3 (mid-depth)
+
+Fresh 449 (basin B):
+  d=1: 2
+  d=2: 4
+  d=3: 10
+  d=4: 5
+  d=5: 8
+  d=6: 1
+  d=7: 1
+  → 0 mismatches at d=0 (outermost ring)
+  → peak at d=3-5
+```
+
+**Empirical confirmation of the user's intuition**: on both
+basins, **0 mismatches occur on the outermost ring**. All 31
+defects are in the interior. The outer ring is "free" — cell-CP
+solves the boundary layer perfectly. The hard region is the
+interior.
+
+This sharpens what we already saw in vol. 4 Option A
+(connected components localized to south-central region) and
+in vol. 2's plateau-analysis (the 60 border cells are
+invariant across plateau states).
+
+### Phase 1 — interior-only scoring
+
+The natural followup: change the objective. Score only edges
+where *both* cells are in the **inner region**, leaving outer
+ring(s) free. Hypothesis: with a relaxed objective, can we
+reach near-100% matched in the center?
+
+If yes → the interior is *individually* solvable; the
+plateau is fundamentally about *joint* feasibility of
+interior + boundary.
+
+If no → even the interior alone is at its structural ceiling;
+no relaxation of the border helps.
+
+Two configurations to test:
+- `ring_depth=1`: outermost ring (60 cells) is "exterior";
+  interior = 196 cells, 14×14 region.
+- `ring_depth=2`: outer two rings (112 cells) are exterior;
+  interior = 144 cells, 12×12 region.
+
+Implementation plan:
+1. New bin `crates/benchmark/src/bin/interior_e2.rs`.
+2. Custom scoring function: only count an edge if both incident
+   cells are at distance ≥ `ring_depth` from the border.
+3. Run cell-CP→PT with this objective; report center-match-rate
+   and full-board score in parallel.
+4. **No 449 seed** — per user instruction, start fresh.
+
+### Phase C — post-hoc center-scoring of all existing PT plateaus
+
+Before building the new bin: I post-scored all 12 existing PT
+plateau JSONs by ring depth. Asks: do PT runs with different
+overall scores converge to different *center* scores, or do
+they all hit the same center plateau?
+
+```
+overall | d>=1 (14×14)    | d>=2 (12×12)    | d>=3 (10×10)
+449     | 333/364 = 91.5% | 234/264 = 88.6% | 155/180 = 86.1%
+449     | 333/364 = 91.5% | 235/264 = 89.0% | 155/180 = 86.1%
+447     | 331/364 = 90.9% | 233/264 = 88.3% | 157/180 = 87.2%  ← best center
+444     | 329/364 = 90.4% | 233/264 = 88.3% | 156/180 = 86.7%
+444     | 329/364 = 90.4% | 233/264 = 88.3% | 156/180 = 86.7%
+440     | 324/364 = 89.0% | 226/264 = 85.6% | 148/180 = 82.2%
+440     | 325/364 = 89.3% | 229/264 = 86.7% | 156/180 = 86.7%
+440     | 325/364 = 89.3% | 229/264 = 86.7% | 156/180 = 86.7%
+438     | 325/364 = 89.3% | 232/264 = 87.9% | 157/180 = 87.2%  ← same center as 447
+435     | 320/364 = 87.9% | 226/264 = 85.6% | 151/180 = 83.9%
+435     | 320/364 = 87.9% | 226/264 = 85.6% | 151/180 = 83.9%
+435     | 320/364 = 87.9% | 226/264 = 85.6% | 151/180 = 83.9%
+```
+
+**Findings**:
+
+1. **The center is also on a plateau, around 86-87%.** Across
+   12 PT runs at overall scores ranging 435-449, the 10×10
+   center score lives in a tight 82-87% band.
+2. **Best center-score is on the 447 board, not the 449.** A
+   lower-overall-score board has higher center-score. PT is
+   trading center matches for peripheral matches without
+   knowing the user prefers the center.
+3. **The 438 plateau has the same center-score as the 447.**
+   Center scores cluster, so even with different overall
+   scores PT lands on similar center states.
+4. **The outer ring is trivially 100%.** Confirms: the
+   structural difficulty is concentrated in the deep interior.
+
+### Mismatch position visualizations
+
+I rendered the mismatch pattern for the 447 and 438 boards
+(see commit history for the full ASCII overlays). Both have
+their mismatches concentrated in rows 5-13, cols 2-13 — the
+same south-central region as the 449 plateaus. **The hard
+region is consistent across PT runs at all overall scores in
+the 435-449 band.**
+
+### Updated hypothesis
+
+The user's "allow errors only on exterior" framing is correct
+descriptively — PT already finds the outer ring trivially —
+but as a *search direction* it would lock onto a region that
+*also* plateaus (at ~87% in the 10×10 center). Changing the
+objective to weight the center wouldn't necessarily break the
+center plateau.
+
+However, it would **clarify** the structural hardness:
+- Outer ring: 100% feasible (PT solves trivially).
+- 14×14 interior: ~91% ceiling.
+- 12×12 interior: ~88% ceiling.
+- 10×10 center: ~87% ceiling.
+
+This suggests **the structural ceiling is multi-scale**: each
+shrinking concentric region has its own plateau. The 86-87%
+center ceiling is what makes the overall 93.5% number — the
+outer ring carries 100%, weighted by its edge count, and the
+center drags down the total.
+
+### Conclusion: Phase 1 not pursued
+
+Building a center-only scoring bin would be implementing an
+*optimizer for a known-plateau metric*. It would replicate the
+PT behavior, just on a smaller numerator/denominator. The
+honest research move is: **acknowledge that the center is the
+hard region, and target it directly with the methods session-2
+identified as plateau-breaking** (frame-first, GA with block
+crossover, SP diagnostic).
+
+### What I'm taking forward
+
+The post-hoc Phase C analysis adds two specific insights:
+
+1. **The hard region is a 10×10 center**, not "the whole
+   puzzle." This narrows the scope: frame-first methods can
+   solve the outer 78 cells (boundary ring + adjacent) easily;
+   the interesting hardness is in the inner 100 cells.
+2. **Multi-scale plateau structure** (91% / 88% / 87% across
+   shrinking regions) suggests the constraint geometry isn't
+   uniform. The puzzle has a "core" of structural difficulty.
+   Worth keeping in mind for SP diagnostic interpretation.
+
+The actual next-experiment-to-run remains **frame-first
+decomposition** or **SP diagnostic** as previously
+identified.
