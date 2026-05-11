@@ -742,6 +742,28 @@ it.
 
 
 
+### NE2.1 sweep complete 00:36 — monotonic over-constraining
+
+| K | best | fmm | swap% | notes |
+|---|---|---|---|---|
+| 1 | 448 | 0   | 1.0%  | reaches fmm=0, matches unconstrained baseline |
+| 2 | 445 | 0   | 14.1% | over-constraining starts |
+| 5 | 442 | 0   | 7.4%  | strongly over-constrained |
+| (10 partial) | 445 | 0 | 0.7% | from earlier confounded run |
+
+**Verdict**: combined NE2.1 is monotonically worse as K grows. No K
+beats NE2 swap-only K=10's 449. Root cause: inner-loop penalty
+applies on ~40% of moves; effective strength ≈ 5x the K parameter.
+K=1 combined ≈ K=5 swap-only effective.
+
+**Lesson**: NE2.1 needs either (1) replacing the swap-level penalty,
+not adding to it (= `--forbidden-mode inner` flag queued), or
+(2) fractional K via float penalty math.
+
+**No further NE2.1 work tonight**. NE2 swap-only K=10 stands.
+
+---
+
 **Full NE2 swap-only K-sweep results** (CP+PT 30+600s, canonical seed):
 | K | best raw | fmm | swap_accept% | interpretation |
 |---|---|---|---|---|
