@@ -56,6 +56,19 @@ struct Args {
     /// Seed for the generator.
     #[arg(long, default_value_t = 0xC0FFEE)]
     generate_seed: u64,
+
+    /// Plateau-anchored mode: load a plateau JSON and pin all 205-ish
+    /// unambiguous (non-mismatch-incident) cells as hints, in addition
+    /// to the puzzle's 5 official hints. The 51 mismatch cells remain
+    /// free. Produces a much smaller instance focused on local
+    /// improvability.
+    #[arg(long)]
+    anchor_plateau: Option<PathBuf>,
+
+    /// plateau_analysis JSON listing the mismatch-incident cells to
+    /// leave free. Required when --anchor-plateau is set.
+    #[arg(long)]
+    anchor_analysis: Option<PathBuf>,
 }
 
 fn main() {
@@ -63,7 +76,7 @@ fn main() {
     eprintln!("=== sat_e2 ===");
     eprintln!("puzzle: {}", args.puzzle.display());
 
-    let (puzzle, hints) = if let Some(n) = args.generate_n {
+    let (puzzle, mut hints) = if let Some(n) = args.generate_n {
         let p = generate(GeneratorConfig {
             size: n, interior_colors: n + 2, seed: args.generate_seed,
         }).expect("generate");
@@ -77,6 +90,77 @@ fn main() {
             p.width, p.height, p.pieces().len(), p.color_count - 1, h.hints.len());
         (p, h)
     };
+
+    if let Some(plateau_path) = &args.anchor_plateau {
+        let analysis_path = args.anchor_analysis.as_ref()
+            .expect("--anchor-analysis required with --anchor-plateau");
+        eprintln!("\n--- plateau-anchored mode ---");
+        eprintln!("plateau: {}", plateau_path.display());
+        eprintln!("analysis: {}", analysis_path.display());
+
+        let plateau_json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(plateau_path).expect("read plateau")
+        ).expect("parse plateau");
+        let analysis_json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(analysis_path).expect("read analysis")
+        ).expect("parse analysis");
+
+        // Collect mismatch-incident cells (these stay free).
+        let mut free_cells: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+        if let Some(comps) = analysis_json.get("components").and_then(|x| x.as_array()) {
+            for c in comps {
+                if let Some(cells) = c.get("cells").and_then(|x| x.as_array()) {
+                    for v in cells {
+                        if let Some(n) = v.as_u64() { free_cells.insert(n as u32); }
+                    }
+                }
+            }
+        }
+        eprintln!("free (mismatch-incident) cells: {}", free_cells.len());
+
+        // Load per-cell placement from plateau JSON's `placement` field
+        // (preferred). Else decode the bucas URL.
+        let placement: Vec<Option<(eternity2_core::PieceId, eternity2_core::Rotation)>> =
+            if let Some(p) = plateau_json.get("placement").and_then(|x| x.as_array()) {
+                let mut out = Vec::with_capacity(p.len());
+                for entry in p {
+                    if entry.is_null() { out.push(None); }
+                    else {
+                        let pid = entry.get("piece_id").unwrap().as_u64().unwrap() as eternity2_core::PieceId;
+                        let rot_u = entry.get("rotation").unwrap().as_u64().unwrap() as u8;
+                        out.push(Some((pid, eternity2_core::Rotation::from_u8(rot_u).unwrap())));
+                    }
+                }
+                eprintln!("using enriched `placement` field");
+                out
+            } else {
+                // Bucas decode fallback.
+                let url = plateau_json.get("bucas_url").and_then(|x| x.as_str()).expect("bucas_url");
+                eprintln!("decoding placement from bucas_url");
+                decode_from_bucas(&puzzle, url)
+            };
+
+        // Add hints for non-free placed cells.
+        let mut anchor_hints = Vec::new();
+        for (pos, slot) in placement.iter().enumerate() {
+            if free_cells.contains(&(pos as u32)) { continue; }
+            if let Some((pid, rot)) = slot {
+                anchor_hints.push(eternity2_core::Hint {
+                    position: pos as u32, piece_id: *pid, rotation: *rot,
+                });
+            }
+        }
+        eprintln!("adding {} anchor hints (pinning non-mismatch cells)", anchor_hints.len());
+        // Combine with existing hints (deduplicate by position).
+        let mut existing_positions: std::collections::BTreeSet<u32> =
+            hints.hints.iter().map(|h| h.position).collect();
+        for h in anchor_hints {
+            if existing_positions.insert(h.position) {
+                hints.hints.push(h);
+            }
+        }
+        eprintln!("total hints (existing + anchor): {}", hints.hints.len());
+    }
 
     eprintln!("\nBuilding variable map...");
     let t0 = std::time::Instant::now();
@@ -140,4 +224,34 @@ fn main() {
 
 fn stem(p: &std::path::Path) -> String {
     p.file_stem().and_then(|s| s.to_str()).unwrap_or("puzzle").to_string()
+}
+
+fn decode_from_bucas(
+    puzzle: &eternity2_core::Puzzle,
+    bucas_url: &str,
+) -> Vec<Option<(eternity2_core::PieceId, eternity2_core::Rotation)>> {
+    use eternity2_core::Rotation;
+    let n_cells = puzzle.cell_count() as usize;
+    let mut out = vec![None; n_cells];
+    let Some(idx) = bucas_url.find("board_edges=") else { return out };
+    let blob = &bucas_url[idx + "board_edges=".len()..];
+    let blob = blob.split('&').next().unwrap_or(blob);
+    let bytes = blob.as_bytes();
+    if bytes.len() < n_cells * 4 { return out; }
+    for pos in 0..n_cells {
+        let q: [u8; 4] = std::array::from_fn(|i| bytes[pos * 4 + i] - b'a');
+        if q.iter().all(|&c| c == 0) { continue; }
+        let mut found = None;
+        let mut multi = false;
+        'outer: for piece in puzzle.pieces() {
+            for rot in Rotation::ALL {
+                if piece.edges.rotated(rot).as_array() == q {
+                    if found.is_some() { multi = true; break 'outer; }
+                    found = Some((piece.id, rot));
+                }
+            }
+        }
+        if !multi { out[pos] = found; }
+    }
+    out
 }

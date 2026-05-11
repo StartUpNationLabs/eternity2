@@ -441,3 +441,176 @@ The result is meaningful in either direction:
 - New bin `crates/benchmark/src/bin/sat_e2.rs` (encode 16×16 or
   generated puzzles to CNF/WCNF).
 - New script `scripts/run_maxsat.py` (load WCNF, run RC2 with budget).
+
+### Paths forward if RC2 times out
+
+The 16×16 instance is famously hard. If RC2 doesn't terminate in
+30 min, the next session has multiple cleaner approaches:
+
+1. **Native MaxSAT solvers** — EvalMaxSAT (Avellaneda 2020, MSE
+   winner), CashWMaxSAT-Core (Lei-Cai 2021), or UWrMaxSAT (Piotrów
+   2020). All require compilation from source. Install path:
+   ```
+   git clone https://github.com/forge-osi/EvalMaxSAT  # placeholder
+   cd EvalMaxSAT && make
+   ```
+   These can be 10-100× faster than RC2 on industrial instances.
+2. **Encoding refinements**:
+   - **Sequential AMO** instead of bimander for cells with very
+     large piece-rotation sets (n > 200): typically tighter UP.
+   - **Cardinality-based MaxSAT objective**: encode "≥ k matched
+     edges" as a hard clause via a sequential cardinality
+     constraint, then binary-search over k. Avoids MaxSAT entirely
+     — pure SAT decisions. Works with kissat/cadical (very fast
+     CDCL).
+3. **Problem decomposition**:
+   - **Plateau-anchored MaxSAT**: pin the 256 - 51 = 205
+     unambiguous cells from the 449-plateau as additional hard
+     unit clauses, ask SAT/MaxSAT to maximize matches *over the
+     51 mismatch-incident cells*. Drastically smaller instance.
+     Caveat: this assumes the plateau's pinning is consistent —
+     vol. 4 F2 showed AC3 wipes out, so the SAT solver itself
+     would prove UNSAT, confirming "no improvement on this
+     plateau" from another angle. Worth doing as a focused probe.
+   - **Region-MaxSAT**: pin only the boundary ring (60 cells),
+     MaxSAT over the 196 interior. Smaller search space; gives
+     "best possible interior given the canonical border".
+4. **Symmetry breaking**:
+   - Rotational symmetry of pieces that have repeated edges:
+     detect and emit only one rotation. Reduces piece-vars
+     count by ~10-15% on typical E2 puzzles.
+   - Translational symmetry: not present in E2 (5 hints break
+     all global symmetries), so no gain there.
+
+### Session-2 priority
+
+Given vol. 4 session 1 has settled:
+- Option A is *complete*: localized but locally-unrepairable.
+- Option C *foundation* is built and validated.
+
+The natural session-2 work is **harden the SAT pipeline**:
+1. Install EvalMaxSAT (or whichever is most accessible).
+2. Run 16×16 on a real overnight budget (8-24h).
+3. If unproductive: try the *plateau-anchored MaxSAT* probe (#3
+   above) — far smaller instance, may give a clean local-optimum
+   confirmation in minutes.
+4. Document the authoritative bound: if SAT finds ≥ 450, our
+   stack has been suboptimal. If it proves ≤ 449, the 93.5%
+   ceiling is structural.
+
+---
+
+## SESSION CLOSE (vol. 4 first session)
+
+### Headline deliverables
+
+1. **Option A complete** — plateau structural diagnostic. The 31
+   mismatch edges at the canonical 449 plateau form 4 connected
+   components (38/6/5/2), localization ratio 0.745 (strongly
+   single-blob). A fresh 449 from a different basin has 5
+   components (23/16/6/3/2), localization 0.460. **Cross-basin
+   conclusion**: spatial structure is basin-dependent, but
+   AC3-unsatisfiability of the plateau pinned ring is universal.
+   Tools: `plateau_analyze`, `component_repair`.
+
+2. **vol. 2 obstruction sharpened**. Mini-CP repair (free the
+   mismatch components, pin everything else) AC3-wipes in <0.1s on
+   both basins. Replicates and extends vol. 2's "local repair
+   can't fix this" finding: not just that the freed-window pieces
+   lack a completion, but that the *pinned cells alone* are not
+   arc-consistent.
+
+3. **Option C foundation built** — new crate `eternity2-sat-encoder`
+   implementing Ansótegui-style piece-rotation-at-cell encoding +
+   bimander AMO + edge-match aux vars for MaxSAT objective.
+   Validated end-to-end on 3×3/4×4/5×5 generated puzzles (splr
+   solves them all to 100%; RC2 confirms WCNF parsing and MaxSAT
+   optimum). For 16×16 official: 171 112 vars, 5.8M hard clauses,
+   480 soft clauses, 108.8 MB WCNF.
+
+4. **Report enrichment**: `report.rs` now writes a per-cell
+   `placement` array so analysis tools don't need to bucas-decode.
+
+### Files added / changed
+
+```
+v2/crates/sat-encoder/                       (new crate)
+  Cargo.toml, src/lib.rs, tests/end_to_end.rs
+v2/crates/benchmark/
+  Cargo.toml, src/report.rs (placement field),
+  src/bin/plateau_analyze.rs, src/bin/component_repair.rs,
+  src/bin/sat_e2.rs (all new)
+v2/Cargo.toml                                (workspace member)
+v2/scripts/run_maxsat.py                     (new helper)
+v2/RESEARCH_NOTES_4.md                       (this file)
+.claude/projects/.../memory/MEMORY.md        (auto-memory refresh)
+.claude/projects/.../memory/project_e2_state.md
+```
+
+### Hard-won lessons
+
+1. **A 0.745 localization ratio is not the same as repair-able.**
+   The SESSION CLOSE prediction "localized → mini-CP can repair
+   that region exactly" turned out to be over-optimistic. The
+   right framing is: localization tells us *where* the failures
+   are spatially, not whether the pinned surround admits any
+   improvement. AC3 unsatisfiability of plateau states is
+   stronger than spatial diagnosis can detect.
+
+2. **AC3 unsatisfiability of the pinned ring is basin-invariant.**
+   Two distinct 449 plateaus produced different component
+   structures but the *same wipeout phenomenon* under
+   component-repair. This is a strong negative result that
+   moots the "mini-CP region repair" branch of the SESSION
+   CLOSE conditional. The real ceiling-question is a global
+   feasibility question — SAT-shaped.
+
+3. **MaxSAT instance sizes are tractable for E2 by modern
+   standards.** 5.8M clauses, 170k vars is at the easy-to-medium
+   end of MaxSAT Evaluation benchmarks. RC2 may not finish, but
+   a native solver should.
+
+4. **Class-filtering shrinks the SAT instance dramatically.**
+   The naive piece-rotation-at-cell count is 256×256×4 = 262 144;
+   after class filtering it's 156 816 — a 40% reduction. Crucial
+   for tractability.
+
+5. **Bimander AMO is the right default.** Pairwise AMO on n=200
+   cells would emit 20k clauses per cell × 256 cells = 5M clauses
+   *just for AMO* — comparable to our total. Bimander makes the
+   encoding feasible.
+
+### Verified state for next session
+
+- Cell-CP baseline: 449/480 (unchanged).
+- Plateau structure: 4 components in canonical / 5 components in
+  fresh, both spatially localized but AC3-incompatible with local
+  repair.
+- SAT encoder: validated on small puzzles, builds a 108.8 MB
+  WCNF for 16×16 official in ~1s.
+- RC2 16×16 run: status uncertain (may time out within 30 min
+  budget). See `/tmp/rc2_16x16.log`.
+
+### Open questions for next session
+
+1. **Did RC2 finish?** If yes, what's the optimum? If timed out,
+   *was the lower bound improving steadily*?
+2. Native MaxSAT solver path — install EvalMaxSAT or
+   CashWMaxSAT-Core, retry with longer budget.
+3. **Plateau-anchored MaxSAT**: pin the 205 unambiguous cells
+   from a canonical plateau, ask MaxSAT to maximize edge matches
+   over the 51 mismatch cells. Drastically smaller instance —
+   likely solvable in minutes. Sharpens the F2 wipeout finding
+   to an exact lower-bound proof.
+4. **Cardinality-MaxSAT alternative**: instead of MaxSAT, binary-
+   search via decision-SAT with a "≥ k matched edges" cardinality
+   constraint. Use kissat or cadical (both fast CDCL).
+
+### Recommendation
+
+Next session should focus on **(2) install a native MaxSAT solver
++ (3) plateau-anchored encoding**. The full-puzzle MaxSAT may
+remain hard, but the plateau-anchored variant has very few
+degrees of freedom and is likely to produce an authoritative
+bound quickly. That settles the structural ceiling question for
+the documented basin.
