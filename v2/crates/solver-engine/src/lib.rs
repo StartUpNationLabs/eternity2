@@ -1072,15 +1072,16 @@ impl<'a> SearchState<'a> {
         b
     }
 
-    pub(crate) fn run(mut self, sink: &mut dyn EventSink) -> SolveOutcome {
-        self.emit(sink, 0, EventBody::Started {
-            solver_id: self.solver_id.clone(),
-            heuristic_profile: self.heuristic_profile.clone(),
-            puzzle_fingerprint: self.puzzle.fingerprint(),
-            seed: self.opts.seed,
-            started_wall_us: 0,
-        });
-
+    // Apply symmetry-breaking pin (canonical corner at (0,0) when no user
+    // hint touches it) and user-supplied hints (each hint position has its
+    // domain restricted to the chosen (piece, rotation) and is committed
+    // via place_and_propagate). Returns Err with the outcome if either
+    // step is infeasible. Used by both the single-threaded run() and the
+    // parallel root-split path so hints are honoured in both.
+    pub(crate) fn apply_symmetry_and_hints(
+        &mut self,
+        sink: &mut dyn EventSink,
+    ) -> Result<(), SolveOutcome> {
         // Symmetry-breaking. The board has D4 rotational symmetry: each
         // solution has 4 rotational copies (or 8 if we also count
         // reflection, which we don't here because pieces are
@@ -1091,12 +1092,10 @@ impl<'a> SearchState<'a> {
         // the symmetric copies. If the puzzle's user_hints already pin
         // (0,0), we skip this (user knows best).
         if self.config.break_symmetry && self.opts.hints.hints.iter().all(|h| h.position != 0) {
-            // Find lowest-id corner piece.
             let canonical_corner = self.puzzle.pieces().iter()
                 .filter(|p| p.is_corner())
                 .min_by_key(|p| p.id);
             if let Some(piece) = canonical_corner {
-                // Find the rotation that puts BORDER on top AND left.
                 let pid = usize::from(piece.id);
                 let canonical_row_id = (0..4u32).find_map(|r| {
                     let row = self.rows[pid * 4 + r as usize];
@@ -1111,9 +1110,9 @@ impl<'a> SearchState<'a> {
                         if let PropagationOutcome::Wipeout { .. } =
                             self.place_and_propagate(sink, 0, 0, row_id)
                         {
-                            return SolveOutcome::Error(
+                            return Err(SolveOutcome::Error(
                                 "symmetry-breaking placement caused immediate wipeout".into()
-                            );
+                            ));
                         }
                     }
                 }
@@ -1126,16 +1125,31 @@ impl<'a> SearchState<'a> {
             if pos_idx >= self.domains.len()
                 || !self.domains[pos_idx].iter().any(|r| *r == row_id)
             {
-                return SolveOutcome::Error(format!(
+                return Err(SolveOutcome::Error(format!(
                     "hint at position {} is incompatible with constraints", h.position
-                ));
+                )));
             }
             self.domains[pos_idx].retain(|r| *r == row_id);
             if let PropagationOutcome::Wipeout { .. } = self.place_and_propagate(sink, 0, h.position, row_id) {
-                return SolveOutcome::Error(format!(
+                return Err(SolveOutcome::Error(format!(
                     "hint at position {} causes immediate wipeout", h.position
-                ));
+                )));
             }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn run(mut self, sink: &mut dyn EventSink) -> SolveOutcome {
+        self.emit(sink, 0, EventBody::Started {
+            solver_id: self.solver_id.clone(),
+            heuristic_profile: self.heuristic_profile.clone(),
+            puzzle_fingerprint: self.puzzle.fingerprint(),
+            seed: self.opts.seed,
+            started_wall_us: 0,
+        });
+
+        if let Err(e) = self.apply_symmetry_and_hints(sink) {
+            return e;
         }
 
         let mut solutions = Vec::<Board>::new();

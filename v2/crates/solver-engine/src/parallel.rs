@@ -62,8 +62,15 @@ pub fn solve_parallel(
     };
     sink.emit(started);
 
-    // Phase 1: enumerate work units.
+    // Phase 1: enumerate work units. Apply symmetry-breaking and user
+    // hints first so the enumeration tree respects pinned cells; otherwise
+    // the parallel path silently ignores hints (see lib.rs::run for the
+    // single-threaded counterpart).
     let mut enum_state = SearchState::new(puzzle, solver, opts);
+    let mut enum_null = eternity2_events::NullSink;
+    if let Err(out) = enum_state.apply_symmetry_and_hints(&mut enum_null) {
+        return out;
+    }
     let cap = (n_threads * 16).max(8);
     let mut units: Vec<Vec<(eternity2_core::Position, u32)>> = Vec::new();
     let mut prefix = Vec::new();
@@ -289,6 +296,19 @@ fn run_unit(
         solutions_found: solutions_found.clone(),
         stop_on_first,
     };
+
+    // Apply symmetry-breaking and user hints in the worker's fresh state
+    // BEFORE replaying the prefix, mirroring the enum_state setup. If
+    // either fails the worker bails as Exhausted.
+    if state.apply_symmetry_and_hints(&mut sink).is_err() {
+        return WorkerOutcome {
+            result: RecurseResult::Exhausted,
+            solution: None,
+            best_partial: None,
+            best_depth: 0,
+            stats: state.stats,
+        };
+    }
 
     for (depth, &(pos, row_id)) in prefix.iter().enumerate() {
         if state.placed[pos as usize].is_some() {

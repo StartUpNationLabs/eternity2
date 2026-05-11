@@ -48,8 +48,11 @@ pub fn board_to_bucas_edges(puzzle: &Puzzle, board: &Board) -> String {
 
 pub fn bucas_url(puzzle: &Puzzle, board: &Board, puzzle_name: &str) -> String {
     let edges = board_to_bucas_edges(puzzle, board);
+    // Bucas's default motifs_order matches our color labeling (pieces.txt
+    // canonical order); explicitly setting motifs_order=jblackwood scrambles
+    // the rendering, so we omit it.
     format!(
-        "https://e2.bucas.name/#puzzle={}&board_w={}&board_h={}&board_edges={}&motifs_order=jblackwood",
+        "https://e2.bucas.name/#puzzle={}&board_w={}&board_h={}&board_edges={}",
         puzzle_name, puzzle.width, puzzle.height, edges
     )
 }
