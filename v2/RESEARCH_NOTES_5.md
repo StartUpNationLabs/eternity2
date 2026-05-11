@@ -453,6 +453,67 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE2-sweep preliminary 23:50 — K=10 reaches constrained-449 basin
+
+Status: K=0 done, K=10 done, K=50 nearly done. Final two stages
+(K=100, K=200) still ahead.
+
+**Preliminary K-sweep results**:
+
+| K | best raw | fmm | swap_accept% | cold chain (raw) | cold chain (fmm) | interpretation |
+|---|---|---|---|---|---|---|
+| 0   | 448 | n/a | ~16% | [448,447,446,429] | n/a    | unconstrained baseline |
+| 10  | 449 | **0**   |  1.2% | [449,447,445,434] | [0,0,0,0] | constrained-449 basin reached |
+| 50  | 448 | 2   |  9.5%* | [442,435,433,413] | [0,0,0,0] | over-constrained, raw fell |
+
+*K=50 still running, swap rate trending down
+
+**Key observation — the constrained-449 basin exists and is reachable**:
+At K=10, the cold replica reaches 449 with ALL 6 top-6 forbidden edges
+matched. This is a configuration that the canonical 449 (which matches
+only 5/6) does NOT reach in unconstrained PT. **NE2 has empirically
+demonstrated a NEW basin at 449 that resolves the structural defects.**
+
+**But — we have not broken 449 yet**. The penalty pulls the chain INTO
+the basin but doesn't push it THROUGH. Three diagnoses:
+
+1. **Swap-level only is too weak**. The cold chain at 449/fmm=0 can
+   randomly make a single-cell move that breaks fmm=0; SA inner loop
+   accepts that move (only raw delta matters there); PT swap then has
+   to "filter it out" by pushing it to a hotter replica. By the next
+   round it's a different basin entirely. → NE2.1 (inner-loop penalty,
+   already implemented and committed) addresses exactly this.
+
+2. **K is misaligned with the actual score landscape**. At K=10, the
+   penalty is gentle enough to not prevent search but maybe too gentle
+   to *push* toward 450+. At K=50, too strong. The sweet spot might be
+   K=15-30, OR the right answer is **adaptive K** (NE2.2 = SAT 2024
+   weighting rule).
+
+3. **449 with fmm=0 is itself a structural plateau**. The remaining 30
+   mismatches at this constrained 449 are *different* edges than top-6
+   (they're top-7..top-30 in universal-mismatch ranking). To break to
+   450+, we'd need to add those edges to the forbidden set. → NE2.3
+   (top-12 / top-20 forbidden sets, scripts already prepared, sweep
+   pending).
+
+**Falsifying observation**: if K=100 and K=200 produce best ≤ 447, this
+confirms over-constraining beyond ~K=10-30. If K=100 produces a 450,
+the sweet spot was higher than expected.
+
+**Action items queued**:
+- (a) Complete sweep + run `scripts/ne2_analyze.py` for clean tabular
+  summary.
+- (b) Launch NE2.1 inner-loop sweep (K ∈ {10,50,100}, same budget).
+  Script `scripts/ne2_1_inner_sweep.sh` ready.
+- (c) Consider NE2.3 (forbidden-set-size sweep: top-6 vs top-12 vs
+  top-20) at fixed K = best from (b).
+- (d) Pure-research option E: **directed greedy walk** from canonical
+  449 (fmm=5) to fmm=0 via hard-constraint local moves, then PT from
+  there. Tests "is the constrained-449 basin reachable by direct walk,
+  not just by softly-biased PT?" 1-2h Rust work, doable while
+  NE2.1 runs.
+
 ### A4-night — E2 literature survey 2018-2026 — STRONGEST POSITIVE SIGNAL
 
 **Hypothesis**: have I missed any 2018-2026 work that already solves
