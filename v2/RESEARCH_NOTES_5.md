@@ -359,4 +359,71 @@ SP code), arXiv:cs/0506053 (Maneva et al. SP-as-weighted-BP, includes
 negative results), Krzakala et al. PNAS 104 (2007) 10318 = arXiv:cond-mat/0612365
 (rigidity thresholds — the theoretical reason SP needs the rigid phase).
 
+### A2-night — IsingFormer / ML-augmented PT — NEGATIVE for tonight
+
+**Hypothesis**: IsingFormer (arXiv:2509.23043) shows transformer-augmented
+PT beats vanilla PT on hard Ising / spin-glass landscapes; might transfer
+to E2.
+
+**Result**: Verdict from agent — not an overnight thing. Agent estimate
+(NOT my own; per feedback rule): 2-4 calendar weeks + $50-150 GPU. Key
+structural obstacles flagged:
+1. Tokenization explosion: E2 alphabet is (piece, rotation) ≈ 1024 with
+   permutation constraints, vs IsingFormer's binary {-1, +1}.
+2. Boltzmann distribution mismatch: E2 wants a measure-zero ground state,
+   not a thermal distribution. The 3D EA-spin-glass result is the relevant
+   IsingFormer benchmark and even that paper makes no claim of finding
+   ground states it couldn't otherwise reach.
+3. Training data: must come from PT itself → model would learn to
+   reproduce plateau states, not escape them.
+
+Generalization: every learned-proposal MCMC paper of the last 5 years
+(normalizing-flow MCMC, GFlowNet-CombOpt, Markovian Flow Matching, GFACS)
+shows the same pattern: nice on synthetic / continuous / graph problems,
+almost no penetration into the engineered combinatorial-search community
+(SAT, CP, edge-matching).
+
+**Verdict**: SHELF for Q3+; tonight's compute is better spent on NE2.
+Agent's positive recommendations align with my plan: DR-ALNS
+(github.com/RobbertReijnen/DR-ALNS) as a CPU-trainable RL alternative,
+and explicitly: "a targeted destroy operator that always includes the 6
+universal-mismatch edges plus a 2-3 ring around them, which is one
+evening of Rust" — that IS NE2.
+
+### A3-night — GPU/FPGA/Quantum SAT acceleration — DO NOT PURSUE
+
+**Result**: Agent's TL;DR: "Skip the GPU/FPGA/quantum trip... For your
+specific problem... in 2026 is academic theater. The bottleneck is
+encoding strength and search-space structure, not raw FLOPs."
+
+Concrete dead-ends:
+- AWS F1 FPGA: no canned SAT bitstream, multi-week dev.
+- D-Wave Advantage2: needs >100k qubits via minor-embedding; matching-
+  class benchmarks show no advantage over classical (Nature Sci. Rep.
+  2025).
+- ParaFROST GPU SAT: 2-5x speedup, sometimes slower; pure SAT not MaxSAT.
+- p-bit / Ising chips, Pasqal neutral atoms, CryptoMiniSat-GPU: not
+  cloud-accessible / not shipping.
+
+**The one credible path** (kept on the shelf for a future budgeted day):
+**Mallob/MallobSat on AWS c7i fleet** (~$50 for 8h, 5x SAT-Comp Cloud
+Track gold medals). Diversification via portfolio + clause sharing is
+qualitatively different from "more clocks", and it has a track record
+of solving previously-unsolved competition instances.
+
+**Action**: do NOT spend cloud money tonight. NE2 + frame-first
+diversification dominate any hardware play at this margin.
+
+### Cross-agent triangulation — high-confidence verdict
+
+All three independent agents converge: **the structural universal-mismatch
+discovery is the right lever, NE2 is the right experiment**. SP can't run,
+ML-PT is too long, hardware doesn't help. Concrete consensus
+recommendations: NE2 (forbidden-mismatch destroy/penalty), frame-first
+diversity, eventually DR-ALNS for adaptive destroy weighting. The
+universal-mismatch edges are the structural fact, and operationalizing
+them is the highest-leverage move available tonight.
+
+
+
 
