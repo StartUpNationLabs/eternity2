@@ -291,4 +291,167 @@ matched edges share colors in the viewer. The visual color theme will
 differ from Joshua's URL byte-for-byte (different motifs_order ⇒ different
 letter→pattern mapping) but the **puzzle** is the same.
 
+---
+
+## 2026-05-11 — Two-bug fix: parallel CP ignoring hints + Bucas rendering
+
+**H** — Our 449/93.5% baseline is unconstrained (no hints) because
+something in the pipeline ignores them, despite us passing them to CP.
+
+**Setup** — Audit one of the rsb_n20_pt90 plateau dumps for hint
+preservation via the new `audit_hints` binary. CP+PT pipeline,
+`opts.hints = file_hints`, 5 official hints.
+
+**Result** — 0/20 plateau states preserve ANY of the 5 hints. Cause
+isolated to two bugs:
+
+1. **Parallel CP path (`parallel::solve_parallel`) silently ignored
+   hints.** `solver-engine::SearchState::run()` applies hints inline
+   before recursion (lib.rs:1123), but the parallel root-split path
+   creates fresh `SearchState`s in `enumerate_units` and `run_unit`
+   without ever calling that code. Every parallel solve was on the
+   unconstrained instance. All seven parallel engine profiles
+   (gacolor_ac3_par etc.) affected.
+   **Fix**: extract hint+symmetry application into
+   `SearchState::apply_symmetry_and_hints`; call from both
+   enumeration and worker paths in `parallel.rs`.
+
+2. **Bucas URL hardcoded `motifs_order=jblackwood`**, which uses a
+   different color labeling than our CSV (pieces.txt's labels).
+   The viewer rendered most pieces blank because letters didn't
+   match its motifs catalog. **Fix**: drop the param; Bucas's
+   default labeling matches ours.
+
+Also wired hint pinning through PT/SA:
+- `SaConfig::pinned_positions`, `PtConfig::pinned_positions`.
+- `State::new_with_pinned` filters pinned cells out of per-class
+  cell pools so random picks never select them.
+- Cluster moves (2x2, 3x3 rotate, region swap, rotate-only on full
+  grid) explicitly check `state.pinned[pos]` and bail.
+- `pt_e2 --pin-hints` (default true) passes the puzzle file's hints
+  as pinned positions.
+
+**Verdict** — kept. Fresh pt_e2 run with pinning on now preserves
+all 5 hints in the output board (verified via Python on the
+Bucas URL). Bucas viewer renders cleanly without motifs_order.
+
+**Implication for prior results** — Our previously-reported 449 on
+"official E2" was actually on the unconstrained puzzle. Community
+SOTA of 470 (Blackwood) is on the constrained puzzle. The numbers
+are not directly comparable. We need a fresh constrained baseline.
+
+---
+
+## 2026-05-11 — Pinned baseline harvest (in progress)
+
+**H** — With hint pinning on, the plateau score distribution
+shifts down by some amount; the new mean is the true baseline
+against which Blackwood's 470 should be compared.
+
+**Setup** — `harvest_plateau --pin-hints --n-samples 20 --cp-seconds 30
+--pt-seconds 90 --n-replicas 8 --run-name rsb_n20_pt90_pinned`.
+Same parameters as the unpinned `rsb_n20_pt90` harvest for direct
+A/B comparison.
+
+**Partial result (5/20 samples)** — scores 448, 447, 446, 447, 447.
+Mean ~447 vs unpinned mean 449.1. **Hint-pinning cost: about
+2 edges.** Much smaller than I'd guessed. Implies the unpinned
+solutions are NOT exploiting hint-free flexibility much — they
+naturally converge near hint-respecting configurations even when
+hints aren't enforced.
+
+**Verdict** — pending full N=20.
+
+---
+
+## 2026-05-11 — Upper-bound certificate threads (negative findings)
+
+**H** — A cheap counting / LP upper bound can either certify our
+plateau as near-optimal (publish a hardness result instead of
+optimising) or confirm there's room and we should keep pushing.
+
+**Setup** — Compute the simplest closed-form bounds in Python on
+pieces.txt:
+1. Color-multiplicity: UB = Σ_c ⌊N_c / 2⌋ over colors.
+2. Per-edge color-compatibility: UB = #edges where the two cells
+   have at least one common admissible color.
+
+**Result** — both bounds give **480** (the trivial total-edge
+upper bound).
+- Color counts on official E2 are perfectly balanced: 5 colors at
+  24 (each appearing 12× as matched edges), 5 at 48, 12 at 50, all
+  even. Σ ⌊N_c / 2⌋ = 480 = total interior edges.
+- Side-color sets cover all colors at every interior cell, so the
+  per-edge compatibility bound is also 480.
+
+**Verdict** — both dropped. **The hardness of E2 is genuinely
+combinatorial.** Closed-form / counting bounds are too loose. A
+real LP relaxation would have ~156k cell-placement variables —
+borderline for scipy.linprog, and standard LP literature says the
+relaxation is loose anyway (Kovalsky-Glasner-Basri 2014's SDP only
+worked up to 7×7). Dropping the LP-certificate thread; it's
+practically harder than the literature scan suggested.
+
+**Lesson recorded** — pieces.txt color balance is itself a notable
+structural fact: it tells us perfect E2 solutions exist
+colorimetrically (no immediate parity obstruction), so the
+obstruction is purely geometric/combinatorial.
+
+---
+
+## 2026-05-11 — Houdayer cluster moves integrated into PT
+
+**H** — The offline Houdayer analysis showed swappable components
+exist between plateau states but all have joint_delta = 0. The
+move itself doesn't improve score, but might *redistribute* board
+content so that subsequent SA reaches a better local optimum than
+either replica would alone. Test by running PT with periodic
+Houdayer moves.
+
+**Setup** — New PtConfig fields:
+  `houdayer_every: u64` (rounds between Houdayer phases, 0 = off)
+  `houdayer_max_component: usize` (skip components above; default 20)
+  `houdayer_min_component: usize` (skip components below; default 4)
+
+After each PT round's replica-exchange phase, iterate over adjacent
+pairs (i, i+1). For each pair, enumerate swappable disagreement
+components (using existing `houdayer::enumerate_proposals`),
+filter to the size band, pick one uniformly, apply
+unconditionally. Update scores and best-board trackers per replica.
+PtStats grows three counters.
+
+**Smoke test result** — `pt_e2 --houdayer-every=5 --houdayer-max=200
+--houdayer-min=2` (very wide band). Houdayer fires regularly on the
+cold pair (0,1) with components of size 73-77. Hot pairs (1,2),
+(2,3) have no components in the size band — their disagreement is
+too large, which is the correct behaviour (hot-replica chaos
+doesn't admit structure for cluster moves).
+
+**Verdict** — wired, smoke-tested, ready for real A/B. The actual
+question (does it help break 449?) needs a longer run with seed
+sweep. Plan: after the pinned harvest finishes, run another harvest
+with `--houdayer-every=10 --houdayer-max=30` for direct comparison.
+
+---
+
+## 2026-05-11 — Central-region CP repair (planned)
+
+**H** — Topology results showed the variance across plateau states
+is concentrated in rows 4-9, cols 6-10 (the central ~6x6). The
+plateau is geometrically localised. The earlier mini-CP repair
+failed (~99% wipeout) because pinning the boundary of an arbitrary
+region created unsatisfiable sub-problems. But the BORDER of E2 is
+fully solved across all plateau states (colors 1-5 invariant), and
+the central 6x6 is far from the BORDER — so the boundary of the
+central region IS the perfectly-matched middle rings, which should
+admit feasible inner assignments.
+
+**Setup** — when pinned harvest finishes: take one of the highest-
+scoring plateau dumps, call existing `repair_region(board, 5, 5,
+6, budget_ms=60_000)` to free the central 6x6 and re-solve via CP.
+Measure score delta. Repeat across all 20 plateau dumps to estimate
+expected improvement.
+
+**Verdict** — pending.
+
 ## (entries follow as experiments run)
