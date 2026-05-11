@@ -467,6 +467,15 @@ size 2, 3, 4.
 
 **Empirical Hamming-moat depth at 449 plateau: ≥ 5.**
 
+**5-piece sample (added 01:30)**: 30 quadruples × 44 derangements
+× 4⁵=1024 rotations = **1.35M 5-piece-derangement trials, 0
+improvements**. SAMPLE only — covers 0.017% of all C(48,5)=1.7M
+quintuples. CANNOT conclude moat-depth-≥-6 rigorously, but
+**suggestive** that the moat is wider than 5.
+
+**Total cumulative testing (depth 2/3/4/5)**:
+~5M moves tested across the plateau, 0 improvements.
+
 This means: even SIMULTANEOUS permutation of 4 pieces (the maximum
 useful arbitrary move size before we get to small regions) cannot
 improve the score. The plateau requires at minimum a 5-piece
