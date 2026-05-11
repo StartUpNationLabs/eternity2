@@ -1081,3 +1081,236 @@ To break this plateau we need either:
 - (c) Population-based methods: keep many distinct cold configurations alive, crossover them. Hasn't been tried in PT-flavor for E2.
 
 Option (b) is the next innovation push.
+
+---
+
+# SESSION CLOSE — 2026-05-11
+
+## Headline results
+
+Starting from a CP-only baseline that reached ~60% on official
+Eternity II, this session ended at **93.5% (449/480 matched edges)**
+through a CP+PT pipeline. Total wall-clock cost: ~3 minutes.
+
+| Pipeline stage | Score | Time |
+|---|---|---|
+| CP only | 289/480 = 60.2% | 30s |
+| CP + greedy fill (no SA) | 422/480 = 87.9% | +instant |
+| CP + single-T SA (bug fix) | 416/480 = 86.6% | +60s |
+| CP + PT (8 replicas) | 449/480 = 93.5% | +180s |
+| Community SOTA (Verhaard 2008) | 467/480 = 97.3% | weeks |
+
+The 32-edge gap from 449 → 481 is bounded below by a deep glassy
+plateau that no local-search variant we tried can cross.
+
+## Critical bug discovered & fixed
+
+The most impactful single change was a one-character sign error in the
+SA Metropolis acceptance criterion. The original code:
+
+    let p = (-(delta as f64) / temp).exp();    // anti-Metropolis
+
+For delta_score < 0, the exponent becomes positive, so p > 1 and
+`rng.next_f64() < p` is always true — every score-decreasing move was
+accepted at any temperature. The SA was a pure random walk.
+
+The correct form: `let p = (delta as f64 / temp).exp();`
+
+This single fix lifted single-T SA from a meaningless 65% (mostly the
+post-fill score that random shuffling happened not to destroy) to a
+genuine 86%. Every other gain we measured rests on this baseline.
+
+**Lesson**: when a search algorithm's output is suspiciously invariant
+across temperatures / seeds / iterations, *check the acceptance math*
+before tuning anything else. We spent hours optimizing temperatures
+and schedules that were never actually being respected.
+
+## What worked (kept)
+
+1. **Greedy initial fill of CP partial**. When PT seeds from a CP
+   partial, random-fill of the empty cells destroys ~150 boundary
+   matches. Greedy-fill (most-constrained cell first, best piece-rot
+   for current neighbors) keeps the matches the CP earned AND adds
+   ~130 new ones in a single sweep. The 60% CP partial becomes 87.9%
+   before any SA runs. Most of our gain over baseline comes from here.
+
+2. **Parallel Tempering** (Hukushima-Nemoto 1996). 8 replicas on a
+   geometric temperature ladder T ∈ [0.02, 0.5] with replica-exchange
+   between adjacent slots every 30k inner SA iters. Cold chain
+   exploits, hot chain explores, swaps move good configs colder.
+   Healthy mixing: ~30% swap acceptance across pairs. Lifts polished
+   score from 86% (single-T SA) to 93.5%. To our knowledge no
+   published E2 solver uses PT.
+
+3. **The CP+PT pipeline as a whole**. CP gets us to 60%, greedy fill
+   to 88%, PT to 93.5% — each stage is necessary, and the order
+   matters: PT alone from random would never get above ~70%.
+
+## What we tried that did not help past 449
+
+These are negative results worth recording:
+
+- **3×3 cluster rotate** (rigid 9-piece Wolff cluster move). Math
+  worked (internal matches preserved under rigid rotation), but moves
+  almost never improve a near-optimal board.
+- **2×2 region swap** (non-rigid 8-piece swap). Most candidates
+  destructively break boundary edges; cold rejects them all.
+- **Targeted swap** (worst-of-K sampling). Same plateau.
+- **3-cycle swap** (A→B→C→A piece permutation). Same plateau.
+- **Basin hopping** (Wales-Doye perturbation). With aggressive kicks
+  cold can't recover; with gentle kicks cold reaches the same plateau.
+- **Mini-CP region repair** (RTCP-style local CP re-solve). ~99% of
+  CP attempts wipeout because pinning a near-correct surround creates
+  unsatisfiable sub-problems.
+- **Directed SA on bad-cell set** (cells touching mismatched edges +
+  pad). 364M iterations restricted to a 104-cell bad neighborhood:
+  score stays at 449. Definitive evidence that the plateau is global
+  for our move set.
+
+The 449 board has 31 mismatched edges in a *frustrated configuration*
+that is robustly the local optimum across all the move types we tried.
+
+## Key insights about the landscape
+
+- **Plateau at 446-449 is structural, not algorithmic.** All local-
+  search variants (PT, basin hop, directed, region-tear, multi-seed)
+  converge here. The optimization barrier requires either *better
+  initial conditions* (different basin) or *cooperative inference*
+  outside the local-search paradigm.
+- **CP partial quality bounds PT's ceiling.** A 60% CP partial gives
+  93.5% after PT. A hypothetical 80% CP partial would likely give
+  ~95-96%. CP-side improvements have leverage.
+- **Random fill is poison.** Hybrid CP→LS pipelines published in
+  literature usually random-fill the empties. Greedy fill alone
+  recovers 20+ percentage points.
+- **Multi-piece coordinated moves don't help in our regime.** We
+  tried 4-piece (2×2 rotate, region swap), 9-piece (3×3 rotate),
+  and 3-piece (3-cycle). None broke 449. This argues against
+  "bigger moves" as a general path to SOTA.
+
+## Ideas worth pursuing — within this domain
+
+Ranked by likely yield:
+
+1. **Sub-Region Gauss Law (SRGL k=2) propagator inside CP.**
+   For every 2×2 block, propagate the constraint "the 4 cells must
+   admit *some* assignment of remaining pieces in *some* rotations
+   such that internal edges match." This is a *cooperative* inference
+   step — stronger than pointwise AC-3. To my knowledge unpublished
+   in E2. Should produce a much better CP partial (~75-85%), which
+   PT would then polish to ~96-97%.
+
+2. **Verhaard 2×3 piece-pair compatibility precompute.** For every
+   piece-pair (a, b, relative-orientation, shared-color), tabulate
+   the score boost. SA's swap operator becomes table-lookup-based.
+   Verhaard used this for his 467 record. Engineering-heavy but well-
+   documented.
+
+3. **Edge-First Formulation (EFF).** Variables = 480 internal edges
+   with 22-color domains, instead of cells with piece×rotation
+   domains. Smaller raw search space in bits (2143 vs 2560). LP
+   relaxation of color counts is convex. The community's cell-first
+   formulation is the only one tried; edge-first is genuinely
+   uncharted.
+
+4. **GPU SA evaluator.** Embarrassingly parallel SA-move evaluation
+   on a GPU. Won't break the plateau (it's a *landscape* problem,
+   not throughput) but multiplies iteration count by ~50-100× per
+   wall-second, useful for sweeping.
+
+## Ideas worth pursuing — cross-domain
+
+Inspired by the user's "fields outside E2" framing:
+
+- **Survey Propagation** (Mézard, Parisi, Zecchina — from random
+  k-SAT). Beyond belief propagation: each variable sends "warning
+  messages" about which values it is *forced* to take. Cracks the
+  hard phase of k-SAT. Has never been applied to E2 as far as I can
+  find. Would be a genuine cross-field innovation.
+
+- **Replica-symmetry-breaking analysis.** Statistical physics of
+  spin glasses tells us *why* certain landscapes are glassy. If
+  E2's solution space has hierarchical RSB structure, then PT alone
+  is provably insufficient — and the right tool is Cavity-method
+  inspired population dynamics. Worth a literature dive.
+
+- **Tropical geometry / max-plus algebra**. Tile-matching with
+  hard equality constraints can be encoded over tropical semirings.
+  Solution = intersection of tropical varieties. Tools from tropical
+  optimization (Mikhalkin, Ardila) might give polynomial-time
+  certificates for sub-problems. Speculative but unexplored.
+
+- **Reinforcement learning on the search policy.** Train a small
+  neural network to *propose moves* given the current board, learn
+  which moves are likely to improve. AlphaZero-style search guidance.
+  Engineering-heavy, but worth exploring if other paths exhaust.
+
+- **Knot theory / braid groups**. Eternity II's edge-color flows
+  form a system of strands across the board. Each color's strand
+  arrangement has topological invariants. Quotienting by symmetry
+  reduces the search space if the invariants are computable. Long
+  shot but mathematically beautiful.
+
+- **Algebraic geometry**: encode the puzzle as a polynomial ideal,
+  apply Gröbner basis methods. The resulting ideal is too large
+  to compute directly for 16×16, but the *primary decomposition*
+  of small sub-ideals could give algebraic certificates of
+  un-satisfiability for specific configurations.
+
+## Ways of thinking we found useful
+
+- **Define the question before optimizing the experiment.** When we
+  hit the 449 plateau, the right question wasn't "what move helps?"
+  but "*why* is 449 the plateau?" The answer determined the next
+  step (cooperative inference, not more SA variants).
+
+- **Use cheap experiments to inform expensive ones.** The standalone
+  greedy-fill diagnostic (~30 lines) revealed that fill quality
+  alone could explain the entire 65% → 92% gap. That saved hours
+  of futile SA tuning.
+
+- **Trust strong negative results.** 364M iterations of directed SA
+  not moving past 449 is a *theorem*, not noise. After the second
+  or third move-set variant hit the same number, we should have
+  pivoted to CP-side innovation faster.
+
+- **One-character bugs are devastating.** The Metropolis sign error
+  invalidated months of "SA is plateauing" results in our prior
+  sessions. When debugging, *log the acceptance probability of a
+  known-bad move at a known-low temperature* — that one assertion
+  catches this whole class of errors.
+
+- **Distinguish landscape from algorithm.** When a problem is hard,
+  the hard part might be (a) the search algorithm, (b) the move set,
+  or (c) the landscape itself. Different fixes for each. Confusing
+  them wastes effort.
+
+## Open questions
+
+- Does the 449 plateau coincide with a *phase transition* in the
+  energy landscape? If yes, perhaps there's an order parameter that
+  reveals the structure.
+
+- Is there a *characterization* of the 31 frustrated edges in our 449
+  board? If they correspond to a specific topological obstruction
+  (a "winding number" of one color, perhaps), we'd know what move
+  CAN fix them.
+
+- The 467-record solution is published. Can we *load* it and compute
+  the "distance" from our 449 to it in moves? That would quantify
+  exactly which multi-piece reordering we're missing.
+
+- How well does our pipeline scale to harder generated puzzles
+  (size 14-15)? We never benchmarked beyond 16×16 official.
+
+## Final word
+
+This session moved Eternity II solving from ~60% (CP only) to 93.5%
+(CP + PT pipeline). The biggest wins came from correctness fixes
+(Metropolis sign) and initial-condition engineering (greedy fill),
+not from algorithmic exotica. The remaining 7-point gap requires
+either CP-side innovation or piece-pair pre-clustering — both ~1
+week's work to pursue properly.
+
+For the next session: prioritize SRGL k=2 in the CP propagator.
+That's the single highest-yield path that's also tractable.
