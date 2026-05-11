@@ -21,8 +21,8 @@ use std::time::Instant;
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
-use eternity2_core::{Board, Piece, PieceId, Puzzle, BORDER};
-use eternity2_edge_solver::{recover, Search, SearchConfig, Tables, Topology};
+use eternity2_core::{Board, Piece, PieceId, Puzzle, Rotation, BORDER};
+use eternity2_edge_solver::{recover, EdgeHint, Search, SearchConfig, Tables, Topology};
 
 #[derive(Parser, Debug)]
 #[command(name = "edge_cp_e2", about = "Edge-as-variable CP on Eternity II")]
@@ -37,6 +37,31 @@ struct Args {
     /// Off by default — see Inversion 2 design notes.
     #[arg(long, default_value_t = false)]
     propagate_alldiff: bool,
+
+    /// Apply the 5 official hints from the CSV (pin pieces + edges).
+    #[arg(long, default_value_t = true)]
+    apply_hints: bool,
+}
+
+fn translate_hint(
+    puzzle: &Puzzle,
+    topology: &Topology,
+    cell: u32,
+    piece_id: PieceId,
+    rotation: Rotation,
+) -> EdgeHint {
+    // For the piece at (cell, rotation), compute the 4 edge colors in
+    // cell-frame [top, right, bot, left].
+    let piece = puzzle.pieces().iter().find(|p| p.id == piece_id).expect("piece");
+    let edges = piece.edges.rotated(rotation).as_array();
+    let sides = topology.cell_sides[cell as usize];
+    let mut side_edges: [Option<(u32, u8)>; 4] = [None; 4];
+    for s in 0..4 {
+        if let Some(eid) = sides[s] {
+            side_edges[s] = Some((eid, edges[s]));
+        }
+    }
+    EdgeHint { cell, piece_id, rotation, side_edges }
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -107,6 +132,19 @@ fn main() {
     let start = Instant::now();
     let mut search = Search::new(&puzzle, &topology, &tables, cfg);
     search.started_us = 0;
+    if args.apply_hints && !file_hints.hints.is_empty() {
+        let edge_hints: Vec<EdgeHint> = file_hints.hints.iter()
+            .map(|h| translate_hint(&puzzle, &topology, h.position, h.piece_id, h.rotation))
+            .collect();
+        eprintln!("applying {} hints", edge_hints.len());
+        if let Err(e) = search.apply_hints(&edge_hints) {
+            eprintln!("hint application failed: {e}");
+            return;
+        }
+        eprintln!("after hints: {} edges pinned, {} pieces committed",
+            search.edge_color.iter().filter(|o| o.is_some()).count(),
+            search.cell_committed_piece.iter().filter(|o| o.is_some()).count());
+    }
     let clock = || start.elapsed().as_micros() as u64;
     let result = search.recurse(&clock);
     let elapsed = start.elapsed();

@@ -103,6 +103,18 @@ pub struct AssignUndo {
     pub pieces_committed: Vec<(PieceId, u32)>,
 }
 
+/// A hint translated into edge-CP terms: (edge_id, color) plus the
+/// piece-uniqueness commitment at the cell.
+#[derive(Debug, Clone, Copy)]
+pub struct EdgeHint {
+    pub cell: u32,
+    pub piece_id: PieceId,
+    pub rotation: eternity2_core::Rotation,
+    /// For each cell side (top, right, bottom, left): the edge id and
+    /// pinned color, OR None if that side is on the puzzle boundary.
+    pub side_edges: [Option<(u32, Color)>; 4],
+}
+
 impl<'a> Search<'a> {
     #[must_use]
     pub fn new(
@@ -395,6 +407,58 @@ impl<'a> Search<'a> {
             }
         }
         colors
+    }
+
+    /// Translate engine-level hints into edge-CP terms and pin them.
+    /// For each hint, this commits the piece at the cell (so it's
+    /// removed from available_rows), and assigns the cell's interior
+    /// edges to the colors implied by the piece's rotated edges.
+    ///
+    /// Returns Err if any hint is structurally incompatible (e.g. shape
+    /// mismatch, conflicting color pre-assignment), in which case the
+    /// search state is left partially modified — caller should not
+    /// recover and just abort.
+    pub fn apply_hints(&mut self, hints: &[EdgeHint]) -> Result<(), String> {
+        for h in hints {
+            let pid_idx = u32::from(h.piece_id) as usize;
+            if self.piece_committed_at[pid_idx].is_some() {
+                return Err(format!("hint piece {} already committed", h.piece_id));
+            }
+            if self.cell_committed_piece[h.cell as usize].is_some() {
+                return Err(format!("hint cell {} already committed", h.cell));
+            }
+            // Pin edge colors for the 4 sides.
+            for side_opt in h.side_edges {
+                let Some((edge, color)) = side_opt else { continue; };
+                match self.edge_color[edge as usize] {
+                    None => {
+                        // Apply assign — propagates to cells and runs Hall-1.
+                        if let Err(_undo) = self.assign(edge, color) {
+                            return Err(format!(
+                                "hint cell {} edge {} color {} caused contradiction",
+                                h.cell, edge, color));
+                        }
+                        // Don't undo — hints are permanent.
+                    }
+                    Some(existing) if existing == color => {} // already consistent
+                    Some(existing) => {
+                        return Err(format!(
+                            "hint cell {} edge {} requires color {} but pinned to {}",
+                            h.cell, edge, color, existing));
+                    }
+                }
+            }
+            // Commit the piece to the cell. Clear its rows from available.
+            let wpm = self.tables.words_per_mask;
+            let piece_mask: Vec<u64> = self.tables.piece_mask(h.piece_id).to_vec();
+            for w in 0..wpm {
+                self.available_rows[w] &= !piece_mask[w];
+            }
+            self.piece_committed_at[pid_idx] = Some(h.cell);
+            self.cell_committed_piece[h.cell as usize] = Some(h.piece_id);
+            self.stats.piece_commits += 1;
+        }
+        Ok(())
     }
 
     pub fn check_score(&mut self) {

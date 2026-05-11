@@ -28,7 +28,7 @@ use eternity2_solver_trait::{
     HeuristicProfile, SolveMode, SolveOpts, SolveOutcome, Solver, SolverId,
 };
 
-pub use search::{RecurseResult, Search, SearchConfig, SearchStats};
+pub use search::{EdgeHint, RecurseResult, Search, SearchConfig, SearchStats};
 pub use tables::Tables;
 pub use topology::Topology;
 
