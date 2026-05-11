@@ -343,4 +343,147 @@ This is a small experiment for the next session before committing to
 Inversion 2 work. Or it can be punted entirely if Inversion 2 makes
 the whole PT pipeline obsolete.
 
+---
+
+## 2026-05-11 — Session decision: skip Inversion 1, commit to Inversion 2
+
+**H**: cell-as-variable ordering tweaks won't move the 449-450 plateau,
+because vol. 2's random-shuffle CP already varied border cells 55/60
+across seeds and plateaus stayed 443-444 — that *is* the Inversion 1
+signal, in everything but name. Re-doing it under PieceMrv would
+re-confirm the same negative result. Higher EV: spend the session on
+Inversion 2 (edge-variable formulation).
+
+**User instruction**: "do what's best even if it takes a lot of time."
+This is the genuine cross-domain reformulation vol. 2 kept proposing.
+
+**Verdict**: skip Inv. 1. Build Inv. 2.
+
+## Inversion 2 — design
+
+### Model
+
+- **Variables**: the 480 interior edges of the 16×16 board.
+  Boundary edges (64 of them, on the outer perimeter) are not
+  variables — they're fixed to BORDER. Each interior edge is shared
+  by exactly 2 cells.
+- **Domain**: {1..22} (the 22 interior colors). NOT including ⊥.
+  Unmatched edges in partial states arise from being *unassigned*,
+  not from an explicit ⊥ value. This makes the formulation a
+  partial MAX-CSP (find the assignment that assigns the most edges
+  while respecting constraints), not a satisfiability CSP.
+- **Constraint (cell-consistency)**: for each cell c, the (≤4)
+  variables around it must take values such that **some unused
+  piece, in some rotation, has exactly that 4-tuple of edge
+  colors** (with boundary-facing sides forced to BORDER). Boundary
+  sides count as fixed inputs to the lookup.
+- **Constraint (piece-uniqueness)**: each piece may satisfy at most
+  one cell. This is the alldiff that couples otherwise-local cell
+  constraints. Without it, edge-CP factors into per-cell trivia.
+
+### Why edge-as-variable changes the dynamics
+
+In cell-CP, deciding "place piece P at cell c with rotation r" commits
+*4 edge values at once*. The branch is wide (256 cells × ~256 piece
+candidates × 4 rotations = ~250K rows initially) and each branch is a
+big commitment. CP picks the canonical-first cell and burns through it,
+producing the deterministic prefix that the plateau diagnostic flagged.
+
+In edge-CP, deciding "edge e takes color k" commits *1 unit*. The
+branch is narrow (22 colors). The whole board's 480 commitments
+are made one-by-one, with each commitment forcing propagation through
+the two adjacent cell-consistency constraints. The unmatched edges in
+plateau states are *directly addressable*: each ⊥ slot is one edge
+variable, and we can ask "would any color value here be cell-consistent?"
+That's a question the cell formulation can't ask without enumerating
+all (piece, rot) candidates for the cell.
+
+### Search structure: branch-and-bound
+
+- **Score**: # of assigned edge variables in the partial assignment.
+  Max = 480.
+- **Branching**: pick an unassigned edge with smallest live-color
+  domain (edge-MRV). Branch over colors in the live domain.
+- **Propagation**: after assigning edge e := k, for each of e's two
+  adjacent cells, recompute the cell-consistency lookup. If a cell's
+  4 surrounding edges (assigned + unassigned) admit no unused piece in
+  any rotation, the cell becomes infeasible → prune the branch.
+- **Cascade**: edge-MRV may shrink: when one of a cell's edges is
+  fixed, the other 3's live colors are restricted to those that
+  appear in *some* unused-piece-rotation with the fixed edge.
+- **Bound**: upper-bound = total_edges - count(infeasible cells × ≥1).
+  Loose. Tightening this is a v2 task.
+- **Best-partial**: track max-score partial seen; on timeout, return
+  that.
+
+### Lookup tables (precomputed once)
+
+- `edge_4tuple_to_pieces: HashMap<[Color;4], Vec<(PieceId, Rotation)>>`
+  — given the 4 edges around a cell (in cell-frame: top, right, bot,
+  left), which pieces in which rotations match? Wildcard support for
+  unassigned: 4 entries means specific match; some entries mean "any
+  color"; we'll either expand the wildcards on lookup or use a
+  more clever indexing scheme.
+- Alternative: per-cell, per-side, per-color "feasibility bitmask"
+  over (piece-id × rotation) — 256 × 4 × 22 × (256×4 bits) ≈ 22 MB.
+  Negligible. Lets us do cell-consistency in O(piece-rotation-bitmask
+  AND across 4 sides) ≈ ~32 u64 AND ops. Very fast.
+
+I'll start with the bitmask table — it's the right data structure for
+the propagator hot path.
+
+### Score recovery (edge → board)
+
+A complete (or partial) edge assignment doesn't directly produce a
+board with pieces. To recover: for each cell c whose 4 edges are
+assigned, look up matching pieces in `edge_4tuple_to_pieces`. If
+multiple, solve the residual alldiff (small post-processing matching
+problem). For cells with unassigned edges, leave the cell empty in
+the recovered board.
+
+Score under this recovery = matched edges (the proxy quantity we've
+been optimizing all along) — so the edge-CP "score = assigned-edges"
+exactly equals the standard E2 score, modulo the alldiff recoverability.
+
+### Crate layout
+
+- New crate: `crates/edge-solver/`. Self-contained, depends on
+  `eternity2-core`, `eternity2-events`, `eternity2-solver-trait`.
+- Does NOT modify `solver-engine`. If edge-CP is a dud, we keep it as
+  a documented dead branch; if it works, we wire it into the registry.
+
+### Validation plan
+
+1. 6×6 generated puzzle, interior_colors=5. Solve via edge-CP. Confirm
+   recovered board matches a known cell-CP solution (or any valid
+   one). Pure satisfiability test.
+2. 16×16 official E2 with 5 hints translated into pinned edge values.
+   Run with a 60-second budget. Compare best-partial-score to the
+   cell-CP baseline (~449-450).
+3. If competitive or better, integrate with PT pipeline as a CP-phase
+   replacement and rerun megarun.
+
+### Risks / open questions
+
+- **Score-bound tightness**: simple bounds may make B&B effectively a
+  random walk through edge assignments. May need to add domain-
+  reduction propagators or a smarter bound. Punt until we see how it
+  behaves on 6×6.
+- **Alldiff coupling**: piece-uniqueness ties cells; the propagator
+  has to track *which pieces are used so far in this partial*. With
+  many wildcard cells (most unassigned), this is loose. Tightening
+  it might need per-piece-per-side color budget counting (similar to
+  GAColor's incremental machinery).
+- **6×6 hints don't exist**: we'll test 6×6 unconstrained
+  (satisfiability) first, then add 5-clue mock-hints for a structural
+  test before scaling.
+
+### Stop-conditions
+
+If edge-CP on 6×6 unconstrained doesn't solve within 60 s, the
+propagator is too weak; redesign before scaling. If it solves 6×6 but
+on 16×16 plateaus at the same 449 as cell-CP, the *formulation*
+isn't the lever — the plateau is in piece-color-distribution, not
+search-space-shape. Document and move to Inversion 5 or 6.
+
 ## (entries follow as experiments run)
