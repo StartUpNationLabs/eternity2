@@ -453,6 +453,51 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### Universal-mismatch update 23:29 — top-6 list refreshed, top-30 computed
+
+The `scripts/universal_mismatches.py` (vol-4) analyzed 19 plateau
+boards. Re-running across `output/archive/` finds 36 JSONs of which 22
+have score ≥400 — 3 more than vol-4's snapshot.
+
+**NEW TOP-6** (vs vol-4 OLD TOP-6):
+| Rank | Old | New |
+|---|---|---|
+| 1 | (h,180) | (h,180) — same |
+| 2 | (h,91)  | (h,91)  — same |
+| 3 | (v,162) | (h,183) — **NEW** |
+| 4 | (h,188) | (v,183) |
+| 5 | (v,183) | (v,162) |
+| 6 | (v,180) | (h,188) |
+
+`(v,180)` drops to rank 9 (41%); `(h,183)` was rank ~7 in vol-4 data,
+now rank 3 at 50% prevalence. The list is small but mature; the top-30
+have prevalence ≥27% in the corpus.
+
+**Important**: the 450 board matches all 6 of the OLD top-6 but only
+5/6 of the NEW top-6. It is itself MISMATCHED on `(h, 183)` (one of
+the 30 defects remaining on the 450 board).
+
+**Implication**: this is *exactly* the obstruction that pinned 450
+from going higher. The structural fact "matching all 6 of the OLD
+top-6 lifts to 450" should now be restated:
+- "Matching 6/6 NEW top-6 is a stronger condition than 6/6 OLD top-6."
+- "Constrained PT against NEW top-6 will push us past the 450 wall on
+  exactly the edge that 450 fails on."
+
+Generated also `data/forbidden_top12.json` and
+`data/forbidden_top20.json` and `data/forbidden_top30.json` for future
+top-K sweeps. The expanded sets test:
+- Top-12: small extension, includes edges seen in 36-50% of plateaus.
+- Top-20: includes 32-50% edges.
+- Top-30: includes 27-50% edges. forbidden.rs's u64-bitset constraint
+  caps at 64 forbidden edges; top-30 fits comfortably.
+
+**Refined hypothesis**: matching all of top-K is necessary-but-not-
+sufficient for crossing a K-dependent wall. Top-6 unlocks 450; top-12
+might unlock 455-460; top-30 might unlock 467 or beyond. K-sweep
+strategy in NE2 already tests *penalty weight*; a follow-on NE2.2
+sweep over **forbidden-set size** would test this structural claim.
+
 ### NE-BP 23:27 — Belief propagation on edge-color encoding — POSITIVE NEGATIVE RESULT
 
 **Hypothesis**: Despite SP agent's negative verdict (cavity assumption
