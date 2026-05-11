@@ -453,6 +453,26 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE3 — EvalMaxSAT killed at 1h22m, 0 progress
+
+**Outcome**: EvalMaxSAT on full 16x16 WCNF (114 MB, ~50M hard +
+5M soft clauses) ran for 1h22m. **Zero `o <cost>` lines emitted**.
+RSS stable 1 GB (well below 5 GB stop-loss). Killed to free a CPU
+core for NE1 funnel.
+
+**Diagnosis**: with the cell-place-rotation encoding emitting 156k
+piece-rotation variables and 5.8M hard clauses, the SAT solver
+spends all its time on unit propagation and assignment heuristics
+without finding the first feasible model. This is consistent with
+the NE-BP finding: the all-different-over-pieces constraint is
+where rigidity lives, and the unit-clause encoding of all-different
+is too sparse for CDCL to navigate.
+
+**Future direction (not tonight)**: a tighter "minimal" SAT encoding
+that omits piece-rotation variables for pinned cells (vs the current
+encoder which emits them for all 256 cells regardless of pinning).
+Estimated 3x reduction in clause count.
+
 ### NE10 result 00:25 — 450 board is a strict 2-swap local optimum
 
 **Setup**: implemented Wauters/Salassa TA (K=16 Hungarian) + TSR
