@@ -353,14 +353,59 @@ against which Blackwood's 470 should be compared.
 Same parameters as the unpinned `rsb_n20_pt90` harvest for direct
 A/B comparison.
 
-**Partial result (5/20 samples)** — scores 448, 447, 446, 447, 447.
-Mean ~447 vs unpinned mean 449.1. **Hint-pinning cost: about
-2 edges.** Much smaller than I'd guessed. Implies the unpinned
-solutions are NOT exploiting hint-free flexibility much — they
-naturally converge near hint-respecting configurations even when
-hints aren't enforced.
+**Result (stopped at 6/20 samples — user requested truncation)** —
+scores [448, 448, 449, 447, 447, 450]. Mean **448.2**, range
+[447, 450]. **Best constrained score: 450/480 (93.8%) from seed
+0x171560a05f574f4b**.
 
-**Verdict** — pending full N=20.
+Bucas URL of the 450-board (all 5 hints preserved, verified):
+`https://e2.bucas.name/#puzzle=best_constrained_450&board_w=16&board_h=16&board_edges=abdaa...ceaab`
+(saved to output/plateau/rsb_n20_pt90_pinned/sample_005...).
+
+Compared to unpinned mean 449.1: **hint-pinning cost is ~1 edge on
+average**. Much smaller than expected. Implies unpinned PT was NOT
+heavily exploiting hint-free flexibility; the constrained and
+unconstrained basins are geometrically close.
+
+**Updated diagnostics on the 6 pinned dumps**:
+
+*Overlap P(q)* (n=15 pairs):
+- Main peak at 0.67-0.75 (13 pairs), one outlier at 0.66 and one
+  at 0.83-0.92. **No q≈1.0 peak** (unlike unpinned, which had 8
+  pairs at q ≥ 0.92).
+- mean=0.716, std=0.042 — tighter than unpinned (mean 0.70, std
+  0.07). With pinning, no two seeds converge to identical boards.
+- The unpinned multi-modal structure has *weakened* under
+  constraints — the q≈1 peak was an artifact of unpinned freedom.
+
+*Topology*:
+- Colors 1-5 still 100% invariant (border lock unchanged).
+- v_per_row cells: **63.0% invariant** (was 55.2% unpinned).
+- h_per_col cells: **53.3% invariant** (was 40.0% unpinned).
+- **Hints INCREASE invariance** — they anchor structure that
+  propagates outward. The plateau is even more geometrically
+  localised under constraints.
+
+*Houdayer offline*:
+- 17 total disagreement components (mean size 63.6).
+- Only **4 swappable** (vs 151/225 unpinned). Constrained pieces
+  are less interchangeable across boards because hint pieces are
+  anchored at specific cells.
+- All 4 swappable have joint_delta = 0 (microcanonical).
+- The lower swappable rate weakens the case for Houdayer as a
+  pure offline operator, but not for Houdayer-in-PT (which
+  benefits from post-swap SA, not just swap deltas).
+
+**Verdict** — kept as the new constrained baseline. 450/480 best
+known. 6 samples is enough to see the shifts; we don't need to
+finish N=20 unless we want tighter histograms.
+
+**Implication for next experiment**: with pinning making Houdayer
+swaps rarer, the Houdayer-in-PT bet is more speculative. The
+**central-region CP repair** thread becomes more attractive:
+topology says even more of the board is invariant under pinning
+(63% v-cells, 53% h-cells), so the candidate "frame" around the
+central variance region is even more reliable as a hint set.
 
 ---
 
@@ -453,5 +498,92 @@ Measure score delta. Repeat across all 20 plateau dumps to estimate
 expected improvement.
 
 **Verdict** — pending.
+
+---
+
+## 2026-05-11 — Central-region CP repair: definitive negative result
+
+**H** — Topology said variance is in the central 6x6; border colors
+are 100% invariant across plateau states. Therefore, pinning the
+outer cells and re-solving the central 6x6 via CP should fix the
+plateau by exploiting the (correct) frame.
+
+**Setup** — New binaries `central_repair` (free a chosen window)
+and `worst_region_repair` (find the lowest-internal-match k×k
+region and repair it). Tested on the 450/480 plateau dump
+(sample_005_seed_171560a05f574f4b).
+
+**Result** —
+- `central_repair --k 6` (centre 6×6): **CP wipeout in 0.1s**
+  (Exhausted: provably no feasible interior given the pinned
+  surround).
+- `central_repair --k 8`: wipeout in 0.0s.
+- `central_repair --k 12`: wipeout in 30s budget (still no soln).
+- `central_repair --k 14` (only border pinned): **timed out at 60s
+  without completing the interior**.
+- `worst_region_repair --k 6` (worst region at (8,5)): wipeout in 0.1s.
+
+Even with only the BORDER pinned (60 cells), CP cannot complete
+the 196 interior cells in 60s. With more cells pinned, it proves
+infeasibility instantly.
+
+**Verdict: dropped.** The plateau state is *globally inconsistent*
+with completing the puzzle, even though its border is 100%
+identical to every other plateau state's border, AND those border
+choices look locally fine (all border-interior matches present).
+
+**Deeper insight (changes our model of the plateau).**
+- All 6 plateau states share the SAME border (60 cells identical).
+- 97/196 (49%) interior cells are also invariant across plateau
+  states.
+- Yet CP can't extend the remaining cells from any plateau state's
+  pinned outer cells. This means **the canonical-border-after-PT
+  is not a valid prefix of any full E2 solution** under the piece
+  set we have.
+- PT/SA's greedy_fill chooses border pieces that *locally* match
+  perfectly but *globally* don't admit interior completion. Every
+  seed converges to the same wrong border because greedy_fill is
+  deterministic given the CP partial.
+- The 449-450 plateau is a fundamental constraint of "PT after CP
+  + greedy_fill" — it has nothing to do with SA's move set.
+
+**Implications for next steps.**
+
+1. **Local CP repair can never fix this** — the obstruction is in
+   the *pinned* cells, not the freed ones. To break 450, we need
+   to *free border cells* and let CP find a different border
+   permutation that does admit interior completion.
+
+2. **Houdayer-in-PT** is more promising than I thought:
+   - It teleports the SA chain to a different *interior*
+     configuration with the same border.
+   - But if the border is the bottleneck, Houdayer between same-
+     border replicas won't help. Need Houdayer between DIFFERENT-
+     border replicas, which requires different greedy_fills.
+   - Concretely: re-run PT with `--diversify_fill` (already a flag,
+     currently unused) so different replicas get different greedy
+     fills, then Houdayer can swap between different-border replicas.
+
+3. **The strongest next experiment** is no longer Houdayer-in-PT
+   but rather **CP with a different border**. Two routes:
+   - (a) Run CP itself from scratch with a different seed/heuristic
+     so it finds a different partial → different greedy_fill →
+     different border. We've effectively been doing this with
+     different PT seeds, but PT only adds noise on TOP of the same
+     CP partial. We need different CP partials.
+   - (b) Explicitly perturb the CP partial: take CP's output,
+     remove some random border pieces, and let CP re-solve from
+     that. Or apply CP+restart with different variable ordering.
+
+**Action**: pivot from "fix the plateau locally" to "find a
+different prefix that admits global completion". Two concrete
+experiments:
+   (i) Run pt_e2 with --reuse-cp=false in harvest_plateau (run CP
+       fresh per seed); compare to current results. If different
+       CP partials → different borders → different plateaus, we
+       learn whether CP itself is deterministic or seed-sensitive.
+   (ii) Implement a "border-shuffle" CP restart: from a 450 plateau,
+       remove the border pieces, re-run CP with hint+symmetry but
+       a different variable-order seed.
 
 ## (entries follow as experiments run)
