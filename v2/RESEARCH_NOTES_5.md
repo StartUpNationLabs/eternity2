@@ -453,6 +453,51 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### STRUCTURAL ANALYSIS 00:54 — rare colors are EASY, not hard
+
+**Setup**: `scripts/puzzle_structural_analysis.py` analyzes the static
+piece set (no PT/CP):
+
+**Findings**:
+- 22 interior colors. Color counts: colors 1-5 = 24 edges each (rare);
+  colors 6-10 = 48 edges; colors 11-22 = 50 edges.
+- All colors have EVEN count. Puzzle is fully matchable in principle.
+- Sum of (count // 2) = 480 = exactly the # interior edges. **Every
+  color edge MUST match — zero slack.**
+- 4 corners + 56 edge-pieces + 196 interior-pieces (matches the
+  required 4 + 56 + 196).
+- Many color-pairs (mostly involving rare colors 1-5) appear on only
+  1 piece — these are "globally-forcing" pair constraints.
+
+**On the 450 board, mismatches by color**:
+| Color | Mismatches | Matches | Rate |
+|---|---|---|---|
+| **1-5** (rare) | **0** | 12 each | **0%** |
+| 6-22 (abundant) | 2-6 | 22-24 | 8-21% |
+| WORST: 15, 22 | 6 each | 22 | 21% |
+
+**THE BIG INVERSION**: Rare colors are FULLY MATCHED. All 30 mismatches
+are on abundant colors. **The puzzle's hardness is NOT the rare
+colors — it's the abundant ones.**
+
+**Why this surprises me**: I expected rare colors to be the bottleneck
+because their globally-forcing pair constraints leave no flexibility.
+But that flexibility is what makes them HARD TO MIS-PLACE — there are
+few ways to use a rare-color piece, and PT finds the right one.
+
+Abundant colors have COMBINATORIAL FREEDOM: 22-25 internal matches
+per color, but the optimizer has many local-optimum traps because
+swapping which abundant-color piece goes where often LOOKS the same
+locally.
+
+**Implication for the universal-mismatch lever**: the top-6 universal
+mismatches involve abundant colors (need to verify). The structural
+defect at the 449 plateau is caused by ABUNDANT-color combinatorial
+near-degeneracy, not by rare-color rigidity.
+
+**This is the most counter-intuitive finding of the night.** It
+inverts the natural assumption that rare colors are the bottleneck.
+
 ### NE11 prototype 00:33 — Max-Clique RO insufficient on 450 board
 
 **Setup**: `scripts/region_max_clique.py` implements Salassa §3.5 RO
