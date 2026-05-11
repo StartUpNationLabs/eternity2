@@ -414,6 +414,74 @@ of solving previously-unsolved competition instances.
 **Action**: do NOT spend cloud money tonight. NE2 + frame-first
 diversification dominate any hardware play at this margin.
 
+### NE2-impl 23:18 — implementation + smoke test passed
+
+**Implementation**: 
+
+- `crates/localsearch/src/forbidden.rs` — new module, `ForbiddenEdge`,
+  `parse_forbidden_json` (consumes `[["h"|"v", pos]]` from
+  universal_mismatches.py), `fmm_full`, `fmm_touched`. 4 unit tests
+  pass.
+- `PtConfig` gains `forbidden_edges: Vec<ForbiddenEdge>` +
+  `forbidden_penalty_k: i64`. Default zero/empty = back-compat.
+- Penalty applied at: (1) PT replica-exchange acceptance — pulls
+  low-fmm configs toward cold replicas; (2) global-best tracking —
+  tie-break by lower fmm. **SA inner-loop acceptance stays on raw
+  deltas** for performance (and to keep code change scoped). This is
+  a "PT-swap-level constrained variant", not a "every-move constrained
+  variant" — design choice documented in commit message.
+- `pt_e2` CLI: `--forbidden-edges <path>` + `--forbidden-k <int>`.
+- `data/forbidden_top6.json` is the canonical top-6 universal-mismatch
+  list.
+
+**Smoke test** (25s constrained PT, K=50, top-6, seed=1):
+- Cold replicas → fmm=0 (all 6 forbidden edges resolved on chain 0).
+- Warm replicas → fmm=3-6.
+- Raw best 441/480 (slightly below unconstrained 443/480 in matched
+  smoke test). Expected: short-budget penalty trades raw for structure.
+- Swap accept rate 22.1% vs 18.6% unconstrained — penalty math is
+  active in swap math.
+
+**Verdict**: mechanism confirmed working. Real K-sweep next.
+
+**Important design caveat**: because the SA inner-loop is unmodified,
+the local search at each temperature freely accepts moves that
+introduce forbidden mismatches; only PT swap rejects them. This means
+the cold chain CAN drift into a high-fmm state mid-round and only be
+swapped out next round. For short PT runs this is suboptimal. If the
+600s sweep doesn't show clear gains, the next iteration of NE2 should
+add inner-loop penalty too (we have the cell-set machinery in
+forbidden.rs already).
+
+### NE2-sweep 23:20 — launched (background)
+
+**Hypothesis**: forbidden-mismatch penalty steers PT toward the "good
+basin" that contains 450+ configurations. Effective score = raw - K *
+fmm.
+
+**Setup**: K ∈ {0, 10, 50, 100, 200}, single canonical seed
+(0xE2E2E2E2 = 3806637746), 600s PT each, 30s CP. K=0 is the baseline.
+Same wall-clock, same starting basin (same CP seed), so the comparison
+is honest.
+
+**Predicted falsification**:
+- If K=0 ≥ best constrained: the penalty hurts (over-constrains the
+  search, kills escape moves). Means: penalty as currently designed
+  (swap-level only) is too weak to compensate for whatever steering
+  it does at swap time.
+- If all K > 0 = K=0: the penalty has no measurable effect on this
+  budget. Means: PT-swap-level penalty has low coupling to actual
+  basin reached; need to add inner-loop penalty.
+- If some K gives raw score ≥ 449: structural lever validates. The
+  450 frame-first basin is reachable from canonical CP seed under
+  this constraint.
+- If K=200 (very strong) hurts the most: too-strong penalty traps
+  search; pick K in 10-100 range for next experiment.
+
+**Setup commitment**: PID 55094, log `/tmp/ne2_sweep_main.log`.
+Per-K logs in `/tmp/ne2_k{K}_seed{SEED}.log`. Output JSONs in
+`output/`. Sweep summary in `output/ne2_k_sweep_<ts>.json`.
+
 ### Cross-agent triangulation — high-confidence verdict
 
 All three independent agents converge: **the structural universal-mismatch
