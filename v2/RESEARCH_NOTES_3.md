@@ -730,4 +730,156 @@ or escape cell-CP's 449 plateau.
    colors in insertion order. LCV picks the color that prunes fewest
    neighboring cells. Standard CP move.
 
+---
+
+## 2026-05-11 — Cross-pollination: edge-CP → PT (mid-session experiment)
+
+**H**: edge-CP and cell-CP plateau in *different* basins (335 vs 449
+matched edges). Seeding PT with an edge-CP partial might explore
+different cell configurations and reach a different plateau than
+cell-CP-seeded PT does.
+
+**Setup**: `edge_cp_e2 --seconds 30 --pt-seconds 60`. Edge-CP with
+hints + Hall-1 produces a 298-edge / 172-cell partial. Feed to PT
+(8 replicas, T=0.05..2, 60s, pinned hints).
+
+**Result**: PT lifts the partial from 298 → **444/480** (gain +146).
+
+Compared to PT seeded with cell-CP: PT-from-cell-CP plateaus at 449.
+So edge-CP-seeded PT is **5 edges behind** cell-CP-seeded PT.
+
+**Verdict**: edge-CP seeds and cell-CP seeds occupy *similar but not
+identical* basins; PT converges close in both. The edge-CP basin
+might be 5 edges deeper or shallower depending on tuning. Not a
+breakthrough, but a clean diagnostic.
+
+Trying longer budget (60s + 240s) to see if the 444 ceiling moves.
+
+---
+
+## 2026-05-11 — Graph-theoretic reframing (user prompt)
+
+The user asked: "we now have a graph, can we infer things from the
+graph shape? graphs are used for problem solving across many fields,
+maybe we can find things elsewhere? Also, why do we get stuck?"
+
+This is the right level of abstraction. Let me lay out the graphs
+explicitly and what they tell us.
+
+### Graph 1 — Edge-CP factor graph
+
+  Variables: 480 interior edges (domain {1..22})
+  Constraints: 256 cell-consistency factors, each touching the ≤4
+    interior edges around a cell
+
+This is what edge-CP solves. Cell constraint = "the 4 edges around
+me must collectively be the 4-tuple of some piece-rotation, with
+boundary sides pinned to BORDER."
+
+### Graph 2 — Piece-cell bipartite compatibility graph
+
+  Left: 256 cells.
+  Right: 256 pieces.
+  Edge (c, p): given the *current* edge-color assignments around c,
+    some rotation of p is compatible with those colors.
+
+This graph **shrinks** as edges get assigned. Hall's condition on it
+is the alldiff propagator (we have Hall-1 and full matching in code).
+The matching's max-size = #cells that can be assigned a piece.
+
+### Graph 3 — Color-adjacency graph
+
+  Nodes: 22 colors (plus BORDER)
+  Edges: (c1, c2) appears as adjacent edges within some piece in the
+    catalog
+
+Properties of this graph constrain edge-color compatibility entirely
+locally per piece. Vol. 2 did partial topology analysis. (Not
+currently a search input.)
+
+### Graph 4 — Disagreement graph
+
+  Nodes: cells. Edges: cells where two replicas have different
+  (piece, rotation). Used by Houdayer cluster moves; vol. 2 found
+  Houdayer-in-PT keeps proposing the same cluster every round, no
+  improvement.
+
+### Why we get stuck (graph-theoretic)
+
+The plateau at 449 isn't an algorithm bug — it's a **property of the
+joint-feasibility region of Graphs 1 and 2**. Specifically:
+
+- A "complete" solution requires a coloring of Graph 1 + a perfect
+  matching in Graph 2 (under that coloring) simultaneously.
+- For the 5-clue official E2 with its piece distribution, **the
+  joint region is empty or near-empty**. There's likely no perfect
+  joint assignment.
+- Single-piece swaps (PT/SA moves) walk a meta-graph whose nodes are
+  complete-board states and edges connect states differing by 1
+  swap. The 449-plateau is a **connected component** of the level
+  set {score ≥ 449}; its boundary doesn't touch any score-450+
+  state via single-swap moves. **It's a Hamming moat.**
+- 2-swap moves don't help either — Houdayer (cluster moves of size
+  ~80-90) repeatedly finds the same disagreement components round
+  after round (vol. 2 finding) and replica-exchange undoes them.
+
+### What this suggests
+
+1. **Spectral analysis of Graph 2 restricted to plateau cells.** The
+   30 unmatched edges in plateau states share which cells? Build
+   the induced subgraph; compute its eigenvalues, conductance,
+   bipartite double cover. Conductance-bottleneck cells are *the*
+   cells where score-improvement requires coordinated change.
+2. **Treewidth of the joint Graph 1+2 constraint hypergraph.** If
+   bounded, dynamic-programming on tree decomposition gives exact
+   solutions in polynomial time. E2 is a grid, so treewidth ≈ √N =
+   16; not bounded for 16×16, but manageable for 6×6 (twidth ~3).
+3. **Random graph theory.** A random k-regular bipartite graph with
+   n nodes per side has perfect-matching probability that goes to 1
+   as n grows. E2's Graph 2 (256 × 256, sparse) might be in a
+   regime where perfect matching is asymptotically unlikely. That
+   would be a formal explanation of the plateau.
+4. **Graph rewriting / motif search.** E2 piece edges have low
+   color diversity (22 colors). The color-adjacency multigraph
+   (Graph 3) has heavy structure. Finding 4-cycles in Graph 3 might
+   identify "color clusters" that cells naturally split into.
+5. **Spectral matching / Sinkhorn.** Continuous relaxation of
+   bipartite matching has been explored for E2 (Kovalsky-Glasner-
+   Basri 2014). The eigenstructure of the *assignment polytope*
+   restricted to Graph-1-feasible colorings would expose plateau
+   geometry directly.
+6. **Cross-domain connection — graph coloring vs Latin squares.**
+   E2 is a constrained edge-coloring with piece-uniqueness. Latin-
+   square completion is also "color a partial assignment respecting
+   row/column constraints + uniqueness." Algorithms for Latin
+   square completion (e.g., Anstee-McNulty, integer programming
+   relaxations) might transplant.
+7. **Cross-domain — quantum error correction.** Surface codes
+   embed similar local-consistency + global-parity problems on a
+   2D lattice. The decoder algorithms (minimum-weight perfect
+   matching on a syndrome graph) are *structurally the same shape*
+   as our Graph 2 matching, with parity flips as "errors."
+
+### Stuck because: alldiff and edge-coloring don't decouple
+
+Cell-CP enforces alldiff during branching; edge-CP enforces edge-
+coloring during branching. Each leaves the *other* constraint as a
+soft post-condition. The plateau is where both constraints almost
+work but conflict in a way no local move can repair.
+
+A genuinely new approach would *both* enforce alldiff AND edge-color
+matching during a single coupled propagation. Régin's "global cardinality
+constraint" combined with our edge-CP's per-cell row-mask is a candidate.
+
+### Action items from the graph view
+
+- [ ] Extract Graph 2 from a plateau state and analyze: # connected
+  components in the bipartite Hall-violation subgraph; spectral gap
+  of the cell-cell co-occurrence graph; treewidth.
+- [ ] Test if Graph 3 (color-adjacency) is connected. If not, the
+  puzzle decomposes by color-strand.
+- [ ] Encode E2 as a SAT problem with both edge variables and piece
+  variables (the Ansótegui 2008 dual encoding); throw a modern SAT
+  solver at it; see if it can find the 480 SOTA or 470.
+
 

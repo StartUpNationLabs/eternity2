@@ -46,6 +46,11 @@ struct Args {
     /// Strongest sound alldiff propagator; expensive O(V·E) per check.
     #[arg(long, default_value_t = 0)]
     matching_every: u32,
+
+    /// After edge-CP, seed PT with the recovered board and run for this
+    /// many additional seconds (0 = skip PT).
+    #[arg(long, default_value_t = 0)]
+    pt_seconds: u64,
 }
 
 fn translate_hint(
@@ -187,6 +192,54 @@ fn main() {
         matched, total, placed, puzzle.cell_count());
     eprintln!("(cell-CP baseline on this puzzle: 449-450/480)");
 
+    let mut final_board = board.clone();
+    let mut final_matched = matched;
+
+    // Optional PT polish, seeded with the edge-CP recovered board.
+    if args.pt_seconds > 0 {
+        use eternity2_localsearch::{run_pt_from, PtConfig};
+        eprintln!("\n--- PT polish ({}s, seeded with edge-CP partial) ---", args.pt_seconds);
+        let pinned: Vec<u32> = if args.apply_hints {
+            file_hints.hints.iter().map(|h| h.position).collect()
+        } else { Vec::new() };
+        let pt_cfg = PtConfig {
+            n_replicas: 8,
+            t_min: 0.05,
+            t_max: 2.0,
+            inner_iters: 100_000,
+            max_rounds: 0,
+            time_budget_ms: args.pt_seconds * 1000,
+            seed: 0xE2E2E2E2,
+            verbose: true,
+            greedy_fill: true,
+            diversify_fill: false,
+            repair_every: 0,
+            repair_k: 4,
+            repair_budget_ms: 200,
+            kick_every: 0,
+            kick_n_swaps: 20,
+            pinned_positions: pinned,
+            houdayer_every: 0,
+            houdayer_max_component: 20,
+            houdayer_min_component: 4,
+        };
+        let t1 = Instant::now();
+        let (pt_out, pt_stats) = run_pt_from(&puzzle, &board, &pt_cfg);
+        let pt_elapsed = t1.elapsed();
+        eprintln!("PT done in {:.1}s: rounds={} best={}/{} ({:.1}%)",
+            pt_elapsed.as_secs_f64(), pt_stats.rounds,
+            pt_out.best_score, pt_out.total_edges, pct(pt_out.best_score, pt_out.total_edges));
+        final_board = pt_out.best_board.clone();
+        final_matched = pt_out.best_score;
+        eprintln!("\n=== POST-PT SUMMARY ===");
+        eprintln!("edge-CP recovered:    {}/{}", matched, total);
+        eprintln!("after PT polish:      {}/{} (+{})",
+            pt_out.best_score, pt_out.total_edges,
+            pt_out.best_score as i32 - matched as i32);
+    }
+
+    let final_placed = placed_count(&final_board);
+
     let output_dir = std::path::PathBuf::from("output");
     let puzzle_name = puzzle_name_from_path(&args.puzzle);
     let extra = serde_json::json!({
@@ -208,8 +261,12 @@ fn main() {
             "placed_cells": placed,
             "total_cells": puzzle.cell_count(),
         },
+        "final": {
+            "matched_edges": final_matched,
+            "placed_cells": final_placed,
+        },
     });
-    match write_report(&output_dir, "edge_cp_e2", &puzzle, &puzzle_name, &board, extra) {
+    match write_report(&output_dir, "edge_cp_e2", &puzzle, &puzzle_name, &final_board, extra) {
         Ok(r) => {
             eprintln!("\nReport: {}", r.json_path.display());
             eprintln!("Bucas:  {}", r.url);
