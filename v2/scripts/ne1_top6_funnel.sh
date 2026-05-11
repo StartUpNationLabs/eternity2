@@ -20,16 +20,19 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-BORDERS_1=${BORDERS_1:-60}
+# Default to MODERATE budgets (~1.5h total) so the funnel completes
+# leaving time for follow-up experiments. Override via env vars for
+# a deep night run.
+BORDERS_1=${BORDERS_1:-30}
 PT_1=${PT_1:-90}
-BORDER_GEN=${BORDER_GEN:-20}
+BORDER_GEN=${BORDER_GEN:-15}
 CP_S=${CP_S:-15}
 
-TOP_2=${TOP_2:-12}
-PT_2=${PT_2:-300}
+TOP_2=${TOP_2:-8}
+PT_2=${PT_2:-200}
 
-TOP_3=${TOP_3:-3}
-PT_3=${PT_3:-1500}
+TOP_3=${TOP_3:-2}
+PT_3=${PT_3:-600}
 
 # Default base seed: 0xCAFEFEEC. (Vol-4 funnels used 0xCAFEFEED; we
 # nudge by 1 so we explore a different border-seed space rather than
