@@ -26,8 +26,13 @@
 // frame-first is designed to close.
 
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
+
+fn flush_err() {
+    let _ = std::io::stderr().flush();
+}
 
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
@@ -67,6 +72,28 @@ struct Args {
     /// Total wall-clock budget (seconds); 0 = no global limit.
     #[arg(long, default_value_t = 0)]
     total_seconds: u64,
+
+    /// Explicit comma-separated list of u64 seeds to use, overriding
+    /// `base_seed` + `n_borders`. Used by stage-2/3 of the overnight
+    /// funnel to focus on borders that performed well in stage 1.
+    #[arg(long)]
+    seeds_list: Option<String>,
+
+    /// PT seed offset relative to the border seed. Default 0 means
+    /// (border_seed, pt_seed) = (s, s). Set to non-zero to use a
+    /// different PT trajectory for the same border.
+    #[arg(long, default_value_t = 0)]
+    pt_seed_offset: u64,
+
+    /// Path to a per-candidate checkpoint JSON. Updated after every
+    /// candidate so an aborted run still preserves intermediate
+    /// results. Default: output/frame_first_e2_checkpoint.json.
+    #[arg(long, default_value = "output/frame_first_e2_checkpoint.json")]
+    checkpoint_path: PathBuf,
+
+    /// Label to embed in the checkpoint JSON (e.g., "stage1").
+    #[arg(long, default_value = "default")]
+    run_label: String,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -218,8 +245,10 @@ fn main() {
     let args = Args::parse();
     eprintln!("=== FRAME-FIRST DECOMPOSITION ===");
     eprintln!("puzzle: {}", args.puzzle.display());
-    eprintln!("n_borders={} border_gen_s={} cp_s={} pt_s={} total_s={}",
-        args.n_borders, args.border_gen_seconds, args.cp_seconds, args.pt_seconds, args.total_seconds);
+    eprintln!("n_borders={} border_gen_s={} cp_s={} pt_s={} total_s={} run_label={}",
+        args.n_borders, args.border_gen_seconds, args.cp_seconds, args.pt_seconds,
+        args.total_seconds, args.run_label);
+    flush_err();
 
     let (puzzle, file_hints) = load_puzzle_with_hints(&args.puzzle).expect("load");
     eprintln!("loaded {}×{}, {} pieces, {} colors, {} official hints",
@@ -228,19 +257,90 @@ fn main() {
 
     let n_border_cells: u32 = (0..puzzle.cell_count()).filter(|&p| is_border_cell(&puzzle, p)).count() as u32;
     eprintln!("expected border cells: {}", n_border_cells);
+    flush_err();
+
+    // Build seed iterator: either explicit list (stage 2/3) or
+    // base_seed + 0..n_borders (stage 1 / default).
+    let seeds: Vec<u64> = if let Some(list) = &args.seeds_list {
+        let parsed: Vec<u64> = list.split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                if let Some(hex) = s.strip_prefix("0x") {
+                    u64::from_str_radix(hex, 16).expect("seeds_list: bad hex u64")
+                } else {
+                    s.parse::<u64>().expect("seeds_list: bad u64")
+                }
+            })
+            .collect();
+        eprintln!("using explicit seeds_list: {} seeds", parsed.len());
+        parsed
+    } else {
+        (0..args.n_borders).map(|i| args.base_seed.wrapping_add(i as u64)).collect()
+    };
+    eprintln!("seeds to process: {}", seeds.len());
+    flush_err();
+
+    // Ensure checkpoint parent exists.
+    if let Some(parent) = args.checkpoint_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
 
     let t_global = Instant::now();
     let mut seen: BTreeMap<BorderSig, u32> = BTreeMap::new();
     let mut best: (u32, u32, Option<Board>, u64) = (0, 0, None, 0); // (score, total, board, seed_used)
     let mut interior_stats: Vec<(u64, u32, u32, u32)> = Vec::new(); // (seed, border_filled, cp_score, pt_score)
 
-    for i in 0..args.n_borders {
+    // Helper to (re)write the checkpoint. Called after every successful
+    // candidate AND once before the loop so jq always has a parseable
+    // file even if every candidate fails.
+    let write_checkpoint = |interior_stats: &Vec<(u64, u32, u32, u32)>,
+                            best: &(u32, u32, Option<Board>, u64),
+                            t_global: &Instant| {
+        let best_url = best.2.as_ref().map(|b| {
+            eternity2_benchmark::report::bucas_url(
+                &puzzle, b, &puzzle_name_from_path(&args.puzzle),
+            )
+        });
+        let checkpoint = serde_json::json!({
+            "run_label": args.run_label,
+            "n_candidates_done": interior_stats.len(),
+            "n_seeds_planned": seeds.len(),
+            "elapsed_s": t_global.elapsed().as_secs_f64(),
+            "border_gen_seconds": args.border_gen_seconds,
+            "cp_seconds": args.cp_seconds,
+            "pt_seconds": args.pt_seconds,
+            "pt_seed_offset": args.pt_seed_offset,
+            "best": {
+                "score": best.0,
+                "total": best.1,
+                "seed": best.3,
+                "seed_hex": format!("0x{:x}", best.3),
+                "bucas_url": best_url,
+            },
+            "per_border": interior_stats.iter().map(|(s, b, c, p)| serde_json::json!({
+                "seed": s, "seed_hex": format!("0x{:x}", s),
+                "border_filled": b, "cp_score": c, "pt_score": p,
+            })).collect::<Vec<_>>(),
+        });
+        let tmp = args.checkpoint_path.with_extension("json.tmp");
+        if let Ok(s) = serde_json::to_string_pretty(&checkpoint) {
+            if std::fs::write(&tmp, &s).is_ok() {
+                let _ = std::fs::rename(&tmp, &args.checkpoint_path);
+            }
+        }
+    };
+    // Write an initial empty checkpoint so jq always has a parseable file.
+    write_checkpoint(&interior_stats, &best, &t_global);
+
+    for (i, &seed) in seeds.iter().enumerate() {
         if args.total_seconds > 0 && t_global.elapsed().as_secs() >= args.total_seconds {
             eprintln!("\n[budget reached at i={i}, stopping]");
+            flush_err();
             break;
         }
-        let seed = args.base_seed.wrapping_add(i as u64);
         eprintln!("\n--- Border candidate {} (seed=0x{:x}) ---", i + 1, seed);
+        flush_err();
 
         // Phase 1: generate a candidate via random-tiebreaker CP.
         let t1 = Instant::now();
@@ -252,6 +352,7 @@ fn main() {
         let n_filled = border_hints.len() as u32;
         eprintln!("  border-gen elapsed: {:.1}s, border cells filled: {}/{}",
             t1.elapsed().as_secs_f64(), n_filled, n_border_cells);
+        flush_err();
 
         if n_filled < n_border_cells {
             eprintln!("  partial border (not all {} cells filled); using anyway", n_border_cells);
@@ -262,7 +363,7 @@ fn main() {
             eprintln!("  duplicate border (also seen at i={}); skipping interior solve", prev);
             continue;
         }
-        seen.insert(sig.clone(), i);
+        seen.insert(sig.clone(), i as u32);
 
         // Phase 2: interior CP conditioned on this border.
         let t2 = Instant::now();
@@ -273,6 +374,7 @@ fn main() {
         let (cp_s, cp_t) = score_board(&puzzle, &cp_board);
         eprintln!("  interior CP elapsed: {:.1}s, score: {}/{} ({:.1}%)",
             t2.elapsed().as_secs_f64(), cp_s, cp_t, pct(cp_s, cp_t));
+        flush_err();
 
         // Phase 3: PT on the interior result (if budget > 0).
         let final_board = if args.pt_seconds > 0 {
@@ -280,10 +382,12 @@ fn main() {
             // Pin: official hints AND the border. Interior remains free.
             let mut pinned: Vec<Position> = file_hints.hints.iter().map(|h| h.position).collect();
             for h in &border_hints { if !pinned.contains(&h.position) { pinned.push(h.position); } }
-            let pt_board = run_pt_on(&puzzle, &cp_board, pinned, args.pt_seconds, seed);
+            let pt_seed = seed.wrapping_add(args.pt_seed_offset);
+            let pt_board = run_pt_on(&puzzle, &cp_board, pinned, args.pt_seconds, pt_seed);
             let (pt_s, pt_t) = score_board(&puzzle, &pt_board);
             eprintln!("  PT elapsed: {:.1}s, score: {}/{} ({:.1}%)",
                 t3.elapsed().as_secs_f64(), pt_s, pt_t, pct(pt_s, pt_t));
+            flush_err();
             interior_stats.push((seed, n_filled, cp_s, pt_s));
             pt_board
         } else {
@@ -294,8 +398,10 @@ fn main() {
         let (s, t) = score_board(&puzzle, &final_board);
         if s > best.0 {
             eprintln!("  *** NEW BEST: {}/{} (was {}) ***", s, t, best.0);
-            best = (s, t, Some(final_board), seed);
+            best = (s, t, Some(final_board.clone()), seed);
         }
+        flush_err();
+        write_checkpoint(&interior_stats, &best, &t_global);
     }
 
     eprintln!("\n=== SUMMARY ===");
