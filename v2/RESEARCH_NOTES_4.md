@@ -1655,3 +1655,68 @@ Frame-first works. Push it harder:
    universal-mismatch edges are now matched? Which new ones
    appeared? This informs whether the 450-border's improvement is
    one-edge-lucky or a structurally different basin.
+
+---
+
+## 2026-05-11 night — autonomous multi-path research (vol. 4 session 3)
+
+User instruction: "let you research during the night, taking notes
+as you go with experiments. Exploring multiple domains where we
+could steal solutions etc..."
+
+### Operating rules I'm following
+
+1. **One compute job at a time** (8-core M-series). 90 min hard cap
+   per job; abort and document if it doesn't return in budget.
+2. **Sequential, not stacked**. Concurrent rayon jobs would thrash.
+3. **Notes-first**. Hypothesis + falsification criterion BEFORE
+   each experiment. Commit after every experiment (success OR
+   negative) so the log is recoverable.
+4. **Parallel non-compute work** when a job is running: web
+   research agents, code reading, planning the next experiment.
+5. **Stop-loss**: anything that looks runaway (process eating
+   memory, infinite loop, wrong direction) gets killed without
+   ceremony.
+6. **Write as if a different Claude will read these notes cold**.
+   No conversational shorthand.
+
+### Planned experiments (in priority order, subject to revision)
+
+1. **E1 — Frame-first deep PT on the 450-border** (the obvious
+   follow-up). Take seed 0xCAFEFEEF that produced 450/480, give it
+   ~75min PT (within the 90min cap). Does it reach 455+?
+2. **E2 — Universal-mismatch constrained PT** (most novel). Build
+   a PT variant that rejects any state where the top-N
+   universal-mismatch edges (from `universal_mismatches.py`) are
+   themselves mismatched. Tests whether the plateau dissolves when
+   these specific structurally-hard edges are forced to match.
+3. **E3 — PT-seed diversification on canonical border**. Cheap
+   experiment to test whether the canonical 449 PT result is a
+   PT-seed-specific local minimum or a robust basin. Different PT
+   seeds, same border, same starting CP partial.
+4. **E4 — Cross-domain literature agents**. Spawn 2-3 web research
+   agents in parallel (they don't compete with local compute) to
+   find techniques we missed: modern MaxSAT solver landscape +
+   install paths; MWPM surface-code decoder operationalization
+   details; recent (2023+) ML papers on edge-matching/jigsaw.
+5. **E5 — Native MaxSAT compilation** if E4 surfaces a usable
+   path. Compile EvalMaxSAT or UWrMaxSAT; throw the existing 120
+   MB WCNF at it; report whether it finds any bound.
+6. **E6 — Analyze the 450-board's structure** vs canonical 449
+   (universally-hard mismatches: which dissolved? Which appeared?
+   How does the 450 basin differ structurally?).
+
+### How I'll judge what to do when
+
+- After each experiment, results inform next priorities.
+- If E1 reaches 455+, push deeper. If it plateaus at 450-452, fall
+  back to E2 (different mechanism).
+- E4 runs in parallel with E1 (cheap web agents while compute
+  works). E5 only if E4 surfaces a quick-install solver.
+- E2 is the most novel — high priority regardless of E1 outcome.
+
+### Pre-flight state (current 12-border run still going)
+
+Candidate 9 in PT phase (seed 0xCAFEFEF5). ~13 min remaining (3
+more candidates × ~4.5 min each). Will let it finish before
+starting E1.
