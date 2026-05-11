@@ -45,6 +45,7 @@ pub enum VariableOrder {
 pub enum ValueOrder {
     InsertionOrder,        // try rows in domain insertion order
     LeastConstraining,     // LCV — pick value that prunes fewest neighbor rows (v2.1)
+    RandomShuffle,         // shuffle the domain via the opts.seed RNG at each node
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,6 +146,21 @@ impl EngineConfig {
     };
 
     pub const GACOLOR_AC3_PAR: Self = Self {
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    // Same as GACOLOR_AC3_PAR (deterministic MRV variable-ordering, both
+    // propagators) but with a seeded-random VALUE order: domain rows are
+    // shuffled at each node. Different seeds produce different CP partials,
+    // which is needed when downstream local search saturates because every
+    // seed of CP+greedy_fill converges to the same canonical (and globally
+    // wrong) prefix. Keeping MRV intact preserves CP's pruning power; only
+    // tie-breaks between equally-good piece choices are randomised.
+    pub const GACOLOR_AC3_RANDOM_PAR: Self = Self {
+        value_order: ValueOrder::RandomShuffle,
         gacolor_propagator: true,
         ac3_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
@@ -305,6 +321,16 @@ impl EngineSolver {
     #[must_use]
     pub fn gacolor_ac3_par() -> Self {
         Self::new(EngineConfig::GACOLOR_AC3_PAR, "engine", "gacolor_ac3_par")
+    }
+
+    /// Same as `gacolor_ac3_par` but with a seeded random tiebreaker in the
+    /// variable-order step. Different `opts.seed` values produce different
+    /// CP partials, which is necessary when downstream search saturates
+    /// because every seed of the deterministic pipeline converges to the
+    /// same wrong prefix.
+    #[must_use]
+    pub fn gacolor_ac3_random_par() -> Self {
+        Self::new(EngineConfig::GACOLOR_AC3_RANDOM_PAR, "engine", "gacolor_ac3_random_par")
     }
 
     #[must_use]
@@ -1334,6 +1360,21 @@ impl<'a> SearchState<'a> {
             scored.sort_by_key(|(s, _)| *s);
             domain_snapshot.clear();
             domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
+        }
+
+        // RandomShuffle value order: shuffle the candidate-row order using
+        // the opts.seed-derived RNG. Combined with deterministic
+        // BorderFirstMrv variable ordering, this diversifies CP partials
+        // across seeds while keeping the variable selection strong.
+        if matches!(self.config.value_order, ValueOrder::RandomShuffle)
+            && domain_snapshot.len() > 1
+        {
+            // Fisher-Yates with our seeded RNG.
+            let n = domain_snapshot.len();
+            for i in (1..n).rev() {
+                let j = (self.next_random() as usize) % (i + 1);
+                domain_snapshot.swap(i, j);
+            }
         }
 
         for &row_id in &domain_snapshot {

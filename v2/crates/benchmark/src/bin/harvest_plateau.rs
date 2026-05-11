@@ -63,15 +63,24 @@ struct Args {
     #[arg(long, default_value = "default")]
     run_name: String,
 
-    /// Reuse a single CP partial across all samples instead of re-running CP.
-    /// CP is deterministic with the same opts, so re-running is wasted work
-    /// but keeping it lets each sample timestamp realistic end-to-end times.
-    #[arg(long, default_value_t = true)]
+    /// Re-run CP per sample instead of reusing one CP partial. By default we
+    /// reuse a single CP partial (CP is deterministic with the same opts so
+    /// re-running gives identical results unless --random-cp is set).
+    /// Use `--no-reuse-cp` (or equivalently set this to false) when you
+    /// want CP itself to vary between samples.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     reuse_cp: bool,
 
     /// Pin the official-E2 hint positions during PT.
-    #[arg(long, default_value_t = true)]
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     pin_hints: bool,
+
+    /// Use `gacolor_ac3_random_par` (seeded random variable-order tiebreaker)
+    /// instead of the deterministic `gacolor_ac3_par`. Combined with
+    /// `--reuse-cp=false`, this produces a different CP partial per sample,
+    /// diversifying the canonical prefix that PT seeds from.
+    #[arg(long, default_value_t = false)]
+    random_cp: bool,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -110,12 +119,23 @@ fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     (matches, total)
 }
 
-fn run_cp(puzzle: &Puzzle, hints: eternity2_core::Hints, budget_ms: u64) -> Board {
-    let mut solver = EngineSolver::gacolor_ac3_par();
+fn run_cp(
+    puzzle: &Puzzle,
+    hints: eternity2_core::Hints,
+    budget_ms: u64,
+    random_cp: bool,
+    seed: u64,
+) -> Board {
+    let mut solver = if random_cp {
+        EngineSolver::gacolor_ac3_random_par()
+    } else {
+        EngineSolver::gacolor_ac3_par()
+    };
     let mut sink = BufferSink::new();
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = budget_ms;
     opts.hints = hints;
+    opts.seed = seed;
     match solver.solve(puzzle, &opts, &mut sink) {
         SolveOutcome::Solved(b) => b,
         SolveOutcome::TimedOut { best_partial, .. } => best_partial,
@@ -142,9 +162,10 @@ fn main() {
 
     // -- Initial CP partial (reused across samples by default).
     let cp_board_shared: Option<Board> = if args.reuse_cp {
-        eprintln!("\n--- CP phase (shared, {}s) ---", args.cp_seconds);
+        eprintln!("\n--- CP phase (shared, {}s, random_cp={}) ---",
+            args.cp_seconds, args.random_cp);
         let t = Instant::now();
-        let b = run_cp(&puzzle, file_hints.clone(), args.cp_seconds * 1000);
+        let b = run_cp(&puzzle, file_hints.clone(), args.cp_seconds * 1000, args.random_cp, args.seed);
         let (s, total) = score_board(&puzzle, &b);
         eprintln!("CP: {}/{} ({:.1}%) in {:.1}s", s, total, 100.0 * (s as f64) / (total as f64), t.elapsed().as_secs_f64());
         Some(b)
@@ -166,8 +187,11 @@ fn main() {
             shared.clone()
         } else {
             let t = Instant::now();
-            let b = run_cp(&puzzle, file_hints.clone(), args.cp_seconds * 1000);
-            eprintln!("  CP {:.1}s", t.elapsed().as_secs_f64());
+            // Per-sample CP gets the per-sample seed; with random_cp=true
+            // this means each sample's CP partial is different.
+            let b = run_cp(&puzzle, file_hints.clone(), args.cp_seconds * 1000, args.random_cp, sample_seed);
+            let (cp_s, _) = score_board(&puzzle, &b);
+            eprintln!("  CP {:.1}s, score {}", t.elapsed().as_secs_f64(), cp_s);
             b
         };
 
