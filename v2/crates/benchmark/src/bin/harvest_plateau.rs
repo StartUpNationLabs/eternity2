@@ -191,6 +191,9 @@ fn main() {
             kick_every: 0,
             kick_n_swaps: 6,
             pinned_positions: pinned,
+            houdayer_every: 0,
+            houdayer_max_component: 20,
+            houdayer_min_component: 4,
         };
         let t = Instant::now();
         let (pt_out, _stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);

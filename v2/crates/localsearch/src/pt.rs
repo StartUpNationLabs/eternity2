@@ -30,6 +30,7 @@ use std::time::Instant;
 use eternity2_core::{Board, Position, Puzzle};
 
 use crate::{
+    houdayer::{apply_proposal, enumerate_proposals},
     repair::{repair_region, worst_region},
     run_sa_steps_fixed_temp, RngHandle, SaOutcome, StateRef,
 };
@@ -82,6 +83,21 @@ pub struct PtConfig {
     /// Used to honour the official E2 hint pieces during local search. Empty
     /// by default — solver runs unconstrained.
     pub pinned_positions: Vec<Position>,
+    /// If > 0, every `houdayer_every` rounds, apply Houdayer cluster moves
+    /// between adjacent replica pairs. The cluster move identifies
+    /// connected disagreement components (cells where replica i and i+1
+    /// disagree), checks they are piece-multiset-swappable, and unconditionally
+    /// swaps the contents. Joint score is preserved exactly (microcanonical);
+    /// the move's value is teleporting both replicas to a different basin
+    /// that single-cell moves cannot reach. 0 disables.
+    pub houdayer_every: u64,
+    /// Skip Houdayer components larger than this size (cells). Large
+    /// components are massive perturbations; small components are localized
+    /// rearrangements. Defaults to 20 (= ~8% of board).
+    pub houdayer_max_component: usize,
+    /// Skip Houdayer components smaller than this size. Components of size
+    /// < 2 are degenerate. Defaults to 4.
+    pub houdayer_min_component: usize,
 }
 
 impl Default for PtConfig {
@@ -103,6 +119,9 @@ impl Default for PtConfig {
             kick_every: 0,
             kick_n_swaps: 20,
             pinned_positions: Vec::new(),
+            houdayer_every: 0,
+            houdayer_max_component: 20,
+            houdayer_min_component: 4,
         }
     }
 }
@@ -118,6 +137,12 @@ pub struct PtStats {
     pub pair_proposals: Vec<u64>,
     /// Final score per replica, in temperature-order.
     pub final_scores: Vec<u32>,
+    /// Total number of Houdayer cluster-move applications across the run.
+    pub houdayer_applications: u64,
+    /// Components proposed (i.e. found as valid swappable + in size range).
+    pub houdayer_components_proposed: u64,
+    /// Components actually swapped (after any acceptance filter).
+    pub houdayer_components_applied: u64,
 }
 
 /// Run parallel tempering starting from `initial` (which may be partial;
@@ -169,6 +194,9 @@ pub fn run_pt_from(
     // Swap-acceptance bookkeeping for diagnostics.
     let mut pair_proposals = vec![0u64; n - 1];
     let mut pair_accepts = vec![0u64; n - 1];
+    let mut houdayer_applications: u64 = 0;
+    let mut houdayer_components_proposed: u64 = 0;
+    let mut houdayer_components_applied: u64 = 0;
     let mut total_swap_proposals = 0u64;
     let mut total_swap_accepts = 0u64;
     let mut rounds = 0u64;
@@ -280,6 +308,69 @@ pub fn run_pt_from(
 
         rounds += 1;
 
+        // ---- Houdayer cluster move between adjacent replica pairs ----
+        // Energy-preserving teleportation: identify cells where adjacent
+        // replicas i and i+1 disagree, find connected components whose
+        // piece-multisets match between A and B (so the swap doesn't
+        // duplicate pieces), and swap one randomly-chosen swappable
+        // component. Joint matched-edge count is preserved exactly
+        // (offline analysis showed all swappable components have
+        // joint_delta = 0 on our plateau states). The hoped-for benefit
+        // comes from SA continuing on the new joint configuration,
+        // which may reach a better local optimum than either replica
+        // would have found alone.
+        if cfg.houdayer_every > 0 && rounds % cfg.houdayer_every == 0 {
+            for i in 0..(n - 1) {
+                houdayer_applications += 1;
+                // Use the swap RNG so randomness is reproducible per seed.
+                let proposals = enumerate_proposals(puzzle, &boards[i], &boards[i + 1]);
+                // Filter to components within the size band.
+                let mut admissible: Vec<&_> = proposals
+                    .iter()
+                    .filter(|p| {
+                        p.component.len() >= cfg.houdayer_min_component
+                            && p.component.len() <= cfg.houdayer_max_component
+                    })
+                    .collect();
+                houdayer_components_proposed += admissible.len() as u64;
+                if admissible.is_empty() {
+                    continue;
+                }
+                // Pick one uniformly at random.
+                let idx = (swap_rng.next_u64() as usize) % admissible.len();
+                let chosen = admissible.remove(idx);
+                // Snapshot for revert if Metropolis decides against.
+                // For now (microcanonical), always apply.
+                let prop = chosen.clone();
+                // Boards need disjoint mutable access; split via split_at_mut.
+                let (lo, hi) = boards.split_at_mut(i + 1);
+                apply_proposal(&mut lo[i], &mut hi[0], &prop);
+                // Recompute scores after swap. Since joint_delta = 0 by
+                // construction (swap preserves matched edges), we can
+                // also just trust offline-tested invariant and recompute
+                // for safety / metric correctness.
+                scores[i] = state.score(&boards[i]);
+                scores[i + 1] = state.score(&boards[i + 1]);
+                houdayer_components_applied += 1;
+                // Track best.
+                if scores[i] > best_scores[i] {
+                    best_scores[i] = scores[i];
+                    best_boards[i] = boards[i].clone();
+                }
+                if scores[i + 1] > best_scores[i + 1] {
+                    best_scores[i + 1] = scores[i + 1];
+                    best_boards[i + 1] = boards[i + 1].clone();
+                }
+                if cfg.verbose {
+                    eprintln!(
+                        "[PT round {:4}] HOUDAYER pair ({},{}) comp_size={} scores={:?}",
+                        rounds, i, i + 1, prop.component.len(),
+                        (scores[i], scores[i + 1])
+                    );
+                }
+            }
+        }
+
         // ---- mini-CP region repair on the cold chain ----
         if cfg.repair_every > 0 && rounds % cfg.repair_every == 0 {
             // Find worst k×k region on the cold chain's current board.
@@ -384,6 +475,9 @@ pub fn run_pt_from(
         pair_accepts,
         pair_proposals,
         final_scores: scores,
+        houdayer_applications,
+        houdayer_components_proposed,
+        houdayer_components_applied,
     };
     (outcome, stats)
 }

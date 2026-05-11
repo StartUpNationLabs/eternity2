@@ -80,6 +80,19 @@ struct Args {
     /// unconstrained scores but means our score isn't the official E2 score.
     #[arg(long, default_value_t = true)]
     pin_hints: bool,
+
+    /// Apply Houdayer cluster moves between adjacent replica pairs every
+    /// N PT rounds (0 = disable). Recommended starting point: 10.
+    #[arg(long, default_value_t = 0)]
+    houdayer_every: u64,
+
+    /// Skip Houdayer components larger than this size (cells).
+    #[arg(long, default_value_t = 20)]
+    houdayer_max: usize,
+
+    /// Skip Houdayer components smaller than this.
+    #[arg(long, default_value_t = 4)]
+    houdayer_min: usize,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -186,6 +199,9 @@ fn main() {
         kick_every: args.kick_every,
         kick_n_swaps: args.kick_n_swaps,
         pinned_positions: pinned,
+        houdayer_every: args.houdayer_every,
+        houdayer_max_component: args.houdayer_max,
+        houdayer_min_component: args.houdayer_min,
     };
     let t1 = Instant::now();
     let (pt_out, pt_stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);
