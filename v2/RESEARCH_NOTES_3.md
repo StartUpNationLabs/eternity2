@@ -755,6 +755,19 @@ breakthrough, but a clean diagnostic.
 
 Trying longer budget (60s + 240s) to see if the 444 ceiling moves.
 
+**Longer budget (60s edge-CP + 240s PT)**: best=**446/480**. Only +2
+over the 60s PT result (444). The basin is saturating around 444-446.
+Compared to PT-from-cell-CP at 449/480, edge-CP-seeded PT plateaus
+**3 edges shy** — clear evidence of a *different but nearby* basin.
+
+Report: `v2/output/edge_cp_e2_1778524966_446of480.json`.
+
+Conclusion: edge-CP and cell-CP produce overlapping-but-distinct
+basin entry points for PT. Both converge to ceilings in the 444-449
+band. Within this small (5 edges) gap is where the per-basin
+character lives. **The 449 plateau really is a hard structural limit
+of single-swap local search on this puzzle.**
+
 ---
 
 ## 2026-05-11 — Graph-theoretic reframing (user prompt)
