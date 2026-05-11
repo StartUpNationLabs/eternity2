@@ -73,7 +73,7 @@ runs:
 
 **Check `/tmp/night_chain.log` for status.**
 
-## Top-3 takeaway findings (publishable-quality)
+## Top-5 takeaway findings (publishable-quality)
 
 1. **The asymmetric hint at (7,8) is the structural origin of the
    449/450 plateau.** 4 of 5 hints have 180-rotational mirrors that
@@ -99,6 +99,31 @@ runs:
    2-swap+rotation) cannot break it. To break 450 we need 3-swap
    moves OR region rebuilds (max-clique on 6×6) OR frame change
    OR fundamentally different algorithm.
+
+4. **Salassa pipeline is structurally orthogonal to PT-derived
+   boards.** Tested NE11 (Max-Clique RO §3.5): 4×4 region on the
+   450 board has max-clique = 10/16 cells, with current placement
+   matching 18 internal edges — better than any 10-cell perfect-fill.
+   Salassa's published 458 path requires MILP-constructed boards
+   that are structurally LOOSER than PT-tightened boards. PT removes
+   slack as part of its optimization. **The literature SOTA pipeline
+   is NOT directly applicable to our PT boards.**
+
+5. **STRUCTURAL INVERSION: rare colors are EASY, abundant are HARD.**
+   The 22 colors split into rare (1-5, 24 edges each) and abundant
+   (6-22, 48-50 edges). All have EVEN count = puzzle theoretically
+   fully matchable. **On the 450 board, rare colors have 0 mismatches
+   each (100% match)**; ALL 30 mismatches are on abundant colors.
+   Worst: colors 15 and 22 at 21% mismatch rate. The intuition that
+   rare colors are the bottleneck is **inverted** — rare colors are
+   constrained enough that PT places them correctly; the difficulty
+   is combinatorial near-degeneracy among abundant colors.
+
+6. **Pair scarcity: pair (18, 21) appears in 2 mismatches but only 5
+   pieces in the puzzle have both colors.** Currently scattered
+   across 5 distant cells. 2-swap brute-force across all 5 × 4 ×
+   16 = 320 combinations: 0 improvements. Fixing this 2-mismatch
+   pair would need a 4-cycle, not a 2-swap.
 
 ## Hypotheses validated (with evidence)
 
