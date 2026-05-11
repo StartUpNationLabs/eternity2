@@ -525,7 +525,8 @@ cells (47 on 450, similar on 449). Enumerate all 3-cell combinations
 
 | Board | trials | improvements |
 |---|---|---|
-| 450 (frame-first) | **2,075,520** (FULL 16215 triples × 128) | **0** |
+| 450 (frame-first vol-4) | **2,075,520** (FULL 16215 triples × 128) | **0** |
+| 450 (NE1 stage1, basin 2) | **2,075,520** (FULL 16215 triples × 128) | **0** |
 | 449 (basin B) | 384,000 (3k triples × 128, sample) | 0 |
 
 The 450 test is now **FULLY EXHAUSTIVE** over all 16,215 triples
