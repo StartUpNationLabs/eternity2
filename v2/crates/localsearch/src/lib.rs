@@ -29,10 +29,13 @@ use eternity2_core::{
     Board, Color, PieceId, Position, Puzzle, Rotation, BORDER,
 };
 
+pub mod alns;
 pub mod directed;
 pub mod houdayer;
 pub mod pt;
 pub mod repair;
+pub use alns::{run_alns, AlnsConfig, AlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
+               RandomRegion, WorstWindow, ConflictDriven, MwpmDefectPair, RepairKind};
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
 pub use repair::{repair_region, worst_region};
 pub use directed::{run_directed, DirectedConfig};

@@ -1050,3 +1050,138 @@ New bin `crates/benchmark/src/bin/alns_e2.rs` parallel to
   workstream — would change the entire pipeline architecture.
 - Memetic GA (Track A #3). Would compete with ALNS rather
   than complement; defer until we see ALNS results.
+
+---
+
+## 2026-05-11 — ALNS built and tested (vol. 4 session 2)
+
+### Implementation
+
+New module `crates/localsearch/src/alns.rs` (~400 LOC):
+
+- `DestroyOp` trait with 4 implementations: `RandomRegion`,
+  `WorstWindow`, `ConflictDriven`, `MwpmDefectPair`.
+- `MwpmDefectPair` uses greedy min-weight matching on the
+  mismatched-edge midpoints (Manhattan distance), then unions
+  the L1-shortest cell-paths between matched pairs.
+- `RepairKind { Cp, Sa }` — repair dispatch.
+- `cp_repair`: pins non-free cells as Hints, calls
+  `EngineSolver::gacolor_ac3_par`. Returns `None` on AC3 wipeout.
+- `sa_repair`: pins non-free cells via `SaConfig.pinned_positions`,
+  calls `run_sa_from`. Always succeeds (no AC3 to wipe).
+- `Acceptance { Greedy, SimulatedAnnealing, RecordToRecord }`.
+- `AdaptiveWeights` with Ropke-Pisinger σ-rewards.
+- `run_alns` main loop with verbose logging, per-operator stats.
+
+New bin `crates/benchmark/src/bin/alns_e2.rs`: CLI wrapping
+with starting-board options (warm-up CP+PT, or load plateau JSON),
+operator selection, and standard report output.
+
+### Smoke tests
+
+**Test 1: ALNS from empty board, CP-repair**
+- 1280 iterations in 60s, **1280 repair failures**, 0 acceptances.
+- CP repair returns `None` (AC3 wipeout) on virtually every
+  attempt — replicates vol. 4 F2 finding at scale.
+
+**Test 2: ALNS from empty board, SA-repair**
+- 60s run, climbs from 0/480 → **370/480** in 120 iterations.
+- All 4 operators accept at 100% rate (delta ≤ 0 admitted
+  freely under SA acceptance with t=1.0).
+- Per-operator invocations roughly uniform.
+- Implementation is correct: ALNS does what it says when
+  there's slack to improve.
+
+**Test 3: ALNS from 449 plateau seed (fresh basin), SA-repair, 60s**
+- 300 iterations, **0 best-score improvements** (stayed at 449).
+- All accepted-as-worse with delta=0.
+- Repair returns boards with the same score as input — SA
+  cannot find improvements within the pinned boundary.
+
+**Test 4: same as Test 3 but with MWPM-only, 2s repair budget, 30 iters**
+- 449 → 449. Same negative result.
+- The bucas board_edges blob is byte-identical to the seed:
+  SA repair returns the exact starting board every time. With
+  the pinned ring, there is no rotation/swap that improves
+  the free-cell score.
+
+### Interpretation
+
+The ALNS framework works correctly, but **at 449 the
+pinned-boundary obstruction is total**: no destroy operator's
+free-set admits an in-pool permutation that increases matched
+edges. This is the same obstruction vol. 4 F2 documented for
+mini-CP repair, now confirmed for SA-repair too. The
+obstruction is intrinsic to the *fixed-boundary repair regime*,
+not specific to CP vs SA.
+
+This rules out the "ALNS-with-clever-destroy will break 449"
+hypothesis from the literature survey. The survey's optimism
+was based on the documented 2012 SOTA of 458 — but those
+results were achieved by methods that **don't fix the boundary
+during search**: Wauters' tabu+VLNS rebuilds large regions
+including border cells, and Schaus-Deville's CP-VLNS
+re-decomposes the puzzle. Our ALNS keeps 200+ cells pinned
+per iteration; that is the wrong move set for the 449 regime.
+
+### Implications
+
+1. **The 449 plateau is not a pinned-boundary-repairable
+   local minimum.** Confirmed at scale across 4 destroy
+   operators (including the novel MWPM one) and 2 repair
+   backends (CP, SA). The plateau acts like a *globally
+   metastable state*: every coordinate-subset has its current
+   placement as the local optimum.
+
+2. **To break 449 we need moves that change the boundary
+   itself.** Specifically, the **frame-first decomposition**
+   approach (Track A #5) or the **memetic GA with block
+   crossover** approach (Track A #3) — both of which allow
+   the corner+edge ring to change. ALNS holding the boundary
+   fixed is structurally the wrong tool.
+
+3. **Survey Propagation diagnostic remains the right next
+   investment for the *diagnosis* question** — is 449 the
+   structural ceiling, or is it just a metastable state
+   that frame-rebuild methods escape? SP gives a principled
+   answer before we spend weeks on frame-first.
+
+### Code state
+
+ALNS is committed and validated. It's a useful tool for
+search-from-cold-start (0 → 370 in 60s is competitive with
+pure CP), but it does not break the 449 plateau as the
+literature survey hoped. Keep it in the codebase; combine
+with frame-first or GA in a future session.
+
+### Vol. 4 session 2 verdict
+
+**ALNS + MWPM-defect-pairing does not break 449** when starting
+from a 449 plateau. This is a clean falsification of one of the
+survey's central hypotheses. The implementation is sound; the
+mechanism doesn't apply to *this regime*. Two specific learnings:
+
+- The "pinned boundary obstruction" generalizes from CP to SA,
+  meaning it's a property of the plateau state, not the repair
+  algorithm. This is a stronger structural finding than vol. 4
+  session 1's CP-only claim.
+- The "458 SOTA → ALNS reaches it" survey hypothesis was wrong.
+  The 458 results used boundary-mutating methods (tabu+VLNS,
+  CP-VLNS-with-frame-rebuild). Our ALNS doesn't.
+
+### Recommended session-3 work
+
+Pick one or two of:
+1. **Frame-first decomposition** (Track A #5, 4-6 days). Solve
+   the 60-cell border ring as a separate subproblem; freeze
+   different borders; run PT on the interior for each. Directly
+   targets the "fix the boundary" hypothesis.
+2. **Survey Propagation diagnostic** (Track B #2). Settles the
+   structural-ceiling question one way or the other.
+3. **Memetic GA with block crossover** (Track A #3). Same idea
+   as frame-first but more general: block recombination instead
+   of strict frame-first sequencing.
+
+ALNS + MWPM stays in the codebase as the correct tool for
+*search-from-low-quality-state* (its 0→370 climb is fast). It is
+not the right tool for *breaking the 449 plateau*.
