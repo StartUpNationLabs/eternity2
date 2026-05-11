@@ -1355,3 +1355,156 @@ The post-hoc Phase C analysis adds two specific insights:
 The actual next-experiment-to-run remains **frame-first
 decomposition** or **SP diagnostic** as previously
 identified.
+
+---
+
+## 2026-05-11 — Frame-first decomposition + SAT-on-center (vol. 4 session 2, continued)
+
+### Investigation: are the official hints constraining the border?
+
+Pre-flight question before frame-first: are the 5 official E2
+hints on the border (which would explain PT's border convergence)?
+
+```
+Hint 1: piece 138 at (7,8)  rot=0  — center cell
+Hint 2: piece 180 at (2,13) rot=1  — near bottom-left
+Hint 3: piece 207 at (2,2)  rot=1  — near top-left
+Hint 4: piece 248 at (13,13) rot=2 — near bottom-right
+Hint 5: piece 254 at (13,2)  rot=1 — near top-right
+```
+
+**None of the 5 hints are on the actual border ring.** They're
+1 cell in from each "corner area" plus one at center. So PT's
+"same border across all plateau runs" finding (vol. 2) is
+**not** caused by the hint structure. It's caused by greedy_fill
++ deterministic seed → same border initialization → same basin.
+
+This validates frame-first: explicitly diversifying the border
+via gacolor_ac3_random_par with different seeds should produce
+genuinely different basins.
+
+### Frame-first smoke test (4 borders, short PT)
+
+Setup: 4 borders × 10s border-gen × 20s interior CP × 30s PT.
+Result:
+- All 4 seeds → distinct borders (each border 52/60 cells
+  different from canonical 449).
+- PT scores: 444, 444, 445, 446. Best 446.
+- Within budget, each border gave **a different final score**
+  in a tight band 444-446.
+
+Below our 449 baseline — but with only 30s PT per candidate
+(vs vol. 2's 1680s on canonical). The relevant comparison is
+"frame-first with same PT budget vs. canonical PT" — both
+should be tested at matched budgets.
+
+### Frame-first big run (in flight)
+
+Setup: 12 borders × 60s border-gen × 30s interior CP × 180s PT.
+Total budget ~54 minutes. Launched in background; results
+pending.
+
+Three possible outcomes:
+1. **Best > 449**: frame-first finds a better basin → confirm
+   border convergence WAS the bottleneck. Push to 458-461
+   territory.
+2. **Best stays in 444-449 band**: borders don't matter; the
+   structural ceiling is independent of border choice. Falls
+   back to deeper methods (SP, GA, native MaxSAT).
+3. **Variance > 4**: significant border-dependent variation
+   even if max < 449 → suggests the *right* border (not yet
+   sampled) could break through.
+
+### Sat-on-center side bet
+
+In parallel: encoded the inner-10x10-only MaxSAT problem.
+Pinned the 156 cells outside the center 10×10 (from the
+canonical 449 plateau) as hints, leaving 100 center cells free.
+Emitted 120 MB old-style WCNF (Z3-compatible).
+
+Z3 -wcnf -T:300 launched in background. The instance has
+~171k vars / ~5.8M hard clauses + 480 soft clauses; Z3 is
+parsing now (RSS 1.3 GB after 1 min). Whether Z3 can find an
+optimum in 5 min is unclear — but **any output bounds the
+center plateau authoritatively**.
+
+If Z3 returns "optimum = 480": there exists a center-only-
+perfect configuration under this border. Implies our PT can be
+beaten by trying different center arrangements.
+
+If Z3 returns "optimum < 480 and proved": the center has a
+structural ceiling that no center-only optimization can break.
+
+If Z3 times out: at least the upper/lower bounds at termination
+are informative — and a faster native MaxSAT solver could
+finish the job.
+
+### Pipeline state
+
+- `crates/benchmark/src/bin/frame_first_e2.rs`: new bin, frame-
+  first decomposition.
+- `crates/benchmark/src/bin/sat_e2.rs`: extended with
+  --pin-outside-from / --center-k / --wcnf-old.
+- All committed.
+- Two background jobs running simultaneously (frame_first 50min,
+  z3 5min).
+
+### Mid-run analysis: universal mismatch positions
+
+While frame-first runs, I ran a quick Python diagnostic on all
+19 plateau JSONs we have (score >= 400, mix of pt_e2, edge_cp,
+alns, frame_first). For each, extracted the mismatch positions
+and counted frequency across boards.
+
+**Striking result**: there ARE universally-hard mismatch
+positions:
+
+```
+Top-20 most frequent mismatch positions (out of 19 boards):
+freq  type  pos     (x,y)  edge
+ 12     h  180  (4,11)   (4,11)--(5,11)    63% of boards
+ 11     h   91  (11,5)   (11,5)--(12,5)    58%
+ 10     v  162  (2,10)   (2,10)--(2,11)    53%
+ 10     h  188  (12,11)  (12,11)--(13,11)  53%
+  9     v  183  (7,11)   (7,11)--(7,12)    47%
+  9     v  180  (4,11)   (4,11)--(4,12)    47%
+  8     v  104  (8,6)    (8,6)--(8,7)      42%
+  ...
+6 distinct positions appear in >= 50% of boards.
+```
+
+**Spatial pattern**: top-10 mismatch positions cluster in rows
+9-12 and cols 4-13. This is the SAME south-central region
+identified in Option A's connected-components analysis. The
+universal-mismatch positions are at specific cells where many
+borders + interiors all fail to find compatible piece
+arrangements.
+
+**Interpretation**: edge (4,11)-(5,11) is mismatched in 12 of
+19 plateaus (63%). It's essentially unbreakable by single-piece
+moves OR by border-variation. There exist edges in the puzzle
+where NO configuration of nearby pieces in PT's reach produces a
+match. This is the strongest evidence yet that some plateau
+mismatches are **structural** to the puzzle's piece set, not
+artifacts of the search algorithm.
+
+**Hypothesis sharpening**: the 449/480 plateau is partially
+explained by O(20-30) structural mismatches that no local-search
+method touches. If 6 mismatches are >= 50% prevalent and 20 are
+>= 25% prevalent, then ~25% of any plateau's 31 mismatches are
+"shared" with most other plateaus. The other ~75% vary.
+
+**Implication for strategy**: methods that *change the piece set*
+or that *enumerate exhaustively over the universal-mismatch
+neighborhoods* would be necessary to break those specific edges.
+None of our methods do this. SAT/MaxSAT *would*, if we ran it
+long enough — but it would need to actually finish.
+
+### Generating compare_boards.py + universal mismatch analysis
+
+Side-tools added this session:
+- `scripts/compare_boards.py`: pairwise board similarity
+  (border, interior, mismatch overlap).
+- (Inline Python, not yet committed as a script): universal
+  mismatch frequency analysis. Worth promoting to a proper bin
+  if we revisit.
