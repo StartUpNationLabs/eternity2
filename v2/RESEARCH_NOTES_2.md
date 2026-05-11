@@ -586,4 +586,127 @@ experiments:
        remove the border pieces, re-run CP with hint+symmetry but
        a different variable-order seed.
 
+---
+
+## 2026-05-11 — σ bijection solved; Blackwood's 470 is on a DIFFERENT problem
+
+**H** — Compare our CP's piece commitments against Blackwood's 470 solution
+to find where our search makes "wrong" choices early.
+
+**Setup** — Decode Blackwood's Bucas URL into our pieces.txt color
+labeling. The σ: pt_color → joshua_color bijection is overdetermined by
+having 256 known pieces in common; AC-3-style domain propagation
+converges in 2 iterations to a unique σ for all 23 colors. Decoded
+Blackwood board saved to `output/blackwood_decoded.json`.
+
+**Surprise 1**: Blackwood places different pieces at the 4 corner-region
+hint cells than the official 5-clue mandate.
+  - (2,2):  Blackwood=piece 147, official=207
+  - (2,13): Blackwood=piece 108, official=180
+  - (13,2): Blackwood=piece 186, official=254
+  - (13,13):Blackwood=piece 249, official=248
+Only the central (7,8) hint matches.
+
+**Cross-check via web research on libblackwood:**
+The repo's puzzle definition `tomy_EternityII.py:E2ncud` pins only the
+central piece. The 4 corner hints are dropped. **Blackwood's 470 is on
+the 1-clue version, not the official 5-clue version.** All our 5-clue
+plateau scores are NOT directly comparable to 470.
+
+**The actual algorithm in libblackwood** (from the agent dive):
+  1. Pure forward DFS in C, no CP/DLX/SAT. 40-57M nodes/sec.
+  2. Random-seed multi-start parallelism (N processes × 15-min limits).
+  3. Pruners:
+     - Per-cell precomputed `(left_color, up_color) → sorted piece list`.
+     - Monotone color-count constraint: 3 specific colors must keep
+       cumulative count above an empirically-tuned piecewise-linear
+       curve over depth. If below, prune subtree.
+     - **Scheduled relaxations**: 10 specific late depths
+       (197,203,210,216,221,225,229,233,236,238) where one edge
+       mismatch is allowed. The 10 missing edges in 470/480 are
+       DELIBERATELY scheduled, not accidental.
+  4. Scenarios `jb466.py` … `jb471.py` differ only in how many
+     relaxations are allowed. **`jb471.py` exists** (9 relaxations)
+     but the public repo has no log of it succeeding.
+
+**Verdict**: This completely reframes what 470 means.
+  - 470 is "1 hint pinned, 10 mismatches deliberately allowed, brute-
+    force search at 50M nodes/sec for hours until lucky restart."
+  - It's NOT "the best E2 solver finds 470 on the standard 5-hint
+    puzzle."
+  - The hardness ramp 466→467→…→471 is real and *Blackwood himself
+    doesn't have a public 471*.
+
+**Action**: stop comparing our 5-clue scores to 470. Run our pipeline
+in the same 1-clue config Blackwood uses to get an honest comparison.
+
+---
+
+## 2026-05-11 — prefix_compare result + diverse-prefix harvest stopped
+
+**H** — Either our CP makes a specific wrong choice early that dooms it,
+or our search is "fine but different" from Blackwood's.
+
+**Setup** — Run CP with central hint only for 10s, capture committed
+cells, compare to Blackwood at those cells.
+
+**Result** — CP committed 169 cells in 10s; only **2 match Blackwood**
+(the central hint + one accidental match). At cell (0,0) our CP picks
+piece 0; Blackwood picks piece 2. **Divergence starts at cell #1.**
+
+**Interpretation**: doesn't mean our choices are wrong — multiple
+valid solutions exist. But combined with our earlier finding that local
+CP repair on our plateau states is provably-infeasible, this suggests
+our specific commitments lead to a dead end while Blackwood's lead
+to a near-solution. The search-space exploration is fundamentally
+different, not a small-mistake-then-recover difference.
+
+**Diverse-prefix harvest** (`rsb_n20_random_cp`, stopped at 4/20):
+RandomShuffle CP gives genuinely diverse prefixes (55/60 border cells
+differ). But the plateau is now **443-444**, slightly LOWER than
+deterministic-CP's 447-450. Diversity by itself doesn't help, and it
+hurts a bit because random tiebreaks occasionally pick worse.
+
+**Conclusion across the two**: prefix diversification, on its own, is
+not the answer. Blackwood's solution combines:
+  (a) a different problem (1 hint not 5),
+  (b) a deliberate decision to accept mismatches (10 of them),
+  (c) a custom pruning curve on a hand-picked color subset,
+  (d) raw brute-force speed.
+
+**Verdict** — close out the post-CP optimisation thread. The next
+session's leverage is in (b) and (c): scheduled-relaxation and
+monotone color-count pruning.
+
+---
+
+## 2026-05-11 — SESSION CLOSE
+
+Big takeaways:
+1. **Bugs fixed**: parallel CP ignored hints; PT/SA had no pinning;
+   Bucas URL had wrong motifs_order. Bucas now renders correctly.
+2. **Constrained baseline**: ~447-450 with all 5 hints pinned. Best
+   so far 450/480 from one harvest seed.
+3. **Plateau is upstream of SA**: CP+greedy_fill produces a globally-
+   wrong prefix that local repair can't fix; the prefix dominates.
+4. **Blackwood's 470 is on the 1-clue version**, not 5-clue. SOTA
+   comparison was apples-to-oranges. The 5-clue community SOTA is
+   not publicly known to us.
+5. **Blackwood's secret**: scheduled relaxations + monotone color-count
+   pruning + brute force at 50M nodes/sec. Not exotic. Empirical.
+
+Next session priorities (in order):
+  1. Run our pipeline 1-clue to get an honest comparison number.
+  2. Add a "scheduled relaxation" mode: CP allows K edge mismatches
+     at K specific late cells, picked by some heuristic. Test K=10.
+  3. Add monotone color-count pruning as a CP propagator.
+  4. (Maybe) implement the per-cell edge-pair lookup table for
+     throughput.
+
+The session's most important meta-lesson: **always verify the SOTA
+target before optimising against it.** We spent significant compute
+beating ourselves up against 470 which was on a different problem
+altogether. The σ bijection + agent dive would have surfaced this
+in 30 minutes had we done it Day 1.
+
 ## (entries follow as experiments run)

@@ -64,6 +64,10 @@ path = "src/bin/central_repair.rs"
 name = "worst_region_repair"
 path = "src/bin/worst_region_repair.rs"
 
+[[bin]]
+name = "prefix_compare"
+path = "src/bin/prefix_compare.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
