@@ -63,31 +63,38 @@ search strategy that *forces* the top-K to match should:
   defects, and
 - (b) explore the subset of basins that PT-with-default-seed avoids.
 
-### Job inheritance from day-Claude
+### Job inheritance — NONE (jobs killed at handoff)
 
-Two background jobs are running. They write to disk and don't depend
-on the Claude process. They'll continue regardless of session.
+Day-Claude killed both running jobs at user request before handoff
+so night-Claude starts with a clean CPU and the full 8 cores.
 
-1. **E1: Frame-first deep PT on 450-seed.** Single border (seed
-   3405709039), 75 min PT, on top of the 286 interior CP partial.
-   - Log: `/tmp/e1_deep_450.log`
-   - Checkpoint: `output/e1_deep_450.json`
-   - Status when handed off: 4 min elapsed, 287 interior-CP done,
-     PT started. ~71 min remaining.
-   - **Question this answers**: does the 450 basin yield to longer
-     PT (455+? 458+?) or is 450 the ceiling for this specific border?
+For reference, the killed jobs were:
 
-2. **E1.7: EvalMaxSAT on full 16x16 WCNF.** No time limit set.
-   - Log: `/tmp/evalmaxsat_e2.log`
-   - WCNF input: `output/sat_e2_size_16_official_eternity_1778526730.wcnf`
-     (108.8 MB, 171,112 vars, 5.8M hard clauses, 480 soft).
-   - Status when handed off: 1.5 min elapsed, parsing/early CDCL.
-     RSS ~2 GB. No `o <cost>` lines yet.
-   - **Question this answers**: what's the maximum #matched-edges
-     achievable under the official 5 hints?
-   - **Stop-loss for night-Claude**: if EvalMaxSAT exceeds ~5 GB
-     RSS or 4h wall time without producing any `o` line, kill it
-     and document.
+1. **E1: Frame-first deep PT on 450-seed (seed 3405709039).** Killed
+   ~7 min in. Had completed border-gen (60s) + interior CP
+   (287/480 score) and started PT. No final result captured.
+   - Re-launch (if you want it):
+     `./target/release/frame_first_e2 --seeds-list 3405709039 \
+        --border-gen-seconds 60 --cp-seconds 30 --pt-seconds 4500 \
+        --checkpoint-path output/e1_deep_450.json \
+        --run-label E1_deep_450 2>&1 | tee /tmp/e1_deep_450.log`
+
+2. **E1.7: EvalMaxSAT on full 16x16 WCNF.** Killed ~5 min in. Was
+   still parsing, no `o <cost>` lines emitted.
+   - Re-launch (if you want it):
+     `~/Documents/dev-projects/EvalMaxSAT/build/main/EvalMaxSAT_bin \
+        output/sat_e2_size_16_official_eternity_1778526730.wcnf \
+        2>&1 | tee /tmp/evalmaxsat_e2.log`
+
+**Decision-making for night-Claude**:
+- Re-launching E1 verbatim is *less strategically valuable* than
+  pursuing NE1/NE2 — we already know one border that gives 450; the
+  question is whether other borders give more.
+- EvalMaxSAT is single-threaded and can run as a long-tail
+  background job (4h+) alongside PT-based work without significant
+  CPU contention. Worth launching early and letting it run while
+  you do other experiments. Stop-loss: if it exceeds 5 GB RSS or 4h
+  wall time without any `o` line, kill and document.
 
 ### Available infrastructure
 
@@ -267,18 +274,6 @@ Too much for one night. Document as session-5 followup.
 6. **Update auto-memory** (`project_e2_state.md`, `MEMORY.md`)
    when you finish a session-defining experiment.
 
-### What NOT to do tonight
-
-- ❌ Build IsingFormer / DR-ALNS / NMWPM-style GNN (all are 1-2
-  week builds).
-- ❌ Run another 12-border frame-first batch with no top-6
-  filter — we have that data, it confirms the ceiling is
-  ~450 at 180s PT.
-- ❌ Re-attempt mini-CP repair on plateau states — vol. 4 F2
-  established this AC3-wipes universally.
-- ❌ Try diffusion CO methods — Wu et al. 2025 says they don't
-  work.
-
 ### Suggested order
 
 1. Check E1 + EvalMaxSAT (running from day-Claude). Capture
@@ -290,6 +285,9 @@ Too much for one night. Document as session-5 followup.
    continue to 80 borders.
 5. If time remains, NE3 (let EvalMaxSAT keep running) or
    reanalyze the data.
+
+Then continue as you want.
+Do not stop until the user is back in the morning.
 
 ---
 
