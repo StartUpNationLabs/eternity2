@@ -301,4 +301,40 @@ on calibration; vol. 3 should spend it on this.
 
 ---
 
+---
+
+## Observation from 30-min megarun (mid-run, 2026-05-11)
+
+While Inversion 1-7 are the agenda, the megarun PT log shows something
+worth investigating early in vol. 3:
+
+**Houdayer keeps proposing the same swap every round.** At t≈230s, the
+cold-pair Houdayer move finds:
+  - pair (0,1): component size 86, scores (448, 449)
+  - pair (1,2): component size 92, scores (446, 449)
+... and these same numbers repeat at rounds 6350, 6355, 6360, 6385,
+6655, 6660, ...
+
+With energy-preserving swaps (joint_delta=0 confirmed offline), the
+swap teleports the joint state but doesn't change which adjacent-pair
+disagreement components are admissible. Worse: with subsequent
+replica-exchange acceptance, the system may be **reverting** to the
+same state, making each Houdayer firing a no-op in the long run.
+
+**Hypothesis for vol. 3**: Houdayer-in-PT as implemented is being
+neutralised by the next replica-exchange round. The naive integration
+fires Houdayer THEN replica-exchange in the same round; the exchange
+undoes the swap.
+
+**Fixes to try**:
+  - Apply Houdayer ONLY between paired replicas at the SAME temperature
+    (microcanonical, but currently we use adjacent-T pairs).
+  - Track recently-swapped components and forbid re-swapping the same
+    component within K rounds.
+  - Skip replica-exchange for the pair we just Houdayered.
+
+This is a small experiment for the next session before committing to
+Inversion 2 work. Or it can be punted entirely if Inversion 2 makes
+the whole PT pipeline obsolete.
+
 ## (entries follow as experiments run)
