@@ -453,7 +453,63 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
-### NE2 K-sweep complete (partial) + NE2.1 K=10 = 445 (over-constrained)
+### NEW STRUCTURAL FINDING 00:08 — defect REDISTRIBUTION at constrained-449
+
+**Setup**: analyzed the 31 mismatches in the NE2 swap-only K=10 result
+(449/fmm=0 on NEW top-6).
+
+**Result**: only **4/31** of the mismatches are in the top-30 universal-
+mismatch list. The other 27 are spread across rows 5-14, with no
+particular hotspot pattern.
+
+**Compare** to the canonical 449 basin (vol-2 megarun):
+- Canonical 449: ~3-5 of its 31 mismatches are in top-6 (= ~15-25%
+  in top-30 by extrapolation).
+- NE2 K=10 449: 4/31 in top-30 = 13%.
+
+Both have ~13-25% of mismatches at universal hotspots. **The
+constraint did NOT reduce total mismatches**; it MOVED them away
+from the universal hotspots (top-6) but the total count is conserved.
+
+**Implication — the universal-mismatch lever has a hidden boundary**:
+
+The soft penalty pushes the score landscape to find configurations
+where the top-6 are matched. The optimizer finds such configurations
+exist (good!) but also that there is no nearby configuration with
+*fewer total mismatches*. The 31-mismatch budget appears to be a
+structural invariant at the 449 plateau, regardless of WHICH edges
+carry the defects.
+
+This recasts the universal-mismatch finding: **the top-6 are NOT
+edges that are uniquely hard to match. They are edges that the
+unconstrained optimizer LANDS on mismatched most often, because of
+some bias in the search dynamics**. With a soft penalty, the
+optimizer routes around them and lands on OTHER edges mismatched
+instead. Either way, the total defect count is 31.
+
+**This is consistent with the vol-3/vol-4 finding** that 449 is a
+*Hamming moat* — single-swap local moves can't cross from 31
+mismatches to ≤30 mismatches regardless of WHICH 31. The
+universal-mismatch lever shifts the moat location, doesn't dissolve
+it.
+
+**What MIGHT work** (genuinely new hypotheses):
+1. **Forbidden-set = top-N for N >> 31** (e.g., top-60). If we force
+   all top-60 universal mismatches matched, then by pigeonhole the
+   31 defects MUST land outside top-60 — and if top-60 captures most
+   of the puzzle's "hard" structural edges, there might be fewer
+   places for defects to hide. **Testable: top-60 forbidden sweep.**
+2. **Non-local moves that change the defect-count budget**: 2×2
+   region swap, Houdayer cluster moves, or ALNS destroy-and-repair
+   that touches ≥4 cells simultaneously. We have these in alns.rs
+   already, but they hit the pinned-boundary obstruction on canonical
+   449. **NEW seed**: try them from the NE2 K=10 449 board, which
+   has different boundary defects.
+3. **Frame-first with the NEW top-6 constraint**: rerun frame-first
+   but explicitly filter borders whose induced basin matches all of
+   NEW top-6. NE1 funnel already does this.
+
+
 
 **Full NE2 swap-only K-sweep results** (CP+PT 30+600s, canonical seed):
 | K | best raw | fmm | swap_accept% | interpretation |
