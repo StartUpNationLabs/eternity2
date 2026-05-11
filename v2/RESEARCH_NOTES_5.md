@@ -453,6 +453,48 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE11 prototype 00:33 — Max-Clique RO insufficient on 450 board
+
+**Setup**: `scripts/region_max_clique.py` implements Salassa §3.5 RO
+with python-igraph for max-clique. Tested on the frame-first 450
+board for 3×3 and 4×4 regions in the south-central defect zone.
+
+**3×3 region (x:4..6, y:10..12), 9 free cells**:
+- 9 available pieces (all interior pieces in region are removed).
+- 45 candidate nodes (5/cell avg).
+- 72 edges, density 0.073.
+- **Max clique = 3** (not 9). The largest set of mutually-compatible
+  placements is only 3 cells, not the full 9.
+
+**4×4 region (x:4..7, y:10..13), 16 free cells**:
+- 16 pieces, 290 candidate nodes (18/cell avg).
+- 15,518 edges, density 0.370.
+- **Max clique = 10** (not 16). Only 10 cells perfectly fillable.
+- CURRENT 450 board has 18/24 internal edges matched in this region
+  (6 mismatches). A 10-cell perfect-fill matches ~10-15 internal
+  edges, **WORSE than the current 18**.
+
+**Verdict**: max-clique-RO **CANNOT improve the 450 board** on the
+defect-heavy region. The puzzle's defects are densely distributed
+enough that perfect-fill maxima are smaller than the current
+partial-fill of imperfect edges.
+
+To use RO usefully on E2 plateau, we'd need a **WEIGHTED max-clique**
+(maximize sum of matched edges, not node count). This is NP-hard and
+much harder than vanilla max-clique. python-igraph doesn't expose
+weighted max-clique directly; would need custom branch-and-bound.
+
+**This is a real negative result for NE11**. The Salassa pipeline's
+RO step works on MILP-constructed boards where regions are larger
+than the perfect-fill maximum allows — there, max-clique can grow
+the region's match count. On PT-derived 450, every region is already
+overfilled relative to its perfect-fill ceiling.
+
+**Implication**: Salassa's 458 result relied on MILP construction
+producing structurally-loose boards. PT produces structurally-tight
+boards. The two are NOT interoperable: Salassa polishing assumes
+slack, PT removes all slack.
+
 ### NE3 — EvalMaxSAT killed at 1h22m, 0 progress
 
 **Outcome**: EvalMaxSAT on full 16x16 WCNF (114 MB, ~50M hard +
