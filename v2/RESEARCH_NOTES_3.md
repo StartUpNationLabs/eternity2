@@ -23,9 +23,15 @@ record being 1-clue not 5-clue, the σ bijection saved to
 ## Carry-over state (verified end of vol. 2)
 
 - **Constrained baseline**: ~447-450 with all 5 hints pinned on official
-  E2. Best from a single 6-sample harvest: 450/480. A 30-minute megarun
-  with Houdayer-in-PT is running at session close; result will be in
-  `v2/output/pt_e2_<timestamp>_<score>of480.{json,url.txt}`.
+  E2. Best from a single 6-sample harvest: 450/480.
+- **30-minute megarun result** (closed-out at session end): CP+PT+Houdayer
+  at full power for 28 min PT (1680s, 48661 rounds, all 8 cores) gives
+  **449/480**. Houdayer fired 9577 times across all replica pairs (24%
+  accept rate on coldest pair) and contributed **zero** improvement.
+  The plateau is utterly stable. The 6-sample harvest's lucky 450 was
+  effectively the ceiling our pipeline reaches.
+  Report: `v2/output/pt_e2_1778519359_449of480.{json,url.txt}`.
+  Log: `v2/output/megarun_30min.log`.
 - **Community SOTA 470 is on 1-clue** (central pin only), NOT 5-clue.
   Established via σ-bijection decode + libblackwood code review.
   5-clue community SOTA unknown publicly.
