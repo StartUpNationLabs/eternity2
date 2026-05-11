@@ -453,6 +453,65 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### A5-night — Wauters/Salassa replication recipe — ACTIONABLE
+
+**Agent task**: extract the EXACT algorithm of the published 458 SOTA
+so I can replicate it tonight.
+
+**Key findings** (agent's careful read of Salassa et al. 2017
+arXiv:1709.00252 + Wauters 2012):
+
+1. **458 figure**: from Wauters 2012 (J Math Modelling Alg 11:217–233,
+   DOI 10.1007/s10852-012-9178-4), 30 runs × 3600s wall-clock, EII
+   real puzzle. Salassa 2017 also reaches 458 but with 100 runs × 6h
+   wall-clock each — matches, doesn't exceed.
+
+2. **The polishing pipeline (Salassa §3)** is fixed sequence per outer
+   iteration, **Steepest Descent only** (no Metropolis):
+   1. **TA (Tile Assignment)**: pick K=16 NON-ADJACENT tiles
+      probabilistically weighted ∝ (unmatched-edge count + ε).
+      Reinsert via **bipartite weighted matching** (= Hungarian via
+      `scipy.optimize.linear_sum_assignment`). Independence ⇒ exact.
+      **TA.N = 1000 iterations**.
+   2. **BO (Border Optimisation)**: freeze (n−2)×(n−2) inner; re-solve
+      only the border ring as MILP. (Needs MILP solver — skip
+      tonight.)
+   3. **BW (Black & White)**: checkers pattern. All diagonally-adjacent
+      removed simultaneously, reinserted via Hungarian. Alternate
+      black/white sets until local optimum.
+   4. **TSR (Tile Swap + Rotation)**: exhaustive 2-tile swap with all
+      16 rotation combinations.
+   5. **RO (Region Optimisation via Max-Clique)**: 6×6 region; build
+      tile-position-rotation conflict graph; solve Max-Clique via
+      Grosso-Locatelli-Pullan heuristic. (Complex; skip tonight or
+      try python-igraph.)
+
+3. **HARDWARE**: Salassa used 40-core Nehalem cluster with CPLEX 12.4.
+   I have an M-series 8-core with scipy. **The polishing steps (TA,
+   BW, TSR) do NOT require MILP** — they need only Hungarian
+   matching + exhaustive enumeration, which scipy handles natively.
+
+4. **Honest feasibility**:
+   - **Reaching 452-455 tonight from my 450**: HIGH probability (>70%).
+     The Salassa LS adds +3 average from a hot start.
+   - **Reaching 458**: <25% probability. Their 458 required 6h × 100
+     runs of MILP-hot-start + deep LS. My PT-derived 450 is
+     structurally different.
+   - **Polishing IS extractable** — needs only board + cost oracle,
+     not coupled to MILP init.
+
+5. **Verhaard 467**: 1-clue variant, forum-only, no methods paper, no
+   replicable recipe. As suspected.
+
+**ACTION — NE10 added**: implement Wauters polishing (TA + BW + TSR)
+in Python over scipy. ~2-3h. Apply to:
+- The frame-first 450 board (highest base score).
+- The NE2 swap-only K=10 449/fmm=0 board (alternative basin).
+- The canonical 449 boards (multiple, for variance).
+
+Expected gain: +2 to +5 per board. If any reaches ≥453, that's the
+biggest score improvement of the night.
+
 ### DEEPER STRUCTURAL FINDING 00:14 — asymmetric hint creates strain cascade
 
 **Hypothesis**: the official 5 hints have specific positions on the
