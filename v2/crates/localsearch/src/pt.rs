@@ -30,6 +30,7 @@ use std::time::Instant;
 use eternity2_core::{Board, Position, Puzzle};
 
 use crate::{
+    forbidden::{fmm_full, ForbiddenEdge},
     houdayer::{apply_proposal, enumerate_proposals},
     repair::{repair_region, worst_region},
     run_sa_steps_fixed_temp, RngHandle, SaOutcome, StateRef,
@@ -98,6 +99,25 @@ pub struct PtConfig {
     /// Skip Houdayer components smaller than this size. Components of size
     /// < 2 are degenerate. Defaults to 4.
     pub houdayer_min_component: usize,
+    /// Optional list of "forbidden" interior edges — typically the
+    /// top-K universal-mismatch edges identified offline by
+    /// `scripts/universal_mismatches.py`. Empty = unconstrained PT.
+    ///
+    /// When non-empty AND `forbidden_penalty_k > 0`, the PT effective
+    /// score becomes `raw_score - K * (# forbidden mismatches)`.
+    /// SA inner loops still use raw edge-match deltas (cheap, unchanged);
+    /// the penalty steers the PT temperature flow (replica-exchange
+    /// acceptance) and the best-tracking. Configurations that match all
+    /// forbidden edges are pulled to cold replicas, biasing search
+    /// toward the structural basin we know contains 450+ solutions.
+    pub forbidden_edges: Vec<ForbiddenEdge>,
+    /// Penalty weight K. Each forbidden edge that is mismatched adds K
+    /// to the energy = subtracts K from the effective score. Typical
+    /// values 10-500: K=10 is a gentle nudge, K≥|score_range|/|fmm_max|
+    /// ≈ 480/6 = 80 makes any single forbidden mismatch dominate score
+    /// differences. K=0 disables the penalty (equivalent to empty
+    /// `forbidden_edges`).
+    pub forbidden_penalty_k: i64,
 }
 
 impl Default for PtConfig {
@@ -122,6 +142,8 @@ impl Default for PtConfig {
             houdayer_every: 0,
             houdayer_max_component: 20,
             houdayer_min_component: 4,
+            forbidden_edges: Vec::new(),
+            forbidden_penalty_k: 0,
         }
     }
 }
@@ -143,6 +165,14 @@ pub struct PtStats {
     pub houdayer_components_proposed: u64,
     /// Components actually swapped (after any acceptance filter).
     pub houdayer_components_applied: u64,
+    /// Forbidden-mismatch count on the best-raw-score board found, OR
+    /// on the cold replica's final state if no forbidden edges were
+    /// configured. Useful diagnostic: did the constraint drag the best
+    /// board to a low-fmm region?
+    pub best_board_fmm: u32,
+    /// Final fmm per replica, temperature-order. Useful to see whether
+    /// the cold chain is steady-state-low-fmm vs oscillating.
+    pub final_fmm: Vec<u32>,
 }
 
 /// Run parallel tempering starting from `initial` (which may be partial;
@@ -186,10 +216,24 @@ pub fn run_pt_from(
         rngs.push(rng);
     }
 
-    // Global best across replicas.
+    // Global best across replicas. Two best-tracking criteria coexist:
+    //   - `global_best_score` = best RAW edge-match count (the genuine
+    //     metric reported to users; never penalty-adjusted).
+    //   - `global_best_eff` = best effective score (raw - K*fmm); only
+    //     used internally to surface "did we find a 6/6-resolved
+    //     configuration" when penalty is on. The returned best_board is
+    //     ALWAYS the one with the highest raw score, breaking ties
+    //     toward lower fmm.
     let mut global_best_score: u32 = *best_scores.iter().max().unwrap();
     let mut global_best_idx = best_scores.iter().position(|s| *s == global_best_score).unwrap();
     let mut global_best_board = best_boards[global_best_idx].clone();
+    let mut global_best_fmm: u32 = fmm_full(puzzle, &global_best_board, &cfg.forbidden_edges);
+
+    // Per-replica current-state fmm. Cheap to recompute (|forbidden|≤20).
+    let mut fmm_per_replica: Vec<u32> = boards.iter()
+        .map(|b| fmm_full(puzzle, b, &cfg.forbidden_edges))
+        .collect();
+    let forbidden_active = !cfg.forbidden_edges.is_empty() && cfg.forbidden_penalty_k > 0;
 
     // Swap-acceptance bookkeeping for diagnostics.
     let mut pair_proposals = vec![0u64; n - 1];
@@ -236,12 +280,29 @@ pub fn run_pt_from(
             run_sa_steps_fixed_temp(state_ref, b, s, bb, bs, rng, *t, cfg.inner_iters);
         });
 
+        // Recompute current-state fmm per replica after the SA round.
+        // |forbidden| ≤ 20 so this is O(n_replicas * |forbidden|) per
+        // round — negligible compared to inner_iters.
+        if forbidden_active {
+            for i in 0..n {
+                fmm_per_replica[i] = fmm_full(puzzle, &boards[i], &cfg.forbidden_edges);
+            }
+        }
+
         // Update global best after the parallel phase.
+        // Tie-break: prefer lower fmm when raw scores tie. This gives
+        // the penalty SOME pull on best-tracking even at zero K.
         for (i, &bs) in best_scores.iter().enumerate() {
-            if bs > global_best_score {
+            let bs_fmm = if forbidden_active {
+                fmm_full(puzzle, &best_boards[i], &cfg.forbidden_edges)
+            } else { 0 };
+            let new_better = bs > global_best_score
+                || (bs == global_best_score && bs_fmm < global_best_fmm);
+            if new_better {
                 global_best_score = bs;
                 global_best_idx = i;
                 global_best_board = best_boards[i].clone();
+                global_best_fmm = bs_fmm;
             }
         }
 
@@ -281,10 +342,24 @@ pub fn run_pt_from(
             //   If s_i < s_j (hot has better config): exponent > 0, prob ≥ 1
             //     → always accept (good: pull good config colder)
             // Earlier draft had the sign flipped — that destroyed cold chains.
+            //
+            // Forbidden-mismatch extension: when penalty is active, the
+            // energy at chain k is -eff_k = -(raw_k - K*fmm_k) = -raw_k
+            // + K*fmm_k. So in the swap math we substitute s_k with
+            // eff_k = raw_k - K*fmm_k. The exchange acceptance becomes
+            //   ratio = exp((eff_i - eff_j) * (β_j - β_i))
+            // which pulls low-fmm configs toward cold replicas.
             let beta_lo = 1.0 / temps[i];
             let beta_hi = 1.0 / temps[i + 1]; // smaller, since T_{i+1} > T_i
-            let s_lo = scores[i] as f64;
-            let s_hi = scores[i + 1] as f64;
+            let (s_lo, s_hi) = if forbidden_active {
+                let k = cfg.forbidden_penalty_k as f64;
+                (
+                    scores[i] as f64 - k * fmm_per_replica[i] as f64,
+                    scores[i + 1] as f64 - k * fmm_per_replica[i + 1] as f64,
+                )
+            } else {
+                (scores[i] as f64, scores[i + 1] as f64)
+            };
             let log_p = (s_lo - s_hi) * (beta_hi - beta_lo);
             let accept = log_p >= 0.0 || swap_rng.next_f64() < log_p.exp();
             total_swap_proposals += 1;
@@ -300,6 +375,9 @@ pub fn run_pt_from(
                 // configuration's ancestry.
                 best_boards.swap(i, i + 1);
                 best_scores.swap(i, i + 1);
+                if forbidden_active {
+                    fmm_per_replica.swap(i, i + 1);
+                }
                 total_swap_accepts += 1;
                 pair_accepts[i] += 1;
             }
@@ -351,6 +429,10 @@ pub fn run_pt_from(
                 // for safety / metric correctness.
                 scores[i] = state.score(&boards[i]);
                 scores[i + 1] = state.score(&boards[i + 1]);
+                if forbidden_active {
+                    fmm_per_replica[i] = fmm_full(puzzle, &boards[i], &cfg.forbidden_edges);
+                    fmm_per_replica[i + 1] = fmm_full(puzzle, &boards[i + 1], &cfg.forbidden_edges);
+                }
                 houdayer_components_applied += 1;
                 // Track best.
                 if scores[i] > best_scores[i] {
@@ -395,14 +477,23 @@ pub fn run_pt_from(
                     if new_score > before {
                         boards[0] = new_board.clone();
                         scores[0] = new_score;
+                        if forbidden_active {
+                            fmm_per_replica[0] = fmm_full(puzzle, &boards[0], &cfg.forbidden_edges);
+                        }
                         if new_score > best_scores[0] {
                             best_scores[0] = new_score;
                             best_boards[0] = new_board.clone();
                         }
-                        if new_score > global_best_score {
+                        let new_fmm = if forbidden_active {
+                            fmm_full(puzzle, &new_board, &cfg.forbidden_edges)
+                        } else { 0 };
+                        let new_better = new_score > global_best_score
+                            || (new_score == global_best_score && new_fmm < global_best_fmm);
+                        if new_better {
                             global_best_score = new_score;
                             global_best_idx = 0;
                             global_best_board = new_board;
+                            global_best_fmm = new_fmm;
                         }
                     }
                 }
@@ -438,6 +529,9 @@ pub fn run_pt_from(
                 }
             }
             scores[0] = state.score(&boards[0]);
+            if forbidden_active {
+                fmm_per_replica[0] = fmm_full(puzzle, &boards[0], &cfg.forbidden_edges);
+            }
             if cfg.verbose {
                 eprintln!("[PT round {:4}] KICK cold: {} swaps, {} → {}",
                     rounds, cfg.kick_n_swaps, cold_before, scores[0]);
@@ -449,14 +543,27 @@ pub fn run_pt_from(
             let swap_rate = if total_swap_proposals > 0 {
                 (total_swap_accepts as f64) / (total_swap_proposals as f64)
             } else { 0.0 };
-            eprintln!(
-                "[PT round {:4}] t={:.1}s  global_best={}/{} ({:.1}%)  swap_accept={:.1}%  per_chain_scores={:?}",
-                rounds, elapsed_s,
-                global_best_score, total_edges,
-                100.0 * (global_best_score as f64) / (total_edges as f64),
-                100.0 * swap_rate,
-                scores,
-            );
+            if forbidden_active {
+                eprintln!(
+                    "[PT round {:4}] t={:.1}s  global_best={}/{} ({:.1}%) gbest_fmm={}/{}  swap_accept={:.1}%  per_chain=(raw,fmm)={:?}",
+                    rounds, elapsed_s,
+                    global_best_score, total_edges,
+                    100.0 * (global_best_score as f64) / (total_edges as f64),
+                    global_best_fmm, cfg.forbidden_edges.len(),
+                    100.0 * swap_rate,
+                    scores.iter().zip(fmm_per_replica.iter())
+                        .map(|(s, f)| (*s, *f)).collect::<Vec<_>>(),
+                );
+            } else {
+                eprintln!(
+                    "[PT round {:4}] t={:.1}s  global_best={}/{} ({:.1}%)  swap_accept={:.1}%  per_chain_scores={:?}",
+                    rounds, elapsed_s,
+                    global_best_score, total_edges,
+                    100.0 * (global_best_score as f64) / (total_edges as f64),
+                    100.0 * swap_rate,
+                    scores,
+                );
+            }
         }
         let _ = global_best_idx; // suppress unused warning
     }
@@ -478,6 +585,8 @@ pub fn run_pt_from(
         houdayer_applications,
         houdayer_components_proposed,
         houdayer_components_applied,
+        best_board_fmm: global_best_fmm,
+        final_fmm: fmm_per_replica,
     };
     (outcome, stats)
 }

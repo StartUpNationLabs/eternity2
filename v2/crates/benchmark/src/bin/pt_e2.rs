@@ -13,7 +13,7 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
 use eternity2_core::{Board, Hints, Piece, PieceId, Puzzle, BORDER};
 use eternity2_events::BufferSink;
-use eternity2_localsearch::{run_pt_from, run_sa_from, PtConfig, SaConfig};
+use eternity2_localsearch::{run_pt_from, run_sa_from, parse_forbidden_json, PtConfig, SaConfig};
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -93,6 +93,16 @@ struct Args {
     /// Skip Houdayer components smaller than this.
     #[arg(long, default_value_t = 4)]
     houdayer_min: usize,
+
+    /// Path to JSON file with forbidden (universal-mismatch) edges:
+    /// `[["h", pos], ["v", pos], ...]`. Empty/unset = unconstrained PT.
+    #[arg(long)]
+    forbidden_edges: Option<PathBuf>,
+
+    /// Penalty weight K for forbidden mismatches in PT effective score.
+    /// 0 = off.
+    #[arg(long, default_value_t = 0)]
+    forbidden_k: i64,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -182,6 +192,14 @@ fn main() {
     } else {
         eprintln!("pin_hints=false: PT may move hint pieces (UNOFFICIAL E2)");
     }
+    let forbidden_edges = if let Some(p) = args.forbidden_edges.as_ref() {
+        let s = std::fs::read_to_string(p).expect("read forbidden_edges JSON");
+        let v = parse_forbidden_json(&s, puzzle.width)
+            .expect("parse forbidden_edges JSON");
+        eprintln!("forbidden-edge soft penalty: K={} on {} edges from {}",
+            args.forbidden_k, v.len(), p.display());
+        v
+    } else { Vec::new() };
     let pt_cfg = PtConfig {
         n_replicas: args.n_replicas,
         t_min: args.t_min,
@@ -202,6 +220,8 @@ fn main() {
         houdayer_every: args.houdayer_every,
         houdayer_max_component: args.houdayer_max,
         houdayer_min_component: args.houdayer_min,
+        forbidden_edges,
+        forbidden_penalty_k: args.forbidden_k,
     };
     let t1 = Instant::now();
     let (pt_out, pt_stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);
@@ -220,6 +240,10 @@ fn main() {
         .collect();
     eprintln!("per-pair accept rates: {:?}", pair_rates);
     eprintln!("final replica scores: {:?}", pt_stats.final_scores);
+    if args.forbidden_k > 0 && args.forbidden_edges.is_some() {
+        eprintln!("forbidden mismatches: best_board fmm={} (out of {}), final per-replica fmm={:?}",
+            pt_stats.best_board_fmm, pt_stats.final_fmm.len(), pt_stats.final_fmm);
+    }
 
     // ----- Single-T SA control -----
     if !args.skip_sa_compare {
@@ -266,6 +290,10 @@ fn main() {
             "final_replica_scores": pt_stats.final_scores,
             "repair_every": args.repair_every,
             "kick_every": args.kick_every,
+            "forbidden_k": args.forbidden_k,
+            "forbidden_count_configured": pt_cfg.forbidden_edges.len(),
+            "best_board_fmm": pt_stats.best_board_fmm,
+            "final_fmm": pt_stats.final_fmm,
         },
         "seed": args.seed,
     });

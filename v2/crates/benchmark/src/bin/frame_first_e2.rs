@@ -236,6 +236,8 @@ fn run_pt_on(
         kick_every: 0, kick_n_swaps: 20,
         pinned_positions: pinned,
         houdayer_every: 0, houdayer_max_component: 20, houdayer_min_component: 4,
+    forbidden_edges: Vec::new(),
+    forbidden_penalty_k: 0,
     };
     let (out, _stats) = run_pt_from(puzzle, seed_board, &pt_cfg);
     out.best_board

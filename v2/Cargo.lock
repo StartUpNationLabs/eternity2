@@ -352,6 +352,7 @@ dependencies = [
  "eternity2-solver-engine",
  "eternity2-solver-trait",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]

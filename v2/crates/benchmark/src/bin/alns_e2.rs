@@ -257,6 +257,8 @@ fn main() {
                 kick_every: 0, kick_n_swaps: 20,
                 pinned_positions: file_hints.hints.iter().map(|h| h.position).collect(),
                 houdayer_every: 0, houdayer_max_component: 20, houdayer_min_component: 4,
+            forbidden_edges: Vec::new(),
+            forbidden_penalty_k: 0,
             };
             let t1 = Instant::now();
             let (pt_out, _stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);
