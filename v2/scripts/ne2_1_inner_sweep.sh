@@ -44,7 +44,10 @@ if [[ ! -f "$FORBIDDEN_PATH" ]]; then
     exit 1
 fi
 
-KS=(10 50 100)
+# Combined inner-loop + swap-level penalty is ~5-10x stronger than
+# swap-only at the same K. Empirical: K=10 combined produced 445 vs
+# swap-only K=10 produced 449. Need much smaller K for combined.
+KS=(1 2 5)
 SUMMARY_PATH="$OUT_DIR/ne2_1_inner_sweep_$(date +%s).json"
 
 echo "[" > "$SUMMARY_PATH.tmp"

@@ -453,6 +453,37 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE2 K-sweep complete (partial) + NE2.1 K=10 = 445 (over-constrained)
+
+**Full NE2 swap-only K-sweep results** (CP+PT 30+600s, canonical seed):
+| K | best raw | fmm | swap_accept% | interpretation |
+|---|---|---|---|---|
+| 0   | 448 | n/a | 16%  | unconstrained baseline |
+| 10  | 449 | **0** | 1.2% | constrained-449 basin reached |
+| 50  | 448 | 2   | 8%   | over-constrained, fmm=0 cold chains at 433-442 |
+| 100, 200 | KILLED at K=100 launch due to binary-version confound (rebuilt mid-sweep). Did not re-run swap-only; pivoted to NE2.1. |
+
+**NE2.1 (inner-loop + swap COMBINED penalty) at K=10** = **445/480 fmm=0**.
+This is **WORSE** than NE2 swap-only K=10 (= 449).
+
+**Diagnosis**: Combined penalty applies twice — once per simple move
+in SA Metropolis, once at PT swap. K=10 on each effectively acts like
+~K=50 swap-only (which we saw was over-constrained). The cold chain
+gets stuck at fmm=0 unable to climb raw score because any raw-
+improving move that incidentally increases fmm has eff_delta =
+1 - 10*1 = -9, almost always rejected.
+
+**Pivoted to K∈{1, 2, 5} for NE2.1 sweep** (running now). Hypothesis:
+the combined penalty needs ~5x smaller K than swap-only to give same
+acceptance flow. So K=2 combined ≈ K=10 swap-only effective.
+
+**Critical experimental discipline lesson** (for future-me):
+- The pt_e2 binary was rebuilt mid-sweep at 23:51, contaminating the
+  K=100/K=200 stages of NE2 sweep. Killed and restarted.
+- Lesson: lock binaries (e.g. copy to `target/release/pt_e2_neX_swap`)
+  before launching long sweeps. **Applied retrospectively**: NE2.1
+  sweep uses the current binary; do NOT rebuild during the sweep.
+
 ### NE2-sweep preliminary 23:50 — K=10 reaches constrained-449 basin
 
 Status: K=0 done, K=10 done, K=50 nearly done. Final two stages
