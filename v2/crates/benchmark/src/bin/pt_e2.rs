@@ -242,7 +242,7 @@ fn main() {
     eprintln!("final replica scores: {:?}", pt_stats.final_scores);
     if args.forbidden_k > 0 && args.forbidden_edges.is_some() {
         eprintln!("forbidden mismatches: best_board fmm={} (out of {}), final per-replica fmm={:?}",
-            pt_stats.best_board_fmm, pt_stats.final_fmm.len(), pt_stats.final_fmm);
+            pt_stats.best_board_fmm, pt_cfg.forbidden_edges.len(), pt_stats.final_fmm);
     }
 
     // ----- Single-T SA control -----

@@ -4,9 +4,9 @@
 Usage:
     python3 scripts/ne2_analyze.py output/ne2_k_sweep_*.json
 
-Reads the sweep index produced by ne2_k_sweep.sh, then for each K reads
-the per-K pt_e2 JSON and tabulates:
-  K  raw_best  fmm  pt_seconds  per_replica_final  per_replica_fmm  seed
+Reads the sweep index produced by ne2_k_sweep.sh, then for each K
+reads the per-K pt_e2 JSON and tabulates:
+  K  raw_best  fmm  pt_seconds  final_replica_scores  final_fmm
 """
 
 import json
@@ -19,12 +19,13 @@ W = 16
 H = 16
 BORDER = 0
 
-# Top-6 edges, hardcoded (matches data/forbidden_top6.json).
-TOP6 = [('h',180),('h',91),('v',162),('h',188),('v',183),('v',180)]
+
+def load_forbidden(path):
+    return [tuple(p) for p in json.load(open(path))]
 
 
-def fmm_from_url(url):
-    """Compute forbidden-mismatch count over top-6 from bucas URL."""
+def fmm_from_url(url, forbidden):
+    """Compute forbidden-mismatch count from bucas URL given a top-K list."""
     m = re.search(r'board_edges=([a-z]+)', url or '')
     if not m:
         return None
@@ -34,11 +35,11 @@ def fmm_from_url(url):
         for pos in range(W * H)
     ]
     fmm = 0
-    for typ, pos in TOP6:
+    for typ, pos in forbidden:
         if typ == 'h':
-            a, b = quads[pos][1], quads[pos+1][3]
+            a, b = quads[pos][1], quads[pos + 1][3]
         else:
-            a, b = quads[pos][2], quads[pos+W][0]
+            a, b = quads[pos][2], quads[pos + W][0]
         if a == BORDER or b == BORDER:
             continue
         if a != b:
@@ -48,12 +49,16 @@ def fmm_from_url(url):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: ne2_analyze.py sweep.json", file=sys.stderr)
+        print("usage: ne2_analyze.py sweep.json [forbidden.json]", file=sys.stderr)
         sys.exit(1)
-    sweep = json.load(open(sys.argv[1]))
+    sweep_path = sys.argv[1]
+    forbidden_path = sys.argv[2] if len(sys.argv) > 2 else "data/forbidden_top6.json"
+    forbidden = load_forbidden(forbidden_path)
+    print(f"# forbidden edges (top-{len(forbidden)}): {forbidden}", file=sys.stderr)
 
-    print(f"{'K':>5}  {'pt_s':>5}  {'best':>5}  {'fmm':>4}  {'seed':>10}  {'json':>50}")
-    print("-" * 90)
+    sweep = json.load(open(sweep_path))
+    print(f"# K-sweep entries: {len(sweep)}", file=sys.stderr)
+
     rows = []
     for entry in sweep:
         K = entry["K"]
@@ -66,29 +71,58 @@ def main():
         j = json.load(open(jpath))
         score = j.get("score", {}).get("matched_edges")
         url = j.get("bucas_url", "")
-        fmm = fmm_from_url(url)
-        # Also try the per-pt block.
-        pt_block = j.get("pt", {})
-        best_board_fmm = pt_block.get("best_board_fmm")
-        # Prefer the URL-derived fmm (canonical recomputation), fall
-        # back to recorded best_board_fmm.
-        fmm_final = fmm if fmm is not None else best_board_fmm
-        rows.append((K, pt_s, score, fmm_final, seed, jpath))
-        print(f"{K:>5}  {pt_s:>5}  {score:>5}  {fmm_final!s:>4}  {seed:>10}  {jpath}")
+        # Canonical fmm from URL.
+        fmm_recomputed = fmm_from_url(url, forbidden)
+        details_pt = j.get("details", {}).get("pt", {})
+        recorded_fmm = details_pt.get("best_board_fmm")
+        replica_scores = details_pt.get("final_replica_scores", [])
+        replica_fmm = details_pt.get("final_fmm", [])
+        swap_rate = (details_pt.get("swap_accepts", 0) / details_pt.get("swap_proposals", 1)
+                     if details_pt.get("swap_proposals", 0) > 0 else 0.0)
+        rows.append({
+            "K": K,
+            "pt_s": pt_s,
+            "score": score,
+            "fmm_recomputed": fmm_recomputed,
+            "fmm_recorded": recorded_fmm,
+            "replica_scores": replica_scores,
+            "replica_fmm": replica_fmm,
+            "swap_rate": swap_rate,
+            "jpath": jpath,
+        })
 
-    print("\n=== highlights ===")
+    # Tabular output.
+    print(f"\n{'K':>5}  {'best':>5}  {'fmm':>4}  {'swap%':>5}  {'cold_scores':<32}  {'cold_fmm':<24}")
+    print("-" * 90)
+    for r in rows:
+        cs = ','.join(str(s) for s in r['replica_scores'][:4])
+        cf = ','.join(str(s) for s in r['replica_fmm'][:4])
+        print(f"{r['K']:>5}  {r['score']:>5}  {r['fmm_recomputed']!s:>4}  "
+              f"{r['swap_rate']*100:>4.1f}%  {cs:<32}  {cf:<24}")
+
+    # Highlights.
+    print("\n=== HIGHLIGHTS ===")
     if not rows:
-        print("(no valid rows)")
+        print("(no rows)")
         return
-    best_raw = max(rows, key=lambda r: (r[2] or 0))
-    print(f"best raw score: {best_raw[2]} (K={best_raw[0]}, fmm={best_raw[3]})")
-    # All-resolved (fmm=0) rows.
-    resolved = [r for r in rows if r[3] == 0]
+    best_raw = max(rows, key=lambda r: r['score'] or 0)
+    print(f"best raw: K={best_raw['K']} → {best_raw['score']}/480 (fmm={best_raw['fmm_recomputed']})")
+    resolved = [r for r in rows if r['fmm_recomputed'] == 0]
     if resolved:
-        best_resolved = max(resolved, key=lambda r: r[2])
-        print(f"best fmm=0 (all 6 forbidden RESOLVED): {best_resolved[2]} at K={best_resolved[0]}")
+        best_resolved = max(resolved, key=lambda r: r['score'])
+        print(f"best with fmm=0 (all {len(forbidden)} forbidden resolved): "
+              f"K={best_resolved['K']} → {best_resolved['score']}/480")
+        if best_resolved['score'] > 449:
+            print(f"*** BROKE THE 449 PLATEAU WITH ALL TOP-{len(forbidden)} RESOLVED ***")
     else:
-        print("no run reached fmm=0 (all forbidden edges resolved)")
+        print(f"no run reached fmm=0 (no all-{len(forbidden)}-resolved configurations)")
+
+    # K vs score (signal-vs-noise).
+    print("\nK → best score signal:")
+    by_k = sorted([(r['K'], r['score']) for r in rows])
+    for K, s in by_k:
+        bar = '█' * (s - 440) if s and s > 440 else ''
+        print(f"  K={K:>4}  {s!s:>5}  {bar}")
 
 
 if __name__ == "__main__":
