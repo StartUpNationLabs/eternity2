@@ -32,6 +32,10 @@ path = "src/bin/pt_e2.rs"
 name = "greedy_diag"
 path = "src/bin/greedy_diag.rs"
 
+[[bin]]
+name = "directed_e2"
+path = "src/bin/directed_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }

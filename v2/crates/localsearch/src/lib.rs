@@ -31,8 +31,10 @@ use eternity2_core::{
 
 pub mod pt;
 pub mod repair;
+pub mod directed;
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
 pub use repair::{repair_region, worst_region};
+pub use directed::{run_directed, DirectedConfig};
 
 /// Configuration for the simulated-annealing local search.
 #[derive(Debug, Clone, Copy)]
@@ -140,7 +142,7 @@ fn cell_class_matches(c: CellClass, p: PieceClass) -> bool {
 // ============================================================
 
 #[derive(Debug, Clone, Copy)]
-struct Rng(u64);
+pub(crate) struct Rng(u64);
 
 impl Rng {
     fn new(seed: u64) -> Self { Self(seed.wrapping_add(0x9E37_79B9_7F4A_7C15)) }
@@ -166,25 +168,17 @@ impl Rng {
 // Run-time state
 // ============================================================
 
-struct State<'a> {
-    puzzle: &'a Puzzle,
-    // For each piece-id × rotation, the rotated edges. Indexed
-    // as `[piece_id*4 + rot]`. Cached at construction to keep the
-    // inner loop hot.
-    piece_rot_edges: Vec<[Color; 4]>,
-    // For each cell, its class.
-    cell_class: Vec<CellClass>,
-    // For each piece-id, its class.
-    piece_class: Vec<PieceClass>,
-    // Pre-bucketed piece lists per class. Used to draw on-class swap
-    // partners cheaply.
-    corner_pieces: Vec<PieceId>,
-    edge_pieces: Vec<PieceId>,
-    interior_pieces: Vec<PieceId>,
-    // Pre-bucketed cell lists per class.
-    corner_cells: Vec<Position>,
-    edge_cells: Vec<Position>,
-    interior_cells: Vec<Position>,
+pub(crate) struct State<'a> {
+    pub(crate) puzzle: &'a Puzzle,
+    pub(crate) piece_rot_edges: Vec<[Color; 4]>,
+    pub(crate) cell_class: Vec<CellClass>,
+    pub(crate) piece_class: Vec<PieceClass>,
+    pub(crate) corner_pieces: Vec<PieceId>,
+    pub(crate) edge_pieces: Vec<PieceId>,
+    pub(crate) interior_pieces: Vec<PieceId>,
+    pub(crate) corner_cells: Vec<Position>,
+    pub(crate) edge_cells: Vec<Position>,
+    pub(crate) interior_cells: Vec<Position>,
 }
 
 impl<'a> State<'a> {
@@ -571,7 +565,7 @@ impl<'a> State<'a> {
 /// affects this cell's contribution AND each neighbour's contribution
 /// at the shared edge, but since matches are symmetric, the delta in
 /// global score = (new local matches) - (old local matches).
-fn local_match_count(state: &State, board: &Board, pos: Position) -> u32 {
+pub(crate) fn local_match_count(state: &State, board: &Board, pos: Position) -> u32 {
     let Some((pid, rot)) = board.get(pos) else { return 0; };
     let e = state.edges_for(pid, rot);
     let w = state.puzzle.width;
@@ -612,7 +606,7 @@ fn local_match_count(state: &State, board: &Board, pos: Position) -> u32 {
 /// Pick the rotation of `pid` at `pos` that maximises edge matches
 /// with currently-placed neighbours. For border cells, only border-
 /// compatible rotations are considered.
-fn best_rotation(state: &State, board: &Board, pos: Position, pid: PieceId) -> Rotation {
+pub(crate) fn best_rotation(state: &State, board: &Board, pos: Position, pid: PieceId) -> Rotation {
     let mask = state.puzzle.border_mask(pos);
     let [tb, rb, bb, lb] = mask;
     let is_interior = matches!(state.cell_class[pos as usize], CellClass::Interior);
@@ -650,7 +644,7 @@ fn best_rotation(state: &State, board: &Board, pos: Position, pid: PieceId) -> R
 
 /// Hypothetical local match-count if the piece-rotation with edges
 /// `e_hypo` were at `pos`. Doesn't mutate board.
-fn match_count_with(state: &State, board: &Board, pos: Position, e_hypo: [Color; 4]) -> u32 {
+pub(crate) fn match_count_with(state: &State, board: &Board, pos: Position, e_hypo: [Color; 4]) -> u32 {
     let w = state.puzzle.width;
     let h = state.puzzle.height;
     let (x, y) = (pos % w, pos / w);
@@ -1166,6 +1160,7 @@ impl<'a> StateRef<'a> {
     }
     pub fn interior_cell_count(&self) -> usize { self.0.interior_cells.len() }
     pub fn interior_cell(&self, i: usize) -> Position { self.0.interior_cells[i] }
+    pub(crate) fn inner(&self) -> &State<'a> { &self.0 }
 }
 
 /// Opaque RNG handle. Cheap to clone; each replica owns its own.
@@ -1387,7 +1382,7 @@ fn run_sa_loop(
 }
 
 /// Returns 1 if cells a and b are adjacent AND their shared edge matches.
-fn adjacent_match(state: &State, board: &Board, a: Position, b: Position) -> u32 {
+pub(crate) fn adjacent_match(state: &State, board: &Board, a: Position, b: Position) -> u32 {
     let w = state.puzzle.width;
     let (ax, ay) = (a % w, a / w);
     let (bx, by) = (b % w, b / w);
