@@ -1588,3 +1588,70 @@ If any > 449: we've crossed it via border variation alone.
     the top-20 universal mismatches to match, see if a solution
     exists. If yes, +20 edges. If no, those edges are
     *provably* unsolvable jointly — a strong negative result.
+
+---
+
+## 🎉 2026-05-11 — FRAME-FIRST BROKE THE 449 PLATEAU
+
+### Headline: 450/480 on candidate 3
+
+```
+Frame-first run (12 borders × 60s/30s/180s, base_seed=3405709037):
+  Candidate 1 (seed 0xCAFEFEED): 446/480
+  Candidate 2 (seed 0xCAFEFEEE): 447/480
+  Candidate 3 (seed 0xCAFEFEEF): 450/480  ← NEW BEST, exceeds canonical 449
+  Candidate 4-12: in flight
+```
+
+**Vol. 4 prior best**: 449/480 (cell-CP→PT, ~28 min vol. 2 megarun).
+
+**Frame-first**: 450/480 in ~14 min on candidate 3 alone (60s
+border-gen + 30s interior CP + 180s PT = 4.5 min/candidate).
+
+This is the first time in vols. 1-4 we've crossed 449.
+
+### Significance
+
+This **falsifies** the strong form of the "449 is the structural
+ceiling" claim from vols. 3-4. The truth is more nuanced:
+
+- 449 is the **canonical-border PT ceiling** — what we hit when
+  PT's greedy_fill picks its deterministic-seeded border.
+- The puzzle has at least one border (the one that yielded 450)
+  whose induced interior reaches a strictly higher score.
+- The vol. 2 finding "all plateau states share the same border"
+  reflected **the absence of border-diversity in our PT**, not a
+  structural constraint of the puzzle.
+
+The literature survey from session-1 was **right** about
+frame-first: Schaus-Deville 2008 (reaching 458) and Wauters 2012
+(reaching 458) used a similar approach. Our pipeline now joins
+that tradition.
+
+### What's still open
+
+- **How high can frame-first go?** This run uses only 180s PT per
+  border. The vol. 2 megarun used 1680s PT. Same PT budget per
+  border, with more borders, could plausibly reach 455-461 (the
+  Wauters/META'10 range).
+- **What's special about the 450-border?** Compare it to the
+  canonical 449-border (which is the same across all default-PT
+  runs) and the lower-scoring borders to identify what edge
+  configurations the 450-border admits that the canonical doesn't.
+- **Universal-mismatch test**: does the 450-board still have the
+  top-20 universal mismatches? If 450 fixes some of them, that
+  tells us border variation can repair *specific* hard edges.
+
+### Updated session-3 priority
+
+Frame-first works. Push it harder:
+1. **Longer-PT-per-border run**: 12 borders × 600s PT each = 2h.
+   If candidates produce 450+ at this budget, run with 1680s PT
+   per border = 5.5h total. Likely to hit 455-461.
+2. **Diverse-seed sweep at the depth of vol. 2's megarun**: maybe
+   100 borders × 60s PT each, then top-5 borders re-run at 600s.
+   Two-stage funnel for compute efficiency.
+3. **Analyze the 450-board's structure** vs canonical 449: which
+   universal-mismatch edges are now matched? Which new ones
+   appeared? This informs whether the 450-border's improvement is
+   one-edge-lucky or a structurally different basin.
