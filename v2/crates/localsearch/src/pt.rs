@@ -72,6 +72,12 @@ pub struct PtConfig {
     pub repair_k: u32,
     /// Wall-clock budget for each mini-CP repair attempt (milliseconds).
     pub repair_budget_ms: u64,
+    /// If > 0, every `kick_every` rounds, perturb the cold chain by
+    /// performing N random swaps unconditionally (basin hopping).
+    /// 0 disables.
+    pub kick_every: u64,
+    /// Number of random swap perturbations per kick.
+    pub kick_n_swaps: u32,
 }
 
 impl Default for PtConfig {
@@ -90,6 +96,8 @@ impl Default for PtConfig {
             repair_every: 0,
             repair_k: 4,
             repair_budget_ms: 200,
+            kick_every: 0,
+            kick_n_swaps: 20,
         }
     }
 }
@@ -302,6 +310,41 @@ pub fn run_pt_from(
                         }
                     }
                 }
+            }
+        }
+
+        // ---- Basin hop: deliberately kick the cold chain out of its basin ----
+        if cfg.kick_every > 0 && rounds % cfg.kick_every == 0 {
+            // Perform N random pair-swaps on cold chain unconditionally.
+            // Then SA at T_min will pull it back toward a (possibly
+            // different) local optimum next round. Classic basin-hopping
+            // perturbation (Wales & Doye 1997). Used for atomic-cluster
+            // global minimisation in chemistry; not used in published
+            // E2 solvers.
+            let interior_n = state.interior_cell_count();
+            let cold_before = scores[0];
+            // RNG: derive from base seed + round number for reproducibility.
+            let raw_seed = cfg.seed
+                .wrapping_add(rounds.wrapping_mul(0xA5A5_A5A5_A5A5_A5A5));
+            let mut kr = RngHandle::new(raw_seed);
+            for _ in 0..cfg.kick_n_swaps {
+                if interior_n < 2 { break; }
+                let i = (kr.next_u64() as usize) % interior_n;
+                let mut j = (kr.next_u64() as usize) % interior_n;
+                if i == j { j = (j + 1) % interior_n; }
+                let pi = state.interior_cell(i);
+                let pj = state.interior_cell(j);
+                if let (Some((pid_i, rot_i)), Some((pid_j, rot_j))) =
+                    (boards[0].get(pi), boards[0].get(pj))
+                {
+                    boards[0].place(pi, pid_j, rot_j);
+                    boards[0].place(pj, pid_i, rot_i);
+                }
+            }
+            scores[0] = state.score(&boards[0]);
+            if cfg.verbose {
+                eprintln!("[PT round {:4}] KICK cold: {} swaps, {} → {}",
+                    rounds, cfg.kick_n_swaps, cold_before, scores[0]);
             }
         }
 

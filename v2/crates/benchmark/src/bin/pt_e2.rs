@@ -65,6 +65,14 @@ struct Args {
     /// CP budget per repair attempt (milliseconds).
     #[arg(long, default_value_t = 200)]
     repair_budget_ms: u64,
+
+    /// Basin-hop kick every N PT rounds (0=disable).
+    #[arg(long, default_value_t = 0)]
+    kick_every: u64,
+
+    /// Number of unconditional random swaps per kick.
+    #[arg(long, default_value_t = 20)]
+    kick_n_swaps: u32,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -160,6 +168,8 @@ fn main() {
         repair_every: args.repair_every,
         repair_k: args.repair_k,
         repair_budget_ms: args.repair_budget_ms,
+        kick_every: args.kick_every,
+        kick_n_swaps: args.kick_n_swaps,
     };
     let t1 = Instant::now();
     let (pt_out, pt_stats) = run_pt_from(&puzzle, &cp_board, &pt_cfg);

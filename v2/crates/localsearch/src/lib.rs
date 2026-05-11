@@ -728,11 +728,281 @@ pub fn run_sa_steps_fixed_temp(
     let state = &state.0;
     let rng = &mut rng.0;
     for _ in 0..n_iters {
-        // Move-kind mix:
-        //   0..2  rotate single interior piece     (30%)
-        //   2..3  rotate 2×2 interior block CW/CCW (10%)  ← cluster move (Wolff-flavored)
-        //   3..10 swap two same-class pieces       (70%)
+        // Move-kind mix (in tenths):
+        //   0..2  rotate single interior piece            (20%)
+        //   2..3  rotate 2×2 interior block CW/CCW        (10%)  ← cluster move (Wolff-flavored)
+        //   3..4  rotate 3×3 interior block CW/CCW        (10%)  ← larger cluster
+        //   4..6  targeted swap (picks bad cells first)   (20%)  ← informed proposal
+        //   6..7  region swap (swap two 2×2 blocks)       (10%)  ← non-rigid multi-piece move
+        //   7..10 random swap two same-class pieces       (30%)
         let move_kind = rng.gen_range(10);
+
+        // ---- 3x3 cluster rotation ----
+        if move_kind == 3 {
+            let w = state.puzzle.width;
+            let h = state.puzzle.height;
+            if w < 5 || h < 5 { continue; }
+            // Interior-only 3×3: TL at (x,y) with x∈[1, w-4], y∈[1, h-4]
+            let x0 = 1 + rng.gen_range(w - 4);
+            let y0 = 1 + rng.gen_range(h - 4);
+            // Collect all 9 (pos, pid, rot) entries.
+            let mut cells_pos = [0u32; 9];
+            let mut cells_pid: [Option<(PieceId, Rotation)>; 9] = [None; 9];
+            for dy in 0..3 {
+                for dx in 0..3 {
+                    let idx = (dy * 3 + dx) as usize;
+                    let pos = (y0 + dy) * w + (x0 + dx);
+                    cells_pos[idx] = pos;
+                    cells_pid[idx] = board.get(pos);
+                }
+            }
+            // If any cell is empty, bail.
+            if cells_pid.iter().any(|c| c.is_none()) { continue; }
+
+            // Boundary score for the 3×3: 12 outward-facing edges.
+            // For TL row: top sides at (0,0),(1,0),(2,0).
+            // For BR row: bottom sides at (0,2),(1,2),(2,2).
+            // For left col: left sides at (0,0..2).
+            // For right col: right sides at (2,0..2).
+            let bnd_3x3 = |s: &State, b: &Board| -> u32 {
+                let mut m = 0;
+                for dx in 0..3 { m += partial_edge_match(s, b, (y0) * w + (x0 + dx), 0); }
+                for dx in 0..3 { m += partial_edge_match(s, b, (y0 + 2) * w + (x0 + dx), 2); }
+                for dy in 0..3 { m += partial_edge_match(s, b, (y0 + dy) * w + x0, 3); }
+                for dy in 0..3 { m += partial_edge_match(s, b, (y0 + dy) * w + (x0 + 2), 1); }
+                m
+            };
+            let old_bnd = bnd_3x3(state, board);
+
+            // CW rotation: (dx,dy) → (2-dy, dx). Each piece rot +1.
+            // CCW: (dx,dy) → (dy, 2-dx).         Each piece rot +3.
+            let dir = if rng.gen_range(2) == 0 { 1u8 } else { 3u8 };
+            let new_idx = |dx: usize, dy: usize| -> usize {
+                let (ndx, ndy) = if dir == 1 { (2 - dy, dx) } else { (dy, 2 - dx) };
+                ndy * 3 + ndx
+            };
+            // Apply rotation to a fresh placement vector, then write.
+            let mut new_assign: [(u32, PieceId, Rotation); 9] =
+                [(0, 0u16, Rotation::from_u8(0).unwrap()); 9];
+            for dy in 0..3 {
+                for dx in 0..3 {
+                    let from_idx = dy * 3 + dx;
+                    let to_idx = new_idx(dx, dy);
+                    let (pid, rot) = cells_pid[from_idx].unwrap();
+                    let new_rot = Rotation::from_u8((rot.as_u8() + dir) & 0b11).unwrap();
+                    new_assign[to_idx] = (cells_pos[to_idx], pid, new_rot);
+                }
+            }
+            for &(pos, pid, rot) in &new_assign {
+                board.place(pos, pid, rot);
+            }
+            let new_bnd = bnd_3x3(state, board);
+            let delta = (new_bnd as i64) - (old_bnd as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                // Revert: restore originals.
+                for idx in 0..9 {
+                    let (pid, rot) = cells_pid[idx].unwrap();
+                    board.place(cells_pos[idx], pid, rot);
+                }
+            }
+            continue;
+        }
+
+        // ---- Region swap: swap two non-overlapping k×k interior blocks ----
+        // This is a *non-rigid* multi-piece move that can break basins
+        // that rigid cluster rotations cannot. Internal block edges
+        // change because the pieces inside change identity.
+        if move_kind == 6 {
+            let w = state.puzzle.width;
+            let h = state.puzzle.height;
+            const KSWAP: u32 = 2;
+            if w < KSWAP + 4 || h < KSWAP + 4 { continue; }
+            // Pick two interior block top-lefts; both must be in [1, w-KSWAP-1]
+            // so that all cells inside are interior.
+            let max_x = w - KSWAP - 1; // top-left x must be ≥ 1 and ≤ max_x
+            let max_y = h - KSWAP - 1;
+            if max_x < 1 || max_y < 1 { continue; }
+            let xa = 1 + rng.gen_range(max_x);
+            let ya = 1 + rng.gen_range(max_y);
+            let xb = 1 + rng.gen_range(max_x);
+            let yb = 1 + rng.gen_range(max_y);
+            // Reject overlapping blocks.
+            let overlap = (xa as i64 - xb as i64).abs() < KSWAP as i64
+                && (ya as i64 - yb as i64).abs() < KSWAP as i64;
+            if overlap { continue; }
+
+            // Save originals of both blocks.
+            let mut orig_a: Vec<(u32, PieceId, Rotation)> = Vec::with_capacity((KSWAP * KSWAP) as usize);
+            let mut orig_b: Vec<(u32, PieceId, Rotation)> = Vec::with_capacity((KSWAP * KSWAP) as usize);
+            for dy in 0..KSWAP {
+                for dx in 0..KSWAP {
+                    let pa = (ya + dy) * w + (xa + dx);
+                    let pb = (yb + dy) * w + (xb + dx);
+                    let Some((pida, rota)) = board.get(pa) else { continue; };
+                    let Some((pidb, rotb)) = board.get(pb) else { continue; };
+                    orig_a.push((pa, pida, rota));
+                    orig_b.push((pb, pidb, rotb));
+                }
+            }
+            if orig_a.len() != (KSWAP * KSWAP) as usize || orig_b.len() != (KSWAP * KSWAP) as usize {
+                continue;
+            }
+
+            // Score contribution of both blocks: sum local_match_count of
+            // all cells in both blocks, with double-counting subtracted
+            // for any edges WITHIN each block (but blocks are non-
+            // overlapping and non-adjacent in our overlap check? Wait —
+            // we only checked non-overlapping, not non-adjacent. Let me
+            // tighten: require |xa-xb| ≥ KSWAP+1 OR |ya-yb| ≥ KSWAP+1 so
+            // there's at least one cell gap. Then no edges cross blocks.
+            let adjacent_blocks = (xa as i64 - xb as i64).abs() < (KSWAP as i64 + 1)
+                && (ya as i64 - yb as i64).abs() < (KSWAP as i64 + 1);
+            if adjacent_blocks {
+                continue; // skip this attempt; not worth handling
+            }
+
+            let block_score = |b: &Board| -> u32 {
+                let mut s = 0;
+                let mut intra_dbl = 0;
+                for &(pos, _, _) in &orig_a {
+                    s += local_match_count(state, b, pos);
+                }
+                for &(pos, _, _) in &orig_b {
+                    s += local_match_count(state, b, pos);
+                }
+                // Each in-block edge is counted twice. Compute intra-A
+                // and intra-B internal edge matches.
+                // For 2x2: edges are TL.right-TR.left, BL.right-BR.left,
+                // TL.bottom-BL.top, TR.bottom-BR.top — 4 edges per block.
+                // Order in orig_a: (xa,ya), (xa+1,ya), (xa,ya+1), (xa+1,ya+1) by my loop above.
+                // index 0 = TL, 1 = TR, 2 = BL, 3 = BR
+                // TL-TR horizontal (TL.right vs TR.left): adjacent_match.
+                if KSWAP == 2 {
+                    intra_dbl += adjacent_match(state, b, orig_a[0].0, orig_a[1].0);
+                    intra_dbl += adjacent_match(state, b, orig_a[2].0, orig_a[3].0);
+                    intra_dbl += adjacent_match(state, b, orig_a[0].0, orig_a[2].0);
+                    intra_dbl += adjacent_match(state, b, orig_a[1].0, orig_a[3].0);
+                    intra_dbl += adjacent_match(state, b, orig_b[0].0, orig_b[1].0);
+                    intra_dbl += adjacent_match(state, b, orig_b[2].0, orig_b[3].0);
+                    intra_dbl += adjacent_match(state, b, orig_b[0].0, orig_b[2].0);
+                    intra_dbl += adjacent_match(state, b, orig_b[1].0, orig_b[3].0);
+                }
+                s - intra_dbl
+            };
+            let old_total = block_score(board);
+
+            // Apply swap: A_i ← orig_B_i, B_i ← orig_A_i. Same rotation
+            // since we keep piece class compatibility (both blocks are
+            // interior). The piece's rotation tag stays the same.
+            for i in 0..orig_a.len() {
+                let (pa, _, _) = orig_a[i];
+                let (_, pidb, rotb) = orig_b[i];
+                board.place(pa, pidb, rotb);
+            }
+            for i in 0..orig_b.len() {
+                let (pb, _, _) = orig_b[i];
+                let (_, pida, rota) = orig_a[i];
+                board.place(pb, pida, rota);
+            }
+            // Re-rotate each piece in both blocks to best orientation
+            // given current neighbours (cheap local optimisation).
+            for i in 0..orig_a.len() {
+                let (pa, _, _) = orig_a[i];
+                if let Some((pid, _)) = board.get(pa) {
+                    let best = best_rotation(state, board, pa, pid);
+                    board.place(pa, pid, best);
+                }
+                let (pb, _, _) = orig_b[i];
+                if let Some((pid, _)) = board.get(pb) {
+                    let best = best_rotation(state, board, pb, pid);
+                    board.place(pb, pid, best);
+                }
+            }
+            let new_total = block_score(board);
+            let delta = (new_total as i64) - (old_total as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                // Revert both blocks.
+                for &(pos, pid, rot) in &orig_a {
+                    board.place(pos, pid, rot);
+                }
+                for &(pos, pid, rot) in &orig_b {
+                    board.place(pos, pid, rot);
+                }
+            }
+            continue;
+        }
+
+        // ---- Targeted swap ----
+        if move_kind == 4 || move_kind == 5 {
+            // Pick a random class. Sample K cells, take worst-scoring one.
+            // Then sample another cell in same class (possibly worst-of-K
+            // too) and swap. "Worst" = lowest local match count.
+            let class_pick = rng.gen_range(3);
+            let cells = match class_pick {
+                0 => &state.corner_cells,
+                1 => &state.edge_cells,
+                _ => &state.interior_cells,
+            };
+            if cells.len() < 2 { continue; }
+            const K_SAMPLE: usize = 8;
+            let pick_worst = |b: &Board, rng: &mut Rng| -> usize {
+                let n = cells.len();
+                let mut worst_idx = rng.gen_range(n as u32) as usize;
+                let mut worst_score = local_match_count(state, b, cells[worst_idx]);
+                for _ in 1..K_SAMPLE.min(n) {
+                    let i = rng.gen_range(n as u32) as usize;
+                    let s = local_match_count(state, b, cells[i]);
+                    if s < worst_score {
+                        worst_score = s;
+                        worst_idx = i;
+                    }
+                }
+                worst_idx
+            };
+            let i = pick_worst(board, rng);
+            let mut j = pick_worst(board, rng);
+            if i == j { j = (j + 1) % cells.len(); }
+            let p_i = cells[i];
+            let p_j = cells[j];
+            let Some((pid_i, rot_i)) = board.get(p_i) else { continue; };
+            let Some((pid_j, rot_j)) = board.get(p_j) else { continue; };
+            let old_local_i = local_match_count(state, board, p_i);
+            let old_local_j = local_match_count(state, board, p_j);
+            let adj_old = adjacent_match(state, board, p_i, p_j);
+            let old_local = old_local_i + old_local_j - adj_old;
+            board.place(p_i, pid_j, rot_j);
+            board.place(p_j, pid_i, rot_i);
+            let best_rot_i = best_rotation(state, board, p_i, pid_j);
+            board.place(p_i, pid_j, best_rot_i);
+            let best_rot_j = best_rotation(state, board, p_j, pid_i);
+            board.place(p_j, pid_i, best_rot_j);
+            let new_local_i = local_match_count(state, board, p_i);
+            let new_local_j = local_match_count(state, board, p_j);
+            let new_adj = adjacent_match(state, board, p_i, p_j);
+            let new_local = new_local_i + new_local_j - new_adj;
+            let delta = (new_local as i64) - (old_local as i64);
+            let accept = if delta >= 0 { true }
+                else { let p = (delta as f64 / temp).exp(); rng.next_f64() < p };
+            if accept {
+                *score = (*score as i64 + delta) as u32;
+                if *score > *best_score { *best_score = *score; *best_board = board.clone(); }
+            } else {
+                board.place(p_i, pid_i, rot_i);
+                board.place(p_j, pid_j, rot_j);
+            }
+            continue;
+        }
+
         if move_kind == 2 {
             // CLUSTER ROTATE: pick an interior-only 2×2 block, rotate
             // CW or CCW. Each of the 4 pieces moves one cell around
@@ -894,6 +1164,8 @@ impl<'a> StateRef<'a> {
     pub fn greedy_fill_initial(&self, initial: &Board, rng: &mut RngHandle) -> Board {
         self.0.greedy_fill_initial(initial, &mut rng.0)
     }
+    pub fn interior_cell_count(&self) -> usize { self.0.interior_cells.len() }
+    pub fn interior_cell(&self, i: usize) -> Position { self.0.interior_cells[i] }
 }
 
 /// Opaque RNG handle. Cheap to clone; each replica owns its own.

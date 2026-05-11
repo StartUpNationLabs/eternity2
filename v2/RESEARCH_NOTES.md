@@ -1044,3 +1044,40 @@ Applied to all 5 occurrences (rotate-step in run_sa_loop, swap-step in run_sa_lo
 This explains why earlier our SA never broke ceiling regardless of temperature, schedule, or operator mix — none of the parameters mattered.
 
 **Re-validation needed**: the existing "Experiment L v1 — SA baseline 65%" result in this notes file is invalid. With Metropolis fixed, single-T SA should reach much higher.
+
+---
+
+## Experiment U — 3×3 cluster + targeted swap + region swap
+
+Added three new move kinds to the SA neighborhood:
+
+1. **3×3 cluster rotation** (10% probability). Same math as 2×2 cluster rotate: under rigid rotation by 90° CW/CCW, internal edge match-count is preserved (each internal edge maps to another internal edge), only the 12 perimeter edges contribute to score delta.
+
+2. **Targeted swap** (20% probability). Sample K=8 random cells from a class, pick the one with lowest local match count as the "worst", do the same for the swap partner. Standard informed-proposal SA technique; not used by published E2 community.
+
+3. **Region swap** (10% probability). Swap two non-overlapping non-adjacent 2×2 interior blocks. Non-rigid multi-piece move — internal block edges change because the pieces change identity. Designed to escape glassy basins that rigid cluster rotations cannot.
+
+The final move mix:
+- 20% single rotate
+- 10% 2×2 rigid cluster rotate
+- 10% 3×3 rigid cluster rotate
+- 20% targeted swap (worst-of-K)
+- 10% region swap (block↔block)
+- 30% random swap
+
+**Result on official Eternity II** (CP 30s + PT 180s, 8 replicas, T=[0.02, 0.5]):
+- Without region swap (just 3×3 + targeted): TBD
+- With region swap: TBD
+
+Both pending.
+
+## Discussion: why the 448 plateau is hard
+
+After ~30s of PT, all cold replicas converge to score 446-449 and stay there for hours. The plateau corresponds to a deep basin in the energy landscape: 32 mismatched edges that any single rotate/swap move can't reduce because the mismatches are *interlocked* (fixing one creates another). 
+
+To break this plateau we need either:
+- (a) Multi-piece *coordinated* moves where pieces 1, 2, 3, … move to specific places that *cooperatively* fix the constraints. Cluster rotations are too rigid (just permute pieces). Region swap is non-rigid but the swap candidates are random — unlikely to find the right 4-piece coordination.
+- (b) Structural CP propagation that resolves these constraints upstream: SRGL, edge-first formulation.
+- (c) Population-based methods: keep many distinct cold configurations alive, crossover them. Hasn't been tried in PT-flavor for E2.
+
+Option (b) is the next innovation push.
