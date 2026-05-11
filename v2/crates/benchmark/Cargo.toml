@@ -36,6 +36,18 @@ path = "src/bin/greedy_diag.rs"
 name = "directed_e2"
 path = "src/bin/directed_e2.rs"
 
+[[bin]]
+name = "harvest_plateau"
+path = "src/bin/harvest_plateau.rs"
+
+[[bin]]
+name = "analyze_overlap"
+path = "src/bin/analyze_overlap.rs"
+
+[[bin]]
+name = "analyze_topology"
+path = "src/bin/analyze_topology.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }

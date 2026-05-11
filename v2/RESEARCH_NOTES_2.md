@@ -5,7 +5,7 @@ Continuation of `RESEARCH_NOTES.md`. Vol. 1 ends with the 2026-05-11 SESSION CLO
 ## Starting state (2026-05-11)
 
 - Best on official Eternity II: **449/480 (93.5%)** matched edges, in ~3 minutes (30s CP + greedy_fill + 180s PT).
-- Community SOTA: 467/480 (97.3%) — Verhaard 2008.
+- Community SOTA: **470/480 (97.9%) — Joshua Blackwood** (libblackwood). Verhaard 2008 = 467/480.
 - The 446-449 plateau is structural; pure local-search saturates here regardless of move set.
 
 ## Methodology rule (carried over from vol. 1)
@@ -89,9 +89,9 @@ named-after-E2 prior art.
      fallback after RSB diagnostic.
 
 5. **Other notable finds.**
-   - **Blackwood holds 468/480**, not Verhaard's 467. libblackwood
-     repo: https://github.com/jfbucas/libblackwood — code-read
-     candidate.
+   - **Blackwood holds 470/480** (corrected — user confirmed),
+     not Verhaard's 467. libblackwood repo:
+     https://github.com/jfbucas/libblackwood — code-read candidate.
    - **Houdayer cluster move** specifically designed to break 1-RSB
      plateaus where PT fails: pairs replicas, identifies clusters
      where they disagree, flips them coherently. Not in our move
@@ -138,5 +138,61 @@ to stderr at end-of-run.
 This unblocks the RSB diagnostic: we can now harvest plateau
 states programmatically by running pt_e2 with N seeds and
 collecting the resulting board JSONs.
+
+---
+
+## 2026-05-11 — RSB & topology diagnostic infrastructure
+
+**H** — At least one of (a) plateau states cluster in configuration
+space with ultrametric structure → 1-RSB landscape, or (b) plateau
+states share an exact color-flow signature → global topological
+obstruction. Either explanation tells us what move set to design
+next. Both being false would also be informative (rules out two
+named theoretical framings).
+
+**Setup** — Three new tools under `crates/benchmark/src/bin/`:
+
+- `harvest_plateau` — runs CP→PT pipeline N times with distinct
+  seeds (CP partial reused across samples by default since CP is
+  deterministic); dumps each final board to
+  `output/plateau/<run_name>/sample_<idx>_seed_<hex>_score_<n>.json`.
+  Lightweight format: width, height, seed, score, total_edges,
+  cells = list of [piece_id, rotation] or null.
+
+- `analyze_overlap` — reads dumps, computes two pairwise overlap
+  metrics: `q_piece` (piece-id agreement, ignoring rotation) and
+  `q_oriented` (piece+rotation agreement). For N samples we get
+  N(N-1)/2 pair values. Reports mean/std/percentiles + 12-bin
+  histogram for each metric. Writes `_overlap.json` summary.
+
+- `analyze_topology` — for each plateau state, computes per-color
+  matched-edge counts and per-row / per-col histograms. Reports
+  how many (color, row|col) cells are *invariant* across all
+  plateau states. Writes `_topology.json` summary.
+
+**Run in progress (2026-05-11):** `rsb_n20_pt90` —
+20 samples × (30s CP shared + 90s PT × 8 replicas) ≈ 30 min wall.
+CP partial score: 293/480 (61.0%). PT temp range [0.05, 2.0].
+Each sample harvested independently with seed mixed via the
+golden-ratio multiplier 0x9E3779B97F4A7C15 from the base seed
+0xE2E2E2E2.
+
+**Expected outcomes & next steps:**
+
+| Overlap signal | Topology signal | Interpretation | Next move |
+|---|---|---|---|
+| narrow peak near 1.0 | mostly invariant | one basin, deterministic | PT diversification is broken; debug seeding |
+| broad single peak < 1.0 | <50% invariant | one giant basin, replica-symmetric | RSB framing wrong; revisit CP-side and SRGL |
+| multi-modal | mostly invariant | 1-RSB + global obstruction (both!) | Houdayer + color-strand surgery (combine) |
+| multi-modal | <50% invariant | 1-RSB clean signal | Houdayer cluster moves (Houdayer 2001) |
+| broad single peak < 1.0 | >90% invariant | strong topological obstruction | color-strand surgery moves |
+
+Bias: I expect **multi-modal overlap + partially invariant topology**,
+because the negative results from all prior local-search variants
+look most like 1-RSB clustering with some local rearrangements
+still permitted (the score wobbles 446-449, not flat 449).
+
+**Smoke check (N=3, 5s PT each):** q_oriented values {0.67, 0.68, 0.86}.
+Already non-trivial spread; N=20 should give resolution.
 
 ## (entries follow as experiments run)
