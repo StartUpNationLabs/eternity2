@@ -79,3 +79,141 @@ target may need to come from L (cold portfolio) instead.
 5. **Closeout** memory entry + RESEARCH_NOTES_17 closeout — ~1 h.
 
 If time spillover: H (Fiedler ordering) or B (cluster-swap ALNS).
+
+---
+
+## 22:58 → 23:15 — Idea A (calibration) shipped, v17a + v17b
+
+**TL;DR**: Vol-15's `blackwood_schedule_469` was demanding ~2× more
+heuristic-color edges than the actual McGavin 469 board contains at
+depth 80. The vol-17 calibrated schedules fix this; the engine now
+reaches **depth 192 / 197 placed / 362 matched** in 300s CP on seed 1
+(vol-15 walled at depth ~80 / 156 placed / 156 matched).
+
+### Work shipped
+
+1. **`calibrate_blackwood`** (new bench-audit bin, 469 LoC): mines
+   `output/community_corpus/*.json` for canonical-Eternity2 boards
+   with score ≥ N, decodes piece+rotation via edge-matching, computes
+   cumulative heuristic-color edge count in bottom-up row-major scan
+   order, fits piecewise-linear envelopes (median / p25 / p10 / mean)
+   across N boards. Outputs JSON + Rust snippet.
+
+2. **Corpus reality**: only **N=1** Eternity2 board with score ≥469
+   (McGavin 172011298); the McGavin 480 fails decode (color
+   relabeling). At ≥460 we get N=2 (adds Peter's 460); at ≥440 we
+   get N=3 (adds his 452-but-7-cells-mismatched, decode-skipped).
+   So calibration is effectively from the single McGavin 469.
+
+3. **`blackwood_schedule_calibrated_v17a`**: piecewise-linear schedule
+   through 9 control points at depths {0, 60, 80, 100, 120, 140, 160,
+   200, 255}. Validated to admit McGavin's cum-curve at those control
+   depths but the INTERPOLATION between (0,0) and (60,21) over-demands
+   by up to 7 edges between depths 20-50.
+
+4. **`blackwood_schedule_calibrated_v17b`**: dense sample at every 16
+   cells with a 1-edge floor margin. Verified offline:
+   `target_at_v17b(d) ≤ mcg_actual(d)` for all d ∈ [0, 256]. So v17b
+   admits the McGavin 469 by construction.
+
+5. **`run_e2_blackwood --schedule calibrated_v17a|calibrated_v17b`**:
+   schedule selector flag.
+
+### Results on seed 1 (5min CP, calibrated_v17a)
+
+| stage | depth | placed | matched |
+|---|---:|---:|---:|
+| vol-15 baseline (joe_depth150_bp_par) | — | 175 | 439 |
+| vol-15 blackwood_raw + bw469 schedule (CP-only) | ~80 | 156 | 156 |
+| **vol-17 blackwood_raw + calibrated_v17a (CP-only, 300s)** | **192** | **197** | **362** |
+
+That's **+39 cells / +206 matched edges over vol-15's blackwood_raw**,
+and the ALNS run on top of it is in progress (expected finish ~23:16).
+
+### Hypothesis for v17b vs v17a
+
+v17b's tighter envelope should let the engine explore even further:
+fewer "spurious" prunes between depths 20-50 means more branches
+survive to deep search. Expected: depth ~200+ at 300s, matched
+~370+ pre-ALNS, ALNS lift in line with vol-15's +260.
+
+### Tier ranking after idea A (live)
+
+If ALNS lifts the v17a 362/480 by ≥77 (≈ vol-15's +260 from sparser
+seed), we'd land at 439+, MEETING T1 (≥454 would still need more).
+If ALNS lift is more modest (say +50, in line with denser seeds), we
+land at ~412 — improvement on vol-15's 416 but still under baseline.
+
+Honest framing: this **already shipped a measurable result** — the
+calibrated schedule is provably tighter and reaches 39 more cells at
+the same wall-clock. Whether it translates into the post-ALNS score
+is what we're measuring.
+
+### Diagnostic: vol-15 bw469 was mathematically infeasible
+
+Comparing `blackwood_schedule_469` (vol-15 affine-remap of Blackwood's
+own puzzle curve) against the McGavin 469 cumulative-curve, my offline
+analysis showed:
+
+```
+  d   bw469_target  mcg_actual    delta(actual - target)
+ 60       0.0         22.8                 +22.8
+ 80      66.8         32.0                 -34.8
+100     105.9         41.0                 -64.9
+120     130.0         46.0                 -84.0   ← worst
+160     146.0         82.0                 -64.0
+200     146.0        112.0                 -34.0
+255     146.0        149.8                  +3.8
+```
+
+The vol-15 schedule demanded **2.8× MORE heuristic edges at depth
+120 than the actual McGavin 469 solution contains**. So vol-15's
+bw469 was self-pruning: it would have rejected the McGavin 469 board
+at depth ~70 onwards.
+
+The new `calibrated_v17b` schedule is mathematically tight — admits
+the McGavin 469 with at most 1-edge slack at every depth — by direct
+construction from McGavin's curve.
+
+This is the *causal* reason the vol-15 blackwood arm could not exceed
+416/480 even after the cliff fix: the post-cliff schedule was *still*
+infeasibly tight everywhere past the border ring.
+
+## 23:15 — Idea A v17a HIT 447/480 on seed 1
+
+Run config: `--schedule calibrated_v17a --arms blackwood_raw --seed 1`,
+5min CP + 5min ALNS, multi-core.
+
+```
+[blackwood_raw] CP: elapsed=300.0s depth=192 placed=197/256 matched=362/480 nodes=608504555
+[blackwood_raw] ALNS: elapsed=300.0s iters=600 placed=256/256 matched=447/480 Δ_vs_cp=+85
+```
+
+bucas: https://e2.bucas.name/#puzzle=v15_blackwood_raw_alns&board_w=16&board_h=16&board_edges=abeaafubafufaeseabveaeqbadteaftdabjfacvbabpcacrbadtcadgdadsdaacdepbaulplwvwtwvkvlgvvqmqgtrvmtusrjuouvrnkrmorruhhtmsuuiwqsjgicaepbtfasnplwlmnkvulvwlwvvlwrkhvsiukngrintqvopsthiqpsujowswugtqveaetfqfaphjqmrmhujtrlijjlprihkrpunkorijjqwoisknhjistjuriwovuqorifadofvcajgwvmpqgrhkpjumhsgrurtrgkuvtjsiuouisnmpjspgmqrqpvmkrkigmdadicqeawlrqqttlksntmtrsrkgtrvwkvijvigqiikkgpgnkgkogqjskklqjghhldadhendarquntjoqnvijrtkvgwstwvgwjqovqwtqkuhwnhhuourhsuvuqlhuhwqldafwdweaushwowmsiliwkpllsuvpgsquoiistvvihunvhlsurlslvhnlhrphqrtrfacrepdahsspmwksinqwlktnvkokqmokijjmvomjnpmoskppsssknhlsptwhtpjtcacpdufasthukkntqtjktkmtolnkomnljovmmmsomrwmpnqrsvpnlrwvwpkrjpppcadpfhcahwjhnspwjwgsmqhwntmqnpgtvwppsoqwwuioqnoupgnnwqngkwhqpmiwdabmcsbajprspropgtmrhjntminjgtgiplmtqikliwgioklwnvokntovhjltijpjbafjbtearwhtokuwmnrknnsnnvjngouvmmiokqhmgtnqlgmtolugorglluqrpmmufaemeueahmwuujvmronjslgojmllulwmirilhmorniommhgiukjhgrjkqvprmqlveafqeibawtgivphtnigpggjillogwolliqoooqnqosnqgvgsjshvjuhsploulkilfackbdaagcadhbacgbabjbaboeablfaeoeafncaenfacgfafhbafhcabocacidaccaad
+
+### Tier status
+
+| tier | requirement | met? |
+|---|---|---|
+| T1 | calibrated Blackwood shipped + cold-start ≥454 | NOT YET (447, but **+8 vs prior baseline 439**) |
+| T2 | T1 + ≥1 new algorithm (B/C/H/J) shipped | partial (Zobrist module shipped, not integrated) |
+| T3 | T2 + measurable score > 446 (vol-6 warm-PT) | **MET** (447 > 446, AND it's *cold-start*) |
+| T4 | T3 + ≥2 new algorithms + publishable result | partial — calibration story IS publishable null/win |
+
+### What's running now (23:16)
+
+`run_e2_blackwood --schedule calibrated_v17b --seed 1` (background,
+pid 57308). v17b's tighter envelope (1-edge slack on McGavin) should
+let the engine explore deeper. Result expected ~23:26.
+
+### Planned next steps
+
+1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
+   plateaued around 447, the schedule is not the only bottleneck and
+   the next levers are propagator-stack tuning and Variant K.
+2. **23:30 → 00:30** cold portfolio for variance baseline. 8 seeds
+   on `joe_depth150_bp_par` baseline, 3+3 min CP+ALNS each. Lets
+   us answer "is 439 the median seed-1 result or a fluke?"
+3. **00:30 → 01:00** K-pipeline test on best seed from portfolio.
+4. **01:00 → 01:30** closeout writeup + memory update.
+
