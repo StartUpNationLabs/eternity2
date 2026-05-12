@@ -18,8 +18,7 @@
 
 use std::time::Instant;
 
-use eternity2_bench_audit as _;
-use eternity2_core::Board;
+use eternity2_bench_audit::{placed_count, score_board_dense as score_board};
 use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_solver_engine::EngineSolver;
@@ -47,36 +46,6 @@ impl EventSink for QuietSink {
     }
 }
 
-fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
-    let (w, h) = (puzzle.width, puzzle.height);
-    let total = (w - 1) * h + w * (h - 1);
-    let mut matched = 0u32;
-    for y in 0..h {
-        for x in 0..w {
-            let pos = y * w + x;
-            let Some((pid, rot)) = board.get(pos) else { continue; };
-            let p = puzzle.piece(pid).unwrap();
-            let e = p.edges.rotated(rot).as_array();
-            if x + 1 < w {
-                if let Some((npid, nrot)) = board.get(pos + 1) {
-                    let np = puzzle.piece(npid).unwrap();
-                    if e[1] == np.edges.rotated(nrot).as_array()[3] { matched += 1; }
-                }
-            }
-            if y + 1 < h {
-                if let Some((npid, nrot)) = board.get(pos + w) {
-                    let np = puzzle.piece(npid).unwrap();
-                    if e[2] == np.edges.rotated(nrot).as_array()[0] { matched += 1; }
-                }
-            }
-        }
-    }
-    (matched, total)
-}
-
-fn placed_count(b: &Board, puzzle: &eternity2_core::Puzzle) -> u32 {
-    (0..puzzle.cell_count()).filter(|&p| b.get(p).is_some()).count() as u32
-}
 
 fn run_profile(label: &str, solver: &mut EngineSolver,
                puzzle: &eternity2_core::Puzzle, budget_ms: u64, seed: u64)

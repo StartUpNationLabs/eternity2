@@ -15,7 +15,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eternity2_bench_audit::ProgressSink;
+use eternity2_bench_audit::{placed_count, score_board_dense as score_board, ProgressSink};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, PathPolicy, Position};
@@ -51,37 +51,6 @@ fn build_rectangle_path() -> Vec<Position> {
     // Spoke to center hint: row y=8 from x=2 to x=7
     for x in 2..=7 { push(pos(x, 8), &mut path, &mut seen); }
     path
-}
-
-fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
-    let (w, h) = (puzzle.width, puzzle.height);
-    let total = (w - 1) * h + w * (h - 1);
-    let mut matched = 0u32;
-    for y in 0..h {
-        for x in 0..w {
-            let pp = y*w+x;
-            let Some((pid, rot)) = board.get(pp) else { continue; };
-            let p = puzzle.piece(pid).unwrap();
-            let e = p.edges.rotated(rot).as_array();
-            if x+1 < w {
-                if let Some((np, nr)) = board.get(pp+1) {
-                    let npp = puzzle.piece(np).unwrap();
-                    if e[1] == npp.edges.rotated(nr).as_array()[3] { matched += 1; }
-                }
-            }
-            if y+1 < h {
-                if let Some((np, nr)) = board.get(pp+w) {
-                    let npp = puzzle.piece(np).unwrap();
-                    if e[2] == npp.edges.rotated(nr).as_array()[0] { matched += 1; }
-                }
-            }
-        }
-    }
-    (matched, total)
-}
-
-fn placed_count(b: &Board, puzzle: &eternity2_core::Puzzle) -> u32 {
-    (0..puzzle.cell_count()).filter(|&p| b.get(p).is_some()).count() as u32
 }
 
 fn main() {

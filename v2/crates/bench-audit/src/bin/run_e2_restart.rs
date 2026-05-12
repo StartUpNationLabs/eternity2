@@ -23,6 +23,7 @@ use std::time::Instant;
 
 use eternity2_bench_audit as _;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_bench_audit::{placed_count, score_board_dense as score_board};
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::Board;
 use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
@@ -60,38 +61,6 @@ impl EventSink for RoundSink {
 
 /// Canonical E2 score: matched internal edges out of total internal
 /// edges (480 on canonical 16x16). Unplaced cells contribute 0.
-fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
-    let (w, h) = (puzzle.width, puzzle.height);
-    let total = (w - 1) * h + w * (h - 1);
-    let mut matched = 0u32;
-    for y in 0..h {
-        for x in 0..w {
-            let pos = y * w + x;
-            let Some((pid, rot)) = board.get(pos) else { continue; };
-            let p = puzzle.piece(pid).unwrap();
-            let e = p.edges.rotated(rot).as_array();
-            if x + 1 < w {
-                if let Some((npid, nrot)) = board.get(y * w + (x + 1)) {
-                    let np = puzzle.piece(npid).unwrap();
-                    let ne = np.edges.rotated(nrot).as_array();
-                    if e[1] == ne[3] { matched += 1; }
-                }
-            }
-            if y + 1 < h {
-                if let Some((npid, nrot)) = board.get((y + 1) * w + x) {
-                    let np = puzzle.piece(npid).unwrap();
-                    let ne = np.edges.rotated(nrot).as_array();
-                    if e[2] == ne[0] { matched += 1; }
-                }
-            }
-        }
-    }
-    (matched, total)
-}
-
-fn placed_count(b: &Board, puzzle: &eternity2_core::Puzzle) -> u32 {
-    (0..puzzle.cell_count()).filter(|&p| b.get(p).is_some()).count() as u32
-}
 
 #[derive(Clone)]
 enum Strategy { BpExploit, RandomExplore }
