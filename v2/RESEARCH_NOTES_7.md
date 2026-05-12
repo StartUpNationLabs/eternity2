@@ -107,6 +107,50 @@ Score is 453/480; any move that yields 454+ is the headline.
 
 ## Vol-7 dispatch log
 
+### *** MORE GENERATOR STRUCTURE 09:25 — corners, hints, edge-pieces ***
+
+Continued deep-probe of the official piece set:
+
+- **The 4 corner pieces use ONLY rare colors {1,2,3,4} on their inner
+  edges.** Specifically: piece 0=(1,3), piece 1=(1,4), piece 2=(2,3),
+  piece 3=(3,2). Color 5 does NOT appear at any corner.
+- **Edge pieces (56) have 67% rare colors on their inner edges**
+  (112 of 168 inner-edge slots are color 1-5). Abundant colors are
+  only 33%. The border ring is *deliberately* rare-color-dense.
+- **The 5 hint pieces are ALL pure-abundant**: hint piece colors
+  are {8,9,11,12,13,15,16,17,18,20,21,22}. **Zero hint pieces touch
+  a rare color (1-5).** Hint constraint propagates through the
+  dense abundant-color graph, not the sparse rare-color graph.
+- **2 interior pieces share a 4-color multiset, but are NOT
+  rotations of each other**: piece 109=(7,10,15,17) and piece 110=
+  (7,10,17,15); piece 171=(9,14,21,12) and piece 181=(9,21,14,12).
+  Same multiset, different cyclic order → genuinely distinct
+  pieces. Tiny symmetry-breaking opportunity.
+
+**This is the structural picture**:
+
+```
+   Rare colors {1-5} → assigned to corners + edge-piece inner edges
+                       → form thin stripes propagating inward
+                       → trivially matched on plateau boards (vol-5
+                         finding "all rare are 100% matched" derived)
+
+   Abundant {6-22}   → fill the interior
+                       → ALL 5 hint pieces are abundant
+                       → ALL plateau mismatches are between abundant
+                         colors
+
+   Asymmetric (7,8) hint  → only the abundant cone of strain
+                            radiates; the rare-color border is
+                            unaffected.
+```
+
+The puzzle's "mathematical beauty" is now visible: rare colors form
+a sparse, hierarchical scaffold (corners → edges → stripes); abundant
+colors fill the dense interior under the hint cones. **The 30-
+mismatch budget = the irreducible defect count in the abundant-
+color interior subgraph given the hint-pinning constraints.**
+
 ### *** GENERATOR-RULE DISCOVERY 09:10 — RARE COLORS ON OPPOSITE EDGES ***
 
 **User pushback on the "looks random" verdict**: *"I don't think the
