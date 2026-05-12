@@ -154,6 +154,37 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### C — CONSENSUS SEEDING (07:20): NEGATIVE — polishes back to 452
+
+**Setup**: built a consensus board from the top family (38 boards).
+Per-cell modal piece, with greedy duplicate repair. Initial score:
+451/480.
+
+**PT polish (300s, seed 5371)**: best = 452/480.
+
+**Overlap analysis**:
+- consensus 452 vs original 452: **100% identical**.
+- consensus 452 vs original 453: 75.9% (different basin).
+
+**Verdict**: consensus seeding lands in the SAME 452 basin we
+already had. PT collapses the smoothed-consensus board back to
+the most-attractive nearby fixed point, which is the existing 452.
+
+**Why it didn't work**: the consensus IS a smoothed version of
+the 452 basin's representative boards. PT just removes the noise
+and lands at the cleanest 452. To find a NEW basin, the seed must
+be structurally orthogonal to the 452 — which the consensus, by
+construction, is not.
+
+**Implication**: consensus seeding alone does NOT escape basins.
+It's a useful "PT-prep" but not a breakthrough mechanism in itself.
+
+**Combine with constraint**: use the consensus AS A FORBIDDEN
+SET (NE2-style) — penalize PT for matching consensus placements,
+forcing exploration AWAY from the basin. ~30 min experiment.
+
+
+
 
 
 ---
