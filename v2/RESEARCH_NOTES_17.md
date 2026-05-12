@@ -573,3 +573,32 @@ E2 is dominated by iso-score plateaus**. To escape, we need either:
 NEXT: E4 = 10-min single chain. Measures if more iters in the same
 plateau-exploration regime hits a higher peak.
 
+## 00:25 — Strategy pivot: multi-CP-partial diversity is the key
+
+E2/E3 finding that t-diversity is a no-op means **seed-only diversity
+in chains caps at 4-chain max around 456**. To break past, we need
+diversity at the BOARD level: different CP partials from different
+Blackwood seeds.
+
+Shipped:
+- `run_alns_pt` — synchronous parallel tempering with Metropolis
+  exchanges between adjacent chains.
+- `run_alns_pt_multi_init` — same but each chain starts from its own
+  initial board (Vec<Board>).
+- `alns_pt` bin with `--cp-boards p1,p2,p3,p4` flag.
+- `gen_cp_partials.sh` — sequential generator for seeds 2/3/4.
+- `lex_break_isoscore` ALNS option — iso-score tiebreak by largest
+  mismatch component (smaller is preferred).
+- `--lex` CLI flag in alns_only + alns_portfolio.
+
+Plan for next experiments (once E4 finishes):
+1. **E5**: gen_cp_partials.sh produces canonical_v17a_cp_seed{2,3,4}.
+   ~15 min sequential.
+2. **E6**: alns_pt --cp-boards seed1..4 --n-chains 4 --t-min 0.5
+   --t-max 2.0 --inner-iters 25 --time-budget-ms 300000 --ops winning5.
+   Tests: does board-level diversity break past 456?
+3. **E7**: same as E6 but with --lex enabled. Tests if iso-score
+   tiebreak helps.
+4. **E8**: alns_only --lex --cp-board seed1 --alns-budget-ms 300000
+   vs same without --lex (paired t-test). Clean A/B for lex feature.
+
