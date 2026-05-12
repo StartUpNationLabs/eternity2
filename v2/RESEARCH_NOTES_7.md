@@ -344,6 +344,55 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### Vol-6 handoff received 12:30 — vol-7 owns BORDER-3e
+
+Vol-6 closed their session at 454 PT saturation. Handoff message:
+
+- 454 is reproducible (3 × 300s × 8 replicas all hold at 454; saturation).
+- `pt_e2 --pin-perimeter` exists.
+- 100k borders in `output/borders/sample_100k.jsonl`.
+- 1000 borders pre-sorted by inner-corner-tightness in
+  `output/borders/top_1000_by_corner_tightness.jsonl`.
+- Vol-6 intentionally did NOT run BORDER-3e. The cleaner experiment
+  is to drive that triage with vol-7's reverse-Selby interior-first
+  inner solver, not vanilla pt_e2.
+
+**Vol-7 actions taken**:
+
+1. Verhaard-tier diff of the 17 cells PT moved 453→454. Result:
+   PT did NOT change the tier distribution (still 9 good + 7 bad
+   + 1 precious on both 453 and 454). PT just *permutes* the same
+   17 pieces. Vol-6's hypothesis "PT spontaneously shuffles
+   precious pieces" is **falsified at the tier level** — but the
+   mobility ZONE is informative.
+
+2. Spatial map of the 17 mobile cells: tight cluster in cols 5-11,
+   rows 5-12 (SE strain front). **76% of mobile cells are STILL
+   mismatched on the 454; 32 of 45 mismatched cells are OUTSIDE
+   the mobility zone.** PT-with-pin-perimeter has a hard ceiling
+   at 454 because its mobility zone is too small.
+
+3. Mismatched-cell quadrant analysis: 65% of mismatches in SE+SW;
+   NE has 10, NW only 6. The strain cascade is real and asymmetric.
+
+4. **Built synthetic-border seeder** `scripts/synth_border_seed.py`.
+   Converts a vol-6 border JSONL entry into a `pt_e2 --start-from`
+   compatible 256-cell JSON (60 border + 5 hints + 191 null cells).
+   pt_e2 greedy-fills the interior.
+
+5. **Launched BORDER-3e Stage 1 triage** at 08:59:
+   - 12 borders from `top_1000_by_corner_tightness.jsonl`
+   - 60s PT × 2 replicas each
+   - 4 in parallel
+   - ETA ~9 min wall
+   - Expected: most borders 425-445; goal is finding 1-2 that reach
+     449+ in stage 1 (will then be promoted to stage 2 at 300s).
+
+   Vol-7's hypothesis: if ANY top-1000-tightness border reaches
+   ≥449 in 60s, longer PT will reach 454-455+. If none do, the
+   surrogate score is weakly correlated with PT ceiling and we
+   need to test borders by full PT (slow).
+
 ### *** SELBY-RIORDAN AGENT RETURN — generator countermeasures named, 12:15 ***
 
 Background agent (dispatched 11:25) returned with a *definitive*
