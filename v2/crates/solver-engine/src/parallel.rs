@@ -321,9 +321,10 @@ fn run_unit(
                 stats: state.stats,
             };
         }
-        // Take the domain out the way the main recursion does, so
+        // Clear domain bits at `pos` the way the main recursion does, so
         // place_and_propagate sees an empty domain at this position.
-        let _saved = std::mem::take(&mut state.domains[pos as usize]);
+        let base = (pos as usize) * state.words_per_pos;
+        for w in &mut state.domain_bits[base..base + state.words_per_pos] { *w = 0; }
         match state.place_and_propagate(&mut sink, depth as u32, pos, row_id) {
             PropagationOutcome::Ok { .. } => {}
             PropagationOutcome::Wipeout { .. } => {

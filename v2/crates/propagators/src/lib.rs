@@ -35,7 +35,54 @@ pub struct PropagatorContext<'a> {
     pub puzzle: &'a Puzzle,
     pub placed: &'a [Option<PlacementInfo>],
     pub used_pieces: &'a [bool],   // indexed by piece_id
-    pub domains: &'a [Vec<u32>],   // domains[pos] = row_ids; row_id = piece_id*4 + rot
+    /// Per-position row-id bitset.
+    /// `domain_bits[pos * words_per_pos .. (pos+1) * words_per_pos]`
+    /// has bit `r_id % 64` of word `r_id / 64` set iff `r_id` is in
+    /// the domain of `pos`. row_id = piece_id*4 + rot.
+    pub domain_bits: &'a [u64],
+    pub words_per_pos: usize,
+}
+
+impl<'a> PropagatorContext<'a> {
+    /// Iterate set-row-ids in the domain of `pos`.
+    #[inline]
+    pub fn domain_iter(&self, pos: usize) -> DomainBitIter<'_> {
+        let base = pos * self.words_per_pos;
+        DomainBitIter {
+            words: &self.domain_bits[base..base + self.words_per_pos],
+            word_idx: 0,
+            cur: if self.words_per_pos > 0 { self.domain_bits[base] } else { 0 },
+        }
+    }
+
+    /// True iff the domain of `pos` is empty.
+    #[inline]
+    pub fn domain_is_empty(&self, pos: usize) -> bool {
+        let base = pos * self.words_per_pos;
+        self.domain_bits[base..base + self.words_per_pos].iter().all(|&w| w == 0)
+    }
+}
+
+pub struct DomainBitIter<'a> {
+    words: &'a [u64],
+    word_idx: usize,
+    cur: u64,
+}
+
+impl<'a> Iterator for DomainBitIter<'a> {
+    type Item = u32;
+    fn next(&mut self) -> Option<u32> {
+        loop {
+            if self.cur != 0 {
+                let bit = self.cur.trailing_zeros();
+                self.cur &= self.cur - 1;
+                return Some((self.word_idx as u32) * 64 + bit);
+            }
+            self.word_idx += 1;
+            if self.word_idx >= self.words.len() { return None; }
+            self.cur = self.words[self.word_idx];
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -438,7 +485,7 @@ pub fn island_check(ctx: &PropagatorContext<'_>) -> PropagatorResult {
     let mut placeable = vec![false; n_pieces];
     for pos in 0..puzzle.cell_count() {
         if ctx.placed[pos as usize].is_some() { continue; }
-        for &row_id in &ctx.domains[pos as usize] {
+        for row_id in ctx.domain_iter(pos as usize) {
             let piece_idx = (row_id >> 2) as usize;
             if piece_idx < placeable.len() {
                 placeable[piece_idx] = true;
@@ -674,8 +721,30 @@ mod tests {
         Piece::new(id, Edges::new(t, r, b, l))
     }
 
-    fn empty_ctx<'a>(puzzle: &'a Puzzle, domains: &'a [Vec<u32>], placed: &'a [Option<PlacementInfo>], used: &'a [bool]) -> PropagatorContext<'a> {
-        PropagatorContext { puzzle, placed, used_pieces: used, domains }
+    /// Build the per-position bitset + words_per_pos from a `Vec<Vec<u32>>`
+    /// list, sized for `puzzle.pieces()`. Returned as a pair the caller
+    /// owns; the test body then constructs a `PropagatorContext` that
+    /// borrows from the returned `bits`.
+    fn build_bits(puzzle: &Puzzle, domains: &[Vec<u32>]) -> (Vec<u64>, usize) {
+        let n_pieces = puzzle.pieces().iter().map(|p| usize::from(p.id) + 1).max().unwrap_or(1);
+        let n_rows = n_pieces * 4;
+        let wpp = n_rows.div_ceil(64).max(1);
+        let mut bits = vec![0u64; domains.len() * wpp];
+        for (pos, dom) in domains.iter().enumerate() {
+            let base = pos * wpp;
+            for &r_id in dom {
+                let r = r_id as usize;
+                bits[base + (r >> 6)] |= 1u64 << (r & 63);
+            }
+        }
+        (bits, wpp)
+    }
+
+    /// Construct a `PropagatorContext` for tests from the supplied owned
+    /// `bits` slice. Tests should: `let (bits, wpp) = build_bits(&puzzle, &domains);
+    /// let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);`
+    fn mkctx<'a>(puzzle: &'a Puzzle, bits: &'a [u64], wpp: usize, placed: &'a [Option<PlacementInfo>], used: &'a [bool]) -> PropagatorContext<'a> {
+        PropagatorContext { puzzle, placed, used_pieces: used, domain_bits: bits, words_per_pos: wpp }
     }
 
     #[test]
@@ -687,7 +756,8 @@ mod tests {
         let placed = vec![None; 4];
         let used = vec![false; 4];
         let domains: Vec<Vec<u32>> = vec![vec![0,4,8,12]; 4];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         assert_eq!(class_balance_check(&ctx), PropagatorResult::Ok);
     }
 
@@ -736,7 +806,8 @@ mod tests {
         // Instead test the *border-edge balance* check by mis-counting:
         // unused pieces should still satisfy border equality.
         let domains: Vec<Vec<u32>> = vec![vec![]; 9];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         // With placement (0, TL corner) and (no second placement), the
         // remaining border edges in unplaced pieces 1..=8:
         //   piece 1: 2 border edges (TR corner)
@@ -775,7 +846,8 @@ mod tests {
             vec![0, 4, 8],   // pos 2
             vec![0, 4, 8],   // pos 3
         ];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         assert_eq!(island_check(&ctx), PropagatorResult::Wipeout);
     }
 
@@ -793,7 +865,8 @@ mod tests {
             vec![0, 4, 8, 12],
             vec![0, 4, 8, 12],
         ];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         assert_eq!(island_check(&ctx), PropagatorResult::Ok);
     }
 
@@ -806,7 +879,8 @@ mod tests {
         let placed = vec![None; 4];
         let used = vec![false; 4];
         let domains: Vec<Vec<u32>> = vec![vec![0,4,8,12]; 4];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         assert_eq!(gacolor_check(&ctx), PropagatorResult::Ok);
     }
 
@@ -845,7 +919,8 @@ mod tests {
         // Open demand: 2 (pos1's left face, pos3's top face, both color 1).
         // slack = 25 - 2 = 23 → odd → WIPEOUT.
         let domains: Vec<Vec<u32>> = vec![vec![]; 9];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         assert_eq!(gacolor_check(&ctx), PropagatorResult::Wipeout);
     }
 
@@ -860,7 +935,8 @@ mod tests {
         let placed = vec![None; 16];
         let used = vec![false; 16];
         let domains: Vec<Vec<u32>> = vec![vec![0,4,8]; 16];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         // Empty board: committed_A = committed_B = 0; supplies positive. OK.
         assert_eq!(multiset_equality_check(&ctx), PropagatorResult::Ok);
     }
@@ -920,7 +996,8 @@ mod tests {
         // Mark edge pieces 4..11 used.
         for i in 4..12 { used[i] = true; }
         let domains: Vec<Vec<u32>> = vec![vec![]; 16];
-        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        let (bits, wpp) = build_bits(&puzzle, &domains);
+        let ctx = mkctx(&puzzle, &bits, wpp, &placed, &used);
         // committed_A[2] = 8 (all 8 edge cells have color 2 inward).
         // committed_B[2] = 0 (no perimeter cell placed yet).
         // b_supply_max[2] = 0 (interior pieces don't have any color-2 edge).

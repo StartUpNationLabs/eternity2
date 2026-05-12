@@ -87,12 +87,12 @@ fn bench_propagators(c: &mut Criterion) {
                 b
             };
         }
-        let (placed, used, domains) = build_propagator_inputs(&puzzle, &board);
+        let (placed, used, domain_bits, wpp) = build_propagator_inputs(&puzzle, &board);
         group.bench_with_input(BenchmarkId::new("gacolor_check", size), &size, |b, _| {
-            b.iter(|| run_gacolor(&puzzle, &placed, &used, &domains));
+            b.iter(|| run_gacolor(&puzzle, &placed, &used, &domain_bits, wpp));
         });
         group.bench_with_input(BenchmarkId::new("parity_check", size), &size, |b, _| {
-            b.iter(|| run_parity(&puzzle, &placed, &used, &domains));
+            b.iter(|| run_parity(&puzzle, &placed, &used, &domain_bits, wpp));
         });
     }
     group.finish();

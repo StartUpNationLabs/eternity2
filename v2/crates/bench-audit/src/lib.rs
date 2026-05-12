@@ -126,7 +126,7 @@ pub fn score_board_baseline_wrapper(puzzle: &Puzzle, board: &Board) -> u32 {
 /// them inside the timed section.
 #[must_use]
 pub fn build_propagator_inputs(puzzle: &Puzzle, board: &Board)
-    -> (Vec<Option<PlacementInfo>>, Vec<bool>, Vec<Vec<u32>>)
+    -> (Vec<Option<PlacementInfo>>, Vec<bool>, Vec<u64>, usize)
 {
     let n = puzzle.cell_count() as usize;
     let mut placed = vec![None; n];
@@ -142,25 +142,29 @@ pub fn build_propagator_inputs(puzzle: &Puzzle, board: &Board)
             }
         }
     }
-    let domains: Vec<Vec<u32>> = vec![Vec::new(); n];
-    (placed, used, domains)
+    let n_rows = max_pid * 4;
+    let wpp = n_rows.div_ceil(64).max(1);
+    let domain_bits = vec![0u64; n * wpp];
+    (placed, used, domain_bits, wpp)
 }
 
 pub fn run_gacolor(puzzle: &Puzzle,
                    placed: &[Option<PlacementInfo>],
                    used: &[bool],
-                   domains: &[Vec<u32>])
+                   domain_bits: &[u64],
+                   words_per_pos: usize)
 {
-    let ctx = PropagatorContext { puzzle, placed, used_pieces: used, domains };
+    let ctx = PropagatorContext { puzzle, placed, used_pieces: used, domain_bits, words_per_pos };
     let _ = gacolor_check(&ctx);
 }
 
 pub fn run_parity(puzzle: &Puzzle,
                   placed: &[Option<PlacementInfo>],
                   used: &[bool],
-                  domains: &[Vec<u32>])
+                  domain_bits: &[u64],
+                  words_per_pos: usize)
 {
-    let ctx = PropagatorContext { puzzle, placed, used_pieces: used, domains };
+    let ctx = PropagatorContext { puzzle, placed, used_pieces: used, domain_bits, words_per_pos };
     let _ = parity_check(&ctx);
 }
 
