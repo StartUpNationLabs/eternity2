@@ -1,0 +1,101 @@
+=== vol-12 raw run on canonical Eternity II ===
+puzzle: ../data/puzzles/size_16_official_eternity.csv
+size: 16x16 colors=22 hints=5
+profile: joe_depth150_par (gacolor + AC-3 + NS-1 + depth-150 gate + multi-core)
+budget: 300_000 ms (5 min)
+started: (unix=1778588535)
+
+[   5004 ms]  current_depth=  32  best_depth_seen= 160  node_id=13294
+[  10010 ms]  current_depth=  57  best_depth_seen= 160  node_id=32908
+[  15012 ms]  current_depth=  53  best_depth_seen= 163  node_id=54949
+[  20012 ms]  current_depth=  69  best_depth_seen= 163  node_id=86032
+[  25012 ms]  current_depth=  30  best_depth_seen= 163  node_id=111943
+[  30015 ms]  current_depth=  62  best_depth_seen= 163  node_id=114374
+[  35017 ms]  current_depth=  31  best_depth_seen= 163  node_id=145125
+[  40017 ms]  current_depth=  60  best_depth_seen= 163  node_id=147626
+[  45018 ms]  current_depth=  66  best_depth_seen= 163  node_id=188632
+[  50018 ms]  current_depth=  57  best_depth_seen= 164  node_id=206944
+[  55019 ms]  current_depth=  41  best_depth_seen= 164  node_id=235277
+[  60021 ms]  current_depth= 135  best_depth_seen= 164  node_id=144569
+[  65023 ms]  current_depth=  58  best_depth_seen= 164  node_id=294185
+[  70034 ms]  current_depth=  58  best_depth_seen= 165  node_id=285315
+[  75034 ms]  current_depth=  54  best_depth_seen= 165  node_id=279218
+[  80034 ms]  current_depth=  57  best_depth_seen= 165  node_id=333585
+[  85039 ms]  current_depth=  58  best_depth_seen= 165  node_id=378746
+[  90039 ms]  current_depth=  56  best_depth_seen= 165  node_id=337090
+[  95042 ms]  current_depth= 148  best_depth_seen= 167  node_id=219078
+[ 100042 ms]  current_depth=  48  best_depth_seen= 167  node_id=254008
+[ 105043 ms]  current_depth=  58  best_depth_seen= 168  node_id=400113
+[ 110047 ms]  current_depth=  61  best_depth_seen= 168  node_id=508865
+[ 115063 ms]  current_depth=  45  best_depth_seen= 170  node_id=498884
+[ 120064 ms]  current_depth=  59  best_depth_seen= 170  node_id=471213
+[ 125065 ms]  current_depth= 132  best_depth_seen= 170  node_id=326882
+[ 130065 ms]  current_depth=  69  best_depth_seen= 170  node_id=577934
+[ 135065 ms]  current_depth=  60  best_depth_seen= 170  node_id=537750
+[ 140069 ms]  current_depth= 142  best_depth_seen= 175  node_id=368415
+[ 145071 ms]  current_depth= 134  best_depth_seen= 175  node_id=384697
+[ 150071 ms]  current_depth=  63  best_depth_seen= 175  node_id=670381
+[ 155071 ms]  current_depth=  60  best_depth_seen= 175  node_id=777735
+[ 160076 ms]  current_depth=  56  best_depth_seen= 175  node_id=648810
+[ 165076 ms]  current_depth=  58  best_depth_seen= 175  node_id=801756
+[ 170079 ms]  current_depth=  49  best_depth_seen= 175  node_id=429915
+[ 175079 ms]  current_depth=  56  best_depth_seen= 175  node_id=856183
+[ 180079 ms]  current_depth=  68  best_depth_seen= 175  node_id=912308
+[ 185082 ms]  current_depth=  61  best_depth_seen= 175  node_id=939725
+[ 190090 ms]  current_depth=  50  best_depth_seen= 175  node_id=483792
+[ 195092 ms]  current_depth=  67  best_depth_seen= 175  node_id=993709
+[ 200097 ms]  current_depth= 144  best_depth_seen= 175  node_id=511868
+[ 205102 ms]  current_depth=  47  best_depth_seen= 175  node_id=524009
+[ 210108 ms]  current_depth=  47  best_depth_seen= 175  node_id=541983
+[ 215109 ms]  current_depth=  47  best_depth_seen= 175  node_id=557150
+[ 220109 ms]  current_depth=  37  best_depth_seen= 175  node_id=1019003
+[ 225110 ms]  current_depth=  68  best_depth_seen= 175  node_id=1156094
+[ 230110 ms]  current_depth=  68  best_depth_seen= 175  node_id=1181697
+[ 235110 ms]  current_depth=  59  best_depth_seen= 175  node_id=1070788
+[ 240116 ms]  current_depth=  60  best_depth_seen= 175  node_id=1234876
+[ 245116 ms]  current_depth=  43  best_depth_seen= 175  node_id=1147235
+[ 250117 ms]  current_depth= 140  best_depth_seen= 175  node_id=642382
+[ 255117 ms]  current_depth= 133  best_depth_seen= 175  node_id=694535
+[ 260117 ms]  current_depth=  56  best_depth_seen= 175  node_id=1186286
+[ 265119 ms]  current_depth=  45  best_depth_seen= 175  node_id=692316
+[ 270127 ms]  current_depth=  43  best_depth_seen= 175  node_id=1271775
+[ 275130 ms]  current_depth=  39  best_depth_seen= 175  node_id=1298161
+[ 280136 ms]  current_depth= 148  best_depth_seen= 175  node_id=762172
+[ 285144 ms]  current_depth=  48  best_depth_seen= 175  node_id=753489
+[ 290147 ms]  current_depth=  42  best_depth_seen= 175  node_id=1374437
+[ 295148 ms]  current_depth=  70  best_depth_seen= 175  node_id=1526719
+[ 300149 ms]  current_depth=  15  best_depth_seen= 175  node_id=371
+=== terminal event received ===
+
+=== FINAL RESULT ===
+verdict: TIMEOUT (best_depth=174)
+wall_clock: 300.21 s
+nodes: 4243749
+backtracks: 976363
+propagations: 2922387013
+domain_wipeouts: 976363
+max_depth_seen: 174
+solutions_found: 0
+nodes_per_sec: 14136
+pieces_placed: 179/256
+edge_matches: 303/303 (counting only placed-placed joins)
+internal_total_edges: 480
+
+Board (piece_id:rotation):
+   0:3    4:0    6:0   23:0    5:0   41:0    9:0   44:0   13:0   49:0   48:0   17:0   42:0   52:0   37:0    1:0 
+  31:3   87:2   98:1   88:3  103:0  119:3  243:0   72:1   95:3  127:0   77:0  225:2  191:2  244:0  218:0   24:1 
+  30:3   75:0  207:1  220:3  205:2  194:1  161:1   66:2  111:3  232:0  199:1  185:3  200:0  254:1  230:0   32:1 
+  15:3   65:2  184:3  140:1  144:3  214:3  163:1   71:0  152:1   83:1   91:3  240:3  171:2  116:2  118:1   27:1 
+  25:3   61:3  110:2  141:1  155:3  153:2  245:1  192:0  174:2  131:2  190:3  117:1  107:3  133:0  156:1   28:1 
+  16:3  189:3  112:0  166:0   90:1   68:3 ----:-  219:2 ----:- ----:- ----:- ----:- ----:-  114:3  234:1   40:1 
+  51:3  167:3  223:2  188:2 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  250:0   20:1 
+   7:3  173:3  226:0  186:0 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  124:1   50:1 
+  56:3   86:1   85:3  125:2 ----:- ----:- ----:-  138:0 ----:- ----:- ----:- ----:- ----:- ----:-   94:3   22:1 
+  12:3  251:1  217:1  134:0 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  187:2   58:1 
+  55:3  231:2  204:2  212:3 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  176:2   54:1 
+  35:3  228:0  122:2  182:1 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  229:3  170:0   29:1 
+  36:3  151:3  108:0   84:1 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-   73:2   43:1 
+  10:3  224:0  180:1  175:3  136:0  137:3  121:1  135:3  128:2  105:1 ----:- ----:- ----:-  248:2   93:0   11:1 
+  18:3   79:2  159:1  149:3  160:1  146:3  157:3  235:1  102:0  106:3  216:1  209:3  162:0  195:1  113:1   14:1 
+   2:2   26:2   33:2   38:2   57:2   59:2   34:2   53:2   47:2   46:2   45:2   39:2   19:2   21:2    8:2    3:1 
+
