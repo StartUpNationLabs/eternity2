@@ -26,7 +26,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use eternity2_core::{Board, Hint, Hints, PieceId, Position, Puzzle, BORDER};
+use eternity2_core::{Board, Hint, Hints, PieceId, Position, Puzzle, Rotation, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
@@ -1059,6 +1059,115 @@ pub fn run_alns(
     }
 
     (best, stats)
+}
+
+/// Vol-17 — deterministic post-ALNS polish: for each cell, try all 4
+/// rotations of its current piece. Keep the rotation that yields the
+/// highest neighbour-edge match count. Iterate until no improvement
+/// (single-cell-rotation fixed point).
+///
+/// This is a HILL-CLIMB on rotation only — never moves pieces, only
+/// rotates them. Bounded gain, but always non-negative. Useful after
+/// SA-repair which doesn't fully explore rotation space.
+///
+/// `pinned_set` cells are skipped (their rotations must be preserved
+/// as canonical hints).
+pub fn polish_rotations(
+    puzzle: &Puzzle,
+    board: &Board,
+    pinned_set: &BTreeSet<Position>,
+) -> (Board, u32) {
+    let mut b = board.clone();
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut total_improvement = 0u32;
+    let mut iterations = 0u32;
+    loop {
+        iterations += 1;
+        if iterations > 1000 { break; }
+        let mut any_change = false;
+        for pos in 0..w * h {
+            if pinned_set.contains(&pos) { continue; }
+            let Some((pid, current_rot)) = b.get(pos) else { continue };
+            let Some(piece) = lookup_piece(puzzle, pid) else { continue };
+            // Count current neighbour matches at this position.
+            let current_match = count_neighbour_matches(puzzle, &b, pos, piece.edges.rotated(current_rot).as_array());
+            // Try other rotations.
+            let mut best_rot = current_rot;
+            let mut best_match = current_match;
+            for rot in Rotation::ALL {
+                if rot == current_rot { continue; }
+                let e = piece.edges.rotated(rot).as_array();
+                let m = count_neighbour_matches(puzzle, &b, pos, e);
+                if m > best_match {
+                    best_match = m;
+                    best_rot = rot;
+                }
+            }
+            if best_rot != current_rot {
+                b.place(pos, pid, best_rot);
+                total_improvement += best_match - current_match;
+                any_change = true;
+            }
+        }
+        if !any_change { break; }
+    }
+    (b, total_improvement)
+}
+
+/// Count edge-match count between cell at `pos` (with edges `e_at_pos`)
+/// and its 4 placed neighbours. Doesn't count BORDER or empty edges.
+fn count_neighbour_matches(puzzle: &Puzzle, board: &Board, pos: Position, e: [u8; 4]) -> u32 {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let x = pos % w;
+    let y = pos / w;
+    let mut c = 0u32;
+    // top
+    if y > 0 {
+        if let Some((npid, nrot)) = board.get((y - 1) * w + x) {
+            if let Some(np) = lookup_piece(puzzle, npid) {
+                let ne = np.edges.rotated(nrot).as_array();
+                if e[0] != BORDER && ne[2] != BORDER && e[0] != 0 && ne[2] != 0 && e[0] == ne[2] {
+                    c += 1;
+                }
+            }
+        }
+    }
+    // right
+    if x + 1 < w {
+        if let Some((npid, nrot)) = board.get(y * w + (x + 1)) {
+            if let Some(np) = lookup_piece(puzzle, npid) {
+                let ne = np.edges.rotated(nrot).as_array();
+                if e[1] != BORDER && ne[3] != BORDER && e[1] != 0 && ne[3] != 0 && e[1] == ne[3] {
+                    c += 1;
+                }
+            }
+        }
+    }
+    // bottom
+    if y + 1 < h {
+        if let Some((npid, nrot)) = board.get((y + 1) * w + x) {
+            if let Some(np) = lookup_piece(puzzle, npid) {
+                let ne = np.edges.rotated(nrot).as_array();
+                if e[2] != BORDER && ne[0] != BORDER && e[2] != 0 && ne[0] != 0 && e[2] == ne[0] {
+                    c += 1;
+                }
+            }
+        }
+    }
+    // left
+    if x > 0 {
+        if let Some((npid, nrot)) = board.get(y * w + (x - 1)) {
+            if let Some(np) = lookup_piece(puzzle, npid) {
+                let ne = np.edges.rotated(nrot).as_array();
+                if e[3] != BORDER && ne[1] != BORDER && e[3] != 0 && ne[1] != 0 && e[3] == ne[1] {
+                    c += 1;
+                }
+            }
+        }
+    }
+    c
 }
 
 // Re-export so the binary doesn't need to know internal modules.

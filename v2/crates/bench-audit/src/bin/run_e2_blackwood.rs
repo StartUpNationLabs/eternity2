@@ -21,9 +21,9 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Puzzle};
 use eternity2_localsearch::{
-    run_alns, Acceptance, AlnsConfig, ComponentDestroy, ComponentPlusHaloDestroy,
-    ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair, RandomRegion, RepairKind,
-    WorstBand, WorstRow, WorstWindow,
+    polish_rotations, run_alns, Acceptance, AlnsConfig, ComponentDestroy,
+    ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair,
+    RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -132,6 +132,14 @@ fn run_arm(
     let t_alns = Instant::now();
     let (alns_board, alns_stats) = run_alns(puzzle, &cp_board, ops.as_mut_slice(), &cfg);
     let alns_elapsed = t_alns.elapsed();
+    // Vol-17 — deterministic rotation polish after ALNS. Never decreases
+    // matched count; bounded gain. Cheap (one or two passes typically).
+    let pinned_set: std::collections::BTreeSet<u32> =
+        hints.hints.iter().map(|h| h.position).collect();
+    let (alns_board, polish_gain) = polish_rotations(puzzle, &alns_board, &pinned_set);
+    if polish_gain > 0 {
+        eprintln!("[{label}] polish: rotations +{polish_gain} matches");
+    }
     let (am, _at) = score_board(puzzle, &alns_board);
     let ap = placed_count(&alns_board, puzzle);
     let alns_url = bucas_url(puzzle, &alns_board, &format!("v15_{label}_alns"));
