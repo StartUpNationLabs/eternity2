@@ -206,6 +206,29 @@ bucas: https://e2.bucas.name/#puzzle=v15_blackwood_raw_alns&board_w=16&board_h=1
 pid 57308). v17b's tighter envelope (1-edge slack on McGavin) should
 let the engine explore deeper. Result expected ~23:26.
 
+### 23:26 — v17b RESULT 448/480 (essentially identical to v17a)
+
+```
+[blackwood_raw] CP:   elapsed=300.1s depth=192 placed=197/256 matched=362/480
+[blackwood_raw] ALNS: elapsed=300.0s iters=600 placed=256/256 matched=448/480 Δ_vs_cp=+86
+```
+
+Δ = v17a 447 vs v17b 448 = +1. Within noise — the schedule differences
+between v17a and v17b don't move the needle past CP-cliff fix. CP best
+depth is identical (192). The remaining bottleneck is NOT the schedule.
+
+### Next experiment: v17a + WorstBand
+
+Built (commit f9a277b) and launched (pid 69733). The 447 board's
+mismatch geometry showed all 33 mismatches in rows 0-3 forming ONE
+51-cell connected component. With WorstBand{k=4} + ConflictDriven{80}
++ repair_budget_ms=1500, the ALNS now has operators capable of
+destroying and CP-refilling the whole top-row cluster.
+
+Expected ETA: ~23:36.
+
+If this lifts past 454, T1 is met.
+
 ### Planned next steps
 
 1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
