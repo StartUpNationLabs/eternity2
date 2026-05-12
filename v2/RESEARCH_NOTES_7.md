@@ -283,6 +283,44 @@ backtracking** but probably worth <1% gain.
 to be empirically empty. Focus shifts to the *active* user pivot:
 border diversification.
 
+### Houdayer-PT FIX + offline post-mortem on 451-453 corpus — 09:55
+
+**Vol-3 bug fixed**: filter Houdayer proposals to `joint_delta > 0`
+by default; pick highest-delta admissible. Added `houdayer_accept_zero_delta`
+opt-in flag for the vol-3 microcanonical behaviour.
+
+Committed in 18fd7a6. PtConfig new field plumbed through 6 bench
+binaries.
+
+**Offline post-mortem on the 17 HISTORIC 450-453 boards** (vol-7
+corpus, output/plateau/v7_high/):
+
+```
+pairs scanned:                 136
+pairs with ≥1 swappable comp:  45 (33.1%)
+pairs with ≥1 IMPROVING comp:  0 (0.0%)
+total swappable components:    45  (all joint_delta = 0)
+swappable component sizes:     mean 76.9, p50=77, p90=82, max=86
+```
+
+**Verdict**: ZERO improving Houdayer swaps exist among our current
+corpus. Every swappable component has joint_delta = 0 — exactly the
+vol-3 observation. With the new strict-improvement filter, Houdayer
+will accept zero swaps on this corpus.
+
+**Why this is informative, not negative**: it confirms the 17 boards
+are all in the same Houdayer class — energy-equivalent reshufflings
+of each other on macro-scale components (mean 77 cells out of 256).
+**They have no structural diversity to exploit.** To find improving
+Houdayer swaps, we need replicas from *different* border families —
+exactly what the border-diversity sweep is producing.
+
+**The Houdayer fix + the border sweep compose**: after the sweep
+finishes, run PT with houdayer_every=10 across replicas drawn from
+the new border families. If the family-0 boards are in a Houdayer
+basin distinct from the new-border boards, the swap will
+productively migrate one toward the other.
+
 ### USER PIVOT 08:35 — BORDER DIVERSITY IS A MASSIVE OVERSIGHT
 
 **User observation**: *"I think it also might be interesting to try
