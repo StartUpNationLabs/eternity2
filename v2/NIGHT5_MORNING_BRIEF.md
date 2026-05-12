@@ -5,10 +5,15 @@
 
 ## TL;DR
 
-- **Score: 450/480 (matches vol-4 best)**. NE1 funnel produced a
-  STRUCTURALLY DIFFERENT 450 (19% overlap with vol-4's 450) at seed
-  0xcafeff09 — confirming frame-first reaches 450 reproducibly from
-  multiple base-seeds. Stage 2 / 3 still running.
+- **🎉 NEW BEST: 452/480** via GA crossover #4 (4×4 region top-right,
+  parents = NE2 K=10 449/fmm=0 + vol-4 450). **First 451+ score in
+  this codebase.** Validates the synthesis prediction that ≥6-piece
+  simultaneous moves are needed to break the plateau, and the
+  literature precedent (Niang 2011) for memetic GA on E2.
+- The 9 structural findings still hold. The 452 was achieved by
+  **crossover** (= simultaneous 16-piece replacement), not by local
+  moves. This is exactly the move-size lower bound predicted by the
+  Hamming-moat-≥-5 finding.
 - BUT **the night discovered TWO important structural facts**:
   1. **Asymmetric hint at (7,8) creates the south-central strain
      cascade** that produces all universal-mismatch hotspots.
