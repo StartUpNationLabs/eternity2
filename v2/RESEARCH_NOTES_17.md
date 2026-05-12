@@ -683,6 +683,34 @@ CLI: `run_e2_blackwood --schedule calibrated_v17e --noise-amplitude 0.15 --sched
 
 Plan: 4 schedule seeds × 3+3min sequential ~24min total.
 
+## 01:37 — E15 result + CRITICAL DATA: schedule perturbation gives CP-partial diversity
+
+E15: v17e noise=0.15 sched_seed=1 + 3min CP + 3min ALNS → 449/480.
+
+**CP-partial diff between v17e and v17a**: only 88/256 cells match.
+Both have 197 placed but in DIFFERENT (piece, position, rotation)
+choices for 168 cells.
+
+So schedule perturbation DOES change CP outcome — H21 partially
+CONFIRMED at CP level. But the ALNS basin from this different
+partial only reaches 449 (-6 vs v17a's 455 baseline).
+
+Question: is this seed=1 a fluke or representative? Launching
+long portfolio (8 seeds × 5+5 min = 80min) to find out.
+
+## 01:37 — LONG portfolio launched: 8 v17e schedule seeds × 5+5min
+
+Per user suggestion (use night for long experiments). Each seed
+gets the FULL 5min ALNS budget (vs 3min in E15). Output to
+output/v17_exp/v17e_long_sched*.stderr.log.
+
+ETA: ~02:57.
+
+If any seed reaches ≥456, v17e portfolio is a viable T1++ tool.
+If all stay <455, schedule perturbation underperforms v17a's
+"lucky attractor" and we need different diversity (e.g., variable
+order, scan order).
+
 ## 01:21 — E13 result: chimera 284 → 397 (3min ALNS), -58 vs A
 
 Cross-graft of v17a's rows 0-4 (cluster) with v17b's rows 0-4 created
