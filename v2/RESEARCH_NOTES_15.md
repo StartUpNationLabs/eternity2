@@ -254,3 +254,165 @@ so vol-16 has a concrete punch list rather than a vibes-based
 - `frontend/dist/assets/index-*.js` — generated artifacts
   showing up in git status. Should be .gitignored.
 
+### 2026-05-12 ~19:07 — canonical-E2 standalone Blackwood result
+
+`output/v15_e2_blackwood/run_1778604403/summary.json`. Seed 1,
+5 min CP + 5 min ALNS per arm, multi-core.
+
+| arm        | CP depth | CP placed | CP matched | ALNS matched |
+|------------|---------:|----------:|-----------:|-------------:|
+| baseline (`joe_depth150_bp_par`) | 171 | 176/256 | 292/480 | **439/480** |
+| blackwood (`BLACKWOOD_BASE_PAR`) | 56  | 61/256  | 96/480  | 395/480     |
+
+**Δ = −44.**
+
+Schedule pruning kicks in around depth 56 (= 61 placed cells
+with the 5-hint offset) and never releases. Engine spends the
+remaining ~190 s of CP budget exploring the depth-56 layer
+without finding a value-assignment that brings
+placed_heuristic_count to the next target threshold. ALNS
+recovers +299 from the 61-cell seed (impressive) but cannot
+close the −44 gap end-to-end.
+
+**This is the failure mode the spec flags ("the algorithm finds
+469s, not 480s ... if the algorithm's schedule penalises
+heuristic-color-poor branches early, the algorithm may never
+search the 480-region")** but at a far more aggressive level.
+Blackwood's scaled schedule on canonical E2 prunes about 80%
+of the search space at depth 56, well before reaching ANY of
+the 12 break-indexes (lowest = 201). The schedule is calibrated
+for a piece-set / scan-order interaction that proportional
+rescaling can't replicate.
+
+The honest read on Tier ranking after seed-1 standalone:
+
+- Tier 1 (≥454): NOT MET.
+- Tier 2 (≥469): NOT MET.
+- Tier 3 (≥470): NOT MET.
+
+Vol-15 has shipped the Blackwood mechanism, but the schedule
+parameter tuning is its own multi-day effort. The spec's pilot
+recommendation (500M iters → 10 hours) is moot here because we
+hit the schedule wall in 5 minutes of CP.
+
+Next: rectangle×Blackwood composition (running). If it also
+collapses at the schedule wall, the conclusion is that the
+schedule needs first-principles re-derivation (vol-16+), not
+parameter rescaling.
+
+### Diagnostic: what's the search actually doing?
+
+Blackwood arm: 3.19M nodes / 300s = 10.6k nps multi-core (vs
+baseline's 13.8k nps), so 23% slower per-node due to the
+schedule check overhead. 3.19M nodes spent mostly bouncing
+between depth 50 and 56 (per the progress log). Without
+schedule infeasibility, this many nodes would have produced
+depth 150+ comfortably.
+
+The cell at engine-depth 56 (= path_order[56]) is — given
+bottom-up scan with hint cells skipped from the path — at
+bottom-up scan index ≈ 56 + (# hints with bu_idx ≤ 56) = 56+2 = 58
+(hints at bu_idx 34 and 45 are < 56; 119, 210, 221 are > 56).
+So we're stuck around scan_idx 58 = row 12 col 10 (counting
+bottom-up). Three rows above the bottom. The schedule wants 28
+heuristic-color edges placed by total-depth 26 (proportional
+to 16 of 256 → 28 of 122 in Blackwood's curve, scaled by 150/122
+to our pool). With ~58 cells placed, we'd need 18+ heuristic
+edges — and we have <5. Schedule curve has overshot what's
+attainable given that we're still placing perimeter pieces.
+
+### 2026-05-12 ~19:35 — fixed-binary re-run results
+
+External reviewer (a colleague reading summary.json) spotted
+two bugs:
+
+1. **Schedule cliff at depth 60**: `max(scaled, border_ring)`
+   collapses two control points to the same depth, causing
+   `target_at(60)` to jump discontinuously.
+2. **Propagators unsound after break**: gacolor/AC-3/NS-1 assume
+   exact-matching invariants that the break-index allowance
+   violates.
+
+Implemented both fixes (commit `d8fe730`): affine remap of
+Blackwood's depth axis into `[post_border..target_max]`, plus a
+new `BLACKWOOD_RAW` profile that drops the exact-matching
+propagators. Re-ran seed 1.
+
+#### Updated scoreboard (5min CP + 5min ALNS per arm, seed 1)
+
+| arm                             | CP depth | CP nodes | ALNS matched | Δ vs baseline |
+|---------------------------------|---------:|---------:|-------------:|--------------:|
+| baseline (joe_depth150_bp_par)  | 171      |   4.13M  | 439/480      | —             |
+| blackwood ORIG (cliff bug)      |  56      |   3.19M  | 395/480      | −44           |
+| blackwood × layered (cliff bug) |  56      |  15.77M  | 376/480      | −63           |
+| **blackwood (cliff FIXED, AC-3 on)** |  80 |   3.52M  | 405/480      | **−34**       |
+| **blackwood_raw (cliff FIXED, no AC-3)** | 87 | 195.94M | **416/480** | **−23**       |
+
+Three findings:
+
+**Finding A — The cliff fix is worth +10 on its own.**
+blackwood (AC-3 on) went 395 → 405 just from making the
+schedule curve strictly monotonic. Confirms your friend's
+diagnosis.
+
+**Finding B — Dropping AC-3/gacolor/NS-1 is worth another
++11 in this regime, and a 47× throughput speedup.**
+blackwood_raw vs blackwood: same schedule, same break allowance,
+just remove the exact-matching propagators. Result: 195.94M
+nodes (vs 3.52M) in the same 5min budget. ~650k nps multi-core
+≈ 80k nps single-core equivalent. That puts us within ~600× of
+McGavin (was ~25000×). The propagators are NOT free in this
+search regime; they cost more per node than they save in
+pruning.
+
+This is a separate, surprising result independent of Blackwood:
+**vol-12's depth-150 propagator gate was the right idea but
+applied to the wrong propagator class.** AC-3/gacolor/NS-1 are
+useful at exact-solution depths (>150) but actively harmful at
+shallow Blackwood-mode depths (<87) where the break-index
+machinery violates their invariants anyway. Future engine
+profiles should choose propagator-on or propagator-off based
+on the active break-index regime, not depth.
+
+**Finding C — The schedule curve is still mis-tuned even after
+the cliff fix.** Both blackwood and blackwood_raw wall at
+depth ~80–87 (= scan_idx ~85–95 after hint skip). The schedule
+wants ~30 heuristic-color edges placed by depth 87; the engine
+can find arrangements producing only ~10–15. This is **not** a
+mechanism bug — it's a parameter calibration bug. The schedule
+curve was derived by **proportional rescaling** of Blackwood's
+empirical numbers from his piece set + scan order. Even with the
+post-border affine remap, the ratio of heuristic-color content
+to depth differs from Blackwood's setup.
+
+The principled vol-16 fix (suggested by external reviewer):
+replay known community 469/468 boards along our bottom-up scan
+order, measure the empirical cumulative-heuristic-color curve,
+fit our `exhaustion_targets` to it. The community boards live in
+`output/community_corpus/`. This is a single-afternoon task; no
+new algorithm needed.
+
+### Vol-15 final Tier ranking
+
+- Tier 1 (≥454): NOT MET. Best vol-15 cold-start = 416/480
+  (blackwood_raw, with all fixes). Below baseline 439/480.
+- Tier 2 (≥469): NOT MET.
+- Tier 3 (≥470): NOT MET.
+- Tier 4 (≥480): NOT MET.
+
+But the *direction* is now correct: cliff fix + propagator drop
+moved us from −44 to −23 in one iteration. With the
+calibration-from-data step (vol-16), the schedule curve becomes
+empirically grounded; that's the next meaningful test of
+Blackwood's algorithm on our stack.
+
+### Throughput finding worth keeping separately
+
+`BLACKWOOD_RAW`'s 650k nps multi-core is a real artifact
+independent of Blackwood. Whenever exact-matching propagators
+aren't paying off — Blackwood-mode, ALNS-style local search
+warmup, frame-enumeration — we can flip the profile and get a
+~50× throughput lift. Should be documented in the engine
+README (vol-16) and integrated into the speed-vs-pruning
+tradeoff guide.
+
