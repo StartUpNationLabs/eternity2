@@ -167,8 +167,8 @@ Result:
 | seed (CP partial) | seed matched/480 | ALNS-fill final/480 |
 |---|---:|---:|
 | baseline `joe_depth150_par` | 303 | **442** |
-| **vol-14 BP** `joe_depth150_bp_par` | 292 | **443** ⬅ |
-| vol-14 restart-best (random seed 2) | 301 | TBD |
+| **vol-14 BP** `joe_depth150_bp_par` | 292 | **443** ⬅ best |
+| vol-14 restart-best (random seed 2) | 301 | **436** ⬅ worst |
 
 **Even though the BP CP-arm CP-partial is 11 matches WORSE than
 baseline, the BP-seeded ALNS-fill reaches 443/480 vs baseline-seeded
@@ -178,9 +178,10 @@ is a **net positive** when correctly scored end-to-end.
 
 Bench artifacts:
 - `output/alns_e2_1778591861_442of480.json` (baseline-seeded fill)
-- `output/alns_e2_1778592162_443of480.json` (BP-seeded fill, ties our
-  best-ever non-warm-started result)
-- (restart-seeded result pending)
+- `output/alns_e2_1778592162_443of480.json` (BP-seeded fill, vol-14's
+  best end-to-end result — ties vol-12's published 443/480)
+- `output/alns_e2_1778592462_436of480.json` (restart-seeded fill,
+  strictly worse — diverse-seed intuition disconfirmed)
 
 ## Frame-first structural finding (vol-12 frames 75 k → CSP-valid ≈ 0)
 
@@ -211,24 +212,63 @@ Bench artifact: `output/v14_framefirst/latest/results.tsv`.
 
 ## Tier rating at session close
 
-- **Tier 1** (depth lift over vol-12 174): ❌ NOT achieved in any
-  vol-14 single-shot CP variant.
-- **Tier 2** (≥454 cold-start): ❌ — 443/480 reached on BP-seeded
-  ALNS-fill (vol-14's best **completed-board** result), below
-  vol-6's warm-started 454.
+- **Tier 1** (depth lift over vol-12 174 CP-only): ❌ NOT achieved
+  in any vol-14 single-shot CP variant.
+- **Tier 2** (≥454 cold-start end-to-end): ❌ — 443/480 reached on
+  BP-seeded ALNS-fill (vol-14's best **completed-board** result),
+  below vol-6's warm-started 454.
 - **Tier 3** (≥460 cold-start or structural artifact): ✅ — TWO
-  structural findings:
+  structural findings + one process correction:
   1. **The frame-first decomposition does NOT work directly on
      vol-12's Hamilton frames** — they are not globally CSP-valid
-     under any propagation level.
+     under any propagation level. Vol-12's 75 173 count is
+     necessary-not-sufficient.
   2. **CP value-order biases (edge-BP) can hurt CP partial score
-     but help downstream local-search escape** — 443 vs 442 with
-     identical 5-min CP + 5-min ALNS budget.
+     but help downstream local-search escape** — BP-seeded ALNS
+     hits 443 vs baseline-seeded 442.
+  3. **CP-partial-score metric is misleading**; honest comparison
+     must be end-to-end (CP + ALNS-fill).
 - **Tier 4** (≥469 / ≥470 community SOTA): ❌
 
-Net: **TIER 3 achieved by two complementary structural artifacts.**
-Honest framing: no new SOTA, but ruled out an entire class of
-heuristic-only attacks and a major frame-first naivety.
+Net: **TIER 3 achieved by two complementary structural artifacts
+and one methodology correction.** Honest framing: no new SOTA, but
+ruled out an entire class of heuristic-only attacks (BP-as-value-
+order in isolation) and a major frame-first naivety (Hamilton frames
+≠ CSP-valid frames), and corrected the in-pipeline measurement
+methodology.
+
+## Recommendations for vol-15
+
+1. **CP-search policy axis is exhausted on canonical E2.** Five
+   independent attempts (vol-9 Verhaard, vol-12 NS-1+depth-gate,
+   vol-14 #1 BP, vol-14 #2 restart, vol-9-10 generic LCV) all
+   plateau at depth 162-174 in 5 min. Cumulative null.
+2. **The ALNS-fill stage is the binding lift mechanism.** A 1-point
+   improvement in ALNS-final score (442 → 443) from a *worse* CP
+   seed (303 → 292) suggests the ALNS escape ladder is the actual
+   limit. Improving ALNS — better destroy operators, PT acceptance,
+   cooling, Houdayer — likely beats more CP work.
+3. **Frame-first needs a global-CSP-aware enumerator.** vol-12's
+   Hamilton frame catalog is *not* directly composable. A new
+   enumerator that runs gacolor + AC-3 during ring DFS, plus a
+   per-frame check against the 4 interior canonical hints, would
+   produce a much smaller (likely O(100)) usable-frame set worth
+   exhaustive interior sweep.
+4. **PT-from-303-CP-partial is the highest-EV vol-15 move.** Vol-6
+   hit 454 starting from a 453 seed. We have CP partials at 303
+   and an ALNS ceiling of 443. Running vol-6's full PT pipeline
+   on the 443 partial — not a CP partial — is plausibly the path
+   to ≥454 cold-start.
+
+## What shipped this session (5 commits on develop)
+
+| commit | description |
+|---|---|
+| `bafe12a` | session plan |
+| `6679045` | #1: ValueOrder::EdgeBpMarginals + load_edge_bp_marginals + tests + JOE_DEPTH150_BP{,_PAR} profiles + server registry update |
+| `2bef02a` | #2 PoC + timestamped run dirs + output cleanup |
+| `51e46c0` | metric fix (matched/480) + rescore_board bin + run_e2_framefirst bin + 500-frame survey |
+| (this) | closeout: vol-14 tier-3 finding + memory updates |
 
 ## Output-dir cleanup (2026-05-12 14:56)
 
