@@ -158,6 +158,15 @@ moves of size ≤ 5 could not**, validating the moat-depth prediction.
 Combinatorially, the 4×4 transplant changed up to 16 pieces in
 one operation — comfortably above the moat-depth-≥-5 lower bound.
 
+**HONEST CAVEAT (2026-05-12 04:20)**: tonight produced 4 boards
+with score ≥ 451 (1×452 + 3×451). Pairwise overlap analysis shows
+all 3 distinct 451+ boards share ~92-94% bucas string — i.e., they
+are all in the SAME small basin around the 452 board. The
+"breakthrough" is one 451+ basin discovery, not multiple
+independent breakthroughs. To find a structurally distinct second
+451+ basin, future work needs more structurally-diverse parents
+or wider crossover regions.
+
 
 Any algorithm that reaches 451+ from a 450 board must move ≥ 6
 pieces simultaneously OR perform a region rebuild (cell-set ≥ 6).
