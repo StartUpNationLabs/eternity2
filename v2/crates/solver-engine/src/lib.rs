@@ -340,6 +340,12 @@ impl EngineConfig {
     pub const BLACKWOOD_BASE: Self = Self {
         value_order: ValueOrder::BlackwoodHeuristic,
         scan_order: Some(ScanOrder::RowMajorBottomUp),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -366,6 +372,10 @@ impl EngineConfig {
         // change under a color mismatch), but the pruning value at
         // the depths Blackwood reaches (~80) is marginal. Better to
         // pay the cost where it earns it (full-pipeline profiles).
+        propagators: PropagatorConfig {
+            class_balance: false,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -376,16 +386,29 @@ impl EngineConfig {
 
     // Experiment A: GAColor as the strong global propagator.
     pub const BORDER_FIRST_GACOLOR: Self = Self {
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const BORDER_FIRST_GACOLOR_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment D: GAColor + AC-3.
     pub const GACOLOR_AC3: Self = Self {
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -393,23 +416,43 @@ impl EngineConfig {
     // propagation (gacolor + AC-3).
     pub const GACOLOR_AC3_LCV: Self = Self {
         value_order: ValueOrder::LeastConstraining,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_LCV_PAR: Self = Self {
         value_order: ValueOrder::LeastConstraining,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment B' — CHESS revisited with AC-3 propagation.
     pub const CHESS_GACOLOR_AC3: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -423,30 +466,51 @@ impl EngineConfig {
     pub const GACOLOR_AC3_RANDOM_PAR: Self = Self {
         value_order: ValueOrder::RandomShuffle,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment C: GAColor + symmetry breaking.
     pub const GACOLOR_SYMBREAK: Self = Self {
         break_symmetry: true,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_SYMBREAK_PAR: Self = Self {
         break_symmetry: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment B: CHESS + GAColor.
     pub const CHESS_GACOLOR: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const CHESS_GACOLOR_PAR: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -457,6 +521,11 @@ impl EngineConfig {
 
     pub const BORDER_FIRST_FULL_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            parity: true,
+            island: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -474,11 +543,23 @@ impl EngineConfig {
 
     // Vol-12: gacolor + AC-3 + NS-1 multiset equality (Hopfer 2022).
     pub const GACOLOR_AC3_NS1: Self = Self {
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_NS1_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -486,11 +567,25 @@ impl EngineConfig {
     // at depth ≥ 150. Tries to bridge our ~2k nodes/sec to McGavin's
     // ~300M/sec by skipping per-node Step-8 work during early search.
     pub const JOE_DEPTH150: Self = Self {
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const JOE_DEPTH150_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -499,12 +594,26 @@ impl EngineConfig {
     /// see `eternity2_solver_engine::load_edge_bp_marginals`.
     pub const JOE_DEPTH150_BP: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const JOE_DEPTH150_BP_PAR: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -516,6 +625,13 @@ impl EngineConfig {
         value_order: ValueOrder::EdgeBpMarginals,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         path_skeleton: Some(PathSkeleton::HintRectangle),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -523,6 +639,13 @@ impl EngineConfig {
     pub const JOE_DEPTH150_BP_REC: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
         path_skeleton: Some(PathSkeleton::HintRectangle),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -534,21 +657,44 @@ impl EngineConfig {
         value_order: ValueOrder::EdgeBpMarginals,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         path_skeleton: Some(PathSkeleton::HintRectangleLayered),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const JOE_DEPTH150_BP_REC_LAYERED: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
         path_skeleton: Some(PathSkeleton::HintRectangleLayered),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Step 8 profiles: baseline + extra propagators.
     pub const BORDER_FIRST_PARITY: Self = Self {
+        propagators: PropagatorConfig {
+            parity: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const BORDER_FIRST_FULL: Self = Self {
+        propagators: PropagatorConfig {
+            parity: true,
+            island: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -557,12 +703,22 @@ impl EngineConfig {
     /// from phase-0 SA. See `solver-verhaard` crate.
     pub const VERHAARD_PREFERRED: Self = Self {
         value_order: ValueOrder::PreferredFirst,
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const VERHAARD_PREFERRED_PAR: Self = Self {
         value_order: ValueOrder::PreferredFirst,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
         ..Self::BORDER_FIRST_LCV
     };
 }
