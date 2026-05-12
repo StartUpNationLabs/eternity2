@@ -128,7 +128,7 @@ fn count_partial_edges(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::
     let mut placed: Vec<Option<[eternity2_core::Color; 4]>> = vec![None; puzzle.cell_count() as usize];
     for pos in 0..puzzle.cell_count() {
         if let Some((pid, rot)) = board.get(pos) {
-            let piece = puzzle.pieces().iter().find(|x| x.id == pid);
+            let piece = puzzle.piece(pid);
             if let Some(piece) = piece {
                 placed[pos as usize] = Some(piece.edges.rotated(rot).as_array());
             }
