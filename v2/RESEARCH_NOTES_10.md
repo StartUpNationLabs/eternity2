@@ -379,6 +379,155 @@ can check). Non-linear extensions (kernel PCA, autoencoders) might
 surface stronger structure but the cost-benefit looks weak given how
 modest the linear result is.
 
+## Probe #4 — significant pieces (verifies a Discord claim we missed)
+
+**Provenance**. `onesmallstep` posted in Discord on 2025-01-18 and again
+on 2026-01-29: "pieces 17 and 38 are significant, as is piece 62
+internally. 17 and 38 have one unique edge pattern facing inwards, so
+you know your second ring can only have one of each of those patterns
+facing outwards. And 62 is the only internal piece that doesn't
+connect to any hint." Vol-8's corpus mining grep'd for scores and named
+techniques but missed this — it's exactly the kind of structural craft
+move vol-8's catalogue ranked as "high P(>454)" but no specific
+instance was extracted.
+
+**Direct verification on the canonical piece set**.
+Code: `scripts/v10_verify_significant_pieces.py`.
+Output: `output/v10_math/significant_pieces.{json,txt}`.
+
+| Claim | Verdict | Detail |
+|------|--------|--------|
+| Piece 17 has a unique inward edge color | **CONFIRMED** | piece 17 = `ackf`; color `k` appears as inward-facing on this piece alone among 56 edge pieces |
+| Piece 38 has a unique inward edge color | **CONFIRMED** | piece 38 = `aelf`; color `l` appears as inward-facing on this piece alone |
+| Exactly 17 and 38 have this property | **CONFIRMED** | no other edge piece carries a globally-rare-frequency-1 inward color |
+| Piece 62 connects to no hint | **CONFIRMED** | piece 62 = `ggko`; cannot adjacent-match any of {139, 181, 208, 249, 254} in any of 4 rotations × 4 adjacency types |
+| Piece 62 is the unique such interior | **CONFIRMED** | 195 of 196 interior pieces can adjacent-match at least one hint; piece 62 is the lone exception |
+
+All five claims hold **exactly** on the canonical piece data. No
+ambiguity, no statistical caveats — these are forced structural facts.
+
+**Generalization (full ranking)**.
+
+Edge pieces by rarest inward color:
+
+| inward-color frequency ≤ | # edge pieces | IDs |
+|-------------------------:|--------------:|------|
+| 1 | 2 | **17, 38** |
+| 2 | 8 | 9, 17, 22, 23, 36, 38, 39, 60 |
+| 3 | 23 | 7, 8, 9, 14, 16, 17, 18, 22, 23, 24, 25, 29, 32, 36, 37, 38, 39, 40, 41, 46, 52, 59, 60 |
+
+Interior pieces by hint-adjacency count (out of 5 hints):
+
+| # hints matched | # interior pieces |
+|---------------:|------------------:|
+| 0 | **1** (piece 62 — the singleton) |
+| 1 | 18 |
+| 2 | 37 |
+| 3 | 68 |
+| 4 | 59 |
+| 5 | 13 |
+
+The distribution is roughly bell-shaped around 3 of 5, with piece 62 as
+the lone outlier at zero.
+
+### Operational implications — concrete, immediate
+
+These are **propagator-grade exact constraints**, not heuristic
+preferences. They are usable today:
+
+**Constraint A (force from piece 17)**. In any valid solution:
+- The cell *interior-adjacent* to piece 17's placement on the border has
+  color `k` on its 17-facing edge. Color `k` is a *globally unique*
+  inward edge color, so the cell adjacent to piece 17 is the **only**
+  cell in the entire 16×16 with color `k` on that side.
+- This **single-occurrence constraint on color `k`** can be propagated:
+  whenever any interior piece-rotation with color `k` on some side gets
+  considered, its placement is restricted to exactly the cell adjacent
+  to piece 17 (and only with `k` on the correct side).
+- Symmetrically for **color `l` and piece 38**.
+
+**Constraint B (forbidden positions for piece 62)**. In any valid
+solution, piece 62 cannot be cell-adjacent to any of the 5 hint pieces
+in any rotation. With 5 hint positions in the canonical scenario, this
+**forbids up to 5 × 4 = 20 cells × 4 rotations = 80 (cell, rotation)
+placements** for piece 62 (some hint-adjacent cells may coincide if
+hints are themselves adjacent, but the canonical 5 are not).
+
+These two constraints **do not interact** — they constrain different
+pieces and different cells. Both can be added as propagators
+independently.
+
+### How much pruning is this worth? (corrected after color-frequency check)
+
+The first draft of this section over-claimed (said "color `k` appears
+only twice in the whole puzzle"). **Correction**: color `k` has **48
+total occurrences across all edges of all pieces** — it is *not* a
+globally rare color. What's rare is `k` **on an edge piece's inward
+side**: only piece 17 has this. Same for `l` on piece 38.
+
+The honest constraint:
+
+- **Constraint A1 (piece 17)**: piece 17 = `ackf` has its `a` (border)
+  at one position and the cyclically-opposite position is `k`. **Under
+  any rotation, that opposite-position character is preserved** by
+  cyclic structure — so piece 17 always faces `k` inward, no matter
+  which border (N/E/S/W) it sits on. The second-ring cell adjacent to
+  piece 17 must therefore carry `k` on the side facing 17.
+- **Constraint A2 (piece 38)**: piece 38 = `aelf`, opposite-of-`a` is
+  `l`. Always faces `l` inward.
+- **Constraint A3 (counting all edges with `a`-opposite preserved)**:
+  by the cyclic-rotation argument, **every edge piece's "inward
+  color" is fixed across rotations**. The unique-inward property of
+  17 and 38 is therefore the **unique-globally-rare-inward** property,
+  not a rotation-dependent fact.
+- **Constraint A → second-ring partitioning**: piece 17's second-ring
+  neighbor must come from the **44 interior pieces containing color
+  `k`** on at least one edge. Piece 38's must come from the **42**
+  containing `l`. Without 17 and 38 in the border, the second-ring
+  cell adjacent to them would be unconstrained — with them, it's
+  ≤44/196 = 22% of the interior pool. Modest, not dramatic.
+- **Constraint B (piece 62)**: piece 62 cannot be cell-adjacent to any
+  of the 5 hint pieces. Forbids ≤5 × 4 = 20 cells × 4 rotations = 80
+  (cell, rotation) placements pre-search.
+
+**These are real propagator-grade constraints, but more modest than my
+first draft implied**. They reduce search-space domain sizes by ~78%
+(for the second-ring cells adjacent to 17 and 38) and ~14% for piece
+62's domain. Useful — and free, structurally — but not order-of-
+magnitude search compression.
+
+### Deeper structural fact uncovered
+
+The cyclic-rotation argument above reveals a *more general* invariant:
+**every edge piece has a deterministic inward color, independent of
+rotation**. That means we can precompute the **inward-color
+multiset of the 56 edge pieces** — a length-22 vector. The second
+ring's outward-facing edge colors must form exactly this multiset.
+
+This gives a **multiset-equality propagator** at the boundary between
+the first and second rings: at any partial placement of the second
+ring, the multiset of second-ring-outward colors placed so far must be
+consistent with the inward-color multiset of the edge pieces already
+placed. **This is a strict equality constraint** — much stronger than
+the Eulerian connectivity check vol-9 found vacuous, because the
+multiset equality is not generator-defeated (it follows from piece
+identity, not piece-set statistics).
+
+### What probe #4 changes in vol-10's meta-conclusion
+
+The meta-conclusion from earlier ("static math doesn't save us") is
+**partially overturned**. There exists static *structural* information
+the puzzle does not defeat — but it lives at the **per-piece** level
+(specific edge-color rarity, specific connectivity to hints), not at
+the **per-puzzle spectrum** level. Probes #1, #2, #3 were looking at
+the wrong granularity: they aggregated across pieces; the structure is
+local-to-specific-pieces.
+
+This reframes the "operational vs mathematical" question from earlier:
+the productive math is **combinatorial structural analysis of
+individual pieces**, not spectral analysis of aggregate matrices. The
+community knew this; we re-derived it the hard way.
+
 ## Artifacts
 
 - `scripts/v10_pca_piece_cloud.py` — probe #1
@@ -386,6 +535,7 @@ modest the linear result is.
 - `scripts/v10_pairwise_interaction_pca.py` — probe #3a (kept for
   reproducing the algebraic-collapse finding)
 - `scripts/v10_save_position_color_pcs.py` — probe #3b eigenbasis
+- `scripts/v10_verify_significant_pieces.py` — probe #4 verification
 - `output/v10_math/pca_piece_cloud.{json,txt}` — probe #1 results
 - `output/v10_math/laplacian_spectrum.{json,txt}` — probe #2 results
 - `output/v10_math/pairwise_pca.{json,txt}` — probe #3a results
