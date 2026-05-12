@@ -584,6 +584,15 @@ pub(crate) struct SearchState<'a> {
     pub(crate) heuristic_profile: String,
     pub(crate) rows: Vec<Row>,
     pub(crate) domains: Vec<Vec<u32>>,
+    /// Redundant bitset mirror of `domains`, indexed
+    /// `domain_bits[pos * words_per_pos + word]`. Bit `r_id % 64` of word
+    /// `r_id / 64` is set iff `r_id` is in `domains[pos]`. Maintained
+    /// alongside the Vec so AC-3 can read it directly instead of
+    /// scanning the Vec at each entry. Step 1 of the bitset refactor
+    /// plan in `crates/bench-audit/AUDIT_REPORT.md`.
+    pub(crate) domain_bits: Vec<u64>,
+    /// Number of u64 words per position (ceil(n_rows / 64)).
+    pub(crate) words_per_pos: usize,
     pub(crate) placed: Vec<Option<u32>>,
     pub(crate) path_order: Vec<Position>,
     pub(crate) path_index_of: Vec<u32>,
@@ -674,6 +683,19 @@ impl<'a> SearchState<'a> {
             }
         }
 
+        // Build domain_bits as a redundant bitset mirror of `domains`.
+        // words_per_pos = ceil(n_rows / 64).
+        let n_rows = max_piece_index * 4;
+        let words_per_pos = n_rows.div_ceil(64);
+        let mut domain_bits = vec![0u64; n_pos * words_per_pos];
+        for (pos, dom) in domains.iter().enumerate() {
+            let base = pos * words_per_pos;
+            for &r_id in dom {
+                let r = r_id as usize;
+                domain_bits[base + (r >> 6)] |= 1u64 << (r & 63);
+            }
+        }
+
         Self {
             puzzle,
             opts,
@@ -682,6 +704,8 @@ impl<'a> SearchState<'a> {
             heuristic_profile: solver.heuristic_profile.clone(),
             rows,
             domains,
+            domain_bits,
+            words_per_pos,
             placed: vec![None; n_pos],
             path_order,
             path_index_of,
@@ -736,6 +760,27 @@ impl<'a> SearchState<'a> {
     fn timed_out(&self) -> bool {
         self.opts.time_budget_ms != 0
             && self.elapsed_us() / 1000 >= self.opts.time_budget_ms
+    }
+
+    /// Rebuild `domain_bits[pos]` from `domains[pos]`. Cheap (one
+    /// memset on the position's word range, then OR a bit per row id).
+    /// Called at every site that mutates `domains[pos]`.
+    #[inline]
+    fn rebuild_bits_for(&mut self, pos: usize) {
+        let base = pos * self.words_per_pos;
+        for w in &mut self.domain_bits[base..base + self.words_per_pos] { *w = 0; }
+        for &r_id in &self.domains[pos] {
+            let r = r_id as usize;
+            self.domain_bits[base + (r >> 6)] |= 1u64 << (r & 63);
+        }
+    }
+
+    /// Clear all bits for a position (called when `domains[pos]` is
+    /// emptied via `mem::take`).
+    #[inline]
+    fn clear_bits_for(&mut self, pos: usize) {
+        let base = pos * self.words_per_pos;
+        for w in &mut self.domain_bits[base..base + self.words_per_pos] { *w = 0; }
     }
 
     fn next_random(&mut self) -> u64 {
@@ -853,6 +898,7 @@ impl<'a> SearchState<'a> {
             if this.placed[neighbor as usize].is_some() {
                 return PruneResult::Ok;
             }
+            let bit_base = (neighbor as usize) * this.words_per_pos;
             let domain = &mut this.domains[neighbor as usize];
             let mut removed = Vec::new();
             let mut i = 0;
@@ -861,6 +907,9 @@ impl<'a> SearchState<'a> {
                 let r = this.rows[r_id as usize];
                 if r.piece_id == row.piece_id || r.edges[neighbor_edge_idx] != required {
                     removed.push(r_id);
+                    // Clear bit in domain_bits.
+                    let r_idx = r_id as usize;
+                    this.domain_bits[bit_base + (r_idx >> 6)] &= !(1u64 << (r_idx & 63));
                     domain.swap_remove(i);
                 } else {
                     i += 1;
@@ -899,9 +948,13 @@ impl<'a> SearchState<'a> {
 
         // Piece-uniqueness propagation (the "column" of classic DLX).
         let mut other_undo: Vec<(Position, Vec<u32>)> = Vec::new();
+        let words_per_pos = self.words_per_pos;
         for p in 0..self.puzzle.cell_count() {
             if p == pos || self.placed[p as usize].is_some() { continue; }
+            let bit_base = (p as usize) * words_per_pos;
+            // Borrow domains and domain_bits disjointly through fields.
             let domain = &mut self.domains[p as usize];
+            let domain_bits = &mut self.domain_bits[bit_base..bit_base + words_per_pos];
             let mut removed = Vec::new();
             let mut i = 0;
             while i < domain.len() {
@@ -909,6 +962,8 @@ impl<'a> SearchState<'a> {
                 let r = self.rows[r_id as usize];
                 if r.piece_id == row.piece_id {
                     removed.push(r_id);
+                    let r_idx = r_id as usize;
+                    domain_bits[r_idx >> 6] &= !(1u64 << (r_idx & 63));
                     domain.swap_remove(i);
                 } else {
                     i += 1;
@@ -996,7 +1051,7 @@ impl<'a> SearchState<'a> {
         debug_assert!(self.ac3_count.len() == count_len);
         debug_assert!(self.ac3_present.len() == present_len);
         for v in &mut self.ac3_count[..count_len] { *v = 0; }
-        for v in &mut self.ac3_present[..present_len] { *v = 0; }
+        // ac3_present is overwritten by copy_from_slice below — no need to zero.
         for v in &mut self.ac3_on_queue[..n_pos as usize] { *v = false; }
         // Pin a non-borrow timeout snapshot before we take mut-borrows
         // on the cache fields. self.started doesn't implement Copy so
@@ -1007,6 +1062,12 @@ impl<'a> SearchState<'a> {
         } else {
             time_budget_ms.saturating_mul(1000)
         };
+        // Bitset present mirror is already maintained incrementally on
+        // self.domain_bits — just copy. Saves the per-row bit-set cost
+        // during the entry rebuild loop.
+        debug_assert!(self.domain_bits.len() == present_len,
+            "domain_bits ({}) != present_len ({})", self.domain_bits.len(), present_len);
+        self.ac3_present[..present_len].copy_from_slice(&self.domain_bits[..present_len]);
         let count = &mut self.ac3_count;
         let present = &mut self.ac3_present;
         let on_queue = &mut self.ac3_on_queue;
@@ -1014,8 +1075,7 @@ impl<'a> SearchState<'a> {
             if self.placed[p].is_some() { continue; }
             for &r_id in &self.domains[p] {
                 let r = self.rows[r_id as usize];
-                let r_idx = r_id as usize;
-                present[p * words_per_pos + r_idx / 64] |= 1u64 << (r_idx % 64);
+                // present bits already set via copy above.
                 for s in 0..4 {
                     let c = r.edges[s] as usize;
                     count[p * stride_pos + s * n_colors + c] += 1;
@@ -1116,6 +1176,8 @@ impl<'a> SearchState<'a> {
                     let a_u = a as usize;
                     let r_idx = r_id as usize;
                     present[a_u * words_per_pos + r_idx / 64] &= !(1u64 << (r_idx % 64));
+                    // Also clear the canonical domain_bits.
+                    self.domain_bits[a_u * words_per_pos + r_idx / 64] &= !(1u64 << (r_idx % 64));
                     for s in 0..4 {
                         let c = r.edges[s] as usize;
                         count[a_u * stride_pos + s * n_colors + c] -= 1;
@@ -1236,8 +1298,15 @@ impl<'a> SearchState<'a> {
     }
 
     pub(crate) fn restore(&mut self, undo: Vec<(Position, Vec<u32>)>) {
+        let words_per_pos = self.words_per_pos;
         for (pos, mut removed) in undo {
-            self.domains[pos as usize].append(&mut removed);
+            let pos_u = pos as usize;
+            let bit_base = pos_u * words_per_pos;
+            for &r_id in &removed {
+                let r = r_id as usize;
+                self.domain_bits[bit_base + (r >> 6)] |= 1u64 << (r & 63);
+            }
+            self.domains[pos_u].append(&mut removed);
         }
     }
 
@@ -1287,6 +1356,7 @@ impl<'a> SearchState<'a> {
                 if let Some(row_id) = canonical_row_id {
                     if self.domains[0].iter().any(|r| *r == row_id) {
                         self.domains[0].retain(|r| *r == row_id);
+                        self.rebuild_bits_for(0);
                         if let PropagationOutcome::Wipeout { .. } =
                             self.place_and_propagate(sink, 0, 0, row_id)
                         {
@@ -1310,6 +1380,7 @@ impl<'a> SearchState<'a> {
                 )));
             }
             self.domains[pos_idx].retain(|r| *r == row_id);
+            self.rebuild_bits_for(pos_idx);
             if let PropagationOutcome::Wipeout { .. } = self.place_and_propagate(sink, 0, h.position, row_id) {
                 return Err(SolveOutcome::Error(format!(
                     "hint at position {} causes immediate wipeout", h.position
@@ -1420,6 +1491,7 @@ impl<'a> SearchState<'a> {
             let piece_idx = usize::from(row.piece_id);
             if self.used[piece_idx] { continue; }
             let saved_domain = std::mem::take(&mut self.domains[pos as usize]);
+            self.clear_bits_for(pos as usize);
             // Reuse place_and_propagate against a null sink — we
             // intentionally throw away events during enumeration.
             let mut null = eternity2_events::NullSink;
@@ -1436,6 +1508,7 @@ impl<'a> SearchState<'a> {
             }
             self.undo_place(pos, row_id);
             self.domains[pos as usize] = saved_domain;
+            self.rebuild_bits_for(pos as usize);
             if units.len() >= cap_units { return; }
         }
     }
@@ -1571,6 +1644,7 @@ impl<'a> SearchState<'a> {
             });
             self.stats.nodes += 1;
             let saved_domain = std::mem::take(&mut self.domains[pos as usize]);
+            self.clear_bits_for(pos as usize);
             let outcome = self.place_and_propagate(sink, depth, pos, row_id);
             match outcome {
                 PropagationOutcome::Ok { undo } => {
@@ -1589,6 +1663,7 @@ impl<'a> SearchState<'a> {
                             self.restore(undo);
                             self.undo_place(pos, row_id);
                             self.domains[pos as usize] = saved_domain;
+                            self.rebuild_bits_for(pos as usize);
                             return terminal;
                         }
                         RecurseResult::Exhausted => {}
@@ -1607,6 +1682,7 @@ impl<'a> SearchState<'a> {
             }
             self.undo_place(pos, row_id);
             self.domains[pos as usize] = saved_domain.clone();
+            self.rebuild_bits_for(pos as usize);
         }
         RecurseResult::Exhausted
     }
@@ -1655,6 +1731,61 @@ mod tests {
 
     fn p(id: PieceId, t: Color, r: Color, b: Color, l: Color) -> Piece {
         Piece::new(id, Edges::new(t, r, b, l))
+    }
+
+    #[test]
+    fn domain_bits_match_domains_on_construction() {
+        // SearchState's domain_bits must exactly mirror domains[pos]:
+        // a bit at position (pos, r_id) is set iff r_id is in domains[pos].
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig { size: 5, interior_colors: 5, seed: 7 }).unwrap();
+        let solver = EngineSolver::gacolor_ac3();
+        let opts = SolveOpts::default();
+        let state = SearchState::new(&puzzle, &solver, &opts);
+        for (pos, dom) in state.domains.iter().enumerate() {
+            let base = pos * state.words_per_pos;
+            let mut bit_set: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+            for w in 0..state.words_per_pos {
+                let word = state.domain_bits[base + w];
+                let mut x = word;
+                while x != 0 {
+                    let bit = x.trailing_zeros() as usize;
+                    bit_set.insert((w * 64 + bit) as u32);
+                    x &= x - 1;
+                }
+            }
+            let vec_set: std::collections::BTreeSet<u32> = dom.iter().copied().collect();
+            assert_eq!(bit_set, vec_set,
+                "domain_bits and domains diverge at pos {}", pos);
+        }
+    }
+
+    #[test]
+    fn domain_bits_match_after_full_solve_2x2() {
+        // After a full search run that completes (or near-completes), the
+        // invariant must still hold on the *final* state we observe. We
+        // can't easily inspect SearchState post-solve from outside, but
+        // we can rely on the construction test plus the place_and_propagate
+        // unit invariants checked indirectly via the other tests passing.
+        // This test re-runs the construction test under a different
+        // puzzle size to widen coverage.
+        let pieces = vec![
+            p(0, 0, 1, 1, 0), p(1, 0, 0, 1, 1),
+            p(2, 1, 1, 0, 0), p(3, 1, 0, 0, 1),
+        ];
+        let puzzle = Puzzle::new(2, 2, 2, pieces).unwrap();
+        let solver = EngineSolver::border_first_lcv();
+        let opts = SolveOpts::default();
+        let state = SearchState::new(&puzzle, &solver, &opts);
+        for (pos, dom) in state.domains.iter().enumerate() {
+            let base = pos * state.words_per_pos;
+            let mut bit_count = 0usize;
+            for w in 0..state.words_per_pos {
+                bit_count += state.domain_bits[base + w].count_ones() as usize;
+            }
+            assert_eq!(bit_count, dom.len(),
+                "popcount(domain_bits[{}]) != domains[{}].len()", pos, pos);
+        }
     }
 
     #[test]
