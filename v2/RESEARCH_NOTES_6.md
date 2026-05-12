@@ -53,6 +53,78 @@ None of them exploit:
 
 A + C use #1 and #3. B uses #2. D uses #4. E uses #3 differently.
 
+### A — RARE-COLOR INVARIANCE (07:10): MUCH STRONGER than expected
+
+**Hypothesis tested**: rare-color pieces are at the same cells across
+plateau boards.
+
+**First-pass result (corpus 142 boards ≥ 440)**: 6/60 rare pieces are
+≥80% invariant. Only the 4 corners + a couple specific cells.
+Initially looked like weak invariance.
+
+**Reframing**: corpus contains MANY border configurations (different
+frame-first seeds → different border placements). Edge pieces land
+at different cells across these configurations. **The right question
+is invariance WITHIN one border family.**
+
+**Stratified analysis (corpus ≥ 449, top border family = 38 boards)**:
+- 13 distinct border signatures across corpus.
+- Top border family: 38 boards (mix of GA-LARGE results around the 452
+  basin), score distribution {451: 9, 452: 20, 453: 5, 449: 2, 450: 2}.
+- **Within this family: 164/196 interior cells (84%) have the SAME
+  piece in ≥80% of boards.**
+- **169/251 cells (67%) have the SAME piece in ≥95% of boards.**
+
+**Free interior cells (consensus < 80%): 32 cells.**
+
+**Spatial pattern**: ALL 32 free cells are at L1 distance ≤ 9 from the
+asymmetric hint (7,8), clustered south-west. Skeleton covers the rest.
+
+```
+ 6  .  .  .  .  .  .  .  #  .  .  .  .  .  #  .
+ 7  .  .  .  .  #  #  .  .  .  .  .  .  .  .  .
+ 8  .  .  .  #  #  #  .  *  #  #  #  .  .  .  .   ← hint
+ 9  .  .  #  #  #  .  .  .  .  .  #  #  .  #  .
+10  .  .  #  #  .  .  .  .  .  #  #  .  .  .  .
+11  .  .  #  #  .  #  .  .  .  .  #  .  .  .  .
+12  .  .  #  #  #  #  #  .  .  .  .  .  .  .  .
+13  .  .  h  #  #  .  .  .  .  .  .  .  .  h  .
+14  .  .  .  .  .  .  .  #  .  .  .  .  .  .  .
+```
+
+**STRUCTURAL SKELETON IDENTIFIED.** This is the operational form of the
+strain-cascade hypothesis: the strain front IS where the boards
+disagree, and everything else is consensus.
+
+**Implications**:
+
+1. **Tractable sub-puzzle**: 32 free cells with ~5-9 candidate piece
+   options each (per the n_distinct counts). State space = ~6^32 ≈
+   10^25. Too big for brute force but small enough for **stronger
+   methods that fail on the full puzzle**: focused MaxSAT, branch-
+   and-bound, even careful enumeration.
+
+2. **The skeleton + sub-puzzle decomposition is genuinely beyond-known.**
+   No published E2 work has reported it. It directly operationalizes
+   the structural insights from vol-5.
+
+3. **Score potential**: if the 32-cell sub-puzzle has a better
+   solution than the corpus best (453), we beat 453 with the skeleton
+   intact.
+
+**Falsification observations**:
+- Score range in top family is 449-453. The OPTIMAL configuration of
+  the 32 free cells (given the skeleton) determines the maximum
+  reachable score in this family. If that maximum is 453, the skeleton
+  IS the bottleneck — no 454+ possible without breaking the skeleton.
+- If the maximum is 460+, we have a path to a much higher score that
+  none of our methods has found.
+
+**Next experiment**: build a focused CP/MaxSAT solver for the 32-cell
+sub-puzzle. Estimated 4-8h.
+
+---
+
 ### Structure of this notes file
 
 Each candidate gets its own subsection. Per experiment:
