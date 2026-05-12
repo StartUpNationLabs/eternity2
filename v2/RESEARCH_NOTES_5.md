@@ -453,6 +453,49 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### GA-LIGHT FINAL 03:18 — 12 crossovers, best = 452 (1 hit)
+
+**Full results table**:
+| # | Region | Parents | Polished |
+|---|---|---|---|
+| 1 | 4×4 (3,2)   | NE2-K10 449 + canonical 449 | 449 |
+| 2 | 6×6 (2,1)   | vol-4 450 + NE1-stage-2 450 | 437 |
+| 3 | 5×5 (4,2)   | NE2-K10 449 + vol-4 450     | 442 |
+| 4 | **4×4 (11,1)** | **NE2-K10 449 + vol-4 450** | **452** ✓ |
+| 5 | 4×4 (9,1)   | NE2-K10 449 + NE1-stage-2 450 | 447 |
+| 6 | 5×5 (10,10) | NE2-K10 449 + NE1-stage-1 450 | 439 |
+| 7 | 6×6 (6,4)   | NE1-stage-1 450 + vol-4 450 | 441 |
+| 8 | 4×4 (9,3)   | NE1-stage-1 450 + NE2-K10 449 | 444 |
+| 9 | 4×4 (10,2)  | NE1-stage-1 450 + vol-4 450 | 445 |
+| 10 | 4×4 (9,8)  | NE1-stage-2 450 + vol-4 450 | 446 |
+| 11 | 6×6 (9,5)  | vol-4 450 + canonical 449 basin B | 442 |
+| 12 | 6×6 (9,1)  | NE1-stage-2 450 + NE1-stage-1 450 | 439 |
+
+**Statistics**:
+- Best: 452 (1 of 12 = 8.3%)
+- Median: 444
+- Worst: 437
+
+**Pattern by region size**:
+- 4×4 regions: 444-452 median 446 (best of all sizes).
+- 5×5 regions: 439-442 median 442.
+- 6×6 regions: 437-442 median 441 (consistent regression).
+
+**Conclusion**: 4×4 is the sweet spot for crossover region size on
+this puzzle — large enough to inject diversity, small enough for
+PT to recover. 6×6 is consistently too disruptive.
+
+**The winning crossover (452)** was at TOP-RIGHT (11,1), FAR from
+the south-central defect zone. This is counter-intuitive — I'd
+expected crossovers in the strain-front region to be more useful.
+**Hypothesis**: the south-central region is so structurally tight
+that crossover there destroys more than it creates; the top-right
+region has more "play" and crossover successfully reorganizes
+abundant-color placements.
+
+**Phase A cascade now running**: 1800s PT polish on the 452 board.
+If this reaches 453+, the 452 isn't a rare local optimum.
+
 ### *** BREAKTHROUGH 03:04 — GA CROSSOVER REACHES 452/480 ***
 
 **This is the night's BIGGEST result. First 451+ score in this codebase.**
