@@ -453,6 +453,31 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE1 STAGE 2 RESULT 02:04 — 450/6/6 (third 450, all top-6 matched)
+
+**Setup**: stage 2 ran the top-8 stage-1 borders × 200s PT each.
+
+**Best**: 450/480 at seed 0xcafeff03 (= 3405709059). **Matches all
+6/6 NEW top-6 universal mismatches.** 18% bucas-overlap with vol-4's
+450 = structurally distinct.
+
+**This is the BEST 450 of the night** in terms of structural quality:
+- Vol-4 450: matches 5/6 NEW top-6 (missing (h,183)).
+- NE1 stage-1 450 (cafeff09): matches 5/6 NEW top-6.
+- **NE1 stage-2 450 (cafeff03): matches 6/6 NEW top-6.** ✓
+
+The constraint is fully resolved AND we have 30 mismatches. Both
+PT improved on the stage-1 borders: cafefeef went from 449 to 450,
+cafeff03 from 448 to 450.
+
+**Stage 3 next**: 2 candidates × 600s PT each. ETA finish ~02:24.
+The TOP candidate is cafeff03's 450/6/6, second is cafefefd's 449/6/6.
+
+**Significance**: we now have THREE 450 boards total tonight
+(vol-4 + 2 from NE1). The NE1 stage-2 450 is the structurally
+strongest. **If stage 3 PT improves any of these to 451+, that's
+the night's biggest result.**
+
 ### NE1 STAGE 1 RESULT 01:33 — second 450 board found (different basin)
 
 **Setup**: NE1 funnel stage 1 ran 30 borders × 90s PT each (top-6
