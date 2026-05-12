@@ -28,7 +28,8 @@ use eternity2_localsearch::{
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
     blackwood_schedule_calibrated_v17b, blackwood_schedule_calibrated_v17c,
-    load_edge_bp_marginals, EngineConfig, EngineSolver, PathSkeleton,
+    blackwood_schedule_calibrated_v17e, load_edge_bp_marginals, EngineConfig, EngineSolver,
+    PathSkeleton,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -195,6 +196,8 @@ fn main() {
     // Vol-17 — schedule selector: "bw469" (default, vol-15 affine remap)
     // or "calibrated_v17a" (median curve from McGavin 469 corpus board).
     let mut schedule_kind = "bw469".to_string();
+    let mut noise_amplitude: f64 = 0.15;
+    let mut schedule_seed: u64 = 0;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -203,6 +206,8 @@ fn main() {
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--arms" => arms = args.next().unwrap(),
             "--schedule" => schedule_kind = args.next().unwrap(),
+            "--noise-amplitude" => noise_amplitude = args.next().unwrap().parse().unwrap(),
+            "--schedule-seed" => schedule_seed = args.next().unwrap().parse().unwrap(),
             _ => {}
         }
     }
@@ -227,7 +232,12 @@ fn main() {
             .expect("calibrated_v17b schedule construction failed"),
         "calibrated_v17c" => blackwood_schedule_calibrated_v17c(&puzzle, &hints)
             .expect("calibrated_v17c schedule construction failed"),
-        other => panic!("unknown --schedule {other:?}; want bw469|calibrated_v17a|calibrated_v17b|calibrated_v17c"),
+        "calibrated_v17e" => {
+            eprintln!("v17e noise-injected: amplitude={noise_amplitude}, seed={schedule_seed}");
+            blackwood_schedule_calibrated_v17e(&puzzle, &hints, noise_amplitude, schedule_seed)
+                .expect("calibrated_v17e schedule construction failed")
+        }
+        other => panic!("unknown --schedule {other:?}; want bw469|calibrated_v17a|calibrated_v17b|calibrated_v17c|calibrated_v17e"),
     };
     eprintln!(
         "Blackwood schedule [{schedule_kind}]: heuristic_sides={:?}  pool_size={}  max_idx={}  breaks={:?}",

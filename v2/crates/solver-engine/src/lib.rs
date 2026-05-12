@@ -1675,6 +1675,67 @@ pub fn blackwood_schedule_calibrated_v17a_p25(
 /// This is a hypothesis — by allowing 1 break at depth 180, the
 /// engine can spread mismatch tolerance over a wider range, and may
 /// reach higher matched scores at the end.
+/// Vol-17 (idea H21, V17E revision) — NOISE-INJECTED schedule.
+/// Take the v17b base targets and apply per-control-point jitter
+/// scaled by `noise_amplitude` * seed-derived RNG. Different seeds
+/// produce different perturbed schedules. Hypothesis: each perturbed
+/// schedule guides CP into a SLIGHTLY DIFFERENT piece-region basin
+/// than v17a/b. Best-of-K perturbed-schedule runs may exceed any
+/// single-schedule ceiling without using existing-board info.
+///
+/// noise_amplitude=0.0 → returns v17b unchanged.
+/// noise_amplitude=0.2 → each target may shift by up to ±20%.
+///
+/// Targets are kept monotone-non-decreasing and within
+/// [0, heuristic_pool_size] after perturbation.
+pub fn blackwood_schedule_calibrated_v17e(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+    noise_amplitude: f64,
+    seed: u64,
+) -> Option<BlackwoodSchedule> {
+    let mut s = blackwood_schedule_calibrated_v17b(puzzle, hints)?;
+    if noise_amplitude == 0.0 { return Some(s); }
+    // Simple splitmix64-style PRNG.
+    let mut state: u64 = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut next_u64 = || -> u64 {
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    };
+    let mut next_jitter = || -> f64 {
+        let u = next_u64();
+        // map to [-1, 1)
+        (u as f64 / u64::MAX as f64) * 2.0 - 1.0
+    };
+    let pool = s.heuristic_pool_size as f64;
+    let mut perturbed: Vec<(u32, u32)> = Vec::with_capacity(s.exhaustion_targets.len());
+    let mut prev_c: u32 = 0;
+    for (d, c) in s.exhaustion_targets.iter().copied() {
+        if d == 0 {
+            perturbed.push((d, 0));
+            prev_c = 0;
+            continue;
+        }
+        let jitter = next_jitter() * noise_amplitude * (c as f64).max(1.0);
+        let mut new_c = ((c as f64) + jitter).round() as i64;
+        if new_c < prev_c as i64 { new_c = prev_c as i64; }
+        if new_c < 0 { new_c = 0; }
+        if new_c > pool as i64 { new_c = pool as i64; }
+        let new_c_u = new_c as u32;
+        perturbed.push((d, new_c_u));
+        prev_c = new_c_u;
+    }
+    s.exhaustion_targets = perturbed;
+    if let Err(e) = s.validate() {
+        eprintln!("WARNING: v17e (noise={noise_amplitude}, seed={seed}) invalid: {e}");
+        return None;
+    }
+    Some(s)
+}
+
 /// Vol-17 (idea H20, V17D revision) — calibrate the Blackwood schedule
 /// from OUR own 455-board (v17a + WorstBand) rather than the McGavin
 /// 469 community board. Hypothesis: our 455 board has a MUCH higher
