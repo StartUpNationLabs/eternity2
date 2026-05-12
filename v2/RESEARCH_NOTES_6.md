@@ -154,6 +154,48 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### FRAME-LAST proper (07:37): minimal SAT encoder DONE
+
+**User instruction**: "we have all the time we want to fix things
+properly", "break your limiting thoughts".
+
+**The proper fix**: rewrite the SAT encoder to omit variables for
+pinned cells. The vol-5 night's EvalMaxSAT failure was rooted in the
+encoder emitting 5.8M clauses + 156k vars regardless of how many
+cells were pinned. The new encoder makes pinning ACTUALLY shrink
+the problem.
+
+**Implementation** (~2h Rust):
+- `VarMap::build_with_pinned(puzzle, pinned_map)`: skips emitting
+  vars for pinned cells AND for pieces that are used in the pinned
+  set.
+- `encode_with_pinned(puzzle, hints, vmap, opts, pinned)`: skips
+  cell-EO for pinned cells, skips piece-EO for pinned pieces.
+- For edge-match clauses with one pinned endpoint: the pinned color
+  is a constant — m_{e,k} for k≠pinned forced false; the other side
+  must emit the pinned color.
+- For pinned-pinned edges: collapsed to a "TRUE" tautology that
+  contributes +1 to the MaxSAT objective.
+- Backwards-compat: `build()` / `encode()` delegate to the new
+  functions with empty pinned map.
+
+**Empirical reduction** (HISTORIC 453 board, pin outside, free
+center-k):
+| center-k | free cells | OLD vars | NEW vars | OLD clauses | NEW clauses | OLD size | NEW size |
+|---|---|---|---|---|---|---|---|
+| 8  | 64  | 156k | 27k  | 5.8M | 383k | 109 MB | 6.5 MB  |
+| 12 | 144 | 156k | 90k  | 5.8M | 2.6M | 109 MB | 46 MB   |
+
+15× reduction at center-k=8, 2.2× at center-k=12. **EvalMaxSAT now
+has a chance.**
+
+**Launched: EvalMaxSAT on inner-8 (TCT 1800s)**. PID 59281.
+Result will tell us: given the 453's outer fixed, what's the
+optimal inner-8 placement using the existing 64 inner-8 pieces?
+
+If MaxSAT finds an inner-8 with FEWER mismatches than the current
+453 has (15 in that zone), we'll improve the score.
+
 ### USER QUESTION (07:30): "allow mistakes only in outer 2 layers"
 
 **Empirical check across 86 corpus boards (score ≥449)**:
