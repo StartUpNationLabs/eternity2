@@ -909,6 +909,9 @@ pub struct AlnsConfig {
     /// scoring. Fixed in vol-14 after discovering canonical hints
     /// were being swapped out, invalidating the 443/480 score.
     pub pinned_positions: Vec<Position>,
+    /// Vol-17 — optional hard cap on iters (0 = no cap). Used by PT-on-ALNS
+    /// to do bounded inner loops between exchanges.
+    pub iter_budget: u32,
 }
 
 impl Default for AlnsConfig {
@@ -923,6 +926,7 @@ impl Default for AlnsConfig {
             repair: RepairKind::Sa,
             cp_fallback_to_sa: true,
             pinned_positions: Vec::new(),
+            iter_budget: 0,
         }
     }
 }
@@ -976,7 +980,9 @@ pub fn run_alns(
     let mut last_best_iter: u32 = 0;
     let mut total_restarts: u32 = 0;
 
-    while t_start.elapsed().as_millis() < cfg.time_budget_ms as u128 {
+    while t_start.elapsed().as_millis() < cfg.time_budget_ms as u128
+        && (cfg.iter_budget == 0 || stats.iters < cfg.iter_budget)
+    {
         stats.iters += 1;
         let op_idx = weights.select(&mut rng);
         stats.per_op_invocations[op_idx] += 1;
@@ -1316,6 +1322,7 @@ where
                 repair: base_cfg.repair,
                 cp_fallback_to_sa: base_cfg.cp_fallback_to_sa,
                 pinned_positions: base_cfg.pinned_positions.clone(),
+                iter_budget: base_cfg.iter_budget,
             };
             cfg.seed = seed;
             let mut ops = ops_factory(i);

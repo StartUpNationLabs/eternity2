@@ -153,6 +153,7 @@ fn main() {
             repair: RepairKind::Sa,
             cp_fallback_to_sa: true,
             pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
+            iter_budget: 0,
         };
         let t_alns = Instant::now();
         let (alns_board, alns_stats) = run_alns(&puzzle, &cp_board, ops.as_mut_slice(), &cfg);

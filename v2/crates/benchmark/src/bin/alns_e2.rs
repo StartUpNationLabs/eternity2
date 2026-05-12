@@ -297,6 +297,7 @@ fn main() {
         // destroy operators happily free hint cells and the score is
         // for the wrong puzzle.
         pinned_positions: file_hints.hints.iter().map(|h| h.position).collect(),
+        iter_budget: 0,
     };
     let t_alns = Instant::now();
     let (best, stats) = run_alns(&puzzle, &initial, ops.as_mut_slice(), &cfg);

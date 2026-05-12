@@ -269,6 +269,7 @@ fn main() {
         repair: RepairKind::Sa,
         cp_fallback_to_sa: true,
         pinned_positions: pinned_positions.clone(),
+        iter_budget: 0,
     };
     eprintln!("[stage3] ALNS pinning {} positions, budget={}s", pinned_positions.len(), alns_ms / 1000);
     let t_alns = Instant::now();

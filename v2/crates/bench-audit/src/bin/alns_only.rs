@@ -149,6 +149,7 @@ fn main() {
         },
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
+        iter_budget: 0,
     };
 
     let t0 = Instant::now();

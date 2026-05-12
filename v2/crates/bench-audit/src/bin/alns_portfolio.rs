@@ -83,6 +83,8 @@ fn main() {
     let mut ops_preset = "winning5".to_string();
     let mut repair_budget_ms: u64 = 1500;
     let mut temperature_ladder = false;
+    let mut t_min: f64 = 0.5;
+    let mut t_max: f64 = 2.0;
 
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -94,6 +96,8 @@ fn main() {
             "--ops" => ops_preset = args.next().unwrap(),
             "--repair-budget-ms" => repair_budget_ms = args.next().unwrap().parse().unwrap(),
             "--temperature-ladder" => temperature_ladder = true,
+            "--t-min" => t_min = args.next().unwrap().parse().unwrap(),
+            "--t-max" => t_max = args.next().unwrap().parse().unwrap(),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -123,6 +127,7 @@ fn main() {
         repair: RepairKind::Sa,
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
+        iter_budget: 0,
     };
     let preset = ops_preset.clone();
     let ops_factory = move |_chain_idx: usize| build_ops(&preset);
@@ -130,8 +135,9 @@ fn main() {
     let n_chains_clone = n_chains;
     let acceptance_for_chain = move |i: usize| -> Acceptance {
         if temperature_ladder {
-            // 4 chains: t = 0.5, 1.0, 1.5, 2.0; scaled linearly with n_chains.
-            let t = 0.5 + 1.5 * (i as f64) / (n_chains_clone.saturating_sub(1).max(1) as f64);
+            // Linear ladder from t_min to t_max.
+            let denom = (n_chains_clone.saturating_sub(1)).max(1) as f64;
+            let t = t_min + (t_max - t_min) * (i as f64) / denom;
             Acceptance::SimulatedAnnealing { t }
         } else {
             Acceptance::SimulatedAnnealing { t: 1.0 }
