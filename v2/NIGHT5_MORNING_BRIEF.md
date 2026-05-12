@@ -5,11 +5,12 @@
 
 ## TL;DR
 
-- **🎉 NEW BEST: 452/480** via GA crossover #4 (4×4 region top-right,
-  parents = NE2 K=10 449/fmm=0 + vol-4 450). **First 451+ score in
-  this codebase.** Validates the synthesis prediction that ≥6-piece
-  simultaneous moves are needed to break the plateau, and the
-  literature precedent (Niang 2011) for memetic GA on E2.
+- **🎉🎉 NEW BEST: 453/480** via GA-LARGE crossover #37 (4×4 region
+  top-LEFT (3,2), parents = canonical 449 basin B + cascade #1 451).
+  **27 mismatches.** Structurally NEW basin (76% overlap with 452).
+  Score trajectory: 449 → 450 → 452 → 453 (+4 over the night).
+- **First 452/480** via GA-light crossover #4 (4×4 top-RIGHT (11,1),
+  parents = NE2 K=10 449/fmm=0 + vol-4 450). 28 mismatches.
 - **Total 451+ boards produced tonight: 4** (1×452 + 3×451). All
   from algorithms that did not exist at session start.
 - The 9 structural findings still hold. The 452 was achieved by
