@@ -471,6 +471,56 @@ impl DestroyOp for MwpmDefectPair {
     }
 }
 
+/// Vol-17 — destroy a full horizontal band of `k_rows` adjacent rows
+/// chosen to maximize the count of mismatched edges falling inside.
+/// Motivated by the vol-17 calibrated_v17a 447 board where ALL 33
+/// mismatches concentrated in rows 0-3 forming one 51-cell connected
+/// component — bigger than any of the k≤30 destroy ops can swallow.
+/// Pair with `RepairKind::Cp` to let the engine search-fill the band
+/// against the now-pinned bottom 12 rows. Pinned positions (canonical
+/// hints) inside the band are still respected upstream.
+pub struct WorstBand {
+    /// Width of the band in rows. For 16×16 canonical E2, 4 captures
+    /// the observed cluster; values up to 6-8 are reasonable.
+    pub k_rows: u32,
+}
+impl DestroyOp for WorstBand {
+    fn name(&self) -> &str { "worst_band" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let k = self.k_rows.min(h).max(1);
+        // Per-row mismatch count = sum over interior edges incident on row y
+        // that are mismatched.
+        let mismatches = find_mismatches(puzzle, board);
+        let mut per_row = vec![0u32; h as usize];
+        for m in &mismatches {
+            let ya = m.cell_a / w;
+            let yb = m.cell_b / w;
+            per_row[ya as usize] += 1;
+            if yb != ya { per_row[yb as usize] += 1; }
+        }
+        // Window of k consecutive rows with max total mismatches.
+        let mut best = (0u32, 0u32); // (score, y_start)
+        for y0 in 0..=(h.saturating_sub(k)) {
+            let mut s = 0u32;
+            for dy in 0..k { s += per_row[(y0 + dy) as usize]; }
+            if s > best.0 { best = (s, y0); }
+        }
+        // If no mismatches at all, default to a top band so the repair
+        // explores SOMETHING (rather than empty set causing a no-op).
+        let y_start = if best.0 == 0 { 0 } else { best.1 };
+        let mut out = BTreeSet::new();
+        for dy in 0..k {
+            let y = y_start + dy;
+            for x in 0..w {
+                out.insert(y * w + x);
+            }
+        }
+        out
+    }
+}
+
 // ----- Acceptance criterion --------------------------------------------
 
 #[derive(Debug, Clone, Copy)]

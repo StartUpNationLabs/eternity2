@@ -22,7 +22,7 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Puzzle};
 use eternity2_localsearch::{
     run_alns, Acceptance, AlnsConfig, ConflictDriven, DestroyOp, MwpmDefectPair,
-    RandomRegion, RepairKind, WorstWindow,
+    RandomRegion, RepairKind, WorstBand, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -95,11 +95,15 @@ fn run_arm(
     }
 
     eprintln!("[{label}] Stage 2: ALNS-fill ({}s, hints pinned)", alns_budget_ms / 1000);
+    // Vol-17 — add WorstBand for top-row cluster (calibrated_v17a's
+    // 447 board had all 33 mismatches in rows 0-3, ONE 51-cell
+    // component too big for k≤30 ops).
     let mut ops: Vec<Box<dyn DestroyOp>> = vec![
         Box::new(RandomRegion { k: 4 }),
         Box::new(WorstWindow { k: 5 }),
         Box::new(ConflictDriven { max_size: 30 }),
         Box::new(MwpmDefectPair { max_pairs: 12 }),
+        Box::new(WorstBand { k_rows: 4 }),
     ];
     let cfg = AlnsConfig {
         time_budget_ms: alns_budget_ms,

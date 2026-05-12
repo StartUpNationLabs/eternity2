@@ -37,7 +37,7 @@ pub mod pt;
 pub mod repair;
 pub mod zobrist;
 pub use alns::{run_alns, AlnsConfig, AlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
-               RandomRegion, WorstWindow, ConflictDriven, MwpmDefectPair, RepairKind};
+               RandomRegion, WorstWindow, WorstBand, ConflictDriven, MwpmDefectPair, RepairKind};
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
                     build_edges_by_cell, fmm_full, fmm_touched};
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};

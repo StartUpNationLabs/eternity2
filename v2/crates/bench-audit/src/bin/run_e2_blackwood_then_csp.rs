@@ -47,7 +47,7 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Hint, Hints, Puzzle};
 use eternity2_localsearch::{
     run_alns, Acceptance, AlnsConfig, ConflictDriven, DestroyOp, MwpmDefectPair,
-    RandomRegion, RepairKind, WorstWindow,
+    RandomRegion, RepairKind, WorstBand, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -246,6 +246,7 @@ fn main() {
         Box::new(WorstWindow { k: 5 }),
         Box::new(ConflictDriven { max_size: 30 }),
         Box::new(MwpmDefectPair { max_pairs: 12 }),
+        Box::new(WorstBand { k_rows: 4 }),
     ];
     let pinned_positions: Vec<u32> = pinned_hints.hints.iter().map(|h| h.position).collect();
     let cfg = AlnsConfig {
