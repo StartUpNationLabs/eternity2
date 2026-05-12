@@ -306,6 +306,7 @@ dependencies = [
  "eternity2-solver-engine",
  "eternity2-solver-naive",
  "eternity2-solver-trait",
+ "eternity2-solver-verhaard",
  "rayon",
  "serde",
  "serde_json",
@@ -441,6 +442,19 @@ dependencies = [
  "eternity2-core",
  "eternity2-events",
  "serde",
+]
+
+[[package]]
+name = "eternity2-solver-verhaard"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-events",
+ "eternity2-propagators",
+ "eternity2-solver-engine",
+ "eternity2-solver-trait",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

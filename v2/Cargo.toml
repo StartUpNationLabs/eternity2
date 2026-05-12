@@ -13,6 +13,7 @@ members = [
     "crates/solver-naive",
     "crates/solver-portfolio",
     "crates/solver-trait",
+    "crates/solver-verhaard",
     "crates/wire",
     "server",
     "wasm",

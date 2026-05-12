@@ -97,6 +97,8 @@ impl SolverService for SolverServiceImpl {
                     time_budget_ms: req.time_budget_ms,
                     max_solutions: req.max_solutions,
                     solver_run_id: run_id,
+                    excluded_pieces: Vec::new(),
+                    preferred_pieces: Vec::new(),
                 },
             });
         }

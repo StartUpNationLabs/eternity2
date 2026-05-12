@@ -150,6 +150,8 @@ pub fn solve_naive(input: JsValue) -> Result<JsValue, JsValue> {
         time_budget_ms: input.time_budget_ms,
         max_solutions: 0,
         solver_run_id: 0,
+        excluded_pieces: Vec::new(),
+        preferred_pieces: Vec::new(),
     };
 
     let mut sink = BufferSink::new();

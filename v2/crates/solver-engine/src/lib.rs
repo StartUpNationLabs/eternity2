@@ -46,6 +46,12 @@ pub enum ValueOrder {
     InsertionOrder,        // try rows in domain insertion order
     LeastConstraining,     // LCV — pick value that prunes fewest neighbor rows (v2.1)
     RandomShuffle,         // shuffle the domain via the opts.seed RNG at each node
+    /// Stable partition: rows whose piece-id is in
+    /// `SolveOpts.preferred_pieces` first, then the rest. Used by
+    /// Verhaard's phase-1 to load "hard pieces" (deferred + worst
+    /// good-set members) into early placements where the search has
+    /// maximum flexibility. groups.io 105190116 (Verhaard 2008-04-11).
+    PreferredFirst,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -230,6 +236,24 @@ impl EngineConfig {
         island_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
+
+    /// Verhaard 2008 — gacolor + AC-3 + PreferredFirst value ordering.
+    /// Caller sets `SolveOpts.preferred_pieces` to (deferred ∪ worst-good)
+    /// from phase-0 SA. See `solver-verhaard` crate.
+    pub const VERHAARD_PREFERRED: Self = Self {
+        value_order: ValueOrder::PreferredFirst,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const VERHAARD_PREFERRED_PAR: Self = Self {
+        value_order: ValueOrder::PreferredFirst,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BORDER_FIRST_LCV
+    };
 }
 
 pub struct EngineSolver {
@@ -336,6 +360,20 @@ impl EngineSolver {
     #[must_use]
     pub fn chess_gacolor_ac3() -> Self {
         Self::new(EngineConfig::CHESS_GACOLOR_AC3, "engine", "chess_gacolor_ac3")
+    }
+
+    /// Verhaard-style value ordering: prefer the pieces listed in
+    /// `SolveOpts.preferred_pieces`. Combined with gacolor + AC-3.
+    /// Single-thread.
+    #[must_use]
+    pub fn verhaard_preferred() -> Self {
+        Self::new(EngineConfig::VERHAARD_PREFERRED, "engine", "verhaard_preferred")
+    }
+
+    /// Parallel variant of verhaard_preferred.
+    #[must_use]
+    pub fn verhaard_preferred_par() -> Self {
+        Self::new(EngineConfig::VERHAARD_PREFERRED_PAR, "engine", "verhaard_preferred_par")
     }
 
     #[must_use]
@@ -504,8 +542,19 @@ impl<'a> SearchState<'a> {
             Row { piece_id: 0, edges: [0; 4], rotation: 0, valid: false };
             max_piece_index * 4
         ];
+        // SolveOpts.excluded_pieces (used by Verhaard phase-1 scaffold)
+        // forbids these piece-ids from appearing in any domain. Mark
+        // all four rows of an excluded piece as invalid below.
+        let mut excluded = vec![false; max_piece_index];
+        for &pid in &opts.excluded_pieces {
+            let idx = usize::from(pid);
+            if idx < excluded.len() {
+                excluded[idx] = true;
+            }
+        }
         for piece in pieces {
             let pid = usize::from(piece.id);
+            let is_excluded = excluded.get(pid).copied().unwrap_or(false);
             let mut seen: Vec<[Color; 4]> = Vec::with_capacity(4);
             for r in 0..4u8 {
                 let rot = Rotation::from_u8(r).unwrap();
@@ -516,7 +565,7 @@ impl<'a> SearchState<'a> {
                     piece_id: piece.id,
                     edges: e,
                     rotation: r,
-                    valid: !dup,
+                    valid: !dup && !is_excluded,
                 };
             }
         }
@@ -1375,6 +1424,35 @@ impl<'a> SearchState<'a> {
                 let j = (self.next_random() as usize) % (i + 1);
                 domain_snapshot.swap(i, j);
             }
+        }
+
+        // PreferredFirst: stable partition; preferred-piece rows first.
+        // Verhaard 2008. Caller sets `opts.preferred_pieces`.
+        if matches!(self.config.value_order, ValueOrder::PreferredFirst)
+            && domain_snapshot.len() > 1
+            && !self.opts.preferred_pieces.is_empty()
+        {
+            // O(|preferred|) bitset lookup keeps this cheap per node.
+            let max_pid = self.opts.preferred_pieces.iter().map(|p| *p as usize).max().unwrap_or(0) + 1;
+            let mut pref = vec![false; max_pid];
+            for &pid in &self.opts.preferred_pieces {
+                if (pid as usize) < pref.len() { pref[pid as usize] = true; }
+            }
+            // Stable partition: preferred first, others after; preserve
+            // existing relative order within each bucket.
+            let mut a: Vec<u32> = Vec::with_capacity(domain_snapshot.len());
+            let mut b: Vec<u32> = Vec::new();
+            for &r_id in domain_snapshot.iter() {
+                let pid = self.rows[r_id as usize].piece_id as usize;
+                if pid < pref.len() && pref[pid] {
+                    a.push(r_id);
+                } else {
+                    b.push(r_id);
+                }
+            }
+            a.extend(b);
+            domain_snapshot.clear();
+            domain_snapshot.extend(a);
         }
 
         for &row_id in &domain_snapshot {

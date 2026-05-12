@@ -35,6 +35,15 @@ pub struct SolveOpts {
     pub time_budget_ms: u64,       // 0 = unlimited
     pub max_solutions: u32,        // 0 = unlimited (AllSolutions only)
     pub solver_run_id: u64,
+    /// Pieces forbidden from use in this run. Empty = use all pieces.
+    /// Set by `solver-verhaard` to defer "worst-performer" inner pieces
+    /// during phase-1 scaffolding.
+    pub excluded_pieces: Vec<eternity2_core::PieceId>,
+    /// Pieces to prefer in value-ordering (only consulted when
+    /// `EngineConfig.value_order == ValueOrder::PreferredFirst`).
+    /// Rows whose piece-id is in this list are tried before others.
+    /// Used by Verhaard's phase-1 to load "hard pieces" early.
+    pub preferred_pieces: Vec<eternity2_core::PieceId>,
 }
 
 impl Default for SolveOpts {
@@ -48,6 +57,8 @@ impl Default for SolveOpts {
             time_budget_ms: 0,
             max_solutions: 0,
             solver_run_id: 0,
+            excluded_pieces: Vec::new(),
+            preferred_pieces: Vec::new(),
         }
     }
 }

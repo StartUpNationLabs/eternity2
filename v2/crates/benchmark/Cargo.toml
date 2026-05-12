@@ -104,9 +104,18 @@ path = "src/bin/reverse_selby_e2.rs"
 name = "eulerian_border_corpus"
 path = "src/bin/eulerian_border_corpus.rs"
 
+[[bin]]
+name = "verhaard_sa"
+path = "src/bin/verhaard_sa.rs"
+
+[[bin]]
+name = "verhaard_e2"
+path = "src/bin/verhaard_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-propagators = { path = "../propagators" }
+eternity2-solver-verhaard = { path = "../solver-verhaard" }
 eternity2-edge-solver = { path = "../edge-solver" }
 eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-events = { path = "../events" }

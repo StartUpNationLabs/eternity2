@@ -1,0 +1,22 @@
+[package]
+name = "eternity2-solver-verhaard"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-events = { path = "../events" }
+eternity2-propagators = { path = "../propagators" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-trait = { path = "../solver-trait" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
