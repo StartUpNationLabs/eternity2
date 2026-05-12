@@ -150,6 +150,15 @@ remains. But the absence of any improvement in over 1.8M sampled
 
 **Inference: empirical Hamming-moat depth at 449 plateau is ≥ 5.**
 
+**EMPIRICAL CONFIRMATION (2026-05-12 03:04)**: GA-light crossover
+#4 reached **452/480** via a 4×4 region transplant (= 16-piece
+simultaneous swap) followed by 90s of PT polish. This is +2 over
+the previous best of 450. **The crossover did exactly what local
+moves of size ≤ 5 could not**, validating the moat-depth prediction.
+Combinatorially, the 4×4 transplant changed up to 16 pieces in
+one operation — comfortably above the moat-depth-≥-5 lower bound.
+
+
 Any algorithm that reaches 451+ from a 450 board must move ≥ 6
 pieces simultaneously OR perform a region rebuild (cell-set ≥ 6).
 The published SOTA pipelines (Wauters K=16 TA, Salassa 6×6=36 cell
