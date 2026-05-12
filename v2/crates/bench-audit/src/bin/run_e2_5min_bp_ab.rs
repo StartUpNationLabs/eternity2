@@ -8,116 +8,16 @@
 //
 // Run sequentially (not in parallel) so they don't fight over cores.
 
-use std::io::Write;
+// Vol-16 Cat-3 — migrated to shared `bench_audit` helpers.
+
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eternity2_bench_audit as _;
+use eternity2_bench_audit::{placed_count, score_board_dense as score_board, ProgressSink};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
-use eternity2_core::Board;
-use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_solver_engine::{load_edge_bp_marginals, EngineSolver};
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
-
-struct ProgressSink {
-    log: std::fs::File,
-    started: Instant,
-    last_log_ms: u64,
-    period_ms: u64,
-    best_depth: u32,
-    final_stats: Option<FinalStats>,
-}
-
-impl ProgressSink {
-    fn new(path: &Path, period_ms: u64) -> std::io::Result<Self> {
-        let file = std::fs::File::create(path)?;
-        Ok(Self {
-            log: file,
-            started: Instant::now(),
-            last_log_ms: 0,
-            period_ms,
-            best_depth: 0,
-            final_stats: None,
-        })
-    }
-    fn write_line(&mut self, line: &str) {
-        let _ = writeln!(self.log, "{line}");
-        let _ = self.log.flush();
-    }
-}
-
-impl EventSink for ProgressSink {
-    fn emit(&mut self, event: SolverEvent) {
-        let elapsed_ms = self.started.elapsed().as_millis() as u64;
-        if let EventBody::Backtrack { from_depth, .. } = &event.body {
-            if *from_depth > self.best_depth { self.best_depth = *from_depth; }
-        }
-        if event.depth > self.best_depth { self.best_depth = event.depth; }
-        let should_tick = elapsed_ms.saturating_sub(self.last_log_ms) >= self.period_ms;
-        if should_tick {
-            self.last_log_ms = elapsed_ms;
-            let bd = self.best_depth;
-            let line = format!(
-                "[{:>7} ms]  current_depth={:>4}  best_depth_seen={:>4}  node_id={}",
-                elapsed_ms, event.depth, bd, event.node_id
-            );
-            self.write_line(&line);
-        }
-        match event.body {
-            EventBody::Solved { final_stats, .. }
-            | EventBody::Exhausted { final_stats, .. }
-            | EventBody::TimedOut { final_stats, .. }
-            | EventBody::Cancelled { final_stats, .. } => {
-                self.final_stats = Some(final_stats);
-                self.write_line("=== terminal event received ===");
-            }
-            _ => {}
-        }
-    }
-}
-
-/// Canonical E2 score: matched internal edges out of the puzzle's
-/// total internal-edge count. Unplaced cells contribute 0 matches
-/// (their would-be neighbour edges count toward the denominator).
-/// This is `(matched, 480)` on canonical 16x16.
-fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
-    let w = puzzle.width;
-    let h = puzzle.height;
-    let total = (w - 1) * h + w * (h - 1);
-    let mut matched = 0u32;
-    for y in 0..h {
-        for x in 0..w {
-            let pos = y * w + x;
-            let Some((pid, rot)) = board.get(pos) else { continue; };
-            let p = puzzle.piece(pid).unwrap();
-            let e = p.edges.rotated(rot).as_array();
-            if x + 1 < w {
-                if let Some((npid, nrot)) = board.get(y * w + (x + 1)) {
-                    let np = puzzle.piece(npid).unwrap();
-                    let ne = np.edges.rotated(nrot).as_array();
-                    if e[1] == ne[3] { matched += 1; }
-                }
-            }
-            if y + 1 < h {
-                if let Some((npid, nrot)) = board.get((y + 1) * w + x) {
-                    let np = puzzle.piece(npid).unwrap();
-                    let ne = np.edges.rotated(nrot).as_array();
-                    if e[2] == ne[0] { matched += 1; }
-                }
-            }
-        }
-    }
-    (matched, total)
-}
-
-fn placed_count(b: &Board, puzzle: &eternity2_core::Puzzle) -> u32 {
-    let mut n = 0;
-    for pos in 0..puzzle.cell_count() {
-        if b.get(pos).is_some() { n += 1; }
-    }
-    n
-}
 
 struct ArmResult {
     label: String,

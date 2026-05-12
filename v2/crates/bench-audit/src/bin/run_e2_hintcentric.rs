@@ -15,15 +15,15 @@
 // CLI: --budget-ms <ms> (default 60_000), --seed <u64> (default 1),
 // --profile {joe,joe_bp} (default joe), --use-edge-bp (load BP marginals).
 
-use std::io::Write;
-use std::path::{Path, PathBuf};
+// Vol-16 Cat-3 — migrated to shared `bench_audit` helpers.
+
+use std::path::PathBuf;
 use std::time::Instant;
 
-use eternity2_bench_audit as _;
+use eternity2_bench_audit::{placed_count, score_board, ProgressSink};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
-use eternity2_core::{Board, PathPolicy, Position};
-use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
+use eternity2_core::{PathPolicy, Position};
 use eternity2_solver_engine::{load_edge_bp_marginals, EngineSolver};
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -49,75 +49,6 @@ fn build_hint_centric_path(hint_positions: &[Position]) -> Vec<Position> {
     all.into_iter().map(|(_, _, pos)| pos).collect()
 }
 
-struct ProgressSink {
-    log: std::fs::File,
-    started: Instant,
-    last_log_ms: u64,
-    period_ms: u64,
-    best_depth: u32,
-    final_stats: Option<FinalStats>,
-}
-impl ProgressSink {
-    fn new(p: &Path, period_ms: u64) -> std::io::Result<Self> {
-        Ok(Self { log: std::fs::File::create(p)?, started: Instant::now(),
-            last_log_ms: 0, period_ms, best_depth: 0, final_stats: None })
-    }
-}
-impl EventSink for ProgressSink {
-    fn emit(&mut self, event: SolverEvent) {
-        let elapsed_ms = self.started.elapsed().as_millis() as u64;
-        if let EventBody::Backtrack { from_depth, .. } = &event.body {
-            if *from_depth > self.best_depth { self.best_depth = *from_depth; }
-        }
-        if event.depth > self.best_depth { self.best_depth = event.depth; }
-        if elapsed_ms.saturating_sub(self.last_log_ms) >= self.period_ms {
-            self.last_log_ms = elapsed_ms;
-            let _ = writeln!(self.log,
-                "[{:>7} ms]  current_depth={:>4}  best_depth_seen={:>4}",
-                elapsed_ms, event.depth, self.best_depth);
-            let _ = self.log.flush();
-        }
-        match event.body {
-            EventBody::Solved { final_stats, .. }
-            | EventBody::Exhausted { final_stats, .. }
-            | EventBody::TimedOut { final_stats, .. }
-            | EventBody::Cancelled { final_stats, .. } => {
-                self.final_stats = Some(final_stats);
-            }
-            _ => {}
-        }
-    }
-}
-
-fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> u32 {
-    let (w, h) = (puzzle.width, puzzle.height);
-    let mut m = 0u32;
-    for y in 0..h {
-        for x in 0..w {
-            let pos = y*w+x;
-            let Some((pid, rot)) = board.get(pos) else { continue; };
-            let p = puzzle.piece(pid).unwrap();
-            let e = p.edges.rotated(rot).as_array();
-            if x+1 < w {
-                if let Some((npid, nrot)) = board.get(pos+1) {
-                    let np = puzzle.piece(npid).unwrap();
-                    if e[1] == np.edges.rotated(nrot).as_array()[3] { m += 1; }
-                }
-            }
-            if y+1 < h {
-                if let Some((npid, nrot)) = board.get(pos+w) {
-                    let np = puzzle.piece(npid).unwrap();
-                    if e[2] == np.edges.rotated(nrot).as_array()[0] { m += 1; }
-                }
-            }
-        }
-    }
-    m
-}
-
-fn placed_count(b: &Board, puzzle: &eternity2_core::Puzzle) -> u32 {
-    (0..puzzle.cell_count()).filter(|&p| b.get(p).is_some()).count() as u32
-}
 
 fn main() {
     let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
@@ -214,7 +145,7 @@ fn main() {
 
         let (placed, matched, bucas) = if let Some(b) = board.as_ref() {
             let p = placed_count(b, &puzzle);
-            let m = score_board(&puzzle, b);
+            let (m, _) = score_board(&puzzle, b);
             let bu = bucas_url(&puzzle, b, &format!("v14_hc_{label}"));
             (p, m, Some(bu))
         } else { (0, 0, None) };

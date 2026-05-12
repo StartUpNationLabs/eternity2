@@ -11,7 +11,9 @@
 // pinned color or to "any of the colors still possible on that
 // side"), AND with "rows belonging to unused pieces", check non-zero.
 
-use eternity2_core::{Color, Piece, PieceId, Puzzle, Rotation, BORDER};
+use eternity2_core::{Color, PieceId, Puzzle, Rotation, BORDER};
+#[cfg(test)]
+use eternity2_core::Piece;
 
 use crate::topology::Topology;
 
