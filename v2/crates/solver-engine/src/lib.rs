@@ -2074,19 +2074,28 @@ impl<'a> SearchState<'a> {
             let arena_start = this.undo_words_arena.len();
             this.undo_words_arena.resize(arena_start + wpp, 0);
             let mut popcount: u32 = 0;
+            // Vol-16 follow-up: slice-based inner loop for bounds elision.
+            let dom = &mut this.domain_bits[bit_base..bit_base + wpp];
+            let pmask = &this.piece_mask[pm_base..pm_base + wpp];
+            let sc_mask: &[u64] = if req_idx < n_colors {
+                &this.side_color_mask[sc_base..sc_base + wpp]
+            } else {
+                &[]
+            };
+            let arena_slot = &mut this.undo_words_arena[arena_start..arena_start + wpp];
             for w in 0..wpp {
-                let cur = this.domain_bits[bit_base + w];
+                let cur = dom[w];
                 if cur == 0 { continue; }
                 let keep = if req_idx < n_colors {
-                    this.side_color_mask[sc_base + w] & !this.piece_mask[pm_base + w]
+                    sc_mask[w] & !pmask[w]
                 } else {
-                    !this.piece_mask[pm_base + w]
+                    !pmask[w]
                 };
                 let drop = cur & !keep;
                 if drop != 0 {
-                    this.undo_words_arena[arena_start + w] = drop;
+                    arena_slot[w] = drop;
                     popcount += drop.count_ones();
-                    this.domain_bits[bit_base + w] = cur & keep;
+                    dom[w] = cur & keep;
                 }
             }
             if popcount > 0 {
@@ -2144,13 +2153,20 @@ impl<'a> SearchState<'a> {
             let arena_start = self.undo_words_arena.len();
             self.undo_words_arena.resize(arena_start + words_per_pos, 0);
             let mut popcount: u32 = 0;
+            // Vol-16 — slice-based inner loop. Split borrows so dom +
+            // pmask + arena can all be sliced for bounds-elision. The
+            // `piece_mask` slab is borrowed immutably twice (used here
+            // and at the read site), so we can hold a reference.
+            let dom = &mut self.domain_bits[bit_base..bit_base + words_per_pos];
+            let pmask = &self.piece_mask[pm_base..pm_base + words_per_pos];
+            let arena_slot = &mut self.undo_words_arena[arena_start..arena_start + words_per_pos];
             for w in 0..words_per_pos {
-                let cur = self.domain_bits[bit_base + w];
-                let drop = cur & self.piece_mask[pm_base + w];
+                let cur = dom[w];
+                let drop = cur & pmask[w];
                 if drop != 0 {
-                    self.undo_words_arena[arena_start + w] = drop;
+                    arena_slot[w] = drop;
                     popcount += drop.count_ones();
-                    self.domain_bits[bit_base + w] = cur & !self.piece_mask[pm_base + w];
+                    dom[w] = cur & !pmask[w];
                 }
             }
             if popcount > 0 {
@@ -2524,12 +2540,27 @@ impl<'a> SearchState<'a> {
         // the minimum is the first entry's words_start. Empty undo log
         // means nothing was reserved here.
         let arena_keep = undo.iter().map(|e| e.words_start as usize).min();
+        // Vol-16 Cat-2 follow-up: take a non-overlapping view of the
+        // arena (read-only borrow) and the domain_bits (mutable). For
+        // each entry, slice both to a length-wpp window so the inner
+        // OR loop is bounds-check-free (the compiler elides them when
+        // length is known from the slice). This was 19.1% self time
+        // in the post-Cat-4 profile.
+        let arena_slice = self.undo_words_arena.as_slice();
+        let dom_slice = self.domain_bits.as_mut_slice();
         for entry in &undo {
             let pos_u = entry.pos as usize;
             let bit_base = pos_u * words_per_pos;
             let ws = entry.words_start as usize;
-            for w in 0..words_per_pos {
-                self.domain_bits[bit_base + w] |= self.undo_words_arena[ws + w];
+            // SAFETY-NOTE: these indices are guaranteed in-bounds by
+            // construction (pos < cell_count, words_start was pushed
+            // into the arena with wpp zeros, so words_start + wpp <=
+            // arena.len()). We rely on slice access + iter().zip()
+            // to let the compiler elide the bounds-check.
+            let dst = &mut dom_slice[bit_base..bit_base + words_per_pos];
+            let src = &arena_slice[ws..ws + words_per_pos];
+            for (d, s) in dst.iter_mut().zip(src.iter()) {
+                *d |= *s;
             }
         }
         drop(undo);
