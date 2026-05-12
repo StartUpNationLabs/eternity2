@@ -483,3 +483,52 @@ Vol-16 path to Tier 1:
    bench-audit duplication, registry drift must all be
    resolved before vol-16 picks up new research directions.
 
+### 2026-05-12 ~20:10 — engine profile (samply, BLACKWOOD_RAW, 60s single-core)
+
+User-requested profiling pass. Profile artifact:
+`output/v15_profile/blackwood_raw_60s_sym.json.gz` (samply
+JSON, full DWARF symbolication). Aggregation script captured
+in vol-16 cleanup memory entry.
+
+#### Top hotspots by self time
+
+| %     | function                                               |
+|------:|--------------------------------------------------------|
+| 14.6% | `<usize as PartialOrd>::lt` (Rust bounds-checks)       |
+|  8.6% | `Range::spec_next` (`for w in 0..wpp` loops)           |
+|  7.9% | `SearchState::place_and_propagate_opts` (self)         |
+|  7.6% | `class_balance_check` (unexpected: meant to be off in RAW) |
+|  5.0% | `SearchState::new::{{closure}}` (init sort)            |
+|  3.7% | `Vec::as_slice`                                        |
+|  2.7% | `sort::stable::quicksort::partition_one` (value-order) |
+
+#### Top inclusive cost (cumulative through children)
+
+| %     | function                          |
+|------:|-----------------------------------|
+| 24.1% | `System::dealloc`                 |
+| 17.5% | `System::alloc_zeroed`            |
+|  9.8% | `run_extra_propagators`           |
+|  5.1% | `RawVecInner::grow_amortized`     |
+|  4.5% | `System::realloc`                 |
+
+**~42% of CPU is in the allocator.** Per-call `Vec::new()` +
+`vec![0u64; wpp]` inside `place_and_propagate_opts` and the
+4-way prune is the root cause. The pattern is well-established
+elsewhere in the engine (`ac3_count` is pre-reserved on
+SearchState); extending it to the prune path is the highest-EV
+cleanup target.
+
+**~15% of CPU is Rust bounds-checking** (`PartialOrd::lt`).
+Selective `get_unchecked` at the hottest 5–10 indexing sites in
+`place_and_propagate_opts` + `recurse` would recover this.
+
+**~7.6% of CPU is `class_balance_check`** — vol-15 left this on
+in BLACKWOOD_RAW intentionally as "cheap and break-agnostic."
+Profile says it's not cheap. Either drop from RAW or rewrite.
+
+Estimated total speedup from cleanup-only changes (no
+algorithmic shifts): **2–4× per-node**, putting single-core
+engine at 150–300k nps. Closes ~half the remaining gap to
+McGavin's 295M nps. Engineering-only effort.
+

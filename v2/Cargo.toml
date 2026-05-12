@@ -56,3 +56,4 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 debug = "line-tables-only"
+strip = "none"  # override release's strip="symbols" so samply/atos can symbolicate
