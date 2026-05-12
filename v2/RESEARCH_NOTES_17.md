@@ -229,6 +229,47 @@ Expected ETA: ~23:36.
 
 If this lifts past 454, T1 is met.
 
+## 23:36 — T1 MET: 455/480 with WorstBand + ConflictDriven{80}
+
+```
+[blackwood_raw] CP:   elapsed=300.0s depth=192 placed=197/256 matched=362/480
+[blackwood_raw] ALNS: elapsed=300.0s iters=200 placed=256/256 matched=455/480 Δ_vs_cp=+93
+```
+
+T1 ✅ **(≥454 cold-start)**. New canonical-E2 cold-start record.
+
+Mismatch geometry on the 455 board: 25 mismatches in rows 0-4, ONE
+41-cell connected component. Rows 5-15 perfect. Same topology as
+447, just smaller cluster — WorstBand chipped 10 cells off the cluster.
+
+The Δ_vs_cp improved from +85 (v17a w/o WB) to +93 (with WB) — but
+iters dropped from 600 to 200 because each iteration has a longer
+repair budget (1500ms vs 500ms). So per-iter lift went from 0.142
+to 0.465 (3.3× more effective per iteration).
+
+### User redirected at 23:30: "stop replicating McGavin, INNOVATE"
+
+Pivot: instead of chasing McGavin's exact algorithm parameters,
+focus on making OUR solver fundamentally better.
+
+Shipped innovations since user redirect:
+- `ComponentDestroy` — frees the entire connected mismatch component
+  via BFS, no fixed size cap (novel — I don't see this in E2 ALNS literature).
+- `ComponentPlusHaloDestroy` — adds 1-cell halo so neighbouring edge-
+  pieces are also re-rotatable.
+- `WorstRow` — 16-cell scalpel for single-row destruction.
+- `BoardZobrist` module (vol-17 idea D) — O(1) board fingerprint
+  for PT tabu detection (data structures only; not integrated yet).
+
+### 23:36 — next experiment: v17a + ALL 10 ops + repair_budget 1500ms
+
+Launched (pid 86122). 10 ops: RandomRegion, WorstWindow, ConflictDriven
+{30,80}, MwpmDefectPair, WorstBand{4,6}, ComponentDestroy,
+ComponentPlusHaloDestroy, WorstRow. AdaptiveWeights picks among them.
+
+Expected: lift from 455 to ≥460 if ComponentDestroy can find the
+41-cell whole-cluster and CP-repair it. Plausible 459-465.
+
 ### Planned next steps
 
 1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
