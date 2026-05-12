@@ -1675,6 +1675,74 @@ pub fn blackwood_schedule_calibrated_v17a_p25(
 /// This is a hypothesis — by allowing 1 break at depth 180, the
 /// engine can spread mismatch tolerance over a wider range, and may
 /// reach higher matched scores at the end.
+/// Vol-17 (idea H20, V17D revision) — calibrate the Blackwood schedule
+/// from OUR own 455-board (v17a + WorstBand) rather than the McGavin
+/// 469 community board. Hypothesis: our 455 board has a MUCH higher
+/// heuristic-color trajectory than McGavin's (e.g., 63 at depth 80
+/// vs McGavin's 32). Using OUR curve as the schedule demands more
+/// heuristic placement early, which may force the CP search into a
+/// DIFFERENT piece-region assignment than v17a/v17b.
+///
+/// If the CP search reaches the wall at a similar depth (~192), the
+/// ALNS ceiling might differ.
+///
+/// Trade-off: stricter demands → smaller feasible search space → CP
+/// may fail earlier (UNSAT or low depth wall). But the demand levels
+/// were ACHIEVED by our 455 board, so by construction this schedule
+/// admits it.
+pub fn blackwood_schedule_calibrated_v17d(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Option<BlackwoodSchedule> {
+    let colors = compute_heuristic_sides(puzzle, hints);
+    if colors.len() < 3 { return None; }
+    let pool_size = count_color_occurrences(puzzle, &colors);
+    let n_pos = puzzle.cell_count();
+    let last_idx = n_pos.saturating_sub(1);
+
+    // From /tmp/calibrate_from_our_board.py on our 455 board, with 1-edge
+    // floor margin and monotone-non-decreasing fixup.
+    let mut targets: Vec<(u32, u32)> = vec![
+        (0,   0),
+        (16,  5),
+        (32,  22),
+        (48,  34),
+        (64,  50),
+        (80,  62),
+        (96,  72),
+        (112, 84),
+        (128, 94),
+        (144, 105),
+        (160, 114),
+        (176, 121),
+        (192, 122),
+        (208, 129),
+        (224, 140),
+        (240, 149),
+    ];
+    if last_idx > 240 {
+        targets.push((last_idx, pool_size.min(149)));
+    }
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| ((b as u64 * n_pos as u64) / 256u64).min(n_pos.saturating_sub(1) as u64) as u32)
+        .collect();
+    let target_max = targets.last().map(|&(d, _)| d).unwrap_or(n_pos - 1);
+    let s = BlackwoodSchedule {
+        heuristic_sides: colors,
+        exhaustion_targets: targets,
+        heuristic_pool_size: pool_size,
+        max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
+    };
+    if let Err(e) = s.validate() {
+        eprintln!("WARNING: blackwood_schedule_calibrated_v17d invalid: {e}");
+        return None;
+    }
+    Some(s)
+}
+
 pub fn blackwood_schedule_calibrated_v17c(
     puzzle: &Puzzle,
     hints: &eternity2_core::Hints,
