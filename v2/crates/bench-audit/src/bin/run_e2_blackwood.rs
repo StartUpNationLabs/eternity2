@@ -25,8 +25,8 @@ use eternity2_localsearch::{
     RandomRegion, RepairKind, WorstWindow,
 };
 use eternity2_solver_engine::{
-    blackwood_schedule_469, load_edge_bp_marginals, EngineConfig, EngineSolver,
-    PathSkeleton,
+    blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
+    load_edge_bp_marginals, EngineConfig, EngineSolver, PathSkeleton,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -146,6 +146,9 @@ fn main() {
     let mut alns_budget: u64 = 300_000;
     let mut seed: u64 = 1;
     let mut arms = "both".to_string();
+    // Vol-17 — schedule selector: "bw469" (default, vol-15 affine remap)
+    // or "calibrated_v17a" (median curve from McGavin 469 corpus board).
+    let mut schedule_kind = "bw469".to_string();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -153,6 +156,7 @@ fn main() {
             "--alns-budget-ms" => alns_budget = args.next().unwrap().parse().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--arms" => arms = args.next().unwrap(),
+            "--schedule" => schedule_kind = args.next().unwrap(),
             _ => {}
         }
     }
@@ -168,15 +172,21 @@ fn main() {
     let edge_bp = load_edge_bp_marginals(&bp_path).ok();
 
     // Build Blackwood schedule.
-    let schedule = blackwood_schedule_469(&puzzle, &hints)
-        .expect("compute_heuristic_sides returned < 3 colors on canonical E2");
+    let schedule = match schedule_kind.as_str() {
+        "bw469" => blackwood_schedule_469(&puzzle, &hints)
+            .expect("compute_heuristic_sides returned < 3 colors on canonical E2"),
+        "calibrated_v17a" | "calibrated" => blackwood_schedule_calibrated_v17a(&puzzle, &hints)
+            .expect("calibrated_v17a schedule construction failed"),
+        other => panic!("unknown --schedule {other:?}; want bw469|calibrated_v17a"),
+    };
     eprintln!(
-        "Blackwood schedule: heuristic_sides={:?}  pool_size={}  max_idx={}  breaks={:?}",
+        "Blackwood schedule [{schedule_kind}]: heuristic_sides={:?}  pool_size={}  max_idx={}  breaks={:?}",
         schedule.heuristic_sides,
         schedule.heuristic_pool_size,
         schedule.max_heuristic_index,
         schedule.break_indexes_allowed
     );
+    eprintln!("  exhaustion_targets: {:?}", schedule.exhaustion_targets);
     let schedule_arc = Arc::new(schedule);
 
     let mut results: Vec<(String, u32, u32, u32)> = Vec::new();

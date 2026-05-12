@@ -1581,6 +1581,89 @@ pub fn blackwood_schedule_469(
     Some(s)
 }
 
+/// Vol-17 (idea A) — Blackwood schedule **calibrated empirically** from
+/// the McGavin 469 community board on canonical Eternity2. Each control
+/// point `(depth, count)` is the cumulative count of heuristic-color
+/// piece-edges placed in cells 0..depth under bottom-up row-major scan
+/// order, computed by `calibrate_blackwood`. N=1 corpus board on
+/// canonical E2 (only one ≥469 board exists), so this is the empirical
+/// truth from THE actual community solve rather than a transferred
+/// curve from Blackwood's different piece set.
+///
+/// Comparison to `blackwood_schedule_469` (affine-remapped Blackwood):
+/// at depth 80 our vol-15 schedule demanded ~60 heuristic edges placed;
+/// the actual McGavin 469 board has 32 at depth 80. The vol-15 schedule
+/// was OVER-DEMANDING by ~2× and pruned the search prematurely. This
+/// calibrated schedule should not have the same cliff failure.
+///
+/// `heuristic_sides` and `heuristic_pool_size` are recomputed at call
+/// time so the schedule works on any puzzle with the same scan-order
+/// structure (5-hint canonical E2 expected; falls back gracefully on
+/// other shapes).
+pub fn blackwood_schedule_calibrated_v17a(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Option<BlackwoodSchedule> {
+    let colors = compute_heuristic_sides(puzzle, hints);
+    if colors.len() < 3 { return None; }
+    let pool_size = count_color_occurrences(puzzle, &colors);
+    let n_pos = puzzle.cell_count();
+
+    // From output/v17_calibration.json (run on McGavin 469, 2026-05-12).
+    // Use the median curve directly. Last point clamped to n_pos-1.
+    let last_idx = n_pos.saturating_sub(1);
+    let targets: Vec<(u32, u32)> = vec![
+        (0,        0),
+        (60,       21),
+        (80,       32),
+        (100,      41),
+        (120,      48),
+        (140,      58),
+        (160,      82),
+        (200,      112),
+        (last_idx, pool_size.min(150)),
+    ];
+
+    // Use the same proportional break schedule as vol-15 — empirical
+    // mismatch calibration is a future task (would need a 469 board
+    // with the break locations annotated).
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| {
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
+            scaled.min(n_pos.saturating_sub(1))
+        })
+        .collect();
+
+    let target_max = targets.last().map(|&(d, _)| d).unwrap_or(n_pos - 1);
+    let s = BlackwoodSchedule {
+        heuristic_sides: colors,
+        exhaustion_targets: targets,
+        heuristic_pool_size: pool_size,
+        max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
+    };
+    if let Err(e) = s.validate() {
+        eprintln!("WARNING: blackwood_schedule_calibrated_v17a produced invalid schedule: {e}");
+        return None;
+    }
+    Some(s)
+}
+
+/// Vol-17 (idea A) — same calibration data as
+/// `blackwood_schedule_calibrated_v17a` but at the 25th-percentile
+/// (more permissive — demands fewer heuristic edges at each depth).
+/// With N=1 corpus board this collapses to the same curve. Kept as
+/// a stable name so additional corpus boards can be folded in later.
+pub fn blackwood_schedule_calibrated_v17a_p25(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Option<BlackwoodSchedule> {
+    // With N=1 the p25 IS the median. Reuse.
+    blackwood_schedule_calibrated_v17a(puzzle, hints)
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Row {
     pub(crate) piece_id: PieceId,
