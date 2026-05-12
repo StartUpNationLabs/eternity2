@@ -27,8 +27,8 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
-    ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy,
-    MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
+    BottomBandDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
+    HingeDestroy, MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
 };
 
 fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
@@ -55,6 +55,19 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
             Box::new(ConflictDriven { max_size: 80 }),
             Box::new(MwpmDefectPair { max_pairs: 12 }),
             Box::new(WorstBand { k_rows: 4 }),
+        ],
+        "diverse" => vec![
+            // Vol-17 — winning5 + BottomBandDestroy to inject diversity in
+            // the perfect zone. Tests H15: forcing bottom-row disturbance
+            // breaks past 455 local optimum.
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(BottomBandDestroy { k_rows: 3, first_row: 8 }),
+            Box::new(BottomBandDestroy { k_rows: 4, first_row: 8 }),
         ],
         "full" => vec![
             Box::new(RandomRegion { k: 4 }),

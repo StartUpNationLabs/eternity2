@@ -670,6 +670,46 @@ impl DestroyOp for ComponentPlusHaloDestroy {
     }
 }
 
+/// Vol-17 NOVEL — destroy a RANDOM band of k_rows rows from the
+/// bottom half of the board (rows 8-15 by default on 16×16). Unlike
+/// WorstBand which targets mismatch density (always rows 0-4 on
+/// canonical-E2 calibrated_v17a boards), this op DELIBERATELY
+/// disturbs the "perfect" zone to inject diversity.
+///
+/// Why: vol-17 empirical finding (E6/E7) — pinning the bottom 12 rows
+/// makes the top cluster provably-unfillable under gacolor_ac3. ALNS
+/// stuck at 455 because it never modifies bottom rows (no mismatches
+/// there to anchor destroy ops). Forcing bottom destruction is the
+/// only way to find a DIFFERENT bottom configuration that admits a
+/// cleaner top cluster.
+pub struct BottomBandDestroy {
+    pub k_rows: u32,
+    /// First row to consider (rows < first_row are excluded).
+    /// Use 8 for "bottom half" of a 16-row board; 12 for "very bottom".
+    pub first_row: u32,
+}
+
+impl DestroyOp for BottomBandDestroy {
+    fn name(&self) -> &str { "bottom_band" }
+    fn destroy(&mut self, puzzle: &Puzzle, _board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let k = self.k_rows.min(h).max(1);
+        let max_first = h.saturating_sub(k);
+        let lo = self.first_row.min(max_first);
+        let span = (max_first - lo) + 1;
+        let y_start = lo + rng.range(span);
+        let mut out = BTreeSet::new();
+        for dy in 0..k {
+            let y = y_start + dy;
+            for x in 0..w {
+                out.insert(y * w + x);
+            }
+        }
+        out
+    }
+}
+
 /// Vol-17 NOVEL — destroy the "hinge cells" of the mismatch component:
 /// the articulation points (cut vertices) of the cell graph induced by
 /// the mismatch component. Removing an articulation point disconnects
