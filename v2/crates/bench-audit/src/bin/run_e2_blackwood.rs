@@ -21,8 +21,9 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Puzzle};
 use eternity2_localsearch::{
-    run_alns, Acceptance, AlnsConfig, ConflictDriven, DestroyOp, MwpmDefectPair,
-    RandomRegion, RepairKind, WorstBand, WorstWindow,
+    run_alns, Acceptance, AlnsConfig, ComponentDestroy, ComponentPlusHaloDestroy,
+    ConflictDriven, DestroyOp, MwpmDefectPair, RandomRegion, RepairKind, WorstBand,
+    WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -106,6 +107,8 @@ fn run_arm(
         Box::new(MwpmDefectPair { max_pairs: 12 }),
         Box::new(WorstBand { k_rows: 4 }),
         Box::new(WorstBand { k_rows: 6 }),  // vol-17 — wider band
+        Box::new(ComponentDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
+        Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
     ];
     let cfg = AlnsConfig {
         time_budget_ms: alns_budget_ms,

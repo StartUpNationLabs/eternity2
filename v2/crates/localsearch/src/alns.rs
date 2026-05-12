@@ -521,6 +521,117 @@ impl DestroyOp for WorstBand {
     }
 }
 
+/// Vol-17 NOVEL — destroy the ENTIRE connected component of mismatched
+/// cells, no matter how big. Adjacent (4-neighbour) cells that both
+/// touch at least one mismatch are part of the same component.
+///
+/// Differs from `ConflictDriven { max_size }`: that one BFS-grows from
+/// a random mismatch with a fixed size cap, so it can miss the larger
+/// component or stop short of bridges. ComponentDestroy explicitly
+/// computes the connected-component closure and frees ALL of it.
+///
+/// For boards with one big component (vol-17 calibrated_v17a 447:
+/// 51 cells in one component) this exactly matches the cluster size,
+/// which neither ConflictDriven{30} nor ConflictDriven{80} can do —
+/// 30 misses cells and 80 over-includes harmless cells.
+///
+/// Cost: O(W*H) BFS per call. Negligible vs CP-repair budget.
+pub struct ComponentDestroy {
+    /// Skip if component size > this. ALNS can't usefully repair a
+    /// 200-cell free region in 1.5s; bail out and let other ops try.
+    /// Set to a high value (e.g. n_cells) to never bail.
+    pub max_size: u32,
+    /// Lower bound on component size to bother destroying. A
+    /// 2-cell component is just one mismatched edge — RandomRegion
+    /// handles that better. Default 6.
+    pub min_size: u32,
+}
+
+impl DestroyOp for ComponentDestroy {
+    fn name(&self) -> &str { "component_destroy" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        if mismatches.is_empty() {
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+        // Build set of cells that touch a mismatched edge.
+        let mut mismatch_cells: std::collections::BTreeSet<Position> = std::collections::BTreeSet::new();
+        for m in &mismatches {
+            mismatch_cells.insert(m.cell_a);
+            mismatch_cells.insert(m.cell_b);
+        }
+        // BFS components.
+        let mut visited: std::collections::BTreeSet<Position> = std::collections::BTreeSet::new();
+        let mut components: Vec<Vec<Position>> = Vec::new();
+        for &start in &mismatch_cells {
+            if visited.contains(&start) { continue; }
+            let mut comp = Vec::new();
+            let mut queue: VecDeque<Position> = VecDeque::new();
+            queue.push_back(start);
+            visited.insert(start);
+            while let Some(p) = queue.pop_front() {
+                comp.push(p);
+                let x = p % w; let y = p / w;
+                let mut nbrs: Vec<Position> = Vec::new();
+                if x + 1 < w { nbrs.push(p + 1); }
+                if x > 0 { nbrs.push(p - 1); }
+                if y + 1 < h { nbrs.push(p + w); }
+                if y > 0 { nbrs.push(p - w); }
+                for n in nbrs {
+                    if mismatch_cells.contains(&n) && !visited.contains(&n) {
+                        visited.insert(n);
+                        queue.push_back(n);
+                    }
+                }
+            }
+            components.push(comp);
+        }
+        // Select the largest component that fits within [min_size, max_size].
+        components.sort_by_key(|c| std::cmp::Reverse(c.len()));
+        for comp in &components {
+            let n = comp.len() as u32;
+            if n >= self.min_size && n <= self.max_size {
+                return comp.iter().copied().collect();
+            }
+        }
+        // No suitable component: fall back to ConflictDriven.
+        ConflictDriven { max_size: 30 }.destroy(puzzle, board, rng)
+    }
+}
+
+/// Vol-17 NOVEL — destroy a connected component of mismatched cells
+/// AND a 1-cell border around it, so the CP-repair has neighbouring
+/// free cells to rotate into matching positions. Useful when the
+/// component is fully surrounded by matched cells whose edge-pieces
+/// are themselves involved (so re-rotating those edges may help).
+pub struct ComponentPlusHaloDestroy {
+    pub max_size: u32,
+    pub min_size: u32,
+}
+
+impl DestroyOp for ComponentPlusHaloDestroy {
+    fn name(&self) -> &str { "component_plus_halo" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        // Reuse ComponentDestroy.
+        let core = ComponentDestroy { max_size: self.max_size, min_size: self.min_size }
+            .destroy(puzzle, board, rng);
+        if core.is_empty() { return core; }
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mut out = core.clone();
+        for &p in &core {
+            let x = p % w; let y = p / w;
+            if x + 1 < w { out.insert(p + 1); }
+            if x > 0 { out.insert(p - 1); }
+            if y + 1 < h { out.insert(p + w); }
+            if y > 0 { out.insert(p - w); }
+        }
+        out
+    }
+}
+
 // ----- Acceptance criterion --------------------------------------------
 
 #[derive(Debug, Clone, Copy)]
