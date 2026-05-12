@@ -21,7 +21,7 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
-    piece_swap_hillclimb, polish_rotations, run_alns_pt, ComponentDestroy,
+    piece_swap_hillclimb, polish_rotations, run_alns_pt_multi_init, ComponentDestroy,
     ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair,
     PtAlnsConfig, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
 };
@@ -79,6 +79,7 @@ fn load_cp_board(path: &std::path::Path) -> Board {
 
 fn main() {
     let mut cp_board_path = PathBuf::new();
+    let mut cp_boards_paths: Vec<PathBuf> = Vec::new();
     let mut n_chains: usize = 4;
     let mut t_min: f64 = 0.5;
     let mut t_max: f64 = 2.0;
@@ -94,6 +95,10 @@ fn main() {
     while let Some(a) = args.next() {
         match a.as_str() {
             "--cp-board" => cp_board_path = PathBuf::from(args.next().unwrap()),
+            "--cp-boards" => {
+                let v = args.next().unwrap();
+                cp_boards_paths = v.split(',').map(PathBuf::from).collect();
+            }
             "--n-chains" => n_chains = args.next().unwrap().parse().unwrap(),
             "--t-min" => t_min = args.next().unwrap().parse().unwrap(),
             "--t-max" => t_max = args.next().unwrap().parse().unwrap(),
@@ -107,17 +112,31 @@ fn main() {
             other => panic!("unknown arg {other}"),
         }
     }
-    if cp_board_path.as_os_str().is_empty() {
-        eprintln!("--cp-board required");
+    if cp_board_path.as_os_str().is_empty() && cp_boards_paths.is_empty() {
+        eprintln!("--cp-board or --cp-boards required");
         std::process::exit(1);
     }
     let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
-    let cp_board = load_cp_board(&cp_board_path);
-    let (cp_m, _) = score_board(&puzzle, &cp_board);
+
+    // Multi-init mode: load N different CP boards (one per chain).
+    let initials: Vec<Board> = if !cp_boards_paths.is_empty() {
+        if cp_boards_paths.len() != n_chains {
+            eprintln!("--cp-boards must have exactly n_chains entries; got {} for n_chains={}",
+                cp_boards_paths.len(), n_chains);
+            std::process::exit(1);
+        }
+        cp_boards_paths.iter().map(|p| load_cp_board(p)).collect()
+    } else {
+        // Single board, replicated across chains.
+        let b = load_cp_board(&cp_board_path);
+        vec![b; n_chains]
+    };
+
+    let cp_scores: Vec<u32> = initials.iter().map(|b| score_board(&puzzle, b).0).collect();
     eprintln!(
-        "loaded CP board: {} placed, {}/480 matched",
-        placed_count(&cp_board, &puzzle), cp_m
+        "loaded {} CP boards: scores={:?}",
+        initials.len(), cp_scores
     );
     eprintln!(
         "PT-ALNS config: n_chains={n_chains} t=[{t_min},{t_max}] geometric={} inner_iters={inner_iters} time_budget_ms={time_budget_ms} ops={ops_preset} repair_budget_ms={repair_budget_ms} seed={seed}",
@@ -143,7 +162,7 @@ fn main() {
     let ops_factory = move |_chain_idx: usize| build_ops(&preset);
 
     let t0 = Instant::now();
-    let (best, pt_stats) = run_alns_pt(&puzzle, &cp_board, ops_factory, &cfg);
+    let (best, pt_stats) = run_alns_pt_multi_init(&puzzle, &initials, ops_factory, &cfg);
     let elapsed = t0.elapsed();
 
     let pinned_set: std::collections::BTreeSet<u32> = hints.hints.iter().map(|h| h.position).collect();
