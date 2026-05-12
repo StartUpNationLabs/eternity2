@@ -602,3 +602,65 @@ Plan for next experiments (once E4 finishes):
 4. **E8**: alns_only --lex --cp-board seed1 --alns-budget-ms 300000
    vs same without --lex (paired t-test). Clean A/B for lex feature.
 
+## 00:33 — E4 result + EARLY-CONVERGENCE finding
+
+```
+ALNS: elapsed=600.1s iters=400 placed=256/256 matched=456/480 polish_rot=+0 polish_swap=+0
+best_score_history: 10 entries — all in iter 0..33; iter 34..400 found NO new best.
+```
+
+**E4 = 456 (10 min)** vs E2 single chain = 455 (5 min). +1 only.
+
+**CRITICAL**: best_score_history shows all 10 new-bests in iter 0-33.
+Iters 34 to 400 (367 iters = 92% of run) found ZERO improvements.
+**ALNS converges to its ceiling in <1 minute.**
+
+H10 (more iters helps) REFUTED. The 5-min budget is way more than
+enough — we're wasting 90% on iso-score wandering.
+
+This validates the user's intuition that multi-CP-partial diversity
+is the right next move. Single-seed-single-CP-partial converges in
+<60 seconds; we need DIFFERENT STARTING BOARDS to break out.
+
+## 00:34 — Launched gen_cp_partials.sh (15 min)
+
+Generates Blackwood CP partials for seeds 2, 3, 4 (each 5 min CP,
+sequential). Output: `output/v17_exp/canonical_v17a_cp_seed{2,3,4}.json`.
+
+After completion, E6 launches: PT-ALNS with 4 different CP-partial
+starting boards.
+
+## Hypothesis tracker (after E4)
+
+| ID | Hypothesis                                              | Evidence                  | Verdict       |
+|----|---------------------------------------------------------|---------------------------|---------------|
+| H1 | calibrated_v17a > vol-15 bw469                          | depth 192 vs ~80          | CONFIRMED     |
+| H2 | CP walls at 193 are structural                          | CP 362 → ALNS 447+        | CONFIRMED     |
+| H3 | Mismatch cluster rows 0-4 is structural                 | 4/4 boards                | CONFIRMED     |
+| H4 | Big-region destroy ops (WB, CD80) beat small            | 455 vs 447, +8            | CONFIRMED     |
+| H5 | CP-primary > SA-primary                                 | 447 (CP) vs 455 (SA), -8  | REFUTED       |
+| H6 | More ops (11 vs 5) helps                                | 447 (11), 454 (10), 455 (5) | REFUTED   |
+| H7 | Polish lifts beyond ALNS                                | rot=+0, swap=+0 on 4 boards | REFUTED |
+| H8 | Parallel chains > single chain                          | 456 vs 455, +1            | WEAKLY CONFIRMED |
+| H9 | Hotter t (1.0-5.5) > cooler (0.5-2.0)                  | E2 = E3 = 456 IDENTICAL   | REFUTED       |
+| H10 | More iters (10 min) > 5 min                            | 456 (10min) vs 455 (5min); plateau by iter 33 | WEAKLY REFUTED |
+| H11 | Multi-CP-partial diversity > single-CP-partial         | E6 pending (15 min CP gen) | PENDING       |
+| H12 | Lex-isoscore tiebreak helps                            | E8 pending                | PENDING       |
+| H13 | Short runs × many seeds > long single run              | E5 running                | PENDING       |
+
+## 00:35 — User pivot: shorter runs × more seeds
+
+User observation: both CP and ALNS plateau early in their budgets,
+so re-allocating from budget-per-run → seed-variance gives more
+diversity per unit time. Confirmed empirically:
+- CP: best_depth=192 reached ~90s, no improvement for next 210s.
+- ALNS: new bests stop at iter 33 (~30s), no improvement for 9.5 min.
+
+Launched E5: 8 seeds × {90s CP + 90s ALNS} = ~24 min sequential.
+Tests H13. Each seed produces a different Blackwood CP partial AND
+a different ALNS trajectory. Best-of-8 expected: 458-462 if seed
+variance is in the ±3 range.
+
+This is structurally equivalent to multi-CP-partial diversity (the
+plan we were going to do via PT-multi-init) but cheaper per partial.
+
