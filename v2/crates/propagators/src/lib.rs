@@ -455,6 +455,192 @@ pub fn island_check(ctx: &PropagatorContext<'_>) -> PropagatorResult {
     PropagatorResult::Ok
 }
 
+// =============================================================================
+// multiset_equality (NS-1) — Al Hopfer 2022 + vol-11 quantitative measurement.
+//
+// Statement: in any full solution, the multiset A of inward-facing colors
+// across the 56 edge-class border cells equals the multiset B of border-
+// facing colors across the 56 14×14-perimeter interior cells. Each interior-
+// to-border interface edge contributes the same color to both multisets,
+// so equality is a *necessary condition*.
+//
+// Vol-11 verified A=B exactly on all 4 known 480 boards; canonical-E2
+// near-solutions (score 448–470) had deficit Δ ∈ {0, 1, 2, 4}. The
+// invariant is loose (most unmatched edges on a 469 are interior-interior,
+// not border-interior), but it cleanly eliminates a class of unsolvable
+// near-final boards.
+//
+// Partial-placement form. Let:
+//   committed_A[c] = c on inward-facing sides of placed edge-class cells
+//   committed_B[c] = c on border-facing sides of placed 14×14-perimeter cells
+//   A_supply_max[c] = upper bound on additional c that could land in A
+//                    via unplaced edge pieces
+//   B_supply_max[c] = upper bound on additional c that could land in B
+//                    via unplaced interior pieces on perimeter cells
+//
+// A full solution exists only if for every non-BORDER color c:
+//   committed_A[c] - committed_B[c] ≤ B_supply_max[c]
+//   committed_B[c] - committed_A[c] ≤ A_supply_max[c]
+//
+// Otherwise the multisets can't be balanced and we wipeout.
+//
+// Loose bounds (v1): A_supply_max[c] = count of c across all 4 edges of
+// each unplaced edge piece (since rotation will fix exactly one of those
+// 4 edges as inward; the loose bound trusts the worst-case orientation).
+// Similarly for interior pieces on the 14×14 perimeter.
+//
+// Cost: O(cells + remaining_pieces · 4 + color_count). Run after gacolor.
+// =============================================================================
+
+// Whether a cell is on the 14×14 perimeter — the innermost ring of
+// border-adjacent interior cells. For a W×H puzzle, that's cells with
+// (x ∈ {1, W-2} or y ∈ {1, H-2}) AND not on the outer border itself.
+#[inline]
+fn on_inner_perimeter(puzzle: &Puzzle, pos: u32) -> bool {
+    let (x, y) = puzzle.xy(pos);
+    let w = puzzle.width;
+    let h = puzzle.height;
+    if w < 3 || h < 3 { return false; }
+    let is_outer = x == 0 || x == w - 1 || y == 0 || y == h - 1;
+    if is_outer { return false; }
+    x == 1 || x == w - 2 || y == 1 || y == h - 2
+}
+
+// For an edge-class outer cell, returns Some(side index 0..3) pointing
+// inward (toward interior); for non-edge or non-outer cells, None.
+// Sides are [top, right, bottom, left] matching PlacementInfo.edges_after_rotation.
+#[inline]
+fn edge_cell_inward_side(puzzle: &Puzzle, pos: u32) -> Option<usize> {
+    let mask = puzzle.border_mask(pos);
+    // edge-class: exactly one of the 4 sides touches the gray frame.
+    let n = u32::from(mask[0]) + u32::from(mask[1]) + u32::from(mask[2]) + u32::from(mask[3]);
+    if n != 1 { return None; }
+    // The inward side is the one that does NOT touch the gray frame on
+    // the perimeter axis. For an edge cell with mask[0]=true (top row),
+    // the inward side is bottom (index 2). Pattern: inward = side opposite
+    // the only border-touching side.
+    if mask[0] { Some(2) } // top row → south face inward
+    else if mask[2] { Some(0) } // bottom row → north
+    else if mask[3] { Some(1) } // left col → east
+    else { Some(3) } // right col → west
+}
+
+// For an interior cell on the 14×14 perimeter, returns the side indices
+// (0..3) facing toward the gray border. Corner cells of the 14×14 (at
+// (1,1), (1,h-2), (w-2,1), (w-2,h-2)) face TWO border sides.
+#[inline]
+fn perimeter_cell_outward_sides(puzzle: &Puzzle, pos: u32) -> [Option<usize>; 2] {
+    let (x, y) = puzzle.xy(pos);
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut out = [None, None];
+    let mut k = 0;
+    if y == 1 { out[k] = Some(0); k += 1; }      // north faces border
+    if y == h - 2 { out[k] = Some(2); k += 1; }  // south
+    if x == 1 { if k < 2 { out[k] = Some(3); k += 1; } } // west
+    if x == w - 2 { if k < 2 { out[k] = Some(1); k += 1; } } // east
+    let _ = k;
+    out
+}
+
+pub fn multiset_equality_check(ctx: &PropagatorContext<'_>) -> PropagatorResult {
+    let puzzle = ctx.puzzle;
+    let color_count = puzzle.color_count.max(1) as usize;
+    if color_count <= 1 { return PropagatorResult::Ok; }
+
+    let mut committed_a = vec![0i32; color_count];
+    let mut committed_b = vec![0i32; color_count];
+
+    // committed_A: placed edge-class outer cells, inward-facing color.
+    // committed_B: placed 14×14-perimeter interior cells, border-facing color(s).
+    for pos in 0..puzzle.cell_count() {
+        let info = match &ctx.placed[pos as usize] {
+            Some(i) => i,
+            None => continue,
+        };
+        if let Some(side) = edge_cell_inward_side(puzzle, pos) {
+            let c = info.edges_after_rotation[side];
+            if c != BORDER && (c as usize) < color_count {
+                committed_a[c as usize] += 1;
+            }
+        } else if on_inner_perimeter(puzzle, pos) {
+            let sides = perimeter_cell_outward_sides(puzzle, pos);
+            for maybe_side in sides.iter() {
+                if let Some(side) = *maybe_side {
+                    let c = info.edges_after_rotation[side];
+                    if c != BORDER && (c as usize) < color_count {
+                        committed_b[c as usize] += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Supply upper bounds from unplaced pieces. A_supply_max[c] = count
+    // of c-edges across unplaced edge pieces (loose; assumes every c-edge
+    // could rotate inward). B_supply_max similar for interior pieces.
+    //
+    // Cap each supply by the number of unplaced "slots" of that side:
+    //   A_slots = number of unplaced edge-class outer positions
+    //   B_slots = total border-facing slots across unplaced perimeter cells
+    //             (each perimeter corner cell has 2 such slots)
+    let mut a_supply_max = vec![0i32; color_count];
+    let mut b_supply_max = vec![0i32; color_count];
+    for piece in puzzle.pieces() {
+        if ctx.used_pieces.get(usize::from(piece.id)).copied().unwrap_or(false) { continue; }
+        let arr = piece.edges.as_array();
+        if piece.is_edge() {
+            for &c in &arr {
+                if c != BORDER && (c as usize) < color_count {
+                    a_supply_max[c as usize] += 1;
+                }
+            }
+        } else if !piece.is_corner() {
+            for &c in &arr {
+                if c != BORDER && (c as usize) < color_count {
+                    b_supply_max[c as usize] += 1;
+                }
+            }
+        }
+    }
+
+    // Count unplaced A_slots / B_slots to cap supply (tighter bound).
+    let mut a_slots = 0i32;
+    let mut b_slots = 0i32;
+    for pos in 0..puzzle.cell_count() {
+        if ctx.placed[pos as usize].is_some() { continue; }
+        if edge_cell_inward_side(puzzle, pos).is_some() {
+            a_slots += 1;
+        } else if on_inner_perimeter(puzzle, pos) {
+            let sides = perimeter_cell_outward_sides(puzzle, pos);
+            for s in sides.iter() {
+                if s.is_some() { b_slots += 1; }
+            }
+        }
+    }
+    for c in 1..color_count {
+        if a_supply_max[c] > a_slots { a_supply_max[c] = a_slots; }
+        if b_supply_max[c] > b_slots { b_supply_max[c] = b_slots; }
+    }
+
+    for c in 1..color_count {
+        // Multiset-balance feasibility:
+        //   final A[c] = committed_a[c] + future_a[c] ∈ [committed_a[c], committed_a[c] + a_supply_max[c]]
+        //   final B[c] = committed_b[c] + future_b[c] ∈ [committed_b[c], committed_b[c] + b_supply_max[c]]
+        // Equality requires intersection of these intervals to be non-empty:
+        //   committed_a[c] ≤ committed_b[c] + b_supply_max[c]
+        //   committed_b[c] ≤ committed_a[c] + a_supply_max[c]
+        if committed_a[c] > committed_b[c] + b_supply_max[c] {
+            return PropagatorResult::Wipeout;
+        }
+        if committed_b[c] > committed_a[c] + a_supply_max[c] {
+            return PropagatorResult::Wipeout;
+        }
+    }
+
+    PropagatorResult::Ok
+}
+
 // Convenience: run all enabled propagators in order, stopping at first
 // Wipeout. Order is cheapest-first so we bail quickly when possible.
 pub fn run_enabled(
@@ -661,6 +847,85 @@ mod tests {
         let domains: Vec<Vec<u32>> = vec![vec![]; 9];
         let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
         assert_eq!(gacolor_check(&ctx), PropagatorResult::Wipeout);
+    }
+
+    #[test]
+    fn multiset_equality_passes_on_empty_board() {
+        let puzzle = Puzzle::new(4, 4, 3, vec![
+            p(0, 0, 1, 1, 0), p(1, 0, 1, 1, 0), p(2, 0, 1, 1, 0), p(3, 0, 1, 1, 0),
+            p(4, 0, 1, 1, 0), p(5, 0, 1, 1, 0), p(6, 0, 1, 1, 0), p(7, 0, 1, 1, 0),
+            p(8, 1, 1, 1, 1), p(9, 1, 1, 1, 1), p(10, 1, 1, 1, 1), p(11, 1, 1, 1, 1),
+            p(12, 1, 1, 1, 1), p(13, 1, 1, 1, 1), p(14, 1, 1, 1, 1), p(15, 1, 1, 1, 1),
+        ]).unwrap();
+        let placed = vec![None; 16];
+        let used = vec![false; 16];
+        let domains: Vec<Vec<u32>> = vec![vec![0,4,8]; 16];
+        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        // Empty board: committed_A = committed_B = 0; supplies positive. OK.
+        assert_eq!(multiset_equality_check(&ctx), PropagatorResult::Ok);
+    }
+
+    #[test]
+    fn multiset_equality_inner_perimeter_helper() {
+        // 16×16 canonical layout: perimeter is x∈{1,14} or y∈{1,14} (interior only).
+        let pieces: Vec<Piece> = (0..256u16).map(|id| p(id, 0, 0, 0, 0)).collect();
+        let puzzle = Puzzle::new(16, 16, 1, pieces).unwrap();
+        // (1,1) is on inner perimeter
+        let pos_11 = puzzle.position(1, 1);
+        assert!(on_inner_perimeter(&puzzle, pos_11));
+        // (0,0) corner is NOT (it's outer)
+        assert!(!on_inner_perimeter(&puzzle, puzzle.position(0, 0)));
+        // (5,5) deep interior is NOT
+        assert!(!on_inner_perimeter(&puzzle, puzzle.position(5, 5)));
+        // (1,5) is on inner perimeter (x==1)
+        assert!(on_inner_perimeter(&puzzle, puzzle.position(1, 5)));
+        // edge cell inward-side: (5, 0) top row → side 2 (bottom = south)
+        assert_eq!(edge_cell_inward_side(&puzzle, puzzle.position(5, 0)), Some(2));
+        // corner (0,0): two sides on border, returns None (not edge-class)
+        assert_eq!(edge_cell_inward_side(&puzzle, puzzle.position(0, 0)), None);
+        // perimeter corner-of-14×14 at (1,1): two outward sides
+        let s = perimeter_cell_outward_sides(&puzzle, puzzle.position(1, 1));
+        assert!(s[0].is_some() && s[1].is_some());
+    }
+
+    #[test]
+    fn multiset_equality_catches_imbalance() {
+        // 4×4 puzzle, 2 colors. Place 1 edge cell with inward color 1 and
+        // exhaust the unplaced-edge supply of color 1 so committed_A
+        // can't be matched by future_B from interior. Crafted to wipeout.
+        //
+        // Layout: 4 corner pieces + 8 edge pieces + 4 inner pieces.
+        // Use color_count=3 so we can have a non-BORDER color with limited supply.
+        let pieces = vec![
+            // Corners (4): id 0..3
+            p(0, 0, 1, 1, 0), p(1, 0, 0, 1, 1), p(2, 1, 1, 0, 0), p(3, 1, 0, 0, 1),
+            // Edges (8): id 4..11 — give them color 2 inward
+            p(4, 0, 2, 1, 1), p(5, 0, 2, 1, 1), p(6, 0, 2, 1, 1), p(7, 0, 2, 1, 1),
+            p(8, 1, 2, 1, 1), p(9, 1, 2, 1, 1), p(10, 1, 2, 1, 1), p(11, 1, 2, 1, 1),
+            // Interior (4): id 12..15 — color 1 only (no color 2 supply for B)
+            p(12, 1, 1, 1, 1), p(13, 1, 1, 1, 1), p(14, 1, 1, 1, 1), p(15, 1, 1, 1, 1),
+        ];
+        let puzzle = Puzzle::new(4, 4, 3, pieces).unwrap();
+        // Place all 8 edge pieces at edge-class positions with inward color 2.
+        // Inner perimeter (2,2) (1,2) (2,1) (1,1) cells stay unplaced.
+        // Since interior pieces have only color 1 on their edges, B_supply_max[2]=0
+        // but committed_A[2] = 8 (after placement). Should wipeout.
+        let mut placed: Vec<Option<PlacementInfo>> = vec![None; 16];
+        let mut used = vec![false; 16];
+        // Top row edge positions: (1,0), (2,0). Inward side = 2 (south).
+        // Set placement.edges_after_rotation so the south side = color 2.
+        for &pos in &[1u32, 2, 4, 7, 8, 11, 13, 14] {
+            placed[pos as usize] = Some(PlacementInfo { edges_after_rotation: [0, 0, 2, 0] });
+        }
+        // Mark edge pieces 4..11 used.
+        for i in 4..12 { used[i] = true; }
+        let domains: Vec<Vec<u32>> = vec![vec![]; 16];
+        let ctx = empty_ctx(&puzzle, &domains, &placed, &used);
+        // committed_A[2] = 8 (all 8 edge cells have color 2 inward).
+        // committed_B[2] = 0 (no perimeter cell placed yet).
+        // b_supply_max[2] = 0 (interior pieces don't have any color-2 edge).
+        // → committed_A[2] - committed_B[2] = 8 > b_supply_max[2] = 0 → WIPEOUT.
+        assert_eq!(multiset_equality_check(&ctx), PropagatorResult::Wipeout);
     }
 
     #[test]

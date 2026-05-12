@@ -18,7 +18,8 @@ use eternity2_events::{
     BacktrackCause, EventBody, EventSink, FinalStats, SelectionReason, SolverEvent,
 };
 use eternity2_propagators::{
-    class_balance_check, gacolor_check, island_check, parity_check, GaColorState, NeighborInfo,
+    class_balance_check, gacolor_check, island_check, multiset_equality_check, parity_check,
+    GaColorState, NeighborInfo,
     PlacementInfo, PropagatorContext, PropagatorResult,
 };
 use eternity2_solver_trait::{
@@ -86,6 +87,20 @@ pub struct EngineConfig {
     // GAColor — symmetric-alldiff feasibility per color. Strictly tighter
     // than parity_propagator on the same problem; intended replacement.
     pub gacolor_propagator: bool,
+    /// NS-1 / Hopfer 2022 multiset-equality propagator. Necessary
+    /// condition for any full solution: the multiset of inward-facing
+    /// colors on the 56 edge-class cells equals the multiset of border-
+    /// facing colors on the 56 14×14-perimeter interior cells. Cheap
+    /// (O(cells + remaining_pieces·4 + color_count)); most useful late
+    /// in search (once the border ring closes), so consider gating
+    /// behind `depth_threshold_for_propagators`.
+    pub multiset_equality_propagator: bool,
+    /// Joe-Saunders 2026: skip the expensive Step-8 propagators
+    /// (class_balance / parity / island / gacolor / multiset_equality)
+    /// at depths below this threshold. AC-3 and edge/uniqueness
+    /// propagation still run at every depth. `None` = always run.
+    /// Empirical sweet spot for canonical E2 reported as ~150.
+    pub depth_threshold_for_propagators: Option<u32>,
     /// Break rotational symmetry by fixing the lowest-id corner piece at
     /// position (0,0) in its only valid rotation. Reduces search space
     /// by 4× on puzzles with 4 distinct corners (i.e., generated
@@ -103,6 +118,8 @@ impl EngineConfig {
         island_propagator: false,
         ac3_propagator: false,
         gacolor_propagator: false,
+        multiset_equality_propagator: false,
+        depth_threshold_for_propagators: None,
         break_symmetry: false,
         parallelism: Parallelism::SingleThread,
     };
@@ -222,6 +239,42 @@ impl EngineConfig {
     pub const BORDER_FIRST_RANDOM: Self = Self {
         variable_order: VariableOrder::BorderFirstRandom,
         value_order: ValueOrder::InsertionOrder,
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    // Vol-12: gacolor + AC-3 + NS-1 multiset equality (Hopfer 2022).
+    pub const GACOLOR_AC3_NS1: Self = Self {
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const GACOLOR_AC3_NS1_PAR: Self = Self {
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    // Vol-12: Joe-Saunders 2026 — gacolor + AC-3, but extras only fire
+    // at depth ≥ 150. Tries to bridge our ~2k nodes/sec to McGavin's
+    // ~300M/sec by skipping per-node Step-8 work during early search.
+    pub const JOE_DEPTH150: Self = Self {
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const JOE_DEPTH150_PAR: Self = Self {
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -360,6 +413,29 @@ impl EngineSolver {
     #[must_use]
     pub fn chess_gacolor_ac3() -> Self {
         Self::new(EngineConfig::CHESS_GACOLOR_AC3, "engine", "chess_gacolor_ac3")
+    }
+
+    /// Vol-12: gacolor + AC-3 + NS-1 multiset-equality propagator.
+    #[must_use]
+    pub fn gacolor_ac3_ns1() -> Self {
+        Self::new(EngineConfig::GACOLOR_AC3_NS1, "engine", "gacolor_ac3_ns1")
+    }
+
+    #[must_use]
+    pub fn gacolor_ac3_ns1_par() -> Self {
+        Self::new(EngineConfig::GACOLOR_AC3_NS1_PAR, "engine", "gacolor_ac3_ns1_par")
+    }
+
+    /// Vol-12: gacolor + AC-3 + NS-1 with Step-8 propagators gated to
+    /// depth ≥ 150 (Joe-Saunders 2026 pruning policy).
+    #[must_use]
+    pub fn joe_depth150() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150, "engine", "joe_depth150")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_par() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_PAR, "engine", "joe_depth150_par")
     }
 
     /// Verhaard-style value ordering: prefer the pieces listed in
@@ -873,7 +949,7 @@ impl<'a> SearchState<'a> {
         // Step 8 propagators: run only the ones enabled in config. They
         // are read-only over engine state (don't mutate domains) so the
         // undo log doesn't change. Order is cheapest-first.
-        if self.run_extra_propagators() == PropagatorResult::Wipeout {
+        if self.run_extra_propagators(depth) == PropagatorResult::Wipeout {
             self.emit(sink, depth, EventBody::DomainWipeout { position: pos });
             return PropagationOutcome::Wipeout { undo };
         }
@@ -1098,13 +1174,22 @@ impl<'a> SearchState<'a> {
         out
     }
 
-    fn run_extra_propagators(&self) -> PropagatorResult {
+    fn run_extra_propagators(&self, depth: u32) -> PropagatorResult {
         if !self.config.class_balance_propagator
             && !self.config.parity_propagator
             && !self.config.island_propagator
             && !self.config.gacolor_propagator
+            && !self.config.multiset_equality_propagator
         {
             return PropagatorResult::Ok;
+        }
+        // Depth gate (Joe-Saunders 2026): suppress Step-8 propagators
+        // below threshold so early-search throughput approaches the
+        // bare-edge-equality + AC-3 inner-loop ceiling.
+        if let Some(threshold) = self.config.depth_threshold_for_propagators {
+            if depth < threshold {
+                return PropagatorResult::Ok;
+            }
         }
         let placed_info = self.snapshot_placement_info();
         let ctx = PropagatorContext {
@@ -1137,6 +1222,13 @@ impl<'a> SearchState<'a> {
         }
         if self.config.parity_propagator
             && parity_check(&ctx) == PropagatorResult::Wipeout
+        {
+            return PropagatorResult::Wipeout;
+        }
+        // NS-1 multiset equality: cheapest after the border ring closes;
+        // before that the supply terms are loose and rarely triggers.
+        if self.config.multiset_equality_propagator
+            && multiset_equality_check(&ctx) == PropagatorResult::Wipeout
         {
             return PropagatorResult::Wipeout;
         }
