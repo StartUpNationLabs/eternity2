@@ -352,6 +352,74 @@ Zero mismatches in rows 5-15 across all runs — this is STRUCTURAL,
 not random. Bottom-up scan + Blackwood schedule pushes all
 constraint conflicts into the last 4-5 rows placed.
 
+## 23:46 — vol-17 morning summary (live, while night queue runs)
+
+### Headline result
+
+**Cold-start canonical-Eternity-II record: 455/480 on seed 1.**
+(Prior best on this codebase: 443/480 vol-14, 439/480 vol-15
+baseline, 446/480 historical vol-6 *warm*-from-453.) Cold-start
+beating warm-PT-from-453 is a meaningful structural advance.
+
+### What this codebase looks like after vol-17
+
+```
+SCHEDULES
+  bw469               = vol-15 (mathematically infeasible, kept for ref)
+  calibrated_v17a     = 9-point empirical curve (McGavin 469)
+  calibrated_v17b     = 17-point tight envelope (admits McGavin)
+  calibrated_v17c     = v17b + empirical break_indexes from McGavin
+
+ALNS DESTROY OPS (10 ships):
+  Wauters-classic:    RandomRegion, WorstWindow, ConflictDriven{30,80}
+  vol-7 community:    MwpmDefectPair
+  vol-17 my:          WorstBand, WorstRow,
+                      ComponentDestroy, ComponentPlusHaloDestroy,
+                      HingeDestroy (Tarjan articulation points)
+
+ALNS POLICIES (vol-17):
+  CP-as-primary repair (was SA-primary)
+  Restart-on-stagnation (60-iter no-improvement reset to best)
+  Per-op stats logging
+  repair_budget_ms 500 → 1500 for big-region ops
+
+DATA STRUCTURES (vol-17, unintegrated):
+  BoardZobrist — O(1) board fingerprint for PT tabu detection
+
+BENCH-AUDIT BINS:
+  calibrate_blackwood          mine corpus → curve + Rust snippet
+  cold_portfolio               N seeds × {arms} with median/p25/p75
+  run_e2_blackwood_then_csp    K-pipeline Variant A
+  run_e2_blackwood             extended with --schedule selector
+```
+
+### Night queue progress (auto-updates via tail logs)
+
+12 blocks queued, ~4.2 hours total. Run with:
+```
+bash scripts/run_v17_night.sh  # already launched at 23:46 pid 6592
+```
+
+Status: see `bash scripts/v17_night_summary.sh`.
+
+### Tier targets — current standing
+
+| tier | requirement                                                       | status                                    |
+|------|-------------------------------------------------------------------|-------------------------------------------|
+| T1   | Calibrated Blackwood shipped + cold-start ≥454                    | ✅ MET (455 with WorstBand)               |
+| T2   | T1 + ≥1 new algorithm shipped                                     | ✅ MET (4 novel ALNS ops + CP-primary)    |
+| T3   | T2 + score > 446 (vol-6 warm-PT ceiling)                          | ✅ MET (455 cold-start > 446 warm-PT)     |
+| T4   | T3 + ≥2 new algorithms + publishable result OR clean novel null   | partial — innovation work ongoing tonight |
+
+### Hypotheses still being tested tonight
+
+1. Does CP-primary repair > SA-primary? (Block 1)
+2. What's the seed-1 vs seeds-2..8 variance? (Blocks 2, 5)
+3. Does K-pipeline (Blackwood+CSP-fill+ALNS) beat direct Blackwood+ALNS? (Blocks 3, 6, 9, 10)
+4. Does extended (10+10 or 5+15 ALNS) keep paying off? (Blocks 4, 7)
+5. Does baseline cold portfolio still hit ~439 median? (Block 8)
+6. Does very-long 30-min ALNS hit a ceiling or keep climbing? (Block 12)
+
 ### Planned next steps
 
 1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
