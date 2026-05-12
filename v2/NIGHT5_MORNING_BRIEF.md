@@ -67,14 +67,25 @@
 
 ## What's running when you read this
 
-The night chain (`scripts/night_chain.sh`, log `/tmp/night_chain.log`)
-runs:
-1. (waiting then completes) NE2.1 K=5 stage.
-2. (~1.9h) NE1 frame-first top-6 funnel — 30 borders × 90s →
-   top-8 × 200s → top-2 × 600s.
-3. (~30 min) NE2-iter — 3 rounds of iterative forbidden-set deepening.
+The full night chain (5 phases) runs:
+1. (DONE) NE2.1 K=5 stage. Result: 442 (over-constrained).
+2. (DONE 02:24) NE1 frame-first top-6 funnel. **Result: 450 across
+   all 3 stages, no 451.** Found 3 distinct 450 boards including
+   one matching all 6/6 NEW top-6.
+3. (RUNNING 02:25-02:55) NE2-iter — 3 rounds of forbidden-set
+   deepening starting from the best 450/6/6 board. ROUND 1 stayed
+   at 450; expect 2/3 also 450 per redistribution invariance.
+4. (~02:55-03:08) Strain diagnostic — PT with `--pin-hints false`
+   (drops the asymmetric (7,8) hint). Tests strain-cascade hypothesis.
+5. (~03:08-03:20) NE-RAND — random-start PT. Tests CP-basin bias.
+6. (~03:20-03:48) **NE-GA-light** — 12 random crossovers between
+   the 5 available 449/450 boards × 90s PT polish each. **The
+   most novel test of the night.** If any child reaches 451+, it's
+   the night's biggest finding.
 
-**Check `/tmp/night_chain.log` for status.**
+**Check `/tmp/night_chain.log`, `/tmp/post_night_chain.log`,
+`/tmp/post_strain_chain.log`, `/tmp/post_ga_chain.log`,
+`/tmp/ga_light.log` for full status.**
 
 ## Top-9 takeaway findings (publishable-quality)
 
