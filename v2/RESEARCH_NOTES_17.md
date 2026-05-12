@@ -651,7 +651,35 @@ starting boards.
 | H15 | BottomBandDestroy injects diversity past 455           | 456/480 (+1)                            | WEAKLY CONFIRMED |
 | H_MaxSAT | MaxSAT finds optimal cluster repair                | z3 -wcnf timeout 120s, UNKNOWN (no model) | REFUTED for available solvers |
 | H16 | Block cross-graft of same-schedule boards unlocks      | rows 13-15: 455 (no Δ); rows 5-8: 455 (no Δ) | REFUTED |
-| H17 | Cross-graft of DIFFERENT-schedule boards (v17a + v17b) | E13 running (chimera 284→ALNS)         | PENDING       |
+| H17 | Cross-graft of DIFFERENT-schedule boards (v17a + v17b) | chimera 284 → ALNS 397/480, -58 vs A | REFUTED — too much chaos |
+| H18 | Smarter chimera-building (preserve matches)            | not yet attempted                    | PENDING       |
+| H19 | Pin-and-resume CP from a 455 board                     | not yet attempted                    | PENDING       |
+
+## 01:21 — E13 result: chimera 284 → 397 (3min ALNS), -58 vs A
+
+Cross-graft of v17a's rows 0-4 (cluster) with v17b's rows 0-4 created
+a chaotic chimera with 50 piece duplicates fixed by random shuffling.
+Resulting pre-ALNS score = 284/480.
+
+ALNS recovered to 397/480 in 3 min — well below the 455 ceiling. Same
+ALNS budget that converges to 455 from 362-CP-partial can't reach 455
+from a 284-chimera in the same time. Chaos costs more than budget gives.
+
+H17 REFUTED. Cross-graft of different-schedule boards' SHARP regions
+isn't a viable unlock — at least with simple piece-swap fixup.
+
+## Next ideas (still untested)
+
+H18: Smarter chimera. Instead of random missing-piece placement, use a
+matching algorithm: pair each duplicate piece (board A's rows outside
+cluster) with a missing piece such that the pair's edge-colors are
+COMPATIBLE with the cluster's boundary. Reduces chimera-pre-ALNS
+chaos.
+
+H19: Use the 455 board as a CP HINT seed. Pin some non-hint cells
+(say, 50 cells in rows 8-15 with high-confidence backbone-like
+positions) and re-run Blackwood CP. Maybe new piece-region
+assignment.
 
 ## 01:18 — STRUCTURAL FINDING: piece-set per row-region is CONSERVED
 
