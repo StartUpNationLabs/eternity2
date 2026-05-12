@@ -382,3 +382,86 @@ Final vol-15 scoreboard:
   blackwood_raw (best vol-15):       416/480   −23
   blackwood_raw + layered (5min):    382/480   −57
   blackwood_raw + layered (1h+1h):   382/480   −57 (unchanged)
+
+### 2026-05-12 ~22:25 — Cat-4e/f/g: joe_depth150 path 2.4 → 7.0 kNps (2.9×)
+
+User pushed back again on the autonomous-loop prompt. Built
+profile_joe.rs harness to measure joe_depth150_bp single-thread.
+Discovered the joe path runs at 2.4 kNps vs BLACKWOOD_RAW's 367
+kNps — 150× slower. The propagator stack (gacolor + AC-3 + NS-1
++ edge-bp value-order) dominates.
+
+97% of joe CPU is in `place_and_propagate_opts` (everything
+inlined). AC-3 is the bulk; specifically `propagate_ac3`'s
+inner support-check loop:
+
+```rust
+for rot in 0..4 {
+    let cand = pid_base + rot;
+    if cand >= n_rows { break; }
+    let row_cand = self.rows[cand];        // bounds check
+    if !row_cand.valid { continue; }
+    if row_cand.edges[side_b] != required { continue; }
+    let word = present[nb_u * wpp + cand/64];   // bounds check
+    if (word >> (cand%64)) & 1 == 1 { same_piece += 1; }
+}
+```
+
+4 array reads (each bounds-checked), 4 branches, scattered access
+pattern. Called millions of times per second.
+
+**Cat-4f precompute** (user suggestion): `same_piece_rots: Vec<u8>`
+of size rows.len() * 16. For each (row, side_a, side_b),
+precomputes the 4-bit mask of rotations satisfying the support
+predicate. Built once at SearchState::new.
+
+The loop collapses to:
+```rust
+let rot_mask = self.same_piece_rots[r * 16 + side_a * 4 + side_b];
+let present_4 = ((present[nb * wpp + pid_base/64] >> (pid_base%64)) & 0xF) as u8;
+let same_piece = (rot_mask & present_4).count_ones();
+```
+
+Single mask AND + popcount. All bounds checks elided. Works
+because 4 rotation slots always fit in one u64 word
+(pid_base = piece_id * 4 < 1024 means slots span 0..4 of some word).
+
+**Cat-4g recycle** (alloc cleanup): the AC-3 inner `to_check`
+Vec and outer `queue` Vec were per-invocation allocations. Moved
+to SearchState scratch fields (`ac3_to_check`, `ac3_queue`).
++3% atop Cat-4f.
+
+Benchmark (canonical E2 seed 1, joe_depth150_bp, single-thread, 15s):
+  vol-16 entry baseline (joe):  ~2400 nps
+  Cat-4e slice rebuild loop:     ~2500 nps  (+4%)
+  Cat-4f precompute LUT:         ~6800 nps  (+170% / 2.83×)
+  Cat-4g recycle AC-3 scratch:   ~7000 nps  (+3%)
+  Total joe speedup:             2.9×
+
+BLACKWOOD_RAW unchanged (~365 kNps; doesn't use AC-3 so the
+precompute is unused on that profile).
+
+### Vol-17 sweep candidates (precompute-flavored)
+
+The Cat-4f win opens a research direction: most "per-piece-edge"
+calculations are static and can be precomputed once. Vol-17
+should sweep:
+
+- `classify_cell(puzzle, pos)` in `class_balance_check`: cells
+  never change class. `Vec<CellClass>` of size n_pos.
+- `classify_piece(piece)` ditto: 1-byte per piece.
+- `edge_cell_inward_side(puzzle, pos)` in `multiset_equality_check`:
+  static geometric property.
+- `border_mask(pos)`: already cached in `border_priority_cache`
+  for a different purpose, could be reused.
+- AC-3 incremental count: currently rebuilt O(N × R) per AC-3
+  call. Maintaining counts on every prune (decrement on row drop)
+  would skip the rebuild entirely. ~50× per-call speedup at the
+  cost of ~4 increments per dropped row. Net: large win when
+  prunes are sparse (typical case).
+- `multiset_equality_check` per-call Vec allocs (4× per call)
+  could be SearchState scratch like ac3_to_check.
+
+The pattern: **anywhere you see a function reading immutable
+puzzle data and computing something via a loop, precompute it
+at construction.**
