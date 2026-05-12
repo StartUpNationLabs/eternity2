@@ -25,6 +25,7 @@ replies per thread.
 | 58 | While solving for a 14x14 - 196 solution | 26 | 2022-05+ | [11_Inner_14x14_thread.md](./11_Inner_14x14_thread.md) |
 | 14 | Eternity2 information - Disclosure | 43 | 2011-02 | [12_Solution_secrecy_thread.md](./12_Solution_secrecy_thread.md) |
 | miscellaneous | (7 medium threads) | — | various | [10_misc_threads.md](./10_misc_threads.md) |
+| 13 | All remaining ≥25-msg threads (final batch) | various | various | [13_remaining_threads.md](./13_remaining_threads.md) |
 
 ## Threads NOT yet digested (worth future passes)
 
