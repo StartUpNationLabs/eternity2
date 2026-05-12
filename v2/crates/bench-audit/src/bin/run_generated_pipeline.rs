@@ -20,9 +20,8 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eternity2_bench_audit as _;
+use eternity2_bench_audit::ProgressSink;
 use eternity2_core::{Board, Puzzle};
-use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_localsearch::{
     run_alns, Acceptance, AlnsConfig, ConflictDriven, DestroyOp, MwpmDefectPair,
@@ -30,28 +29,6 @@ use eternity2_localsearch::{
 };
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
-
-struct QuietSink {
-    depth: u32,
-    final_stats: Option<FinalStats>,
-}
-impl QuietSink {
-    fn new() -> Self { Self { depth: 0, final_stats: None } }
-}
-impl EventSink for QuietSink {
-    fn emit(&mut self, event: SolverEvent) {
-        if event.depth > self.depth { self.depth = event.depth; }
-        match event.body {
-            EventBody::Solved { final_stats, .. }
-            | EventBody::Exhausted { final_stats, .. }
-            | EventBody::TimedOut { final_stats, .. }
-            | EventBody::Cancelled { final_stats, .. } => {
-                self.final_stats = Some(final_stats);
-            }
-            _ => {}
-        }
-    }
-}
 
 fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     let (w, h) = (puzzle.width, puzzle.height);
@@ -122,7 +99,17 @@ fn main() {
     opts.time_budget_ms = cp_budget;
     opts.seed = seed;
 
-    let mut sink = QuietSink::new();
+    // Progress log lives next to the launcher's invocation. Use a
+    // timestamp-suffixed filename so parallel invocations don't clobber.
+    let log_dir = PathBuf::from("output/v14_generated_pipeline");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let log_path = log_dir.join(format!("seed{}_cp_{}.log", seed, now));
+    let mut sink = ProgressSink::new(&log_path, 5_000).expect("open cp log");
+    sink.write_line(&format!("=== CP ({cp_profile}) {}x{}/{} seed={seed} budget={cp_budget}ms ===",
+        puzzle.width, puzzle.height, puzzle.color_count - 1));
+    eprintln!("CP progress log: {}", log_path.display());
     let t_cp = Instant::now();
     let outcome = solver.solve(&puzzle, &opts, &mut sink);
     let cp_elapsed = t_cp.elapsed();
@@ -137,7 +124,7 @@ fn main() {
     };
     let (cp_m, cp_t) = score_board(&puzzle, &cp_board);
     let cp_p = placed_count(&cp_board, &puzzle);
-    let cp_depth = stats_cp.as_ref().map(|s| s.max_depth_seen).unwrap_or(sink.depth);
+    let cp_depth = stats_cp.as_ref().map(|s| s.max_depth_seen).unwrap_or(sink.best_depth);
     let cp_nodes = stats_cp.as_ref().map(|s| s.nodes).unwrap_or(0);
 
     eprintln!("CP ({cp_profile}): elapsed={:.1}s  depth={cp_depth}  placed={cp_p}/{}  matched={cp_m}/{cp_t}  nodes={cp_nodes}",

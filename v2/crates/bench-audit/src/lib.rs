@@ -12,10 +12,89 @@
 
 #![forbid(unsafe_code)]
 
+use std::io::Write;
+use std::path::Path;
+use std::time::Instant;
+
 use eternity2_core::{Board, Color, PieceId, Position, Puzzle, Rotation};
+use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_localsearch::alns::score_board as score_board_baseline;
 use eternity2_propagators::{PlacementInfo, PropagatorContext, gacolor_check, parity_check};
+
+/// Reusable progress sink for bench bins.
+///
+/// Tracks `best_depth` across all events; captures `FinalStats` on any
+/// terminal event (Solved / Exhausted / TimedOut / Cancelled); appends
+/// a progress line `[<elapsed_ms> ms]  depth=N  best_depth=M  node_id=K`
+/// to the log file every `period_ms` milliseconds.
+///
+/// Usage:
+/// ```ignore
+/// let mut sink = ProgressSink::new(&log_path, 5_000)?;
+/// sink.write_line("=== my run header ===");
+/// let outcome = solver.solve(&puzzle, &opts, &mut sink);
+/// // sink.final_stats / sink.best_depth populated.
+/// ```
+pub struct ProgressSink {
+    pub log: std::fs::File,
+    started: Instant,
+    last_log_ms: u64,
+    period_ms: u64,
+    pub best_depth: u32,
+    pub final_stats: Option<FinalStats>,
+}
+
+impl ProgressSink {
+    pub fn new(path: &Path, period_ms: u64) -> std::io::Result<Self> {
+        Ok(Self {
+            log: std::fs::File::create(path)?,
+            started: Instant::now(),
+            last_log_ms: 0,
+            period_ms,
+            best_depth: 0,
+            final_stats: None,
+        })
+    }
+
+    pub fn write_line(&mut self, line: &str) {
+        let _ = writeln!(self.log, "{line}");
+        let _ = self.log.flush();
+    }
+}
+
+impl EventSink for ProgressSink {
+    fn emit(&mut self, event: SolverEvent) {
+        let elapsed_ms = self.started.elapsed().as_millis() as u64;
+
+        if let EventBody::Backtrack { from_depth, .. } = &event.body {
+            if *from_depth > self.best_depth { self.best_depth = *from_depth; }
+        }
+        if event.depth > self.best_depth { self.best_depth = event.depth; }
+
+        if elapsed_ms.saturating_sub(self.last_log_ms) >= self.period_ms {
+            self.last_log_ms = elapsed_ms;
+            let _ = writeln!(self.log,
+                "[{:>7} ms]  depth={:>4}  best_depth={:>4}  node_id={}",
+                elapsed_ms, event.depth, self.best_depth, event.node_id);
+            let _ = self.log.flush();
+        }
+
+        match event.body {
+            EventBody::Solved { final_stats, .. }
+            | EventBody::Exhausted { final_stats, .. }
+            | EventBody::TimedOut { final_stats, .. }
+            | EventBody::Cancelled { final_stats, .. } => {
+                let _ = writeln!(self.log,
+                    "=== terminal event at {elapsed_ms}ms: nodes={} backtracks={} max_depth_seen={} ===",
+                    final_stats.nodes, final_stats.backtracks, final_stats.max_depth_seen);
+                let _ = self.log.flush();
+                self.final_stats = Some(final_stats);
+            }
+            _ => {}
+        }
+    }
+}
 
 // ---------- Workload builders ----------
 
