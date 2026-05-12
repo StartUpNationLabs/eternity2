@@ -283,6 +283,67 @@ backtracking** but probably worth <1% gain.
 to be empirically empty. Focus shifts to the *active* user pivot:
 border diversification.
 
+### VOL-6 CONVERGED ON BORDER PIVOT 10:30 — 10k borders already sampled
+
+User question: *"could this issue of same basin be solved by new
+findings in NOTES_6 the other agent is doing in parallel?"*
+
+**Yes — vol-6 (parallel sister) hit the EXACT same insight
+independently** at commit 625ee03 "BORDER pivot — diagnose corpus
+monoculture, build Las Vegas border sampler". Two sessions
+converging on the same fix is strong validation.
+
+**Vol-6 is actually further along than vol-7 on this front**:
+
+- Built `crates/benchmark/src/bin/border_enumerate.rs` + the
+  `border_count_estimate.py` Python surrogate.
+- Identified: "the border uses ONLY rare colors 1-5 on the inward
+  perimeter" — independently derived from frequency analysis. Same
+  conclusion vol-7 derived from rare-opposite adjacency.
+- Built a **Las Vegas border sampler** that produces 10k distinct
+  borders in 5.9 seconds. Already ran it — `output/borders/sample_10k.jsonl`
+  is 4.2 MB, 10000 distinct borders.
+- TL corner distribution: uniform across the 4 corner pieces (~2500
+  each).
+- Is now building `--pin-perimeter` to pt_e2 so the 10k borders can
+  be scored.
+
+**My slow `frame_first_e2` sweep was redundant — killed (10:31).
+Switching to use vol-6's sampler output directly.**
+
+The two converging discoveries:
+
+- *Vol-6 first*: border uses only rare colors on perimeter.
+- *Vol-7 first*: rare colors appear on opposite edges of pieces;
+  hint pieces are pure-abundant.
+
+Same structural picture from two angles.
+
+**Vol-7 next moves** (coordinate with vol-6: don't duplicate):
+
+Vol-6 ("A") has committed to BORDER-3c–e: surrogate scoring →
+fast PT triage → full PT on top-K. ~3-4h. Owns the border-scoring
+track end-to-end.
+
+Vol-7 should pursue work that is *orthogonal* and *composable* with
+vol-6's output, not duplicate it. The candidates:
+
+1. **Verhaard 2×3-tileability propagator** (HIGHEST EV, 1-2 days
+   Rust). Documented hobbyist algorithm that hit 467/480 on the
+   canonical 5-clue, never ported to academic / our codebase.
+   Composes with vol-6: once vol-6 returns top-K borders, Verhaard
+   variable ordering can re-CP each border with depth-banded
+   admission, potentially reaching higher interior scores than PT
+   does on the same border. — VOL-7 STARTS THIS NOW.
+2. Selby & Riordan's 1999 E1 algorithm reverse-engineering (M1
+   recommendation). What they built to defeat in E1 is what they
+   made E2 resistant to. ~3-4h research + writeup, no compute.
+   Queued.
+3. Z_22 vertex-charge fingerprint on 453 (X1 disclination-strings
+   pre-experiment). Cheap test, ~30 min Python. Queued.
+4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
+   The Houdayer fix from 18fd7a6 composes here. Queued.
+
 ### Houdayer-PT FIX + offline post-mortem on 451-453 corpus — 09:55
 
 **Vol-3 bug fixed**: filter Houdayer proposals to `joint_delta > 0`
