@@ -104,6 +104,7 @@ fn main() {
     let mut repair_budget_ms: u64 = 1500;
     let mut repair_kind = "sa".to_string();
     let mut t: f64 = 1.0;
+    let mut lex = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -114,6 +115,7 @@ fn main() {
             "--repair-budget-ms" => repair_budget_ms = args.next().unwrap().parse().unwrap(),
             "--repair-kind" => repair_kind = args.next().unwrap(),
             "--t" => t = args.next().unwrap().parse().unwrap(),
+            "--lex" => lex = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -150,7 +152,7 @@ fn main() {
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
-            lex_break_isoscore: false,
+        lex_break_isoscore: lex,
     };
 
     let t0 = Instant::now();

@@ -85,6 +85,7 @@ fn main() {
     let mut temperature_ladder = false;
     let mut t_min: f64 = 0.5;
     let mut t_max: f64 = 2.0;
+    let mut lex = false;
 
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -98,6 +99,7 @@ fn main() {
             "--temperature-ladder" => temperature_ladder = true,
             "--t-min" => t_min = args.next().unwrap().parse().unwrap(),
             "--t-max" => t_max = args.next().unwrap().parse().unwrap(),
+            "--lex" => lex = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -128,7 +130,7 @@ fn main() {
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
-            lex_break_isoscore: false,
+        lex_break_isoscore: lex,
     };
     let preset = ops_preset.clone();
     let ops_factory = move |_chain_idx: usize| build_ops(&preset);
