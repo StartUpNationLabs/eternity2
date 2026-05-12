@@ -287,6 +287,14 @@ pub struct EngineConfig {
     /// schedule's `break_indexes_allowed` field then indexes into this
     /// path.
     pub scan_order: Option<ScanOrder>,
+    /// Vol-17 (H22) — within-tie shuffle for BlackwoodHeuristic value
+    /// order. When true, after sorting rows by heuristic-color count
+    /// (descending), shuffle each run of equal-score rows using the
+    /// seed-derived RNG. Gives schedule-invariant CP-partial diversity
+    /// across seeds, without breaking Blackwood's score-descending
+    /// invariant. Default: false (preserves existing deterministic
+    /// tie-breaking).
+    pub shuffle_within_blackwood_ties: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -322,6 +330,7 @@ impl EngineConfig {
         parallelism: Parallelism::SingleThread,
         path_skeleton: None,
         scan_order: None,
+        shuffle_within_blackwood_ties: false,
         propagators: PropagatorConfig {
             class_balance: true,
             parity: false,
@@ -3541,6 +3550,16 @@ impl<'a> SearchState<'a> {
         // of heuristic-color edges (descending). Schedule-rich rows
         // tried first so the running heuristic count keeps pace with
         // the schedule's target_at(depth+1).
+        //
+        // Vol-17 (H22) — within-tie shuffle. The heuristic-color
+        // count is an integer in 0..=4; many rows score equal. By
+        // default sort_by_key is stable (preserves insertion order
+        // within ties). With `config.shuffle_within_blackwood_ties`,
+        // we shuffle the rows WITHIN each tie group using the
+        // seed-derived RNG. This gives schedule-invariant CP-partial
+        // diversity (different seeds → different shuffle → different
+        // search trajectories) WITHOUT breaking Blackwood's score-
+        // descending invariant.
         if matches!(self.config.value_order, ValueOrder::BlackwoodHeuristic)
             && !self.heuristic_color_mask.is_empty()
             && domain_snapshot.len() > 1
@@ -3555,6 +3574,24 @@ impl<'a> SearchState<'a> {
                 })
                 .collect();
             scored.sort_by_key(|(k, _)| *k);
+            if self.config.shuffle_within_blackwood_ties {
+                // Within each contiguous run of equal scores, Fisher-
+                // Yates shuffle using seeded RNG.
+                let n = scored.len();
+                let mut i = 0;
+                while i < n {
+                    let mut j = i + 1;
+                    while j < n && scored[j].0 == scored[i].0 { j += 1; }
+                    // Shuffle range [i, j).
+                    if j - i > 1 {
+                        for k in (i + 1..j).rev() {
+                            let r = (self.next_random() as usize) % (k - i + 1);
+                            scored.swap(k, i + r);
+                        }
+                    }
+                    i = j;
+                }
+            }
             domain_snapshot.clear();
             domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
         }

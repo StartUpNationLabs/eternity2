@@ -198,6 +198,7 @@ fn main() {
     let mut schedule_kind = "bw469".to_string();
     let mut noise_amplitude: f64 = 0.15;
     let mut schedule_seed: u64 = 0;
+    let mut shuffle_blackwood_ties: bool = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -208,6 +209,7 @@ fn main() {
             "--schedule" => schedule_kind = args.next().unwrap(),
             "--noise-amplitude" => noise_amplitude = args.next().unwrap().parse().unwrap(),
             "--schedule-seed" => schedule_seed = args.next().unwrap().parse().unwrap(),
+            "--shuffle-blackwood-ties" => shuffle_blackwood_ties = true,
             _ => {}
         }
     }
@@ -337,7 +339,15 @@ fn main() {
     // only edge forward-checking + piece-uniqueness + schedule +
     // break allowance. Sound after break-index by construction.
     if arms == "blackwood_raw" || arms == "all" {
-        let raw = Box::new(EngineSolver::blackwood_raw_par(schedule_arc.clone()));
+        // Vol-17 H22 — optional shuffle of Blackwood-tie rows for
+        // schedule-invariant CP-partial diversity across `--seed N` runs.
+        let mut cfg = EngineConfig::BLACKWOOD_RAW_PAR;
+        cfg.shuffle_within_blackwood_ties = shuffle_blackwood_ties;
+        if shuffle_blackwood_ties {
+            eprintln!("(H22) shuffle_within_blackwood_ties = TRUE");
+        }
+        let raw = Box::new(EngineSolver::new(cfg, "engine", "blackwood_raw_par")
+            .with_blackwood_schedule(schedule_arc.clone()));
         let (m, p, d) = run_arm(
             "blackwood_raw",
             raw,
