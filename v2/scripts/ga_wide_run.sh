@@ -24,9 +24,10 @@ echo "=== GA-WIDE start: $(date) ===" | tee "$LOG"
 echo "N crossovers: $N_CROSS, PT seconds per child: $PT_S" | tee -a "$LOG"
 
 PARENTS=(
-    "output/HISTORIC_first_452_1778547973.json"
-    "output/pt_e2_1778550597_451of480.json"
-    "output/pt_e2_1778551437_451of480.json"
+    "output/HISTORIC_first_453_1778557672.json"               # 453 (NEW BEST)
+    "output/HISTORIC_first_452_1778547973.json"               # 452
+    "output/pt_e2_1778550597_451of480.json"                   # 451 (cascade #1)
+    "output/pt_e2_1778551437_451of480.json"                   # 451 (cascade #8)
     "output/archive/frame_first_e2_1778532924_450of480.json"
     "output/ne1_stage1_new_450.json"
     "output/ne1_stage2_best_450of480.json"
@@ -41,7 +42,7 @@ NP=${#PARENTS_AVAIL[@]}
 echo "$NP parents available" | tee -a "$LOG"
 
 mkdir -p output/ga_wide
-BEST_SCORE=452
+BEST_SCORE=453
 HITS_451PLUS=0
 NEW_BASIN_HITS=0
 
@@ -87,7 +88,7 @@ for i in $(seq 1 "$N_CROSS"); do
             OVERLAP=$(python3 -c "
 import json, re
 W = 16
-url1 = json.load(open('output/HISTORIC_first_452_1778547973.json'))['bucas_url']
+url1 = json.load(open('output/HISTORIC_first_453_1778557672.json'))['bucas_url']
 url2 = json.load(open('$LATEST'))['bucas_url']
 b1 = re.search(r'board_edges=([a-z]+)', url1).group(1)
 b2 = re.search(r'board_edges=([a-z]+)', url2).group(1)
