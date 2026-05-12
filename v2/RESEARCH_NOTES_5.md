@@ -453,7 +453,37 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
-### GA-LARGE early hits 05:07 — 100% basin-overlap with original 452
+### GA-LARGE 5 hits at 05:40 — basin diversity emerging
+
+**5 hits at 451+ from GA-LARGE so far**:
+| Cross # | Score | Region | Overlap w/ 452 | Basin |
+|---|---|---|---|---|
+| 5  | 452 | 4×4 (11,4) | 100.0% | SAME 452 |
+| 10 | 452 | 4×4 (9,11) | 100.0% | SAME 452 |
+| 15 | 452 | (region TBD) | 98.4% | SAME 452 |
+| **17** | **451** | **4×4 (9,6)** | **74.1%** | **PARTIAL** ← novel |
+| 32 | 451 | (region TBD) | 92.2% | mostly SAME |
+
+**Cross #17 is the most interesting**: south-central crossover at
+(9,6) — RIGHT IN THE STRAIN FRONT — produced a 451 with only 74%
+overlap with the 452 AND 73% overlap with the cascade-#1 451. It
+sits in the structural neighborhood between them but is distinct
+from both.
+
+**This shows that south-central crossovers DO produce structural
+diversity** — earlier the synthesis hypothesized that south-central
+crossovers would over-disrupt. Cross #17 contradicts: the
+south-central region CAN yield 451-class novelty, but only 1 of 4
+attempts did so.
+
+**Cumulative 451+ basin map after GA-LARGE 5 hits**:
+- 452 main basin: original + cascade #1, #2 + GA-LARGE #5, #10, #15
+  (≥6 boards in this basin).
+- ~74-92% overlap "neighbor basin": cross #17, #32.
+
+GA-LARGE has ~30 more crossovers to run. ETA finish ~06:00.
+
+
 
 **First 2 hits at 451+ from GA-LARGE: BOTH identical to the original
 452 board** (100% bucas overlap).
