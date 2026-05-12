@@ -245,13 +245,16 @@ fn main() {
         Box::new(RandomRegion { k: 4 }),
         Box::new(WorstWindow { k: 5 }),
         Box::new(ConflictDriven { max_size: 30 }),
+        Box::new(ConflictDriven { max_size: 80 }),
         Box::new(MwpmDefectPair { max_pairs: 12 }),
         Box::new(WorstBand { k_rows: 4 }),
+        Box::new(WorstBand { k_rows: 6 }),
     ];
     let pinned_positions: Vec<u32> = pinned_hints.hints.iter().map(|h| h.position).collect();
     let cfg = AlnsConfig {
         time_budget_ms: alns_ms,
-        repair_budget_ms: 500,
+        // Vol-17 — bumped from 500ms (see run_e2_blackwood note).
+        repair_budget_ms: 1500,
         acceptance: Acceptance::SimulatedAnnealing { t: 1.0 },
         segment_iters: 50,
         seed,

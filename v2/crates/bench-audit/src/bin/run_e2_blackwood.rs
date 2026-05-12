@@ -102,12 +102,16 @@ fn run_arm(
         Box::new(RandomRegion { k: 4 }),
         Box::new(WorstWindow { k: 5 }),
         Box::new(ConflictDriven { max_size: 30 }),
+        Box::new(ConflictDriven { max_size: 80 }),  // vol-17 — big cluster
         Box::new(MwpmDefectPair { max_pairs: 12 }),
         Box::new(WorstBand { k_rows: 4 }),
+        Box::new(WorstBand { k_rows: 6 }),  // vol-17 — wider band
     ];
     let cfg = AlnsConfig {
         time_budget_ms: alns_budget_ms,
-        repair_budget_ms: 500,
+        // Vol-17 — bumped from 500ms to give WorstBand/ConflictDriven{80}
+        // CP-repair budgets time to find a fill on the 64-80 cell ops.
+        repair_budget_ms: 1500,
         acceptance: Acceptance::SimulatedAnnealing { t: 1.0 },
         segment_iters: 50,
         seed,
