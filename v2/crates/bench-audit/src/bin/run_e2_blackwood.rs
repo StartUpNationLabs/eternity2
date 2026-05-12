@@ -137,6 +137,14 @@ fn run_arm(
         alns_stats.iters,
         am as i32 - cp_m as i32
     );
+    // Vol-17 — per-op ALNS effectiveness (invocations + accepts).
+    eprintln!("[{label}] ALNS per-op:");
+    for (i, name) in alns_stats.op_names.iter().enumerate() {
+        let inv = alns_stats.per_op_invocations[i];
+        let acc = alns_stats.per_op_accepts[i];
+        let rate = if inv > 0 { 100.0 * acc as f64 / inv as f64 } else { 0.0 };
+        eprintln!("    {name:<24}  inv={inv:>4}  acc={acc:>4}  rate={rate:>5.1}%");
+    }
     eprintln!("[{label}] ALNS bucas: {alns_url}");
     let _ = std::fs::write(
         out_dir.join(format!("{label}_alns_board.json")),
