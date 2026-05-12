@@ -966,6 +966,15 @@ pub fn run_alns(
 
     let pinned_set: BTreeSet<Position> = cfg.pinned_positions.iter().copied().collect();
 
+    // Vol-17 novel — restart-on-stagnation: track iters-since-best.
+    // After STAGNATION_LIMIT iters with no new best, reset
+    // `current` to `best` (escapes worse-accept drifts that ratchet
+    // away from the optimum) and reshuffle op weights to give bored
+    // ops a fresh chance.
+    let stagnation_limit: u32 = 60;
+    let mut last_best_iter: u32 = 0;
+    let mut total_restarts: u32 = 0;
+
     while t_start.elapsed().as_millis() < cfg.time_budget_ms as u128 {
         stats.iters += 1;
         let op_idx = weights.select(&mut rng);
@@ -1006,6 +1015,7 @@ pub fn run_alns(
                 best = current.clone();
                 best_score = new_score;
                 stats.best_score_history.push((stats.iters, best_score));
+                last_best_iter = stats.iters;
                 sigma = weights.sigma_new_best;
             } else if delta > 0 {
                 sigma = weights.sigma_improve;
@@ -1018,6 +1028,22 @@ pub fn run_alns(
             stats.rejected += 1;
         }
         weights.reward(op_idx, sigma);
+
+        // Vol-17 — stagnation check: if no new best in stagnation_limit
+        // iterations, jump back to best and reshuffle weights.
+        if stats.iters - last_best_iter >= stagnation_limit {
+            current = best.clone();
+            current_score = best_score;
+            // Slightly shrink weights then add a tiny uniform perturbation,
+            // so the dominant op stays dominant but bored ops get a boost.
+            weights = AdaptiveWeights::uniform(ops.len());
+            last_best_iter = stats.iters;
+            total_restarts += 1;
+            if cfg.verbose {
+                eprintln!("[ALNS iter {}] stagnation restart #{}; reset to best={}",
+                    stats.iters, total_restarts, best_score);
+            }
+        }
 
         if stats.iters % cfg.segment_iters == 0 {
             weights.update_weights();
