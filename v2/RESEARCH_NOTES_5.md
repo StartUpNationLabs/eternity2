@@ -453,6 +453,37 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE-RAND FINAL 04:14 — random-fill PT plateaus at 439/480
+
+**Setup**: PT from random-fill board (no CP phase), 600s.
+
+**Result**: best 439/480. **10 edges below the canonical CP-seeded
+PT plateau of 449.** Random-fill PT cannot match what CP+PT
+achieves in equivalent time.
+
+**Falsified hypothesis**: CP basin is biasing PT toward sub-optimal
+basins. **NOT TRUE** — random-fill produces strictly worse boards
+in equivalent compute. CP is doing meaningful work that random
+initialization cannot replicate.
+
+**Implication**: the algorithmic pipeline (CP → PT → frame-first →
+constrained PT → GA crossover) is layered usefully. Each step adds
+value the previous can't replicate alone.
+
+### NIGHT-CHAIN COMPLETE 04:14 — full pipeline finished
+
+All 6 phases done. Final score: **452/480** from GA-light cross #4.
+
+| Phase | Result | Score |
+|---|---|---|
+| NE2.1 K-sweep | over-constrains monotonically | 442-448 |
+| NE1 funnel (3 stages) | 450 reproduced from new basin | 450 |
+| NE2-iter (3 rounds) | redistribution invariance confirmed | 450 |
+| GA-light (12 cross) | 1 hit at 452 (8% rate) | **452** |
+| Cascade Phase A | 1800s PT cannot push 452 → 453 | 452 |
+| Cascade Phase B (8 cross) | 2/8 = 451; none broke 452 | 451 max |
+| NE-RAND | random-fill PT 10 edges below CP-seed | 439 |
+
 ### CASCADE PHASE B FINAL 04:04 — 2/8 reached 451, none broke 452
 
 **Setup**: 8 cascade crossovers using the 452 board + various 449/450
