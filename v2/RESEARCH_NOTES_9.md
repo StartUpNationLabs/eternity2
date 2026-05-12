@@ -258,7 +258,7 @@ pieces" still missing.
 machinery and a falsifiable A/B test of the metric; closing the
 gap to 469 is a follow-up.
 
-### 13:00 — Vol-9 final deliverable summary
+### 13:00 — Vol-9 deliverable summary (intermediate)
 
 Shipped:
 1. **Eulerian-cycle border propagator** + 1M-trial NEGATIVE
@@ -290,6 +290,227 @@ Files added/modified (vol-9 part 2):
   - `wasm/src/lib.rs` (1-line: new SolveOpts fields)
 
 Workspace state: 84 tests pass, 0 fail, 7 ignored.
+
+---
+
+## Vol-9 closeout (after vol-10 community-mining catalogue)
+
+### Cross-reference against vol-10's findings
+
+Vol-10 (running parallel) finished a 7-probe community-mining pass
+and digested 12 of ~30 substantive groups.io threads end-to-end.
+Three vol-10 findings directly affect vol-9 conclusions:
+
+**1. Blackwood's complete 469-parameter set is now on record**
+(`docs/community-mining/09_Blackwood_solver_thread.md`, msg #31):
+
+```
+heuristic_sides       = [17, 2, 18]
+break_indexes_allowed = [201, 206, 211, 216, 221, 225, 229, 233,
+                         237, 239, 241, 256]  (12 breaks → 469)
+heuristic_array       = piecewise-linear color-exhaustion target
+                        0 of 122 @ index 0
+                        0 of 122 @ index 16
+                       28 of 122 @ index 26
+                       71 of 122 @ index 56
+                       89 of 122 @ index 76
+                      106 of 122 @ index 102
+                      119 of 122 @ index 160
+```
+
+This is **a different algorithm family** from vol-9's Verhaard SA.
+Verhaard's metric (2×2 sub-tilings) selects WHICH inner-piece
+subset to prefer in value order. Blackwood's heuristic_array selects
+WHICH edge-color exhaustion trajectory to follow as depth increases,
+and break_indexes_allowed permits k-mismatch scheduling on a fixed
+schedule (`break_indexes_allowed[i]` → depth at which an i-th break
+is permitted). The two are **composable**: SA picks a preferred-
+piece list (vol-9's work); Blackwood schedules scheduled relaxations
+on top. Composition was not attempted in vol-9.
+
+**2. Canonical 5-hint E2 has ~4×10⁻⁸ expected solutions, i.e.
+overwhelmingly likely exactly one solution** (McGavin complex theory,
+`docs/community-mining/06_Solution_count_estimates_thread.md`).
+**Depth 200 is the funnel entry** — solutions per depth collapse
+from 10⁴⁵ at depth 150 to 10⁴ at depth 256. Below depth 200,
+backtrackers are exploring the plateau; above 200, the search is in
+the funnel and tightly constrained.
+
+Vol-9's best partial reached **depth 181, edges 308** (seed 42, 30s
+budget, verhaard_preferred_par + SA preferred list). **We did NOT
+reach the funnel.** Vol-9's solver runtime is firmly in the
+exponential-plateau regime where 99% of backtrack time is wasted
+per McGavin's complex-theory model and per Joe's 70%@depth>150
+empirical finding.
+
+**3. Verhaard's 180-piece SA is operating in the intractable
+regime by construction** (Brendan 2008 phase-transition,
+`docs/community-mining/04_Interior_Rectangles_thread.md`). The
+phase-transition cutoff for sub-rectangle "about 2 solutions" vs
+"many solutions" is ≈96 cells. A 180-piece subset is **far** past
+this boundary — by construction Verhaard's metric is approximating
+a fundamentally hard surrogate. This is **the structural
+explanation for why Verhaard's 2008 work capped at 467, and a
+priori predicts the +6.5-edges signal vol-9 saw is the entire
+available signal-to-noise.** Verhaard's algorithm is *correctly*
+implemented in vol-9; the algorithm itself does not have the
+expressive power to cross depth 200 in this regime.
+
+### Triage of all relevant vol-10 items
+
+| Vol-10 item | Status |
+|---|---|
+| Blackwood exact 469-params (thread 09) | Composable with vol-9; logged as vol-11 candidate |
+| ~1 expected solution / depth-200 funnel (thread 06) | Affects vol-9 honest assessment; incorporated above |
+| Brendan 2008 phase-transition / Verhaard cap (thread 04) | Affects vol-9 honest assessment; incorporated above |
+| Joe's prune-back-to-depth-150 (thread 05) | Easy add; vol-11 candidate (not started in vol-9 per rules) |
+| McGavin 295M nodes/sec C code (thread 05) | Performance baseline; vol-9 didn't measure nodes/sec; vol-11 candidate |
+| Al Hopfer 2022 multiset-equality (thread 11) | Vol-10 NS-1; firmly vol-11, not retroactive vol-9 |
+| Carlos one-piece-swap 469 neighborhood (thread 09) | Vol-7 MAP-Elites territory, not vol-9 |
+| dvh "flexible frame around few inner 14×14" (thread 06) | Structural insight; informs vol-11 strategy choice |
+| Brendan two-stage 10⁴⁵ search-space model (thread 07) | Confirms vol-9 isn't competitive at this level |
+
+### What vol-9 actually built and measured (definitive)
+
+**Eulerian-cycle border propagator** (anr_56 2007 theorem):
+implemented in `crates/propagators/src/border_eulerian.rs`. Exact
+necessary-and-sufficient feasibility test for the directed-multigraph
+view of a closed border ring. Calibrated on 100k feasible-border
+corpus + 1M random subsets at 5 search depths. **Result: 0 pruning
+on canonical E2** at every depth tested. The theorem is correct;
+the canonical E2 piece set saturates the constraint vacuously.
+Future variant puzzles with smaller border palettes may benefit.
+
+**Verhaard 2×2 metric + simulated annealer**: `crates/solver-
+verhaard/`. Per-piece `participates()` with O(constant) per-swap
+update; verified invariant `sum_p participates(p, S) = 4 ·
+count_total(S)`. SA on canonical E2 grows metric from 3,311,628
+(first 186 by piece-id) to **3,409,059** (best over 5000 iters,
+~7s). Verhaard's 2008 prediction (R²=0.65 with log #tilings)
+operationally validated as **+6.5 to +7 edges of CP search depth**
+compared to random preferred-list or no-preference baselines, at
+30-second budgets across 4 seeds.
+
+**`ValueOrder::PreferredFirst`** in solver-engine: a new value-
+ordering variant that stably partitions a cell's domain so that
+piece-ids in `SolveOpts.preferred_pieces` are tried before others.
+The mechanical implementation of Verhaard's "load hard pieces
+into early placements" idea, but limited to value-order only;
+variable-order biasing (which CELLS visit preferred-pieces first)
+is not implemented.
+
+**Best partial achieved**: depth 181 / 308 edges (seed 42, 30s
+phase-1, gacolor+AC-3 propagation, PreferredFirst with SA's
+preferred-20 list). **Far below** the 469 community ceiling and
+below vol-7's PT-warm-started 449-454. We never crossed into the
+funnel regime (depth 200+).
+
+### Is the McGavin 295M nodes/sec baseline in reach?
+
+**Not measured.** Vol-9's solver-engine is Rust with gacolor + AC-3
+propagation; each visited node does substantially more work than
+McGavin's bare backtracker (his fit_table is a 4-axis edge-color
+lookup with no propagation beyond local color match). The
+throughput tradeoff is unmeasured: each of our nodes prunes much
+more, but at ~5-30× per-node cost. To compare honestly we need
+to instrument nodes/sec in solver-engine and run on Joe's
+puzzle. That's vol-11 work.
+
+McGavin's lookup-table layout (`fit_table[N][E][S][W]`) is
+substantially different from our row-id-based domain. Adopting it
+would be a major rewrite of solver-engine's core data structures.
+Conservatively: McGavin baseline is not in reach with the current
+architecture, and matching it is a vol-12+ project, not a vol-11.
+
+### Honest assessment
+
+Vol-9 shipped two pieces of clean infrastructure (Eulerian
+propagator with a falsifiable negative result; Verhaard SA + metric
++ PreferredFirst with a measurable but small positive signal) and
+zero ceiling progress. Best partial 308 edges, 161 below the 469
+community ceiling, 146 below vol-7's 454 plateau. The Verhaard
+metric works as advertised by Verhaard (small correlated signal),
+which is also Verhaard's documented 2008 ceiling — vol-10's
+phase-transition reading explains why this is the entire available
+signal.
+
+The Eulerian propagator finding is genuinely novel: anr_56's 2007
+prediction "0.78/0.70 tileable random borders" does not apply to
+canonical E2 (P=1.0 on 1M trials). The Monckton generator's border
+palette is structurally rich enough to saturate the constraint.
+
+### Vol-11 candidates (in dependency order)
+
+The vol-10 catalogue surfaced several composable items that
+together could plausibly approach 460+:
+
+1. **Joe's prune-back-to-depth-150 in solver-engine**
+   (`docs/community-mining/05_Joe_pruning_method_thread.md`). Add a
+   `pruning_policy: Option<PruningPolicy>` to `EngineConfig` that
+   triggers when N iterations elapse at depth > T without progress.
+   Calibrate N, T on canonical E2 (Joe's 1600/150 was tuned on a
+   different puzzle). Predicted 17-49% iteration reduction →
+   roughly equivalent to 2× longer effective wall-clock.
+
+2. **Blackwood-schedule layer on top of vol-9's Verhaard
+   preferred-list**
+   (`docs/community-mining/09_Blackwood_solver_thread.md`). Add a
+   `heuristic_array` + `break_indexes_allowed` to `EngineConfig` /
+   `SolveOpts`. The Verhaard SA selects preferred pieces; Blackwood
+   schedules WHICH depths permit a k-mismatch. The two are
+   orthogonal axes. Implementation is mechanical; calibration uses
+   Blackwood's exact 469 parameters as the warm start.
+
+3. **Variable-order biasing** for PreferredFirst. Today, preferred
+   pieces are preferred at every cell. The natural extension is to
+   *visit cells where preferred pieces are in the domain* earlier
+   in the path — `VariableOrder::PreferredEarly`. This is the
+   "first 80 placements" detail vol-9's notes promised and never
+   implemented.
+
+4. **Nodes/sec instrumentation + McGavin comparison**. Add
+   `SolveOutcome.{node_count, elapsed_us}` reporting; benchmark
+   on Joe's 16×16x5x17_71 puzzle (community standard); compare to
+   McGavin's 295M/sec.
+
+5. **Multiset-equality propagator** (vol-10 NS-1, Al Hopfer 2022,
+   `docs/community-mining/11_Inner_14x14_thread.md`). Vol-10 already
+   has this on its roadmap; vol-9 doesn't preempt. Worth combining
+   with #1 + #2 once vol-10's NS-1 lands.
+
+6. **Calibrate Verhaard's R²=0.65 metric correlation on E2** (not
+   on his 2008 2×22 strip but on 4×4 / 6×6 sub-puzzles using
+   E2's actual piece pool). Confirms whether the metric we
+   optimized is the right one for our specific puzzle, or whether
+   a different surrogate (e.g., 3×3 sub-tilings, or pairwise
+   compatibility graph density) gives stronger signal. Cheap.
+
+### Single-paragraph closeout
+
+Vol-9 set out to ship two community techniques — anr_56's Eulerian-
+cycle border propagator and Verhaard's 2008 set-composition swap-
+annealing — on our Rust stack. Both shipped cleanly, with unit
+tests, a calibrated multi-seed factorial experiment, and proper
+extensions to solver-engine (`ValueOrder::PreferredFirst`, new
+profile constants, `SolveOpts.excluded_pieces` /
+`preferred_pieces`). The Eulerian propagator is a sound theorem
+with **zero pruning on canonical E2** (1M trials at 5 depths) —
+a genuine community-side falsification of anr_56's 2007 prediction
+for this specific puzzle. Verhaard's SA grows its 2×2-tiling metric
+as advertised and lifts CP search depth by **+6.5 edges on average
+over no-preference**, a measurable but small signal — which is
+itself consistent with Brendan's 2008 phase-transition reading
+that 180-piece sub-puzzles are operating in the intractable
+regime by construction (vol-10 surfaced this after vol-9 finished
+the runs). Best partial reached was 308 edges, far below depth
+200's funnel entry and 161 below the 469 community ceiling; vol-9
+did NOT move the ceiling, but did ship two clean and falsifiable
+results plus the engine machinery (`PreferredFirst`,
+`excluded_pieces`, `verhaard_preferred[_par]` profiles) that
+vol-11 can build on. The honest punch list for vol-11 is Joe's
+prune-back-to-depth-150 + Blackwood's exact 469 schedule layered
+on top of vol-9's Verhaard preferred-list — three orthogonal
+techniques composed, not new invention.
 
 ### 10:25 — Eulerian formulation pinned (historical, kept for context)
 
