@@ -646,7 +646,35 @@ starting boards.
 | H10 | More iters (10 min) > 5 min                            | 456 (10min) vs 455 (5min); plateau by iter 33 | WEAKLY REFUTED |
 | H11 | Multi-CP-partial diversity > single-CP-partial         | E6 pending (15 min CP gen) | PENDING       |
 | H12 | Lex-isoscore tiebreak helps                            | E8 pending                | PENDING       |
-| H13 | Short runs × many seeds > long single run              | E5 running                | PENDING       |
+| H13 | Short runs × many seeds > long single run              | best-of-8 short = 454 vs single long = 455 | WEAKLY REFUTED |
+| H14 | cluster_repair finds clean completion past 455         | gacolor_ac3 UNSAT in 0ms (halo=1, halo=3)  | REFUTED — 455 is provable local opt |
+| H15 | BottomBandDestroy injects diversity past 455           | 456/480 (+1)                            | WEAKLY CONFIRMED |
+| H_MaxSAT | MaxSAT finds optimal cluster repair                | z3 -wcnf timeout 120s, UNKNOWN (no model) | REFUTED for available solvers |
+| H16 | Block cross-graft of same-schedule boards unlocks      | rows 13-15: 455 (no Δ); rows 5-8: 455 (no Δ) | REFUTED |
+| H17 | Cross-graft of DIFFERENT-schedule boards (v17a + v17b) | E13 running (chimera 284→ALNS)         | PENDING       |
+
+## 01:18 — STRUCTURAL FINDING: piece-set per row-region is CONSERVED
+
+Verified across 4 boards (3 same-schedule, 1 different-schedule v17b):
+- Boards A (447 v17a), C (455 v17a), D (454 v17a) have IDENTICAL piece-sets
+  per row-region {0-4, 5-8, 9-12, 13-15}.
+- Board B (448 v17b) shares only 30/80 pieces with A in rows 0-4.
+
+This means **the CP schedule deterministically decides piece→region
+assignment**. Different ALNS runs from the same CP partial only
+shuffle pieces *within* regions, never *between* regions.
+
+Cross-grafting boards of the SAME schedule is a no-op (E11/E12 confirmed).
+The only piece-level diversity comes from running DIFFERENT schedules.
+
+## Backbone analysis across 9 saved boards
+
+18 cells consistently agree (piece+rotation) across all 9 boards:
+- 5 canonical hints
+- 13 cells in rows 13-15 (corner/bottom-edge regions forced by hint adjacency)
+
+So 238/256 cells are flexible across ALNS runs. The "real search space"
+is everywhere except the hint-forced corners.
 
 ## 00:35 — User pivot: shorter runs × more seeds
 
