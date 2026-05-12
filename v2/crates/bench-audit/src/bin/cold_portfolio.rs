@@ -30,9 +30,9 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Hints, Puzzle};
 use eternity2_localsearch::{
-    polish_rotations, run_alns, Acceptance, AlnsConfig, ComponentDestroy,
-    ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair,
-    RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
+    piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
+    ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy,
+    MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_calibrated_v17a, load_edge_bp_marginals, EngineSolver,
@@ -129,6 +129,7 @@ fn run_one_arm(
     let pinned_set_polish: std::collections::BTreeSet<u32> =
         hints.hints.iter().map(|h| h.position).collect();
     let (alns_board, _polish_gain) = polish_rotations(puzzle, &alns_board, &pinned_set_polish);
+    let (alns_board, _swap_gain) = piece_swap_hillclimb(puzzle, &alns_board, &pinned_set_polish);
     let (am, _) = score_board(puzzle, &alns_board);
     let ap = placed_count(&alns_board, puzzle);
     let alns_bucas = bucas_url(puzzle, &alns_board, &format!("v17_{arm}_s{seed}_alns"));

@@ -46,9 +46,9 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Hint, Hints, Puzzle};
 use eternity2_localsearch::{
-    polish_rotations, run_alns, Acceptance, AlnsConfig, ComponentDestroy,
-    ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair,
-    RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
+    piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
+    ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy,
+    MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -279,7 +279,11 @@ fn main() {
         pinned_positions.iter().copied().collect();
     let (alns_board, polish_gain) = polish_rotations(&puzzle, &alns_board, &pinned_set_polish);
     if polish_gain > 0 {
-        eprintln!("[stage3] polish: rotations +{polish_gain} matches");
+        eprintln!("[stage3] polish-rot: +{polish_gain} matches");
+    }
+    let (alns_board, swap_gain) = piece_swap_hillclimb(&puzzle, &alns_board, &pinned_set_polish);
+    if swap_gain > 0 {
+        eprintln!("[stage3] polish-swap: +{swap_gain} matches");
     }
     let (am, _at) = score_board(&puzzle, &alns_board);
     let ap = placed_count(&alns_board, &puzzle);
