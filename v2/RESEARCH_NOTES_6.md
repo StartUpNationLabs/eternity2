@@ -154,6 +154,25 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### Anti-consensus exploration (07:25) — wrong target
+
+**Setup**: build forbidden-edge list from edges that have ≥95%
+same-color consensus across corpus.
+
+**Result**: 24 edges qualify. Of those, **9 are border-related**
+(forced by hint placement) and **15 are interior** but cluster
+around the symmetric corner-hint cascades.
+
+Penalizing these would force PT away from corner-hint configurations,
+basically making the puzzle impossible. **Not the right anti-consensus
+target.**
+
+The right target would be edges consensus WITHIN the 452 basin
+specifically and VARYING across OTHER basins. Identifying that
+requires per-basin partitioning of the corpus, which I haven't done.
+
+**Verdict**: anti-consensus needs basin partitioning first. Defer.
+
 ### A continued — Free-zone solver TRIED but BACKTRACKING approach yields 357 (07:22)
 
 **Setup**: backtracking solver on 0.95-threshold sub-puzzle (82 free
