@@ -453,6 +453,33 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE2-iter ROUND 1 02:35 — 450 → 450 (forbidden grew 6 → 36)
+
+**Setup**: NE2-iter ROUND 1 starting from NE1 stage-2 best 450/6/6.
+Forbidden set = top-6 NEW universal mismatches. K=10. 600s PT.
+
+**Result**: best stayed at 450 (no improvement). Forbidden set
+expanded from 6 → 36 by adding all 30 currently-mismatched edges.
+Round 2 starts with forbidden=36 and the same 450 board.
+
+**Predicted ROUND 2 outcome (per redistribution invariance)**: best
+≤ 450 because the 30 mismatched edges JUST FORBIDDEN are the same
+ones PT just failed to match. Constraining them harder cannot make
+them matchable.
+
+**Logical issue in NE2-iter design**: adding CURRENTLY-MISMATCHED
+edges to forbidden = forbidding edges that PT just decided are NOT
+matchable in this basin. The constraint becomes self-defeating.
+
+A BETTER iterative design would be: add edges that are mismatched
+ACROSS MULTIPLE different basins (= true universal). But our
+universal-mismatch list (top-6/12/30) already captures that.
+
+**Negative result expected for ROUND 2/3**. The mechanism for
+breaking the plateau is NOT iterative deepening of the same
+constraint family — it's CHANGING the basin (frame-first) or
+performing larger moves (≥6 pieces).
+
 ### NE1 FUNNEL DONE 02:24 — capped at 450/480 across all 3 stages
 
 **Final NE1 funnel result**:
