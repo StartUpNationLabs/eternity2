@@ -453,6 +453,48 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### 451+ BASIN ANALYSIS 04:20 — all 3 are in the SAME BASIN
+
+**Setup**: pairwise bucas-string overlap of the 3 distinct 451+ boards
+produced tonight (1×452 from GA-light + 2×451 from cascade Phase B).
+
+**Result**:
+| | 452 (orig) | 451 (cas#1) | 451 (cas#8) |
+|---|---|---|---|
+| 452 (orig) | --- | **92.2%** | **93.8%** |
+| 451 (cas#1) | 92.2% | --- | 92.2% |
+| 451 (cas#8) | 93.8% | 92.2% | --- |
+
+**All 3 boards: ~92-94% pairwise overlap.**
+
+**Compare**: two different 450 boards had only **18-19% overlap**
+(structurally DISTINCT basins). The 451+ boards are all in the
+SAME small basin around the 452.
+
+**Strain signature consistent**: mean defect L1 distance to (7,8)
+is 5.05-5.43 for all 3 451+ boards (cf. 5.27-5.33 for the 450
+boards). Same strain field, slightly more polished.
+
+**Mechanism**: cascade Phase B used the 452 as one parent and
+crossed in 3×3 / 4×4 / 5×5 regions. Small perturbations of a
+high-quality board → neighbors of the 452 in a small radius. To
+find a STRUCTURALLY DIFFERENT 451+ basin, we'd need a parent that
+is itself in a different 451+ basin — which we don't have yet.
+
+**Implication for NE-GA scaling**: scaling cross-attempts within
+the current parent pool will produce more 451-class boards in this
+basin, but unlikely to find a SECOND 451+ basin. To find new
+basins, need either:
+- More structurally-diverse parents (e.g. cross multiple 450s from
+  very different frame-first borders).
+- Crossover with much wider region (8×8+) to inject more diversity.
+- Frame-first → GA → frame-first iteration.
+
+**Publishable observation**: the night's 4 × 451+ boards represent
+**ONE basin discovery**, not multiple independent breakthroughs.
+This is honest accounting and bounds the significance of the
+result correctly.
+
 ### NE-RAND FINAL 04:14 — random-fill PT plateaus at 439/480
 
 **Setup**: PT from random-fill board (no CP phase), 600s.
