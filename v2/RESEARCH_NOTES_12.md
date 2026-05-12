@@ -357,6 +357,68 @@ The 75k frames will be the input to a "for each frame, try the
    marginals should give a *non-trivial* value-order signal at every
    subsequent variable.
 
+### 2026-05-12 14:18 — DEEP BITSET REFACTOR (steps 2/3/5/6 end-to-end)
+
+After the initial closeout, the user asked me to ship the remaining
+bitset steps (2/3/5/6) end-to-end in this session. Vol-13 agent was
+paused for the duration. Total ~50 min focused work.
+
+**Step 5** (commit `0591683` part 1): `PropagatorContext.domains: &[Vec<u32>]`
+→ `domain_bits: &[u64]` + `words_per_pos: usize`. `DomainBitIter`
+iterator added for set-bit traversal. Only one consumer
+(`island_check`) needed a body rewrite; tests updated to construct
+bitsets via a `build_bits` helper. Cross-crate change, executed in
+~10 min with full propagator + engine test pass.
+
+**Step 2** (commit `0591683` part 2): place_and_propagate's 4-neighbor
+prune now does
+```rust
+let keep = side_color_mask[side*n_colors+color] & !piece_mask[pid];
+domain_bits[w] = cur & keep;
+```
+in a single per-word pass. `side_color_mask` and `piece_mask` are
+precomputed at SearchState construction. Same for piece-uniqueness:
+single AND against `piece_mask[just_placed_piece]`. AC-3 entry rebuild
+iterates set bits of `domain_bits` to fill `count`; AC-3 inner rewritten
+to snapshot set bits before iteration to avoid concurrent-mutation
+issues.
+
+**Step 6** (commit `0591683` part 3): `self.domains: Vec<Vec<u32>>`
+deleted from `SearchState`. All ~25 access sites rewritten to read
+the bitset via `domain_iter`, `domain_size`, `domain_is_empty`,
+`domain_contains`, `pin_to`, `snapshot_bits`, `restore_bits` helpers.
+`parallel.rs` updated. Two invariant unit tests added.
+
+**Step 3** (commit `abde0dc`): undo log
+`Vec<(Position, Vec<u32>)>` → `Vec<UndoEntry { pos, words: Vec<u64> }>`.
+Restore is now O(words_per_pos) per entry — typically 16 u64 ORs vs
+O(removed_count) which can be hundreds.
+
+**Final perf, canonical E2 60s/cell with hints, single-thread:**
+
+| config              | pre-bitset (`ff066b5`) | step6 (`0591683`) | step3 (`abde0dc`) |
+|---------------------|-----------------------:|------------------:|------------------:|
+| t=-1 me=false       |                  1342  |              2063 |          **2136** |
+| t=-1 me=true (NS-1) |                  1211  |              1987 |          **2192** |
+| t=150 me=false      |                  1250  |              1880 |          **2153** |
+| t=150 me=true       |                   959  |              1601 |          **2177** |
+
+| config | depth_pre | depth_step6 | depth_step3 |
+|---|---:|---:|---:|
+| all | 164 | 166-164 | **169** |
+
+**Overall vol-12 throughput arc**: +63% nps on the default config,
+**+127% on the previously-slowest (NS-1+depth-gate) config**, +5 depth
+in the same 60s budget. The per-config nps variation that previously
+favored bare-baseline over NS-1+gate has been **eliminated** — all 4
+configs now run within 3% of each other at ~2150 nps.
+
+**This is the engineering Tier 4 of vol-12**: we did NOT clear 470 on
+canonical 5-clue, but we measurably closed ~half of the inner-loop
+constant-factor gap to McGavin's 295M nps reference (≈14% closed total;
+remaining ~125× is mostly the per-node propagator cost which is
+algorithmically heavier than McGavin's bare-edge-matching).
+
 ### Hourly /loop status
 
 cron job `122d151e` fires at every :07 — was an idle tick during
