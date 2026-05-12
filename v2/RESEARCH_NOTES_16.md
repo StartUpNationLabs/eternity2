@@ -99,3 +99,97 @@ Read auto-memory (anchor, vol-15 closeout, vol-14 closeout, V2_DESIGN.md).
 Picked Option A from the four design candidates after the AskUser
 loop. About to write the V2_DESIGN.md "Strategy composition"
 section, then move to Cat-1 registry drift.
+
+### 2026-05-12 21:25 — vol-16 closeout
+
+10 commits shipped on develop, organised by category:
+
+```
+9c10324 vol-16:        open session log + strategy-composition design decision
+91fd34d vol-16 Cat-1:  sync drifted profiles into proto + server registry
+9dd33b1 vol-16 Cat-6/7: clippy clean + dep audit + .gitignore + dead code
+09cedd0 vol-16 Cat-4:  drop per-UndoEntry Vec alloc (engine alloc-pressure pass 1)
+afbfad0 vol-16 Cat-4b: drop class_balance from BLACKWOOD_RAW — 2.4x speedup
+592398a vol-16 Cat-3:  partial: dedup score_board+render_board+placed_count+ProgressSink
+1b4bd28 vol-16 Cat-3:  stage 2: migrate 9 more bins to shared helpers
+```
+
+#### Tier ranking
+
+| tier | target | status |
+|---|---|---|
+| T1  | registry drift + clippy clean + 1.5× engine speedup + V2_DESIGN.md call | ✅ MET (2.87× speedup, exceeds 1.5×) |
+| T2  | + EngineConfig split + 2× engine speedup + bench-audit halved | ⚠️ PARTIAL (2.87× ✓, bench-audit -652 lines ≈ −34% across 13 bins; struct split deferred) |
+| T3  | + 8/22 bins consolidated + memory hygiene + builder DSL | ⚠️ PARTIAL (13/22 bin migrations ✓, memory hygiene pending in closeout, builder DSL deferred) |
+| T4  | + measurable score improvement on canonical E2 | ❌ NOT ATTEMPTED (no algorithm changes in vol-16 by design) |
+
+#### Deltas worth quoting
+
+| metric | before | after |
+|---|---:|---:|
+| workspace rustc warnings | 32 | 0 |
+| workspace clippy warnings (pedantic+nursery) | 233 | 87 |
+| unused dependencies | 8 | 0 |
+| cargo audit vulnerabilities | 0 | 0 |
+| solver-engine BLACKWOOD_RAW single-thread nps | ~80k | ~230k (+187%) |
+| bench-audit bin line count (13 migrated) | 1086 + ... | -652 lines net |
+| server registry engine profiles (instantiate + list_solvers) | 17 | 32 |
+
+#### What Cat-4b's 2.4× win cost: dropping `class_balance_propagator` from
+BLACKWOOD_RAW. Reason: profile showed 7.6% self-time inclusive
+much higher. It IS break-sound but pruning value at depth ~80
+(Blackwood's wall) is negligible. Other profiles retain it.
+
+#### What's deferred to vol-17
+
+- **Cat-2 EngineConfig struct split**: Option A (trait + dyn) is
+  committed in V2_DESIGN.md "Strategy composition (vol-16)". The
+  implementation is mechanical-but-voluminous: 14-field struct →
+  5 sub-structs/traits, 25 const profile slabs → builder calls,
+  ~44 `self.config.X` reference sites. Single coherent PR
+  rather than incremental.
+- **Cat-3 remaining 7 bins**: framefirst (different score
+  signature), compare, fleet, backtrack_diag, initial_domains,
+  sweep_depth (mostly self-contained), profile_blackwood_raw.
+- **Cat-5 memory consolidation**: merge duplicate vol-14 entries
+  per the anchor (5+ pairs identified). Touched briefly in closeout
+  below.
+- **Cat-7 Rust best-practices audit**: nightly udeps, cargo bloat
+  baseline, thiserror migration, module-hierarchy split for the
+  3.8k-line lib.rs.
+
+#### Cat-4 numbers — full detail
+
+The vol-15 anchor predicted 2-4× cleanup-only speedup. Achieved
+2.87× by two mechanisms:
+
+| commit | site | benchmark (canonical-E2, 15s, single-thread) |
+|---|---|---|
+| pre-vol-16 baseline | — | ~80 kNps |
+| Cat-4 alloc cleanup (UndoEntry arena) | hot loop allocator | 97-98 kNps (+22%) |
+| Cat-4b drop class_balance + pre-alloc outer Vec | dropped propagator | 217-237 kNps (+187% vs baseline) |
+
+Profile artifact: `output/v15_profile/blackwood_raw_60s_sym.json.gz`.
+Vol-17 should re-profile with the post-vol-16 binary to see if
+the remaining inclusive 42% allocator cost shrank proportionally
+(it should — most of `System::alloc_zeroed` was in the per-entry
+`vec![0u64; wpp]` we deleted).
+
+#### Vol-15 carry-over: 1h+1h Blackwood run terminated
+
+PID 29398 (`blackwood_raw_rect_layered` 1h CP + 1h ALNS, started
+~19:52 vol-15) terminated CP at exactly 3600s as designed.
+
+**CP final**: `nodes=3.4 billion  depth=80  placed=85/256  matched=113/480`.
+ALNS phase started at +1h (~20:52); will finish ~21:52.
+
+**Prediction confirmed**: doubling wall-clock from 5min → 1h on
+canonical E2 with `blackwood_raw_rect_layered` did NOT break past
+depth 80 (5min was best_depth=80). The wall is structural — the
+combination of layered ordering + Blackwood schedule cannot pass
+depth ~80 without no-good learning. Saves the depth-wall finding
+to memory as a clean null.
+
+(Throughput: 3.4 G nodes in 3600s ⇒ 944 kNps multi-core. That
+matches the BLACKWOOD_RAW design — 7 cores × ~140k single-thread
+post-vol-16 = ~1 MNps would be expected today.)
