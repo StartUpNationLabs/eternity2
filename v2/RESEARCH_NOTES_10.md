@@ -227,12 +227,174 @@ much subtler argument for the same algorithm, and it suggests:
   sense from this angle: it puts the algorithmic structure where the
   geometric structure is missing.
 
+## Probe #3 — pairwise piece-interaction PCA (added in this session)
+
+**Motivation**. Vol-10's interpretation of probe #1 flagged "pairwise
+piece interactions" as the candidate next direction. Probe #3 tests
+whether the pair-level interaction matrix is low-rank.
+
+### Probe #3a — first attempt (histogram-collapsed)
+
+**Setup**. For each ordered pair (i, j) of interior pieces, compute
+M[i, j] = number of (rot_i, rot_j, adjacency) triples for which the
+shared edge between i and j matches (4 rotations × 4 rotations ×
+4 adjacency types = up to 64).
+
+**Code**: `scripts/v10_pairwise_interaction_pca.py`.
+**Outputs**: `output/v10_math/pairwise_pca.{json,txt}`,
+`pairwise_interaction_matrix.npy`.
+
+**Result**. M has rank **exactly 17**; top-10 PCs capture 80% of
+variance. *Initially this looked like strong low-rank structure*.
+
+**Algebraic check**. Direct calculation confirmed M = 4·H·Hᵀ exactly,
+where H is the 196×22 interior-piece color histogram matrix from
+probe #1. Reasoning: summing over the 4 rotations destroys positional
+information; each rotation visits every edge at every position once;
+so the rotation-summed pair score collapses to the inner product of
+histograms.
+
+**Honest finding**: probe #3a is **algebraically identical to probe #1**.
+The rank-17 result is forced by H being 196×22 with H's spectrum
+already known from probe #1 (top-PC ratio 1.88× iid baseline). Probe
+#3a is not a new probe; it's probe #1 in a different basis. Discard
+its naive interpretation.
+
+### Probe #3b — position-aware (piece-rotation level)
+
+**Motivation**. The right pair-level metric must NOT sum over rotations
+— that's where the positional information lives. Treat each (piece,
+rotation) as a separate entity: 196 × 4 = 784 piece-rotation tokens.
+
+**Setup**. M₃[(i, r), (j, s)] = number of adjacency types (NESW) for
+which the shared edge between piece-rotation (i, r) and (j, s) matches.
+This is a 784×784 symmetric integer matrix with entries in {0..4}.
+
+**Structural decomposition**. Each piece-rotation (i, r) maps to a
+length-88 feature vector φ(i, r) over the 88 (color, position)
+combinations (22 colors × 4 positions). With P the 88×88 permutation
+swapping E↔W and N↔S blocks, we have **M₃ = Φ · P · Φᵀ** exactly
+(verified by direct numerical equality).
+
+**Rank result**.
+- rank(M₃) = **65** out of 88 maximum.
+- rank(Φ) = **65** as well — the 23-dimension deficit comes from
+  linear dependencies among (color, position) features in the
+  canonical piece set, NOT from M₃'s outer-product structure.
+
+**Signed spectrum** (important correction from initial run).
+M₃ is **not** positive semidefinite: its 65 nontrivial eigenvalues
+split into **33 positive (max 184.8) and 32 negative (min -64.8)**.
+This is mathematically correct: M₃ counts matches with a permutation
+P that swaps E↔W and S↔N, which is not a PSD operator.
+
+The honest measure of compressibility on a signed spectrum is the
+Frobenius energy fraction (cumulative |λ|² / Σ|λ|²), not the
+positive-only sum:
+
+| k (by |λ|²) | cumvar |
+|------------:|-------:|
+| 16 | 50% |
+| **37** | **80%** |
+| 48 | 90% |
+| 55 | 95% |
+| 63 | 99% |
+
+**Top |λ| by magnitude**: 184.8 (dominant by 2.6×), then a flat band
+69.8 → 56.6 (alternating signs), then a long tail.
+
+### Probe #3 — interpretation (corrected, twice)
+
+**First-pass interpretation was wrong** (over-claimed 23/65 dims for
+80% by dropping negative eigenvalues from the sum). The honest answer
+is **37/65 ≈ 57% effective dimensionality** when negative eigenvalues
+are counted — modest compression, not strong.
+
+**Genuine residual finding**: among 88 possible (color, position)
+features that a piece-rotation can carry, the canonical E2 set spans
+only **65 independent combinations**. There are 23 linear
+dependencies in the position-color feature matrix — the generator did
+not fully randomize across (color, position). This is **real and
+structural**.
+
+But within that 65-dim subspace, the spectrum is **not** strongly
+concentrated. M₃'s pair-interaction landscape is roughly half-rank
+within the structurally-bounded subspace, with no dominant low-dim
+archetype to exploit.
+
+**Operational implication for vol-9 Verhaard SA — revised**:
+
+The earlier draft proposed a fitness term β · variance_projection
+onto the "top 23 PCs". With the corrected accounting, that recipe is
+**less attractive** than I claimed: the top-37 PCs already include
+both strongly-positive and strongly-negative directions of comparable
+magnitude, and choosing only "top-by-magnitude" PCs would distort the
+metric.
+
+**A more defensible use** of the eigenstructure:
+- The **rank-65 fact** can be used as a sanity invariant: any
+  candidate piece set should span a 65-dim subspace; checking
+  rank(Φ_subset) is O(180 × 88³) and cheap.
+- The **23-dim dependency structure** identifies specific (position,
+  color) features that are linearly redundant. These dependencies
+  encode constraints the generator left in the piece set — they
+  might be expressible as graph-theoretic statements about color
+  flow, which would be testable with vol-9's existing color-count
+  propagators. **This is the right vol-11+ follow-up.**
+- The β · projection term I proposed earlier is **withdrawn** as a
+  concrete vol-9 recommendation until we understand what the
+  positive vs negative eigenvalues mean structurally. The math is
+  honest but the operational story is not yet clear.
+
+### What probe #3 changes in the meta-conclusion
+
+Vol-10's earlier meta said "the math doesn't save us at the static
+level" and recommended vol-9 stay on the operational track. Probe #3b
+**does NOT meaningfully walk that back**:
+
+- **Single-piece histograms are flat** (probe #1: 1.88× iid).
+- **Pair-level with rotations summed is the same as histograms** (#3a:
+  algebraic identity to probe #1).
+- **Position-aware pair-level has 23 linear dependencies in the
+  88-dim feature space** (#3b genuine finding). But within the
+  resulting 65-dim subspace, the eigenspectrum is **mildly**
+  compressible (37/65 dims for 80% Frobenius energy).
+
+The rank-65 fact is real but it's not a knob vol-9 can directly turn.
+The earlier draft of probe #3's recommendation (β · projection-
+variance term in Verhaard SA's fitness function) was based on a wrong
+accounting of the signed spectrum and is withdrawn.
+
+**Net effect on vol-10's meta-conclusion**: nearly unchanged.
+The static-spectral direction remains essentially closed; probe #3b
+surfaced one structural fact (rank-65) but no immediately usable
+operational signal. The operational track that vol-9 is on remains
+the right priority.
+
+**For vol-11+**: the rank-65 structure deserves investigation as a
+graph-theoretic / constraint-propagation object (the 23 dependencies
+in Φ encode invariants the generator left in the piece set; these
+might be expressible as color-flow statements vol-9's propagators
+can check). Non-linear extensions (kernel PCA, autoencoders) might
+surface stronger structure but the cost-benefit looks weak given how
+modest the linear result is.
+
 ## Artifacts
 
-- `scripts/v10_pca_piece_cloud.py`
-- `scripts/v10_laplacian_spectrum.py`
-- `output/v10_math/pca_piece_cloud.{json,txt}`
-- `output/v10_math/laplacian_spectrum.{json,txt}`
+- `scripts/v10_pca_piece_cloud.py` — probe #1
+- `scripts/v10_laplacian_spectrum.py` — probe #2
+- `scripts/v10_pairwise_interaction_pca.py` — probe #3a (kept for
+  reproducing the algebraic-collapse finding)
+- `scripts/v10_save_position_color_pcs.py` — probe #3b eigenbasis
+- `output/v10_math/pca_piece_cloud.{json,txt}` — probe #1 results
+- `output/v10_math/laplacian_spectrum.{json,txt}` — probe #2 results
+- `output/v10_math/pairwise_pca.{json,txt}` — probe #3a results
+- `output/v10_math/pairwise_interaction_matrix.npy` — 196×196 rotation-
+  collapsed M (probe #3a)
+- `output/v10_math/phi_matrix_784x88.npy` — Φ embedding matrix
+- `output/v10_math/eigenvalues_65.npy` — signed eigenvalues of M₃
+- `output/v10_math/piece_rotation_projection_784x33.npy` — projections
+  (kept for reproducibility, NOT recommended as a vol-9 fitness signal)
 - `RESEARCH_NOTES_10.md` — this file
 
 No vol-9 files touched. No vol-7 files touched.
