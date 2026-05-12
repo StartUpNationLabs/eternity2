@@ -2432,20 +2432,29 @@ impl<'a> SearchState<'a> {
         let present = &mut self.ac3_present;
         let on_queue = &mut self.ac3_on_queue;
         // Build `count` by iterating set bits of self.domain_bits per pos.
+        // Vol-16 — slice the per-position views to elide bounds checks
+        // on the inner increment, and bind the rows slice once.
+        let rows = self.rows.as_slice();
+        let dom_bits = self.domain_bits.as_slice();
         for p in 0..n_pos as usize {
             if self.placed[p].is_some() { continue; }
             let base = p * words_per_pos;
-            for w in 0..words_per_pos {
-                let mut word = self.domain_bits[base + w];
+            let pos_count_base = p * stride_pos;
+            let dom_slice = &dom_bits[base..base + words_per_pos];
+            let count_slice = &mut count[pos_count_base..pos_count_base + stride_pos];
+            for (w, &word_init) in dom_slice.iter().enumerate() {
+                let mut word = word_init;
+                let bit_base = (w as u32) * 64;
                 while word != 0 {
                     let bit = word.trailing_zeros();
                     word &= word - 1;
-                    let r_id = (w as u32) * 64 + bit;
-                    let r = self.rows[r_id as usize];
-                    for s in 0..4 {
-                        let c = r.edges[s] as usize;
-                        count[p * stride_pos + s * n_colors + c] += 1;
-                    }
+                    let r_id = bit_base + bit;
+                    let r = &rows[r_id as usize];
+                    // Unrolled 4-side accumulator.
+                    count_slice[r.edges[0] as usize] += 1;
+                    count_slice[n_colors + r.edges[1] as usize] += 1;
+                    count_slice[2 * n_colors + r.edges[2] as usize] += 1;
+                    count_slice[3 * n_colors + r.edges[3] as usize] += 1;
                 }
             }
         }
