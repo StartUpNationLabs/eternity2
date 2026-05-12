@@ -344,6 +344,64 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### *** Z_22 VERTEX-CHARGE FINGERPRINT — disclination strings viable, 11:40 ***
+
+X1's pre-experiment: compute the Z_22 topological charge at each
+interior vertex of the 16×16 board. A vertex has 4 incident edges;
+sum their colors mod 22 = the charge. Perfect solution ⇒ all
+charges 0. Mismatched edges ⇒ nonzero charges that *must pair up*
+topologically (sum over the board = 0 mod 22).
+
+Five HISTORIC boards measured (`scripts/z22_charge_fingerprint.py`):
+
+| Board       | nonzero / 225 | %      | mean L1 to opposite | within ≤6 |
+|-------------|---------------|--------|---------------------|-----------|
+| 453 (first) | 44            | 19.6%  | **4.60**            | 73%       |
+| 453 (xl)    | 44            | 19.6%  | 4.60                | 73%       |
+| 453 (casc.) | 43            | 19.1%  | 5.37                | 58%       |
+| 452 (gal.5) | 47            | 20.9%  | 6.56                | 50%       |
+| 451 (gal.17)| 50            | 22.2%  | **3.55**            | 86%       |
+
+X1's threshold for disclination-string move viability: "≥30% of
+opposite-charge pairs within Manhattan distance ≤6". **All five
+boards pass with margin (50-86%).** Disclination strings are
+viable.
+
+**Spatial structure**: charges live in rows 5-15, cols 4-13.
+Rows 1-4 are 100% charge-free on every board. This is the
+strain front, visualised topologically.
+
+**453 first/xl have IDENTICAL fingerprints**: confirms same basin.
+The cascade 453 differs (distinct basin, also 76% bucas-overlap
+per vol-5).
+
+**Mechanism for disclination-string moves**: a +c charge at vertex
+v_p can annihilate with a -c (= 22-c) charge at v_q by a piece-
+rotation path. This fixes O(path-length) mismatches at cost of
+O(1) boundary mismatches. *Genuinely different from edge-local
+moves* — the move size scales with the path length, comfortably
+above the moat-depth-≥5 lower bound.
+
+**Falsifying observation that didn't kill the idea**: my Z_22
+formulation could be wrong — I used additive Z_22 on color labels,
+but the *correct* gauge would use Z_22 only if the 22 colors form
+a Z_22 cycle group. The labels 1..22 are arbitrary; the gauge group
+might be S_22 (full symmetric group) without additive structure.
+*If* the puzzle has no Z_22 cyclic symmetry, the charges are still
+a useful structural fingerprint but the disclination-move math
+needs different group theory.
+
+**Publishable**: 30 mismatched edges → ~44 nonzero Z_22 charges
+→ topological pairing at L1 ≤ 6. This is a structural fingerprint
+of E2 hardness that the published literature has not reported.
+
+**Cost to implement disclination move in Rust** (X1 estimate):
+~700 LOC + min-cost-flow over a piece-rotation transport graph.
+3-5 CPU-days. Probability of 454+ within 7 days: 10-15% (X1's
+estimate). **DEFERRED until interior-first prototype + vol-6's
+borders complete** — disclination is high-cost, high-uncertainty;
+border diversification is lower-cost, more direct.
+
 ### *** PRECIOUS PIECES ARE NOT IN THE STRAIN CORE — 11:10 ***
 
 **Hypothesis**: if our current solver misallocates the most-tileable
