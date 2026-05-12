@@ -684,6 +684,77 @@ six new entries to the community-technique catalogue:
 | C-5 | M. Field "pattern parity" | M. Field 2008-2010 | partial; unclaimed propagator |
 | C-6 | xp2 checkerboard half-placement | xp2 2026 | untested |
 
+## Probe #7 — groups.io top-thread per-thread reading
+
+User pushed back on grep methodology, then suggested using a `docs/`
+folder if notes get too big. Probe #7 implements that: read complete
+groups.io threads (using `scripts/v10_thread_reader.py`) and dump
+structured notes under `docs/community-mining/`. One file per major
+thread or theme.
+
+**Threads read end-to-end so far** (out of 2346 total, of which ~30
+have ≥25 messages):
+
+| # | Thread | Msgs | Date range | Note file |
+|---|--------|-----:|-----------|-----------|
+| 1 | SAT | 82 | 2011-2026 | [01_SAT_thread.md](docs/community-mining/01_SAT_thread.md) |
+| 4 | Design the hardest puzzle | 54 | 2007-08 | [02_Design_the_hardest_thread.md](docs/community-mining/02_Design_the_hardest_thread.md) |
+| 13 | Algorithmic Challenges related to E2 | 44 | 2010-06+ | [03_Algorithmic_Challenges_thread.md](docs/community-mining/03_Algorithmic_Challenges_thread.md) |
+| 17 | Interior Rectangles | 40 | 2008-03 | [04_Interior_Rectangles_thread.md](docs/community-mining/04_Interior_Rectangles_thread.md) |
+| 60 | A method to prune E2 search space by 17-30%+ | 26 | 2026-01 | [05_Joe_pruning_method_thread.md](docs/community-mining/05_Joe_pruning_method_thread.md) |
+| 46 | Estimated number of solutions w/ and w/o hints | 28 | 2024-01 | [06_Solution_count_estimates_thread.md](docs/community-mining/06_Solution_count_estimates_thread.md) |
+| 32 | Two-stage solution process | 32 | 2025-05 | [07_Two_stage_solution_thread.md](docs/community-mining/07_Two_stage_solution_thread.md) |
+| 20 | Highest points (of 480) with 5 hints | 38 | 2023-03 | [08_Highest_5hints_thread.md](docs/community-mining/08_Highest_5hints_thread.md) |
+| 28 | EternityII Solver (Blackwood release) | 34 | 2020-09+ | [09_Blackwood_solver_thread.md](docs/community-mining/09_Blackwood_solver_thread.md) |
+
+**Most session-defining single findings (cross-thread)**:
+
+1. **The canonical E2 solution count** (probe #6, msg from McGavin):
+   ~14,702 expected solutions with just the start piece; ~4×10^-8 with
+   the 5 hints → **the canonical 5-hint E2 almost certainly has
+   exactly 1 solution**. Authoritative source: Peter McGavin's C
+   implementation of Brendan's Complex Theory.
+
+2. **Brendan Owen's complete model** (Two-stage thread, May 2025):
+   - 10^38 distinct outer frame configurations
+   - 10^34 inner 14×14 solutions
+   - 10^59 nodes searched to find one inner solution
+   - 10^-27 conditional matching probability between any specific
+     border and any specific interior
+
+3. **Blackwood's complete 469 algorithm** (Blackwood thread, Nov 2020,
+   msg #31): heuristic-side exhaustion at piecewise-linear rates +
+   12 scheduled break indices `[201, 206, 211, 216, 221, 225, 229, 233,
+   237, 239, 241, 256]` + parameter `heuristic_sides = [17, 2, 18]`.
+
+4. **Joe's prune-back-to-depth-150 policy** (Joe thread, Jan 2026):
+   17-49% search-space reduction on the E2-like puzzle. Immediately
+   adoptable in vol-9's backtracker.
+
+5. **The shape-and-teeth invariant** (lindstrom thread, May 2011, via
+   McGavin): partial-board state can be fingerprinted by exposed-edge
+   colors + remaining-piece-set. If two partial states have identical
+   fingerprints, the sub-tree only needs searching once. Not in our
+   solver-engine.
+
+6. **The 17-color phase transition formal anchor** (SAT thread, Jan
+   2023, Carles Mateu): E2 is GEMP-F with SAT phase-transition at 17
+   interior colors. Selby-Riordan picked 17 colors deliberately.
+
+7. **Marijn Heule's 2008 SAT-encoding paper** is the canonical
+   reference: `http://www.cs.cmu.edu/~mheule/publications/eternity.pdf`.
+
+8. **The "shell ladder" with shell-4 wall** (probe #5 C-1, plus
+   confirmation in Interior Rectangles thread): each onion ring inward
+   is harder; shell 4 (192 placed) is the wall. Aligns with Hopfer's
+   202-206 band and Joe's "70% time at depth >150" finding.
+
+**Methodological note**: the per-thread approach is producing roughly
+3-5 substantive items per thread. At 30 substantive threads × 4 items
+each → ~120 distinct facts to absorb. The vol-8 grep got perhaps 15-20
+of these. Per-thread reading is **far more productive**, at the cost
+of context.
+
 ## Probe #6 — full Discord end-to-end read (1198 messages, 2021-11 → 2026-05)
 
 **Method**. Read the entire Discord export start-to-finish in 4 chunks
