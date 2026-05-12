@@ -721,3 +721,87 @@ window that proves 454 is the new optimum? Future work.)
 
 **Next**: BORDER-3d.6 — quick saturation experiment on the 454
 board with same border, 5min × 5 seeds, see if 455+ emerges.
+
+### BORDER-3d.6 — saturation experiment results
+
+Setup: `scripts/saturate_454.sh` — 5 PT runs on the 454 board with
+its own border pinned, 300s each, distinct seeds.
+
+Stopped after 3 runs to close the session cleanly:
+
+| Run | Seed   | Result      |
+|-----|--------|-------------|
+| 1   | 9018   | 454/480     |
+| 2   | 18019  | 454/480     |
+| 3   | 27020  | 454/480 (in progress at 238s/300s, stable across all 3 cold replicas, killed at session close) |
+
+**Reading**: across 3 distinct seeds × 300s × 8 PT replicas, all cold
+replicas converge to and hold at 454. **454 is the saturation ceiling
+for the corpus border** within PT's reach. Improving past 454 with
+this border would need either (a) a fundamentally different inner
+solver (e.g. vol-7's reverse-Selby interior-first decomposition) or
+(b) a new border (vol-7 BORDER-3e triage funnel).
+
+---
+
+## VOL-6 → VOL-7 HANDOFF (2026-05-12 ~09:00)
+
+### What vol-6 delivered
+
+1. **NEW RECORD: 454/480** — `output/HISTORIC_first_454_1778567792.json`.
+   Reproducer: `./target/release/pt_e2 --pt-seconds 30 --skip-sa-compare
+   --start-from output/HISTORIC_first_454_1778567792.json --pin-perimeter
+   --seed 42`. (Or seeds 9018, 18019 for confirmation; all reach 454.)
+2. **`pt_e2 --pin-perimeter` flag** — pins all 60 border cells in
+   addition to `--pin-hints`. Requires `--start-from`. See pt_e2.rs.
+3. **`./target/release/border_enumerate`** — Las Vegas border sampler.
+   100k distinct borders in 24s, 88% per-sample success rate. All
+   24 corner-quads sampled uniformly.
+4. **`output/borders/sample_100k.jsonl`** — 100k distinct feasible
+   borders, 60 cells each, JSONL.
+5. **`output/borders/top_1000_by_corner_tightness.jsonl`** — top-1000
+   feasible borders by inner-corner candidate sum (the corpus 453's
+   border has sum=17; library best is sum=25). 37.6% of generated
+   borders are PROVABLY INFEASIBLE at inner-corners (auto-filtered).
+6. **Updated auto-memory** `project_e2_state.md` with the new ceiling
+   and reproducer.
+
+### What's sealed (don't redo)
+
+- Corpus border monoculture diagnosis (3 unique borders, 86% per-cell
+  consensus) — BORDER-1.
+- Sampler diversity sanity check (4.5% per-cell agreement vs corpus
+  86%) — BORDER-2c.
+- Surrogate v1 (global over-demand) — useless, ruled out.
+- Surrogate v2 (inner-corner tightness) — informative, used.
+- Saturation on the 454 board — ceiling confirmed at 454 across
+  3 seeds × 300s.
+- EvalMaxSAT inner-{3,4,5} optimality (`o 4 / o 6 / o 8`); k=6 TO@60s;
+  k=8 UNKNOWN@739s.
+
+### What's left for vol-7 (composes with vol-7's interior-first synthesis)
+
+- **BORDER-3e** is OPEN and should be vol-7's first composable
+  experiment with the reverse-Selby interior-first prototype.
+  Suggested form: rather than vanilla `pt_e2 --pin-perimeter` × 10s
+  on each top-1000 border, **drive the triage with vol-7's
+  interior-first fill as the inner solver**. Joint answer:
+  "which (border, inner-fill) pair breaks 454?"
+- The **17 interior cells that flipped 453→454** are themselves a
+  Verhaard-tileability signal — diff piece-tier-by-cell before
+  designing the reverse-Selby variable order. They show where PT
+  *spontaneously* shuffled precious pieces.
+- The **corner-tightness surrogate** is a coarse local Verhaard
+  proxy at the 4 corner-adjacent cells (compatibility count from
+  the inner-piece pool). Usable as input to reverse-Selby filling
+  without re-running tile-counts on every border.
+
+### Files vol-7 should touch (not vol-6's archived work)
+
+- `crates/propagators/` — new RareStripe / Verhaard-tileability
+  propagators (vol-7 territory).
+- `crates/benchmark/src/bin/` — new binary for interior-first
+  decomposition (vol-7 territory).
+- `RESEARCH_NOTES_7.md` — vol-7 notes (vol-6 won't write here).
+
+### Vol-6 session closed at this point. Hands off to vol-7.
