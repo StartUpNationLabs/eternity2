@@ -9,6 +9,45 @@ Sorted by **expected probability of breaking 450** × **time efficiency**.
 
 ---
 
+## ⭐ HIGHEST PRIORITY (post-breakthrough update 03:20)
+
+### 0. SCALE THE GA — replicate and extend the 452 result
+
+GA-light (12 crossovers, 8% hit rate) reached 452. **Scale to 100+
+crossovers** and we expect ~10 hits at 451+. Of those, statistically
+1-2 might be at 453+.
+
+**Setup**: same `scripts/ga_crossover.py` building block. Modify
+`scripts/ga_light_run.sh` to N=100, K=4 (the sweet spot region size),
+PT seconds = 60 (faster cycles). Total compute: ~1.7h.
+
+**Predicted gain**: at least 452 (≥1 hit) and likely 453-455 (1-3 hits).
+With 100 samples we can estimate the breakthrough-rate distribution
+and find a few outliers.
+
+**Why this is the FIRST thing to do tomorrow**: directly cashes in
+the night's discovery. Low risk, high EV, no new code.
+
+### 0.5 CASCADE from the 452 board
+
+Phase B of tonight's `post_ga_cascade.sh` does this (8 crossovers
+using the 452 as one parent). If any reach 453+, we have a
+*generative* process not just a one-off lucky hit.
+
+**Status**: queued in chain, results expected ~04:30 CEST.
+
+### 0.6 Apply the 4×4 (top-right) recipe systematically
+
+The breakthrough was at region (11,1)+4. Try ALL 4×4 regions in
+the top-right quadrant systematically (rows 1-5, cols 8-13 = ~30
+regions). With NE2-K10 449 + vol-4 450 as parents. Total compute:
+30 × 90s = 45 min. **Cheap, reproducible.**
+
+If 30 regions in top-right produce ≥1 hit at 452, the recipe is
+real. If only (11,1) works, the (11,1) hit was noise.
+
+---
+
 ## Tier 1: best EV (each ≤ 1 day; ≥ 30% chance of producing a 451+)
 
 ### 1. Memetic GA with block crossover, full population
