@@ -10,10 +10,23 @@
   this codebase.** Validates the synthesis prediction that ≥6-piece
   simultaneous moves are needed to break the plateau, and the
   literature precedent (Niang 2011) for memetic GA on E2.
+- **Total 451+ boards produced tonight: 4** (1×452 + 3×451). All
+  from algorithms that did not exist at session start.
 - The 9 structural findings still hold. The 452 was achieved by
   **crossover** (= simultaneous 16-piece replacement), not by local
   moves. This is exactly the move-size lower bound predicted by the
   Hamming-moat-≥-5 finding.
+- **The 452 board: 28 mismatches.** All on abundant colors (rare-
+  color invariance HOLDS). Top-6 NEW universal mismatches: 6/6
+  matched. Pair (13,20) shows the same scarcity pattern as pair
+  (18,21) on the 450.
+- **Cascade from 452**: 1800s PT cannot push 452 → 453 (52,728
+  rounds, no improvement). 8 cascade crossovers from 452 produced
+  2 × 451 but no 452+. The 452 is the new local-search ceiling.
+- **Cumulative score trajectory**: 449 → 450 → 452. +3 over the
+  night via 1 algorithmic class (GA crossover).
+- **Backup**: the 452 board is at
+  `output/HISTORIC_first_452_1778547973.json`.
 - BUT **the night discovered TWO important structural facts**:
   1. **Asymmetric hint at (7,8) creates the south-central strain
      cascade** that produces all universal-mismatch hotspots.
