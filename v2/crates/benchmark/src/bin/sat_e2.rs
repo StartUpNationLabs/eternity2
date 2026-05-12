@@ -81,6 +81,14 @@ struct Args {
     /// is set. Default 10 = inner 10×10 region free on a 16×16 puzzle.
     #[arg(long, default_value_t = 10)]
     center_k: u32,
+
+    /// Alternative to --center-k: an explicit JSON list of 1D cell
+    /// indices to FREE (e.g. "[68,84,100,...]"). All other cells (except
+    /// the 5 official hints) are pinned from --pin-outside-from.
+    /// Mutually exclusive with --center-k semantically (if both set,
+    /// --free-cells wins). Used for arbitrary-shape sub-puzzle attacks.
+    #[arg(long)]
+    free_cells: Option<String>,
 }
 
 fn main() {
@@ -133,29 +141,40 @@ fn main() {
                 panic!("plateau JSON has neither `placement` nor `bucas_url`");
             };
 
-        // Determine the center k×k box.
-        let k = args.center_k;
-        if k > puzzle.width || k > puzzle.height {
-            panic!("center_k={} exceeds puzzle dimensions", k);
-        }
-        let x0 = (puzzle.width - k) / 2;
-        let y0 = (puzzle.height - k) / 2;
-        let x1 = x0 + k;
-        let y1 = y0 + k;
-        eprintln!("free region: rows {}..{}, cols {}..{} ({}×{} = {} cells)",
-            y0, y1, x0, x1, k, k, k * k);
+        // Determine free cell set: either explicit list or centered k×k.
+        use std::collections::HashSet;
+        let free_set: HashSet<u32> = if let Some(s) = args.free_cells.as_ref() {
+            let v: Vec<u32> = serde_json::from_str(s).expect("parse --free-cells JSON");
+            eprintln!("free region: explicit list of {} cells", v.len());
+            v.into_iter().collect()
+        } else {
+            let k = args.center_k;
+            if k > puzzle.width || k > puzzle.height {
+                panic!("center_k={} exceeds puzzle dimensions", k);
+            }
+            let x0 = (puzzle.width - k) / 2;
+            let y0 = (puzzle.height - k) / 2;
+            let x1 = x0 + k;
+            let y1 = y0 + k;
+            eprintln!("free region: rows {}..{}, cols {}..{} ({}×{} = {} cells)",
+                y0, y1, x0, x1, k, k, k * k);
+            let mut s = HashSet::new();
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    s.insert(y * puzzle.width + x);
+                }
+            }
+            s
+        };
 
-        // Pin every cell OUTSIDE the center box. Use the new MINIMAL
+        // Pin every cell OUTSIDE the free set. Use the new MINIMAL
         // encoder path: build a `pinned_map` of (cell -> piece_idx, rot)
         // so the encoder OMITS variables for these cells.
         // Also pin official hints (so they don't get vars either).
         let pieces_arr = puzzle.pieces();
         let mut n_pinned = 0;
         for pos in 0..puzzle.cell_count() {
-            let x = pos % puzzle.width;
-            let y = pos / puzzle.width;
-            let in_center = x >= x0 && x < x1 && y >= y0 && y < y1;
-            if in_center { continue; }
+            if free_set.contains(&pos) { continue; }
             if let Some((pid, rot)) = placement[pos as usize] {
                 if let Some(pi) = pieces_arr.iter().position(|p| p.id == pid) {
                     pinned_map.insert(pos, (pi as u32, rot));
@@ -163,8 +182,8 @@ fn main() {
                 }
             }
         }
-        eprintln!("PINNED-MAP: {} cells outside the {}×{} center are constants (no SAT vars emitted)",
-            n_pinned, k, k);
+        eprintln!("PINNED-MAP: {} cells outside the free region are constants (no SAT vars emitted)",
+            n_pinned);
         // Also pin the official hints into the map (they're inside the
         // center but they're still constants).
         for h in &hints.hints {
