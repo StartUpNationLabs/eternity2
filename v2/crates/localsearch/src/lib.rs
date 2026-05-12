@@ -35,6 +35,7 @@ pub mod forbidden;
 pub mod houdayer;
 pub mod pt;
 pub mod repair;
+pub mod zobrist;
 pub use alns::{run_alns, AlnsConfig, AlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
                RandomRegion, WorstWindow, ConflictDriven, MwpmDefectPair, RepairKind};
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
@@ -42,6 +43,7 @@ pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
 pub use repair::{repair_region, repair_cells, worst_region};
 pub use directed::{run_directed, DirectedConfig};
+pub use zobrist::{BoardZobrist, ZOBRIST_MAX_PIECES};
 
 /// Configuration for the simulated-annealing local search.
 #[derive(Debug, Clone)]
