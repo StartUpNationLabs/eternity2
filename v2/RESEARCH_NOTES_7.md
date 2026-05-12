@@ -344,6 +344,55 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### *** PRECIOUS PIECES ARE NOT IN THE STRAIN CORE — 11:10 ***
+
+**Hypothesis**: if our current solver misallocates the most-tileable
+("precious") interior pieces, interior-first decomposition is high-EV.
+
+**Empirical check on the 453 board** with Verhaard valuation
+(62 precious / 126 good / 64 bad / 4 useless):
+
+```
+zone (L1 from hint (7,8))   precious  good  bad  useless
+  L1 0-3 (corner zone)              1    14   10        0
+  L1 4-6 (cascade ring)             1    34   25        0
+  L1 7-9 (strain front)            20    49   17        0
+  L1 10-12 (outer)                 24    25   11        0
+  L1 13+ (border-adjacent)         16     4    1        4
+```
+
+**Almost ALL precious pieces are OUTER (L1 ≥ 7). Only 2 of 62 are in
+the strain core (L1 ≤ 6).** The strain core is dominated by good
+(middle-tileability) pieces.
+
+**Mismatched-edge incidence by tier**:
+- precious: 1 of 62 = 1.6%
+- good:     32 of 126 = 25.4%
+- bad:      11 of 64 = 17.2%
+
+**Precious pieces are nearly defect-free on the 453.** They
+self-select into matched positions, but as a side-effect they
+migrate AWAY from the strain core. The strain core becomes packed
+with good pieces forced into compromises → that's where mismatches
+cluster.
+
+**Strategic implication**: rather than reproduce Verhaard's depth-
+banded admission rules (tuned to his specific solver), reframe as:
+
+> **Place the most-constrained pieces in the strain core FIRST**,
+> not last. Build outward from (7,8) using high-tileability pieces
+> that fit the hint's color profile. The OUTER ring gets the
+> looser (good/bad) pieces. This inverts frame-first.
+
+This is the interior-first decomposition the user named in
+conversation. No published solver does this; vol-5/6 didn't try it.
+
+**Vol-7 next action**: prototype interior-first. Place piece 138
+(hint at (7,8)) first; expand outward in concentric L1 rings; at
+each ring, prefer high-tileability pieces matching the existing
+colors. Limit to a 10×10 blob first to validate; if blob mismatch
+≤ 5, expand to full board.
+
 ### Houdayer-PT FIX + offline post-mortem on 451-453 corpus — 09:55
 
 **Vol-3 bug fixed**: filter Houdayer proposals to `joint_delta > 0`
