@@ -568,6 +568,14 @@ pub struct AlnsConfig {
     pub repair: RepairKind,
     /// If `repair == Cp` and CP fails, retry once with SA. Default true.
     pub cp_fallback_to_sa: bool,
+    /// Cell positions that destroy operators are not allowed to free.
+    /// Used to keep the 5 canonical E2 hints pinned during ALNS. Empty
+    /// = unconstrained (legacy vol-12 behaviour — score is then *not*
+    /// the official canonical-E2 score). Set this to
+    /// `hints.iter().map(|h| h.position).collect()` for canonical
+    /// scoring. Fixed in vol-14 after discovering canonical hints
+    /// were being swapped out, invalidating the 443/480 score.
+    pub pinned_positions: Vec<Position>,
 }
 
 impl Default for AlnsConfig {
@@ -581,6 +589,7 @@ impl Default for AlnsConfig {
             verbose: false,
             repair: RepairKind::Sa,
             cp_fallback_to_sa: true,
+            pinned_positions: Vec::new(),
         }
     }
 }
@@ -622,12 +631,20 @@ pub fn run_alns(
     let t_start = std::time::Instant::now();
     let mut last_log = t_start;
 
+    let pinned_set: BTreeSet<Position> = cfg.pinned_positions.iter().copied().collect();
+
     while t_start.elapsed().as_millis() < cfg.time_budget_ms as u128 {
         stats.iters += 1;
         let op_idx = weights.select(&mut rng);
         stats.per_op_invocations[op_idx] += 1;
 
-        let free_set = ops[op_idx].destroy(puzzle, &current, &mut rng);
+        let mut free_set = ops[op_idx].destroy(puzzle, &current, &mut rng);
+        // Vol-14 fix: pinned positions are never freed by destroy operators.
+        // Without this, canonical E2 hints get swapped out and the reported
+        // score is for a different puzzle.
+        if !pinned_set.is_empty() {
+            for p in &pinned_set { free_set.remove(p); }
+        }
         if free_set.is_empty() { continue; }
 
         // Iteration-specific seed so SA repairs don't all walk the same path.

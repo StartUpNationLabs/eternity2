@@ -293,6 +293,10 @@ fn main() {
         verbose: args.verbose,
         repair: repair_kind,
         cp_fallback_to_sa: args.cp_fallback,
+        // Vol-14 fix: pin the canonical hint positions. Without this,
+        // destroy operators happily free hint cells and the score is
+        // for the wrong puzzle.
+        pinned_positions: file_hints.hints.iter().map(|h| h.position).collect(),
     };
     let t_alns = Instant::now();
     let (best, stats) = run_alns(&puzzle, &initial, ops.as_mut_slice(), &cfg);
