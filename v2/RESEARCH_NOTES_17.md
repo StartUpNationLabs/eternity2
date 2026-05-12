@@ -270,6 +270,88 @@ ComponentPlusHaloDestroy, WorstRow. AdaptiveWeights picks among them.
 Expected: lift from 455 to ≥460 if ComponentDestroy can find the
 41-cell whole-cluster and CP-repair it. Plausible 459-465.
 
+### 23:46 — all-ops (10 ops, SA repair) = 454/480
+
+```
+[blackwood_raw] ALNS: iters=200 placed=256/256 matched=454/480 Δ_vs_cp=+92
+```
+
+**Result is -1 vs WB-only (455).** Hypothesis: AdaptiveWeights spread
+weight too thin across 10 ops; the new ComponentDestroy + WorstRow
+didn't get enough invocations to specialize before time ran out.
+Could also be random variance from a different effective seed.
+
+Notes for vol-18: with limited 200-iteration budget, more ops = less
+exploration per op. May want to PRUNE ops that adapt to low weight
+(below 0.1) to free time for the productive ones.
+
+### 23:46 — launching overnight 12-block experiment queue
+
+scripts/run_v17_night.sh runs sequentially through:
+- Block 1:  11-ops seed=1 with HingeDestroy + CP-repair primary (10 min)
+- Block 2:  4-seed cold portfolio calibrated (40 min)
+- Block 3:  K-pipeline seed=1 (11 min)
+- Block 4:  extended seed=1 10+10min (20 min)
+- Block 5:  4-seed cold portfolio seeds 5-8 (40 min)
+- Block 6:  K-pipeline v17b seed=1 (11 min)
+- Block 7:  long ALNS seed=1 5+15min (20 min)
+- Block 8:  baseline portfolio 4 seeds (40 min)
+- Block 9:  K-pipeline seed=2 (11 min)
+- Block 10: K-pipeline seed=3 (11 min)
+- Block 11: v17b + all 11 ops seed=1 (10 min)
+- Block 12: very-long ALNS seed=1 30 min (30 min)
+
+Total wall: ~4.2 hours. Started at 23:46. Ends ~03:55.
+
+After 03:55, ~2.5 hours remaining for additional experiments or
+closeout. Plan: closeout writeup + memory updates.
+
+## What's been shipped vol-17 so far (commit list)
+
+1. `calibrate_blackwood` bin (469 LoC) — corpus → calibrated curve.
+2. `blackwood_schedule_calibrated_v17a` — 9-point schedule.
+3. `blackwood_schedule_calibrated_v17b` — tight 17-point envelope.
+4. `blackwood_schedule_calibrated_v17c` — empirical breaks
+   `[187, 188, 190, 199, 200, 202, 206, 216, 222, 233, 249]`
+   from McGavin 469.
+5. `WorstBand` ALNS op (k_rows).
+6. `WorstRow` ALNS op (single-row scalpel).
+7. `ComponentDestroy` + `ComponentPlusHaloDestroy` (novel: BFS the
+   whole mismatch component).
+8. `HingeDestroy` (novel: Tarjan articulation points on the mismatch
+   graph; halo-buffered).
+9. `BoardZobrist` module + 5 unit tests (idea D, data structures
+   only; PT integration deferred).
+10. CP-as-primary ALNS repair (was SA-primary).
+11. Per-op ALNS stats logging.
+12. `cold_portfolio` bin — N seeds × {baseline, calibrated} with
+   median/p25/p75 aggregation.
+13. `run_e2_blackwood_then_csp` bin — K-pipeline Variant A.
+14. `scripts/analyze_mismatch_geometry.py` — per-row histogram +
+   connected components.
+15. `scripts/find_mcgavin_breaks.py` — decode break positions.
+16. `scripts/run_v17_night.sh` — 12-block overnight queue.
+17. `scripts/v17_summary.sh` — quick scoreboard.
+
+User redirected mid-session: "stop McGavin replication, innovate."
+Pivot honoured — items 6-10 are vol-17-original ALNS algorithmics
+NOT derived from McGavin's recipe.
+
+## Cumulative mismatch geometry data (canonical-E2 seed 1)
+
+Three runs, three boards, ALL with same top-row geometry:
+
+| run | matched | cluster cells | cluster rows |
+|---|---:|---:|---|
+| v17a (no WB) | 447 | 51 | 0-4 |
+| v17b (no WB) | 448 | 45 | 0-4 |
+| v17a + WB | 455 | 41 | 0-4 |
+| v17a + 10 ops + SA repair | 454 | (not analyzed yet) | (likely 0-4) |
+
+Zero mismatches in rows 5-15 across all runs — this is STRUCTURAL,
+not random. Bottom-up scan + Blackwood schedule pushes all
+constraint conflicts into the last 4-5 rows placed.
+
 ### Planned next steps
 
 1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
