@@ -463,6 +463,29 @@ Total novel innovations vol-17:
 7. Restart-on-stagnation in ALNS
 8. Per-op stats logging
 9. BoardZobrist module (unintegrated)
+10. `alns_only` bin — replay ALNS on saved CP board (2× iter speed)
+
+## 00:00 — User pivot: iterative science, not batch experiments
+
+User redirected: "do an experiment, observe, learn, do another...
+not a batch script." Acknowledged. Killed the 12-block night queue
+mid-stream. Pivoted to one-experiment-at-a-time.
+
+Exp 1 launched immediately after pivot: 11 ops + SA-primary +
+polish_rotations + piece_swap_hillclimb on seed 1. Tests H7:
+"Does post-ALNS polish add lift on top of the 11-op SA result?"
+
+### Scientific hypothesis tracker
+
+| ID | Hypothesis                                              | Evidence                  | Verdict       |
+|----|---------------------------------------------------------|---------------------------|---------------|
+| H1 | calibrated_v17a > vol-15 bw469 (more depth)             | depth 192 vs ~80          | CONFIRMED     |
+| H2 | CP walls at 193 are structural; ALNS recovers           | CP 362 → ALNS 447+        | CONFIRMED     |
+| H3 | Mismatch cluster rows 0-4 is structural                 | 3/3 boards                | CONFIRMED     |
+| H4 | Big-region destroy ops (WB, CD80) beat small (k≤30)    | 455 vs 447, +8            | CONFIRMED     |
+| H5 | CP-primary repair beats SA-primary                      | 447 (CP) vs 455 (SA), -8  | REFUTED       |
+| H6 | More destroy ops (11 vs 5) helps                        | 454 (10) vs 455 (5), -1   | WEAKLY REFUTED|
+| H7 | Polish (rotation + swap) lifts beyond ALNS              | E1 running                | (pending)     |
 
 ### Planned next steps
 
