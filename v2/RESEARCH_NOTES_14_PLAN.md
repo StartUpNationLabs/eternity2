@@ -1,5 +1,13 @@
 # RESEARCH_NOTES_14_PLAN.md — vol-14 mission brief
 
+> **🛑 VOL-14 RETROACTIVE CORRECTION (2026-05-12 evening)**: this
+> plan cites "75,173 valid 60-cell frames" as if it were a
+> complete enumeration. Vol-14 discovered it is a lower bound from
+> a 120-second time-budgeted DFS. The plan's expectation that 75k
+> covers the Hamilton-ring space was wrong. The frame-first
+> direction (#4/#5 below) is still valid, but the input set is a
+> sample, not a population.
+
 **Written**: 2026-05-12 14:40 CEST, at vol-12/vol-13 closeout.
 **Read first**: `RESEARCH_NOTES_12.md`, `RESEARCH_NOTES_13.md`, the
 memory entries listed below.

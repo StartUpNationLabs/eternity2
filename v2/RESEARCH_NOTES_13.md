@@ -1,5 +1,18 @@
 # RESEARCH_NOTES_13.md — vol-13: unwalked paths for Eternity II
 
+> **🛑 VOL-14 RETROACTIVE CORRECTION (2026-05-12 evening)**: this
+> doc references the "75,173 valid Hamilton frames" from vol-12 as
+> if it were a complete enumeration. **It isn't**: vol-12's DFS
+> ran out of its 120-second budget mid-search. The 75,173 is a
+> lower bound. The downstream claim that the NS-1 multiset filter
+> "has zero pruning effect on all 75,173 frames" is correct
+> *within the sampled subset* but says nothing about the
+> unobserved frames. Pattern probably holds (Selby-Riordan's
+> design enforces the multiset rigidly) but not proven.
+>
+> See `~/.claude/.../memory/project_e2_hamilton_frame_count.md`
+> for the corrected count.
+
 **Session start**: 2026-05-12 13:16 CEST. Continues immediately after vol-11
 close-out (commit `4fe93f4`). Vol-12 was the engineering-track agent running
 in parallel; vol-13 is the **innovation track** — pure outside-the-box

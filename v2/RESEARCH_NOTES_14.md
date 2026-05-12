@@ -186,7 +186,9 @@ Bench artifacts:
 ## Frame-first structural finding (vol-12 frames 75 k → CSP-valid ≈ 0)
 
 Wrote `crates/bench-audit/src/bin/run_e2_framefirst.rs` to test:
-pin each of vol-12's 75 173 Hamilton frames + 5 canonical hints,
+pin each of vol-12's 75 173 Hamilton frames + 5 canonical hints
+(note: vol-14 audit found the 75 173 is a 120s-time-bounded
+subset, NOT exhaustive — the true total is unknown),
 run engine on the residual 14×14 interior.
 
 **Result on a 500-frame sample (border_first_lcv, baseline edge-prop only):**
@@ -202,7 +204,9 @@ are rejected at hint-application time, most at canonical-hint
 positions (pos 210, 34) — vol-12's Hamilton enumeration did not
 filter for global consistency with the 4 *interior* canonical hints.
 
-**Implication:** vol-12's "75 173 valid Hamilton border rings" is a
+**Implication:** vol-12's "75 173 valid Hamilton border rings" is
+(a) a lower bound from a 120s-bounded DFS, NOT exhaustive, AND
+(b) a
 necessary-but-not-sufficient condition. The number of *globally-CSP-
 valid* frames consistent with all 5 canonical hints is **vastly
 smaller** (likely < 100) and the right vol-15 deliverable is a
@@ -222,6 +226,7 @@ Bench artifact: `output/v14_framefirst/latest/results.tsv`.
   1. **The frame-first decomposition does NOT work directly on
      vol-12's Hamilton frames** — they are not globally CSP-valid
      under any propagation level. Vol-12's 75 173 count is
+     itself a lower bound (DFS time-bounded), AND
      necessary-not-sufficient.
   2. **CP value-order biases (edge-BP) can hurt CP partial score
      but help downstream local-search escape** — BP-seeded ALNS

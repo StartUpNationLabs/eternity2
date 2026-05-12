@@ -5,7 +5,8 @@
 (`scripts/v12_hamilton_frame.py`) with a CSP-aware variant that
 filters out frames inconsistent with the 4 interior canonical hints
 under propagation. Vol-14 measured that ≥47% (baseline propagation)
-or ~100% (gacolor+AC3) of vol-12's 75 173 frames fail at hint-apply
+or ~100% (gacolor+AC3) of vol-12's 75 173 frames (a LOWER BOUND
+from a 120s time-budgeted DFS — NOT exhaustive) fail at hint-apply
 time. **The vol-12 catalog is necessary-but-not-sufficient.** The
 spec below describes a new enumerator that returns frames already
 proven CSP-consistent end-to-end.
@@ -15,7 +16,10 @@ proven CSP-consistent end-to-end.
 - **Vol-12 enumerator** (`v12_hamilton_frame.py`): DFS over 60 ring
   positions (4 corners + 56 edges), pinning TL corner for symmetry,
   enforcing pairwise edge-color matching `ring[i].out_side ==
-  ring[i+1].in_side`. Result: 75 173 frames in 120 s.
+  ring[i+1].in_side`. Result: 75 173 frames in 120 s — the DFS
+  hit its time budget and did NOT complete. **The vol-12 catalog
+  is a lower bound; the true Hamilton-valid count is unknown
+  (likely much higher).**
 - **Hint positions on canonical E2** (all 5 are interior, NONE on
   the ring): pos 34 (2,2), pos 45 (13,2), pos 135 (7,8), pos 210
   (2,13), pos 221 (13,13). The vol-12 enumerator never propagated
@@ -50,13 +54,17 @@ A vol-15 enumerator that:
 ## Estimated surviving count
 
 Lower bound: the puzzle has exactly one solution (vol-10 probe #6),
-so at least one frame is CSP-valid. Upper bound: at most 75 173.
+so at least one frame is CSP-valid. **No usable upper bound** —
+vol-12's 75 173 was a time-bounded sample, not exhaustive, so the
+true total is unknown.
 Order-of-magnitude estimate based on vol-14's data:
 - Of 500 random frames, **~0** pass the full gacolor+AC3 hint-apply.
 - Of 500 random frames, **267 (53%)** pass *baseline-prop* hint-apply
   but their interior is exhausted in <200 ms.
 - Inferred: gacolor+AC3 is roughly 100× stricter than baseline.
-- Extrapolating: **0-100** globally-CSP-valid frames out of 75 173.
+- Extrapolating: **0-100** globally-CSP-valid frames out of the
+  vol-12 sample of 75 173 (which itself was a 120s-bounded subset
+  of an unknown larger Hamilton-valid total).
 - **Most likely range**: 1-30 frames. If higher, vol-15 still wins
   (small enough sweep). If 0, the integration-CSP is actually
   proving the frame catalog itself is overconstrained (which would
@@ -193,7 +201,8 @@ Backwards-compatible with vol-12's schema where fields overlap.
 - `scripts/v12_hamilton_frame.py` — the prior implementation.
 - `crates/bench-audit/src/bin/run_e2_framefirst.rs` — vol-14 test
   harness that surfaced the null.
-- `output/v12_hamilton/frames_full.json` — vol-12's 75 173 frames.
+- `output/v12_hamilton/frames_full.json` — vol-12's 75 173 frames
+  (misleadingly named — NOT a full enumeration; lower bound only).
 - `output/v14_framefirst/latest/results.tsv` — 500-frame survey.
 - Memory entries: `project_e2_vol14_framefirst_null.md`,
   `project_e2_hamilton_frame_count.md`,

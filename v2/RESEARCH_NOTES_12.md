@@ -1,5 +1,20 @@
 # RESEARCH_NOTES_12.md — vol-12: dual-track engineering + innovation
 
+> **🛑 VOL-14 RETROACTIVE CORRECTION (2026-05-12 evening)**: this
+> doc claims a "full enumeration" of Hamilton-valid border rings
+> yielding 75,173 frames. **That was wrong**: vol-12's DFS
+> (`scripts/v12_hamilton_frame.py`) terminated due to a 120-second
+> `time_budget_s` check, not because the search space was
+> exhausted. The 75,173 number is a **lower bound from a sampled
+> DFS**, not the true Hamilton-valid count. Replace any reading of
+> "all 75,173 frames" with "the 75,173 frames vol-12's
+> time-budgeted DFS happened to find first." Subsequent commentary
+> in vol-13 and vol-14 inherits this caveat. See
+> `~/.claude/.../memory/project_e2_hamilton_frame_count.md` for
+> the corrected statement and `~/.claude/.../memory/
+> project_e2_vol14_framefirst_null.md` for the operational
+> consequence.
+
 **Session start**: 2026-05-12 13:12 CEST.
 **Predecessor**: vol-11 closed at 2026-05-12 (commit `4fe93f4`). NS-1 deficit
 invariant measured on 82-board corpus. BP/SP on cell-encoding empirically
