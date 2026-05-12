@@ -29,7 +29,11 @@ cd "$(dirname "$0")/.."
 
 N_ROUNDS="${1:-3}"
 PT_SECONDS="${2:-600}"
-START_FROM="${3:-output/pt_e2_1778535682_449of480.json}"  # NE2 K=10 result
+# Updated 2026-05-12 02:05: prefer NE1 stage-2 best 450 (matches all 6/6
+# top-6 NEW universal mismatches) over the NE2 K=10 449 (which matches 6/6
+# OLD top-6 but not 6/6 NEW). Starting iter from a structurally-stronger
+# 450 means round 1's redistribution adds DIFFERENT defects than from 449.
+START_FROM="${3:-output/ne1_stage2_best_450of480.json}"
 K="${K:-10}"
 SEED="${SEED:-3806637746}"
 BIN="./target/release/pt_e2"
