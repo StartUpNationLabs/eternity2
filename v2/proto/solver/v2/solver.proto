@@ -26,6 +26,16 @@ import "google/protobuf/empty.proto";
 //   (engine, border_first_random)   border-first; ties broken randomly (seeded)
 //   (engine, border_first_parity)   adds checkerboard parity propagator
 //   (engine, border_first_full)     all available propagators (parity + island)
+//   (engine, joe_depth150)          gacolor + AC-3 + NS-1, Step-8 gated at depth ≥ 150
+//   (engine, joe_depth150_par)      joe_depth150 + multi-core root-split
+//   (engine, joe_depth150_bp)       joe_depth150 + vol-12 edge-color BP value-order
+//   (engine, joe_depth150_bp_par)   joe_depth150_bp + multi-core
+//
+// (Profiles above are the long-tail ones added in vol-12/vol-14; the
+// full canonical list is what `ListSolvers` returns at runtime — see
+// `server::service::list_solvers`. New strategies opt in by adding
+// to ListSolvers + `instantiate` together; this comment block stays
+// in sync as a navigation aid.)
 //
 // Implementation note: the legacy `dlx` and `csp` families collapsed into
 // a single "engine" once written cleanly in Rust — they share the search

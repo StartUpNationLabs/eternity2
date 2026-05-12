@@ -178,6 +178,7 @@ fn run_search(
         solver_run_id: 0,
         excluded_pieces: excluded.clone(),
         preferred_pieces: preferred,
+        edge_bp_marginals: None,
     };
     let mut sink = NullSink;
     let t0 = Instant::now();

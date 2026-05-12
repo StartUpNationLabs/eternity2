@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+use std::sync::Arc;
+
 use eternity2_core::{Board, Hints, PathPolicy, Puzzle};
 use eternity2_events::EventSink;
 
@@ -44,6 +46,17 @@ pub struct SolveOpts {
     /// Rows whose piece-id is in this list are tried before others.
     /// Used by Verhaard's phase-1 to load "hard pieces" early.
     pub preferred_pieces: Vec<eternity2_core::PieceId>,
+    /// Per-grid-edge color marginals from vol-12 edge-color BP
+    /// (`output/v12_bp/edge_bp_60i.json`). Flat layout
+    /// `len = n_edges * 23` where `n_edges = 2*W*H + W + H` enumerated
+    /// in the same row-major (y,x) order as the Python BP script:
+    /// for each cell, claim N then S-if-last-row then W then
+    /// E-if-last-col. Color 0 = BORDER. Wrapped in `Arc` so it is
+    /// cheap to share across rayon workers when
+    /// `Parallelism::RootSplit` clones `SolveOpts` per task.
+    /// Only consulted when `EngineConfig.value_order ==
+    /// ValueOrder::EdgeBpMarginals`.
+    pub edge_bp_marginals: Option<Arc<Vec<f32>>>,
 }
 
 impl Default for SolveOpts {
@@ -59,6 +72,7 @@ impl Default for SolveOpts {
             solver_run_id: 0,
             excluded_pieces: Vec::new(),
             preferred_pieces: Vec::new(),
+            edge_bp_marginals: None,
         }
     }
 }

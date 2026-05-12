@@ -12,6 +12,8 @@
 
 mod clock;
 
+use std::sync::Arc;
+
 use clock::Clock;
 use eternity2_core::{Board, Color, PathPolicy, PieceId, Position, Puzzle, Rotation, BORDER};
 use eternity2_events::{
@@ -53,6 +55,15 @@ pub enum ValueOrder {
     /// good-set members) into early placements where the search has
     /// maximum flexibility. groups.io 105190116 (Verhaard 2008-04-11).
     PreferredFirst,
+    /// Score each candidate row by Σ over its 4 sides of
+    /// `SolveOpts.edge_bp_marginals[edge_id(cell, side)][row.edges[side]]`;
+    /// sort descending so higher-probability colors are tried first.
+    /// Vol-14 #1, port of vol-12's edge-color BP measurement
+    /// (`output/v12_bp/edge_bp_60i.json`, 18.84% interior-edge
+    /// entropy reduction; beat random as value-order in Python A/B).
+    /// Falls back silently to InsertionOrder if marginals absent
+    /// (preserves correctness in tests / smoke runs).
+    EdgeBpMarginals,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,6 +289,28 @@ impl EngineConfig {
         ..Self::BORDER_FIRST_LCV
     };
 
+    /// Vol-14 #1 — Joe-depth150 baseline + edge-color BP marginals as
+    /// value-order. Caller must populate `SolveOpts.edge_bp_marginals`;
+    /// see `eternity2_solver_engine::load_edge_bp_marginals`.
+    pub const JOE_DEPTH150_BP: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const JOE_DEPTH150_BP_PAR: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BORDER_FIRST_LCV
+    };
+
     // Step 8 profiles: baseline + extra propagators.
     pub const BORDER_FIRST_PARITY: Self = Self {
         parity_propagator: true,
@@ -438,6 +471,16 @@ impl EngineSolver {
         Self::new(EngineConfig::JOE_DEPTH150_PAR, "engine", "joe_depth150_par")
     }
 
+    #[must_use]
+    pub fn joe_depth150_bp() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP, "engine", "joe_depth150_bp")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_bp_par() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_PAR, "engine", "joe_depth150_bp_par")
+    }
+
     /// Verhaard-style value ordering: prefer the pieces listed in
     /// `SolveOpts.preferred_pieces`. Combined with gacolor + AC-3.
     /// Single-thread.
@@ -568,6 +611,107 @@ fn compute_chess_rank(puzzle: &Puzzle) -> Vec<u32> {
     rank
 }
 
+/// Number of states per edge in the vol-12 BP marginals file
+/// (`output/v12_bp/edge_bp_60i.json`): color 0 = BORDER + 22 interior
+/// colors = 23.
+pub const EDGE_BP_NSTATE: usize = 23;
+
+/// Build the (cell, side) -> edge_id map matching the Python BP
+/// enumeration in `scripts/v12_edge_bp.py::build_grid_edges`. Layout:
+/// `cell_side_edge[pos * 4 + side]` is the edge_id for that side
+/// (side 0=N, 1=E, 2=S, 3=W). Internal edges are shared between two
+/// cells; boundary edges have exactly one incident cell.
+///
+/// Total edge count is `2 * W * H + W + H` (= 544 for 16×16).
+pub(crate) fn build_cell_side_edge(puzzle: &Puzzle) -> Vec<u32> {
+    let w = puzzle.width as usize;
+    let h = puzzle.height as usize;
+    let n = w * h;
+    let mut cse = vec![u32::MAX; n * 4];
+    let mut next_eid: u32 = 0;
+    for y in 0..h {
+        for x in 0..w {
+            let pos = y * w + x;
+            // N (side 0)
+            if cse[pos * 4 + 0] == u32::MAX {
+                let eid = next_eid;
+                next_eid += 1;
+                cse[pos * 4 + 0] = eid;
+                if y > 0 {
+                    let npos = (y - 1) * w + x;
+                    cse[npos * 4 + 2] = eid;
+                }
+            }
+            // S (side 2) — only created here if last row (else assigned by next row's N pass)
+            if cse[pos * 4 + 2] == u32::MAX && y == h - 1 {
+                let eid = next_eid;
+                next_eid += 1;
+                cse[pos * 4 + 2] = eid;
+            }
+            // W (side 3)
+            if cse[pos * 4 + 3] == u32::MAX {
+                let eid = next_eid;
+                next_eid += 1;
+                cse[pos * 4 + 3] = eid;
+                if x > 0 {
+                    let npos = y * w + (x - 1);
+                    cse[npos * 4 + 1] = eid;
+                }
+            }
+            // E (side 1)
+            if cse[pos * 4 + 1] == u32::MAX && x == w - 1 {
+                let eid = next_eid;
+                next_eid += 1;
+                cse[pos * 4 + 1] = eid;
+            }
+        }
+    }
+    debug_assert!(cse.iter().all(|&e| e != u32::MAX));
+    cse
+}
+
+/// Load vol-12 edge-color BP marginals from a JSON file produced by
+/// `scripts/v12_edge_bp.py`. Returns a flat `Arc<Vec<f32>>` of length
+/// `n_edges * EDGE_BP_NSTATE` indexed as
+/// `flat[edge_id * EDGE_BP_NSTATE + color]`. Order of edges in the
+/// file is assumed to match `build_cell_side_edge`'s enumeration.
+///
+/// Errors: I/O, JSON parse, or unexpected schema (wrong NSTATE, ids
+/// not contiguous starting at 0).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn load_edge_bp_marginals(path: &std::path::Path) -> std::io::Result<Arc<Vec<f32>>> {
+    let bytes = std::fs::read(path)?;
+    let doc: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    let edges = doc.get("edges").and_then(|v| v.as_array()).ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "missing edges array")
+    })?;
+    let n = edges.len();
+    let mut flat = vec![0f32; n * EDGE_BP_NSTATE];
+    for (i, e) in edges.iter().enumerate() {
+        let id = e.get("id").and_then(|v| v.as_u64()).unwrap_or(i as u64) as usize;
+        if id != i {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("edge ids not contiguous at index {i} (got {id})"),
+            ));
+        }
+        let m = e.get("marginal").and_then(|v| v.as_array()).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing marginal")
+        })?;
+        if m.len() != EDGE_BP_NSTATE {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("edge {i} marginal len {} != {EDGE_BP_NSTATE}", m.len()),
+            ));
+        }
+        for (c, v) in m.iter().enumerate() {
+            flat[i * EDGE_BP_NSTATE + c] = v.as_f64().unwrap_or(0.0) as f32;
+        }
+    }
+    Ok(Arc::new(flat))
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Row {
     pub(crate) piece_id: PieceId,
@@ -648,6 +792,14 @@ pub(crate) struct SearchState<'a> {
     pub(crate) ac3_count: Vec<u16>,
     pub(crate) ac3_present: Vec<u64>,
     pub(crate) ac3_on_queue: Vec<bool>,
+    /// Vol-14 — `cell_side_edge[pos * 4 + side]` = edge_id in the BP
+    /// marginals file. Empty unless value-order is
+    /// `EdgeBpMarginals` *and* `opts.edge_bp_marginals` is set.
+    /// Enumeration order matches `scripts/v12_edge_bp.py`
+    /// `build_grid_edges`: scan (y,x) row-major; for each cell claim
+    /// N then (S if y==H-1) then W then (E if x==W-1); shared sides
+    /// reuse the neighbour's edge_id.
+    pub(crate) cell_side_edge: Vec<u32>,
 }
 
 impl<'a> SearchState<'a> {
@@ -798,6 +950,13 @@ impl<'a> SearchState<'a> {
             },
             ac3_on_queue: if solver.config.ac3_propagator {
                 vec![false; n_pos]
+            } else {
+                Vec::new()
+            },
+            cell_side_edge: if matches!(solver.config.value_order, ValueOrder::EdgeBpMarginals)
+                && opts.edge_bp_marginals.is_some()
+            {
+                build_cell_side_edge(puzzle)
             } else {
                 Vec::new()
             },
@@ -1722,6 +1881,46 @@ impl<'a> SearchState<'a> {
             }
         }
 
+        // EdgeBpMarginals: score each row by Σ over its 4 sides of the
+        // BP marginal mass at the row's edge color. Sort descending so
+        // the engine tries higher-mass colors first. Silently no-op if
+        // marginals or the mapping table aren't populated — preserves
+        // correctness for tests that pick this value-order without
+        // wiring the data.
+        if matches!(self.config.value_order, ValueOrder::EdgeBpMarginals)
+            && domain_snapshot.len() > 1
+            && !self.cell_side_edge.is_empty()
+            && self.opts.edge_bp_marginals.is_some()
+        {
+            let marg = self.opts.edge_bp_marginals.as_ref().unwrap();
+            let base_side = (pos as usize) * 4;
+            let eids = [
+                self.cell_side_edge[base_side + 0] as usize,
+                self.cell_side_edge[base_side + 1] as usize,
+                self.cell_side_edge[base_side + 2] as usize,
+                self.cell_side_edge[base_side + 3] as usize,
+            ];
+            // Score ∝ Σ marginal[eid][color]. Use a fixed-point key so
+            // the sort is deterministic + total. Higher score first.
+            let mut scored: Vec<(u64, u32)> = domain_snapshot.iter().map(|&r_id| {
+                let r = self.rows[r_id as usize];
+                let mut s = 0.0f32;
+                for side in 0..4 {
+                    let c = r.edges[side] as usize;
+                    if c < EDGE_BP_NSTATE {
+                        s += marg[eids[side] * EDGE_BP_NSTATE + c];
+                    }
+                }
+                // Map [0, 4] -> u64 with 1e6 resolution. Descending sort
+                // via negation: key = u64::MAX - quantized.
+                let q = (s * 1.0e6).max(0.0).min(4.0e6) as u64;
+                (u64::MAX - q, r_id)
+            }).collect();
+            scored.sort_by_key(|(k, _)| *k);
+            domain_snapshot.clear();
+            domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
+        }
+
         // PreferredFirst: stable partition; preferred-piece rows first.
         // Verhaard 2008. Caller sets `opts.preferred_pieces`.
         if matches!(self.config.value_order, ValueOrder::PreferredFirst)
@@ -2084,5 +2283,51 @@ mod tests {
         }).unwrap();
         assert_eq!(sid, "engine");
         assert_eq!(prof, "border_first_lcv");
+    }
+
+    #[test]
+    fn cell_side_edge_counts_match_canonical_e2() {
+        // The Python BP enumeration on the canonical 16×16 grid produces
+        // 2*W*H + W + H = 544 distinct edges (64 boundary + 480 internal).
+        // Use a generated 16×16 puzzle (any colors) — the mapping only
+        // depends on grid geometry.
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        let cse = build_cell_side_edge(&puzzle);
+        let n_pos = (puzzle.width * puzzle.height) as usize;
+        assert_eq!(cse.len(), n_pos * 4);
+        let max_eid = cse.iter().copied().max().unwrap();
+        let n_edges = max_eid as usize + 1;
+        assert_eq!(n_edges, 2 * 16 * 16 + 16 + 16, "expected 544 edges, got {n_edges}");
+        // Internal-edge sharing: each non-corner side is referenced by 2
+        // (pos, side) entries; boundary sides by 1. Count.
+        let mut refs = vec![0u32; n_edges];
+        for &e in &cse { refs[e as usize] += 1; }
+        let boundary = refs.iter().filter(|&&r| r == 1).count();
+        let internal = refs.iter().filter(|&&r| r == 2).count();
+        assert_eq!(boundary, 2 * (16 + 16));
+        assert_eq!(internal, 2 * 16 * 16 - 16 - 16);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn load_edge_bp_marginals_smoketest_v12_file() {
+        // The 284 KB vol-12 measurement is in the repo. If running under
+        // a sandbox without it, skip cleanly.
+        let path = std::path::Path::new("../../output/v12_bp/edge_bp_60i.json");
+        if !path.exists() { return; }
+        let m = load_edge_bp_marginals(path).expect("load");
+        assert_eq!(m.len(), 544 * EDGE_BP_NSTATE);
+        // Each edge's marginal must sum to ≈ 1.0.
+        for e in 0..544 {
+            let s: f32 = (0..EDGE_BP_NSTATE).map(|c| m[e * EDGE_BP_NSTATE + c]).sum();
+            assert!((s - 1.0).abs() < 1e-3, "edge {e} sum = {s}");
+        }
+        // Boundary edges (those with refs=1 in cse) should have
+        // argmax = 0 (BORDER). Spot-check edge 0 which is cell-0 north.
+        let argmax_0 = (0..EDGE_BP_NSTATE)
+            .max_by(|a, b| m[*a].partial_cmp(&m[*b]).unwrap())
+            .unwrap();
+        assert_eq!(argmax_0, 0, "boundary edge 0 should argmax to BORDER");
     }
 }

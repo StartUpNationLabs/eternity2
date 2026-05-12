@@ -56,6 +56,8 @@ impl SolverServiceImpl {
             ("engine", "gacolor_ac3_ns1_par") => Some(Box::new(EngineSolver::gacolor_ac3_ns1_par())),
             ("engine", "joe_depth150") => Some(Box::new(EngineSolver::joe_depth150())),
             ("engine", "joe_depth150_par") => Some(Box::new(EngineSolver::joe_depth150_par())),
+            ("engine", "joe_depth150_bp") => Some(Box::new(EngineSolver::joe_depth150_bp())),
+            ("engine", "joe_depth150_bp_par") => Some(Box::new(EngineSolver::joe_depth150_bp_par())),
             _ => None,
         }
     }
@@ -105,6 +107,7 @@ impl SolverService for SolverServiceImpl {
                     solver_run_id: run_id,
                     excluded_pieces: Vec::new(),
                     preferred_pieces: Vec::new(),
+                    edge_bp_marginals: None,
                 },
             });
         }
@@ -266,6 +269,18 @@ impl SolverService for SolverServiceImpl {
                         id: "joe_depth150_par".into(),
                         display_name: "Joe-Saunders depth-gate (multi-core)".into(),
                         description: "Joe-Saunders depth-gate with multi-core root-split.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp".into(),
+                        display_name: "Joe-Saunders + edge-BP value-order".into(),
+                        description: "Joe-Saunders depth-gate + vol-12 edge-color BP marginals as value-order. Caller must populate SolveOpts.edge_bp_marginals.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp_par".into(),
+                        display_name: "Joe-Saunders + edge-BP (multi-core)".into(),
+                        description: "Edge-BP value-order with multi-core root-split.".into(),
                         is_default: false,
                     },
                 ],

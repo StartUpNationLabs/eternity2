@@ -51,3 +51,7 @@ path = "src/bin/sweep_depth.rs"
 [[bin]]
 name = "run_e2_5min"
 path = "src/bin/run_e2_5min.rs"
+
+[[bin]]
+name = "run_e2_5min_bp_ab"
+path = "src/bin/run_e2_5min_bp_ab.rs"

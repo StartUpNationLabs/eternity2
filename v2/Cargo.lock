@@ -504,6 +504,7 @@ dependencies = [
  "eternity2-solver-trait",
  "js-sys",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]
