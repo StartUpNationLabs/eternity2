@@ -36,10 +36,10 @@ pub mod houdayer;
 pub mod pt;
 pub mod repair;
 pub mod zobrist;
-pub use alns::{run_alns, run_alns_portfolio, run_alns_pt, polish_rotations,
-               piece_swap_hillclimb, AlnsConfig, AlnsStats, PtAlnsConfig, PtAlnsStats,
-               AdaptiveWeights, Acceptance, DestroyOp, RandomRegion, WorstWindow, WorstBand,
-               WorstRow, ConflictDriven, MwpmDefectPair, ComponentDestroy,
+pub use alns::{run_alns, run_alns_portfolio, run_alns_pt, run_alns_pt_multi_init,
+               polish_rotations, piece_swap_hillclimb, AlnsConfig, AlnsStats, PtAlnsConfig,
+               PtAlnsStats, AdaptiveWeights, Acceptance, DestroyOp, RandomRegion, WorstWindow,
+               WorstBand, WorstRow, ConflictDriven, MwpmDefectPair, ComponentDestroy,
                ComponentPlusHaloDestroy, HingeDestroy, RepairKind};
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
                     build_edges_by_cell, fmm_full, fmm_touched};

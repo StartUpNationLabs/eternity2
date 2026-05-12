@@ -1401,9 +1401,22 @@ pub fn run_alns_pt(
     chain_ops_factory: impl Fn(usize) -> Vec<Box<dyn DestroyOp>> + Send + Sync,
     cfg: &PtAlnsConfig,
 ) -> (Board, PtAlnsStats) {
+    run_alns_pt_multi_init(puzzle, &vec![initial.clone(); cfg.n_chains], chain_ops_factory, cfg)
+}
+
+/// Variant that lets each chain start from its OWN initial board. Useful
+/// for multi-CP-partial PT where each chain has a different Blackwood
+/// CP seed's output. `initials` length must equal `cfg.n_chains`.
+pub fn run_alns_pt_multi_init(
+    puzzle: &Puzzle,
+    initials: &[Board],
+    chain_ops_factory: impl Fn(usize) -> Vec<Box<dyn DestroyOp>> + Send + Sync,
+    cfg: &PtAlnsConfig,
+) -> (Board, PtAlnsStats) {
     use rayon::prelude::*;
     assert!(cfg.n_chains >= 2, "PT needs ≥2 chains");
     assert!(cfg.t_min > 0.0 && cfg.t_max > cfg.t_min, "bad temperature range");
+    assert_eq!(initials.len(), cfg.n_chains, "initials.len must equal n_chains");
 
     // Build temperature ladder.
     let n = cfg.n_chains;
@@ -1416,7 +1429,7 @@ pub fn run_alns_pt(
     };
 
     // Build per-chain initial state.
-    let mut boards: Vec<Board> = vec![initial.clone(); n];
+    let mut boards: Vec<Board> = initials.to_vec();
     let mut scores: Vec<u32> = boards.iter().map(|b| score_board(puzzle, b)).collect();
     let mut best_board = boards[0].clone();
     let mut best_score = scores[0];
