@@ -23,6 +23,12 @@
 
 #![forbid(unsafe_code)]
 
+pub mod border_eulerian;
+pub use border_eulerian::{
+    corner_tile_ring_edge, edge_tile_ring_edge, eulerian_pool_check, eulerian_pool_or_check,
+    eulerian_ring_check_full, CornerKind, RingEdge, RingSide,
+};
+
 use eternity2_core::{Color, Piece, Puzzle, BORDER};
 
 pub struct PropagatorContext<'a> {

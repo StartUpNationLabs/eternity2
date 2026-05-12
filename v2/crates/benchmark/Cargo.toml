@@ -100,8 +100,13 @@ path = "src/bin/border_enumerate.rs"
 name = "reverse_selby_e2"
 path = "src/bin/reverse_selby_e2.rs"
 
+[[bin]]
+name = "eulerian_border_corpus"
+path = "src/bin/eulerian_border_corpus.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
+eternity2-propagators = { path = "../propagators" }
 eternity2-edge-solver = { path = "../edge-solver" }
 eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-events = { path = "../events" }
