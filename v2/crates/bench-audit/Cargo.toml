@@ -71,3 +71,7 @@ path = "src/bin/run_e2_framefirst.rs"
 [[bin]]
 name = "run_e2_hintcentric"
 path = "src/bin/run_e2_hintcentric.rs"
+
+[[bin]]
+name = "run_e2_backtrack_diag"
+path = "src/bin/run_e2_backtrack_diag.rs"

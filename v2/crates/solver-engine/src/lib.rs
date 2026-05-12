@@ -346,6 +346,10 @@ pub struct EngineSolver {
     config: EngineConfig,
     solver_id: String,
     heuristic_profile: String,
+    /// Vol-14 instrumentation: per-position backtrack counts from
+    /// the most recent `solve()` call. Updated at end-of-solve.
+    /// `take_pos_backtracks()` returns and clears this vector.
+    last_pos_backtracks: std::sync::Mutex<Vec<u64>>,
 }
 
 impl EngineSolver {
@@ -355,7 +359,16 @@ impl EngineSolver {
             config,
             solver_id: solver_id.into(),
             heuristic_profile: heuristic_profile.into(),
+            last_pos_backtracks: std::sync::Mutex::new(Vec::new()),
         }
+    }
+
+    /// Vol-14 instrumentation hook: pull per-position backtrack
+    /// counts from the most recent `solve()`. Cleared on read.
+    /// Returns empty Vec if no run has completed.
+    pub fn take_pos_backtracks(&self) -> Vec<u64> {
+        let mut g = self.last_pos_backtracks.lock().unwrap();
+        std::mem::take(&mut *g)
     }
 
     #[must_use]
@@ -528,7 +541,14 @@ impl Solver for EngineSolver {
                 return parallel::solve_parallel(self, puzzle, opts, sink);
             }
         }
-        SearchState::new(puzzle, self, opts).run(sink)
+        // Vol-14 instrumentation hook: capture pos_backtracks at
+        // end-of-run. The state consumes itself in `run`; we use a
+        // helper that returns both the outcome and the counters.
+        let (outcome, pos_bt) = SearchState::new(puzzle, self, opts).run_with_diag(sink);
+        if let Ok(mut g) = self.last_pos_backtracks.lock() {
+            *g = pos_bt;
+        }
+        outcome
     }
 }
 
@@ -800,6 +820,13 @@ pub(crate) struct SearchState<'a> {
     /// N then (S if y==H-1) then W then (E if x==W-1); shared sides
     /// reuse the neighbour's edge_id.
     pub(crate) cell_side_edge: Vec<u32>,
+    /// Vol-14 transient instrumentation: backtracks bucketed by the
+    /// cell whose value-choice exhausted. `pos_backtracks[pos]` =
+    /// count of times `recurse` saw a Wipeout while attempting some
+    /// row at `pos`. Exposed via `EngineSolver::take_pos_backtracks`
+    /// for harness-side bucket analysis (corner / edge / interior).
+    /// Always allocated; cheap (1 KB on canonical E2).
+    pub(crate) pos_backtracks: Vec<u64>,
 }
 
 impl<'a> SearchState<'a> {
@@ -960,6 +987,7 @@ impl<'a> SearchState<'a> {
             } else {
                 Vec::new()
             },
+            pos_backtracks: vec![0u64; n_pos],
         }
     }
 
@@ -1667,7 +1695,40 @@ impl<'a> SearchState<'a> {
         Ok(())
     }
 
+    /// Vol-14 wrapper: like `run` but also returns the per-position
+    /// backtrack counters for downstream diagnostic analysis.
+    pub(crate) fn run_with_diag(self, sink: &mut dyn EventSink) -> (SolveOutcome, Vec<u64>) {
+        // Save a handle before run() consumes self; we'll repopulate
+        // after by routing through `run`'s consumed body. The simplest
+        // way is: replicate run() inline and snapshot at end. Since
+        // run() is non-trivial we just call the existing run() via a
+        // thin trampoline that exposes the counters.
+        // Implementation: run consumes self, so we must replicate
+        // the small wrapping. We achieve this by giving `run` the
+        // option to return diag too.
+        let (outcome, diag) = Self::run_inner(self, sink);
+        (outcome, diag)
+    }
+
+    fn run_inner(state: Self, sink: &mut dyn EventSink) -> (SolveOutcome, Vec<u64>) {
+        // Equivalent to `run` but yields pos_backtracks.
+        let mut s = state;
+        let outcome = s.run_body(sink);
+        let diag = std::mem::take(&mut s.pos_backtracks);
+        (outcome, diag)
+    }
+
+    /// Run body shared with `run_inner`. Renamed `run` to `run_body`.
+    pub(crate) fn run_body(&mut self, sink: &mut dyn EventSink) -> SolveOutcome {
+        self.run_impl(sink)
+    }
+
+    /// Backwards compat: old `run(self)` consumed self and returned outcome.
     pub(crate) fn run(mut self, sink: &mut dyn EventSink) -> SolveOutcome {
+        self.run_impl(sink)
+    }
+
+    fn run_impl(&mut self, sink: &mut dyn EventSink) -> SolveOutcome {
         self.emit(sink, 0, EventBody::Started {
             solver_id: self.solver_id.clone(),
             heuristic_profile: self.heuristic_profile.clone(),
@@ -1992,6 +2053,12 @@ impl<'a> SearchState<'a> {
                 PropagationOutcome::Wipeout { undo } => {
                     self.restore(undo);
                     self.stats.backtracks += 1;
+                    // Vol-14 instrumentation (transient): count backtracks
+                    // by the cell whose value-choice failed (pos at this
+                    // depth). Inspect `self.pos_backtracks` from a sink.
+                    if (pos as usize) < self.pos_backtracks.len() {
+                        self.pos_backtracks[pos as usize] += 1;
+                    }
                     self.emit(sink, depth, EventBody::Backtrack {
                         from_depth: depth + 1,
                         to_depth: depth,
