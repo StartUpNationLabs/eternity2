@@ -1,0 +1,153 @@
+{
+  "label": "baseline_vol12",
+  "cpu_brand": "Apple M1",
+  "rustflags": "(unset)",
+  "profile": "release-or-bench",
+  "budget_ms": 60000,
+  "engine": [
+    {
+      "size": 8,
+      "colors": 5,
+      "seed": 1,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 10055,
+      "nodes": 989066,
+      "propagations": 62098012,
+      "backtracks": 330170,
+      "best_depth": 64,
+      "solved": true,
+      "nodes_per_sec": 98365.58925907509
+    },
+    {
+      "size": 8,
+      "colors": 5,
+      "seed": 2,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 73,
+      "nodes": 10168,
+      "propagations": 496442,
+      "backtracks": 3361,
+      "best_depth": 64,
+      "solved": true,
+      "nodes_per_sec": 139287.67123287672
+    },
+    {
+      "size": 9,
+      "colors": 5,
+      "seed": 1,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 2134,
+      "nodes": 332924,
+      "propagations": 15662246,
+      "backtracks": 125804,
+      "best_depth": 81,
+      "solved": true,
+      "nodes_per_sec": 156009.37207122773
+    },
+    {
+      "size": 9,
+      "colors": 5,
+      "seed": 2,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 58856,
+      "nodes": 2525585,
+      "propagations": 311612719,
+      "backtracks": 989394,
+      "best_depth": 81,
+      "solved": true,
+      "nodes_per_sec": 42911.257985591954
+    },
+    {
+      "size": 10,
+      "colors": 6,
+      "seed": 1,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 60000,
+      "nodes": 4899419,
+      "propagations": 359562808,
+      "backtracks": 1735849,
+      "best_depth": 97,
+      "solved": false,
+      "nodes_per_sec": 81656.98333333334
+    },
+    {
+      "size": 10,
+      "colors": 6,
+      "seed": 2,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 6967,
+      "nodes": 633044,
+      "propagations": 35684461,
+      "backtracks": 204857,
+      "best_depth": 100,
+      "solved": true,
+      "nodes_per_sec": 90863.21228649346
+    },
+    {
+      "size": 11,
+      "colors": 6,
+      "seed": 1,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 60003,
+      "nodes": 3430775,
+      "propagations": 294313295,
+      "backtracks": 1161729,
+      "best_depth": 113,
+      "solved": false,
+      "nodes_per_sec": 57176.72449710848
+    },
+    {
+      "size": 11,
+      "colors": 6,
+      "seed": 2,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 60000,
+      "nodes": 2102121,
+      "propagations": 152246835,
+      "backtracks": 694221,
+      "best_depth": 117,
+      "solved": false,
+      "nodes_per_sec": 35035.35
+    },
+    {
+      "size": 12,
+      "colors": 7,
+      "seed": 1,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 60002,
+      "nodes": 1948182,
+      "propagations": 190984499,
+      "backtracks": 653491,
+      "best_depth": 135,
+      "solved": false,
+      "nodes_per_sec": 32468.617712742907
+    },
+    {
+      "size": 12,
+      "colors": 7,
+      "seed": 2,
+      "profile": "gacolor_ac3",
+      "elapsed_ms": 60000,
+      "nodes": 2183262,
+      "propagations": 250980788,
+      "backtracks": 613235,
+      "best_depth": 136,
+      "solved": false,
+      "nodes_per_sec": 36387.7
+    }
+  ],
+  "pt": [
+    {
+      "size": 10,
+      "colors": 6,
+      "seed": 1,
+      "elapsed_ms": 60003,
+      "rounds": 11092,
+      "inner_iters_per_round": 5000,
+      "n_replicas": 8,
+      "best_score": 178,
+      "total_edges": 180,
+      "iters_per_sec": 7394296.951819075
+    }
+  ]
+}

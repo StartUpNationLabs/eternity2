@@ -375,6 +375,7 @@ name = "eternity2-bench-audit"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "eternity2-benchmark",
  "eternity2-core",
  "eternity2-events",
  "eternity2-generator",
