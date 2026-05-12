@@ -327,8 +327,12 @@ impl EngineConfig {
     pub const BLACKWOOD_RAW: Self = Self {
         value_order: ValueOrder::BlackwoodHeuristic,
         scan_order: Some(ScanOrder::RowMajorBottomUp),
-        // class_balance stays on (it's cheap and break-agnostic);
-        // everything stronger is off.
+        // Vol-16: class_balance also dropped. Profile showed 7.6%
+        // self time in RAW. It IS break-sound (piece classes don't
+        // change under a color mismatch), but the pruning value at
+        // the depths Blackwood reaches (~80) is marginal. Better to
+        // pay the cost where it earns it (full-pipeline profiles).
+        class_balance_propagator: false,
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -2067,7 +2071,12 @@ impl<'a> SearchState<'a> {
         }
         // Vol-15 — increment Blackwood heuristic-count.
         self.placed_heuristic_count += self.count_heuristic_in_row(&row.edges);
-        let mut undo: Vec<UndoEntry> = Vec::new();
+        // Vol-16 Cat-4b: pre-allocate so the `undo.push` chain doesn't
+        // hit `RawVecInner::grow_amortized`. Worst case is one entry
+        // per cell (piece-uniqueness over all unplaced positions) +
+        // four neighbour prunes + ~few AC-3 cascades. Sized to
+        // `n_pos + 8` to cover the common path without overshooting.
+        let mut undo: Vec<UndoEntry> = Vec::with_capacity(self.puzzle.cell_count() as usize + 8);
 
         let (x, y) = self.puzzle.xy(pos);
         let w = self.puzzle.width;
@@ -2157,7 +2166,8 @@ impl<'a> SearchState<'a> {
         // Bitset form: for every unplaced cell p, AND off any row in
         // piece_mask[just_placed_piece]. Save the dropped bits as a
         // bit-diff for the undo log — no per-row iteration.
-        let mut other_undo: Vec<UndoEntry> = Vec::new();
+        // Vol-16 Cat-4b: same capacity argument as `undo` above.
+        let mut other_undo: Vec<UndoEntry> = Vec::with_capacity(self.puzzle.cell_count() as usize);
         let words_per_pos = self.words_per_pos;
         let pm_base = piece_idx * words_per_pos;
         for p in 0..self.puzzle.cell_count() {
@@ -2317,7 +2327,9 @@ impl<'a> SearchState<'a> {
                 on_queue[*np as usize] = true;
             }
         }
-        let mut all_removed: Vec<UndoEntry> = Vec::new();
+        // Vol-16 Cat-4b — bound the AC-3 cascade output by n_pos so we
+        // skip grow_amortized work.
+        let mut all_removed: Vec<UndoEntry> = Vec::with_capacity(self.puzzle.cell_count() as usize);
 
         let mut ac3_tick: u32 = 0;
         while let Some(a) = queue.pop() {
