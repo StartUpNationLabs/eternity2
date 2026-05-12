@@ -528,6 +528,323 @@ the productive math is **combinatorial structural analysis of
 individual pieces**, not spectral analysis of aggregate matrices. The
 community knew this; we re-derived it the hard way.
 
+## Probe #5 — careful re-mining of community corpus (the things we missed)
+
+**Motivation**. Vol-8 grep'd for scores and named techniques. Probe #4
+showed we missed a major Discord post by grepping the wrong keywords.
+User pushed back: re-read the corpus carefully for similar misses.
+
+**Method**. Intent-keyword greps (artifact: `output/v10_remine/*.txt`):
+- `forcing_claims.txt` — "the only", "exactly one", "always", "must be"
+- `importance_claims.txt` — "important/significant/key piece"
+- `specific_piece_mentions.txt` — `piece #?[0-9]+`
+- `ring_structure.txt` — "ring", "shell", "onion", "core"
+- `multiset_budget.txt` — "color budget", "frequency", "distribution"
+- `proofs_invariants.txt` — "theorem", "invariant", "necessary"
+- `insights.txt` — "noticed", "trick is", "key is"
+- `symmetry.txt` — "parity", "chirality", "orbit"
+- `obstructions.txt` — "stuck", "stall", "wall", "barrier"
+- `personal_observations.txt` — "I noticed", "It turns out"
+
+### What probe #5 surfaced
+
+**1. The "xtal shell ladder" (groups.io 105182887, 2007-09-30).**
+xtal computed and published the exact onion-decomposition difficulty
+ladder for E2 *under random-shell-fill-then-backtrack*:
+
+| Shell | Cum. edges | Cum. pieces | Δ pieces | xtal's empirical time |
+|------:|-----------:|------------:|---------:|-----------------------|
+| 1 (border) | 60 | 60 | 60 | seconds |
+| 2 | 168 | 112 | 52 | minutes |
+| 3 | 260 | 156 | 44 | hours |
+| **4** | **336** | **192** | **36** | **never reached complete** |
+| 5 | 396 | 220 | 28 | — |
+| 6 | 440 | 240 | 20 | — |
+| 7 | 468 | 252 | 12 | — |
+| 8 (center) | 480 | 256 | 4 | — |
+
+**Significance**. xtal's 2007 stall at 192 placed is in Hopfer's 2021
+202-206 band — same wall, 14 years apart, independent observation. This
+is the **strongest empirical evidence we have that the obstruction is
+located at the shell-3-to-shell-4 boundary**. It motivates a focused
+study of the *third-to-fourth ring transition* as the critical regime.
+
+**2. "Rotation Sets" subculture (groups.io 2007-2008).**
+A "Rotation Set" = an assignment of one rotation per piece such that
+for each color: count(N) = count(S) AND count(E) = count(W) across the
+whole set. This is dvholten's later-named **EMPI #2** invariant.
+
+Community results (eternitynut, Dave Clark, antminder, dietergehrke,
+moucherostre, the_solva — 2007 to 2008):
+- Astronomical number of valid Rotation Sets exist for canonical E2.
+- antminder reported a checker at **4200 rotation-sets/sec** by 2008.
+- **Using rotation-sets as backtracker seed produced max 56 placed**
+  — *worse* than ordinary top-down backtracking.
+
+**Significance**. **EMPI #2 is necessary but very far from sufficient.**
+The community already explored using rotation-sets as a feasibility
+oracle and it failed. **This forecloses a research direction we might
+have tried**: precomputing rotation sets to seed search is a known
+dead end. Save the energy.
+
+The deeper point: dvholten's 2013 "tile-set tileability oracle"
+question (groups.io 105203289) — "is there a property of the
+unordered tile set that decides whether it can form a square, faster
+than backtracking?" — is **STILL OPEN as of 2013** and has not been
+answered in the corpus since.
+
+**3. dvholten's edge-matching puzzle invariants** (groups.io
+105203289, 2013-05-13). Named formally in this thread:
+
+- **EMPI #1**: every color must appear an even number of times across
+  all edges of all pieces. (Trivially satisfied for any well-formed
+  edge-matching puzzle, since each internal join contributes 2 sides.)
+- **EMPI #2**: there must exist a rotation assignment such that for
+  each color, count(N)=count(S) AND count(E)=count(W).
+
+Plus dvholten's **q2 open problem**: distinguish a valid puzzle from
+a color-swapped (broken) puzzle by tile-set property alone, without
+backtracking.
+
+**Significance**. EMPI #1/#2 are now **named** in the community
+lexicon. EMPI #2 is computable, expensive (rotation-assignment
+satisfiability — likely the right framing is a flow network or
+constraint program). We do not currently use it as a propagator;
+**neither did any community member successfully**.
+
+**4. Michael Bastion's "KEY tile" claim** (groups.io 105187400,
+2008-01-31). Claimed there is exactly one tile that "sets the board"
+— not one of the 5 known hints. Bastion knew which tile but never
+disclosed; possibly a deliberate misdirection per his own caveat.
+**Unfalsifiable from this thread alone.** Worth lower priority than
+provable structural facts but worth keeping for future eye-test of
+plateau corpus boards.
+
+Same thread also surfaces a verifiable observation: **"two types of
+combinations: one had more high-numbered tiles on the left hand side
+while the other had more high-numbered tiles at the top"** — a
+**spatial bias in piece-ID distribution** across plateau states. This
+is testable on vol-6/7's plateau corpus.
+
+**5. Michael Field "parity" subculture** (multiple threads,
+2008-2010). The community has its own "parity" idea distinct from
+vol-7's H2 chessboard-parity. Field's parity is **pattern parity** —
+a per-color-position constraint, related to EMPI #2 but applied
+locally (per-row, per-column, per-region). Multiple threads
+("Hole filling", "Is this obvious?", "Analysis of edge pieces",
+"2x2s"). Field's own assessment in 105190624 (2008-04-20): *"The
+problem with parity is that you can usually only prove with certainty
+[…]"* — he never published a working propagator.
+
+**Significance**. Worth a separate vol-11 probe specifically on
+"Michael Field's parity papers" to see if any of the local-parity
+ideas produce non-vacuous propagators on the canonical piece set.
+
+**6. xp2 "checkerboard half-placement" idea** (Discord, 2026-01-29).
+Place pieces on one color of a chessboard-coloring of the 16×16 grid
+(128 cells); backtrack the other 128. This halves the immediate
+branching depth. onesmallstep claims "If you can get a working
+checkerboard at least halfway down the board, you're almost
+guaranteed a solution." Untested in the corpus; **could be a vol-11
+build**.
+
+**7. onesmallstep "1216 2×2 sub-tilings in the top-left corner"
+(Discord, 2026-01-29).** Concrete count of 2×2 tilings using only
+hint pieces + their neighbours in the upper-left quadrant. Verifiable;
+not currently in our propagator suite. Direct vol-11 candidate.
+
+**8. Markus Zajc "possibility matrix"** (groups.io 105192710,
+2008-09-10). The MRV (most-restricted variable) heuristic, named
+explicitly. Vol-7 already uses MRV; this confirms vol-7's variable
+ordering was reinventing well-known craft. Not a new finding for us.
+
+**9. Johannes Lindé "invariants" hint** (groups.io 105198823 +
+105201420, 2010-2011). Claimed to have studied invariants but
+admitted he lacked math skills to attack them. **Vague; discount as
+aspiration** unless he ever published.
+
+### Methodological note
+
+**Six discrete structural ideas missed in vol-8.** All were in the
+community corpus before 2014. Vol-8's grep methodology was wrong:
+score- and method-name-centric grep misses *structural claims* and
+*folkloric observations*. A complete corpus mining needs both axes:
+score/method *and* intent-keyword.
+
+The vol-8 catalogue still stands for what it covered (Verhaard SA,
+Blackwood scheduled relaxation, anr_56 Eulerian, etc.). Probe #5 adds
+six new entries to the community-technique catalogue:
+
+| # | Technique / fact | Source | Status |
+|---|---|---|---|
+| C-1 | xtal shell ladder + shell-4 wall | xtal 2007 | empirical, replicable today |
+| C-2 | Rotation Sets / EMPI #2 oracle | eternitynut et al. 2007-2008 | known dead-end as seed |
+| C-3 | EMPI #1/#2 formal invariants | dvholten 2013 | named, EMPI #2 unused as propagator |
+| C-4 | "Tileability oracle" open problem | dvholten 2013 | OPEN, would be transformative |
+| C-5 | M. Field "pattern parity" | M. Field 2008-2010 | partial; unclaimed propagator |
+| C-6 | xp2 checkerboard half-placement | xp2 2026 | untested |
+
+## Next steps for vol-9 / vol-11 (from probe #4)
+
+These are concrete, ready-to-build propagators. They are independent —
+each can be implemented and tested in isolation.
+
+### NS-1: edge-piece inward-color multiset equality propagator
+
+**Statement**. The 56 edge pieces have rotation-invariant inward
+colors. Their multiset M_in (a length-22 vector counting how many
+edge pieces inward-face each color) is a **fixed property of the
+puzzle**, computable once. In any valid solution, the multiset of
+*second-ring outward-facing colors* must equal M_in *exactly*.
+
+**Strength**. Strict equality, not inequality. Not generator-defeated
+(follows from piece identity). At any partial placement of the
+second ring, deviation from M_in by even one element is an immediate
+prune.
+
+**Cost**. O(1) to compute M_in upfront. O(1) per second-ring piece
+placement to update a running count. Negligible runtime overhead.
+
+**Where it plugs in**. `crates/solver-engine/src/propagators/` as a
+new `second_ring_multiset_eq` function. Wired into EngineConfig as
+a bool toggle (per the vol-9 convention).
+
+**Expected gain**. Unknown without measurement, but it's the
+strongest static-equality propagator surfaced in any vol so far.
+Probably nonzero where Eulerian was vacuous, because this constraint
+depends on which edge pieces are placed (not just whether the border
+is closeable).
+
+### NS-2: piece-17 and piece-38 second-ring forcing propagators
+
+**Statement (NS-2a)**. Piece 17's inward edge is always color `k`. So
+the second-ring cell adjacent to piece 17 must carry color `k` on the
+side facing piece 17. The 44 interior pieces containing `k` on at
+least one edge are the only candidates for that cell; the other
+196−44 = 152 interior pieces are forbidden from sitting adjacent to
+piece 17 in the second ring.
+
+**Statement (NS-2b)**. Same for piece 38 and color `l`: 42 candidates,
+154 forbidden.
+
+**Cost**. O(1): precompute the candidate lists for `k` and `l` once.
+At the search-time placement of piece 17 (resp. 38), apply the
+domain reduction to the adjacent second-ring cell.
+
+**Where it plugs in**. Either as a static domain restriction during
+problem setup, or as a propagator hook fired on piece-17/38
+placement.
+
+**Expected gain**. Modest (~78% domain restriction on two specific
+second-ring cells), but free.
+
+### NS-3: piece-62 anti-hint forbidden positions propagator
+
+**Statement**. Piece 62 cannot sit cell-adjacent to any of the 5 hint
+pieces in any rotation with any of 4 adjacency types. Pre-search,
+remove these (cell, rotation) entries from piece 62's domain.
+
+**Cost**. O(1) lookup of forbidden cells (the 4 cell-neighbours of
+each hint position, intersected with positions where the
+adjacency-rotation actually triggers the forbidden match).
+
+**Where it plugs in**. Initial-domain pruning during search setup.
+
+**Expected gain**. ~14% domain restriction for piece 62.
+
+### NS-4 (research, not propagator): generalize NS-1 to inner rings
+
+The multiset-equality argument for the first/second-ring boundary may
+extend: for each ring boundary in a spiral or onion decomposition, the
+inward-facing multiset of the outer ring must equal the outward-facing
+multiset of the inner ring. This is the **ring-boundary multiset
+chain** — a sequence of strict equality propagators, one per ring.
+
+The strength of each propagator depends on **how anisotropic the
+multiset is** at that ring depth. The first-ring inward multiset is
+maximally anisotropic (only border-adjacent colors); deeper rings
+become more uniform as Selby-Riordan flatness kicks in. So expect
+diminishing returns inward — but the first 2-3 ring boundaries
+might all be useful.
+
+**Cost**. A few hours of analysis to compute multisets per ring depth
+and check if any inner-ring inversion is similarly forcing.
+
+### NS-5 (methodology): re-mine the community corpus for missed claims
+
+**DONE in probe #5.** Six discrete missed ideas surfaced. See probe
+#5 section for catalogue C-1 through C-6.
+
+### NS-6: shell-3-to-shell-4 transition focused study
+
+**Statement**. xtal (2007) and Hopfer (2021) independently observed
+the wall at ~192-206 placed pieces, which corresponds to **completing
+shell 3 → starting shell 4**. This is the most-empirically-attested
+obstruction in 19 years of community work. Focus a vol-11 study on
+this specific transition: what happens to color-budget anisotropy,
+local rotation-set feasibility, and mismatch distribution as the
+search crosses shell-3-to-shell-4? Use vol-6/7's plateau corpus as
+data.
+
+**Why this isn't redundant with vol-7**. Vol-7 used PT/MAP-Elites
+*globally*. NS-6 is a *focused depth-conditional study*. Different
+question, different data slice.
+
+### NS-7: EMPI #2 as a partial-board feasibility propagator
+
+**Statement**. dvholten's EMPI #2 says: a valid set has some rotation
+assignment with balanced N/S and E/W counts per color. For a
+*partial* board (some pieces fixed, others free), the propagator
+asks: do the **unplaced pieces, in some rotation, balance the
+*deficit* the placed pieces leave**? If no, prune.
+
+**Why this isn't redundant with the failed "rotation-set seeding"**.
+The 2008 community tried EMPI #2 *as a global seeding constraint* —
+generated valid rotation sets then tried to extend. That failed
+because too many rotation sets exist. NS-7 inverts: use EMPI #2 as a
+*pruning* check during backtracking, not a seeding source.
+
+**Cost**. Per-backtrack, EMPI #2 reduces to a network-flow
+feasibility check on the remaining piece pool — polynomial.
+Estimated 1-2 days Rust if integrated cleanly into the propagator
+suite.
+
+**Expected gain**. Unknown; depends on how anisotropic the deficits
+become as search progresses. Worth trying after shell 3.
+
+### NS-8: piece-ID spatial bias check on plateau corpus
+
+**Statement**. Bastion (2008) observed that plateau states cluster
+into two visual types: "high-numbered tiles on the left" vs.
+"high-numbered tiles at the top". Easy to verify on vol-6/7's
+plateau JSONs in `output/v6_plateaus/` (if extant) or vol-7's MAP-
+Elites archive.
+
+**Cost**. ~1 hour Python. Plot the centroid of placed piece-IDs per
+plateau, see if the distribution is bimodal.
+
+**Why it matters**. If the bimodal structure exists, the two modes
+correspond to two distinct basins of attraction in the search
+landscape. This is a **structural fact about the search trajectory**
+that nobody has measured. Could justify a dual-strategy portfolio.
+
+Status of NS-1 through NS-8: **proposed, not assigned**. Vol-9 may
+pick these up when its Verhaard SA run completes; vol-11 may build
+them as its mission.
+
+**Priority ranking for vol-11**:
+1. **NS-1** (edge-piece inward multiset equality) — strongest static
+   propagator, cheapest to build, definitely not generator-defeated.
+2. **NS-7** (EMPI #2 as partial-board propagator) — moderate cost,
+   community never tried this direction, could be transformative if
+   it works.
+3. **NS-2/3** (piece 17/38/62 forcing) — cheap, deterministic, free.
+4. **NS-8** (spatial bias on plateaus) — diagnostic, not algorithmic.
+5. **NS-6** (shell-4 transition study) — research, motivates further
+   work but doesn't directly improve the solver.
+6. **NS-4** (generalize multiset chain to inner rings) — depends on
+   NS-1 working first.
+
 ## Artifacts
 
 - `scripts/v10_pca_piece_cloud.py` — probe #1
