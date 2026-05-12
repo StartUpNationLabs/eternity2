@@ -179,28 +179,103 @@ In `place_and_propagate`, when checking edge color matches against
 neighbours: track per-call mismatch count. At depth ∈
 `break_indexes_allowed`, allow up to 1 mismatch; else require 0.
 
-## Scan order
+## Scan order — VERIFIED EMPIRICALLY
 
-Blackwood's scan order is **row-major top-down** (cell index `pos =
-y * W + x`). Wait — vol-14 analysis showed community 469s have
-mismatches at the TOP, while top-down search would produce them at
-the BOTTOM. Need to verify Blackwood's actual scan order. Possible
-options:
-- **Row-major bottom-up**: cell index `pos = (H-1-y) * W + x`, so
-  index 0 = (0, 15), index 255 = (15, 0).
-- **Spiral from corner**: cell index follows a spiral path from one
-  corner inward.
-- **Diagonal**: index follows diagonal traversal.
+Vol-14 decoded community 469/468 boards and computed which scan
+order puts their mismatches at indices ≥ 200 (matching the
+Blackwood break_indexes range):
 
-The break_indexes `[201..256]` mean breaks are in the "last quarter"
-of the scan. If 256 mismatches are concentrated at high indices,
-that's late in the scan. The 469 (c) board has mismatches in the
-top region. So **Blackwood's index 0 is at the bottom, index 256 at
-the top**, suggesting **bottom-up scan order**.
+| board    | top-down %≥200 | bottom-up %≥200 | spiral %≥200 |
+|----------|---------------:|----------------:|-------------:|
+| 469 (c)  |  0%           |   **36%** (med 198) |  0%      |
+| 468 (a)  |  0%           |   **66%** (med 231) |  0%      |
 
-**Vol-15 implementation should support configurable scan order**
-(`pub enum ScanOrder { RowMajorTopDown, RowMajorBottomUp, Spiral,
-... }`) and default Blackwood-mode to bottom-up.
+**Blackwood's scan order is bottom-up row-major** (idx = (H-1-y)*W + x).
+Index 0 = (0, 15) (bottom-left), index 255 = (15, 0) (top-right).
+
+Our stack uses **top-down row-major** (idx = y*W + x). This is why
+our 442/454 boards have mismatches at low top-down indices (= top of
+board) and community 469s have them at high bottom-up indices (= top
+of board, but high cell-index in Blackwood's frame).
+
+`pub enum ScanOrder { RowMajorTopDown, RowMajorBottomUp }` is sufficient.
+Default Blackwood-mode = `RowMajorBottomUp`.
+
+## Hint × break-index collision
+
+Vol-14 verified: under bottom-up scan, our 5 canonical hints map to
+indices `{34, 45, 119, 210, 221}`. Blackwood's break_indexes are
+`{201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256}`.
+
+**Collision: hint at pos 45 (= bu_idx 221) coincides with break 221.**
+
+Vol-15 implementation must handle this:
+- If a cell is hint-pinned, no value-ordering happens there — the
+  piece + rotation is forced.
+- Therefore break-allowance at hint-pinned indices is **unused**
+  (no candidate-row evaluation to apply it to).
+- Result: effective break count drops from 12 to ≤ 11, max score
+  becomes ≤ 468.
+- If the hint at pos 45 produces a mismatch on either of its
+  neighbours, that mismatch is unavoidable and consumes the
+  "would-have-been" break.
+
+**Vol-15 task**: implement break-allowance only on non-pinned cells.
+Add a `score_ceiling()` helper that computes max achievable score
+given `(hints, breaks)`.
+
+## Heuristic-side selection — canonical E2 calibration
+
+Vol-14 verified empirically: Blackwood's reported counts don't
+match canonical E2 piece-edge color frequencies:
+
+- Blackwood says `[17, 2, 18]` has **122 occurrences total** and
+  doesn't appear on any corner.
+- On canonical E2 (data/puzzles/size_16_official_eternity.csv,
+  vol-11 loader), counting colors 17, 2, 18: total **124**
+  occurrences. Colors 2 appears on **2 of 4 corners** (pieces 2
+  and 3).
+
+**Conclusion**: Blackwood's color labels differ from ours (his
+puzzle CSV or labeling convention is offset from the v11_load_e2
+output). Cannot literally adopt his triple.
+
+**Vol-15 must recompute heuristic_sides from first principles**
+on the canonical piece set:
+
+```rust
+fn compute_heuristic_sides(puzzle: &Puzzle, hints: &Hints) -> [Color; 3] {
+    // 1. Identify corner pieces (those with exactly 2 BORDER edges).
+    let corner_colors: HashSet<Color> = puzzle.pieces().iter()
+        .filter(|p| p.edges.as_array().iter().filter(|&&c| c == BORDER).count() == 2)
+        .flat_map(|p| p.edges.as_array().iter().copied().filter(|&c| c != BORDER))
+        .collect();
+    // 2. Identify the start piece (5th hint, at pos 135) edges.
+    let start_colors: HashSet<Color> = hints.iter()
+        .find(|h| h.position == 135)
+        .map(|h| puzzle.piece(h.piece_id).unwrap()
+            .edges.as_array().iter().copied().filter(|&c| c != BORDER).collect())
+        .unwrap_or_default();
+    let forbidden: HashSet<Color> = corner_colors.union(&start_colors).copied().collect();
+    // 3. Count occurrences of each color across all piece edges.
+    let mut counts: HashMap<Color, u32> = HashMap::new();
+    for p in puzzle.pieces() {
+        for &c in &p.edges.as_array() {
+            if c != BORDER { *counts.entry(c).or_insert(0) += 1; }
+        }
+    }
+    // 4. Filter, sort by frequency, take top 3.
+    let mut candidates: Vec<(Color, u32)> = counts.into_iter()
+        .filter(|(c, _)| !forbidden.contains(c))
+        .collect();
+    candidates.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+    [candidates[0].0, candidates[1].0, candidates[2].0]
+}
+```
+
+This will produce 3 colors specific to canonical E2 that satisfy
+Blackwood's selection rules. The corresponding `heuristic_pool_size`
+is the sum of their occurrence counts.
 
 ## Throughput
 
