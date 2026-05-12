@@ -107,6 +107,81 @@ Score is 453/480; any move that yields 454+ is the headline.
 
 ## Vol-7 dispatch log
 
+### *** GENERATOR-RULE DISCOVERY 09:10 — RARE COLORS ON OPPOSITE EDGES ***
+
+**User pushback on the "looks random" verdict**: *"I don't think the
+puzzle color is random, the creator was a renowned mathematician, so
+there must be some kind of logic/beauty to it I think."*
+
+User was correct — my first MC test was too narrow. Probing deeper:
+
+**Rare-color in-piece adjacency analysis** (rotation-invariant):
+
+| Color class pair | # missing | total | rate missing |
+|---|---|---|---|
+| **R-R (rare ↔ rare)** | 7 | 10 | **70%** |
+| **R-M (rare ↔ medium)** | 9 | 25 | 36% |
+| **R-A (rare ↔ abundant)** | 14 | 60 | 23% |
+| M-M | 0 | 10 | 0% |
+| M-A | 1 | 60 | 1.67% |
+| A-A | 0 | 66 | 0% |
+
+**Almost all missing in-piece color-pair adjacencies involve a rare
+color.** Non-rare colors form an essentially complete adjacency
+graph (1/136 missing). Rare colors form a near-independent set.
+
+**Sharpened: of 60 pieces carrying 2 rare colors, 56 have them on
+OPPOSITE edges; only 4 have them on adjacent edges, and all 4 of
+those are corner pieces** (where the two non-border edges are
+geometrically adjacent — the rule cannot be satisfied differently).
+
+**STRUCTURAL RULE (with strong evidence)**: *Selby & Riordan's
+generator placed rare colors {1-5} on OPPOSITE edges of any piece
+carrying two of them.* This is **deliberate mathematical structure**,
+not random.
+
+**Sanity check**: same analysis for medium-color pairs gives
+25 adjacent + 17 opposite (close to the natural ratio for non-
+constrained pairs). So the rule is specific to rare colors.
+
+**Verification on the 453 board**: all 60 rare-color internal edges
+are matched (0 mismatches). Consistent with vol-5's "rare colors
+are easy" — but now we know **why**: the structural rule forces
+rare-color edges into chains that the solver can resolve
+trivially.
+
+**Mechanism**: a piece with 2 rare colors on opposite edges acts
+as a "rare-color bridge". Rare colors propagate as **stripes**
+across the board — chains of consecutive cells with rare-color
+edges in a fixed direction. The 453 board's 60 rare-color edges
+are organised into such stripes.
+
+**Algorithmic implication** — this is a hard propagator:
+
+- When CP-placing a piece with 1 rare-color edge fixed to direction
+  D, the piece's rotation is forced to have the (potential) second
+  rare color at the OPPOSITE direction. This cuts the search space
+  per-rare-piece by half.
+- For frame-first border generation: rare-color edges in border
+  pieces force the adjacent interior cell's edge to also be rare.
+  This is a STRIPE-INITIATION constraint we can use to bias the
+  CP variable order.
+- For GA child repair: if the crossover region cuts through a rare
+  stripe, repair must extend/close the stripe rather than leave
+  it half-broken.
+
+**Estimated implementation cost**: 1-2 days Rust in
+`crates/propagators` — add a `RareStripe` propagator that takes a
+partial board and propagates rare-color stripe membership across
+adjacent cells. Predicted gain: faster CP (no breaking score
+ceiling on its own; it accelerates frame-first border generation,
+making the border sweep produce more diverse / higher-scoring
+candidates per second).
+
+**This is a MUCH stronger generator-bias finding than the missing-
+pair count alone**. The user was right; my first MC test was too
+broad (averaging over color classes washed out the per-class signal).
+
 ### Selby-Riordan generator-bias DIAGNOSTIC 09:00 — NEGATIVE
 
 **Hypothesis (M1 H1)**: the Selby-Riordan generator imposed a
