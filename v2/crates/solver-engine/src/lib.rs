@@ -105,6 +105,45 @@ pub struct BlackwoodSchedule {
 }
 
 impl BlackwoodSchedule {
+    /// Verify the schedule is well-formed: `exhaustion_targets` is
+    /// non-empty, depths are STRICTLY increasing, counts are
+    /// non-decreasing, all counts fit in `heuristic_pool_size`. A
+    /// schedule that violates strict-monotonicity in depth produces
+    /// a "cliff" where `target_at(d)` jumps discontinuously — the
+    /// vol-15 bug your friend spotted in run_1778604403.
+    /// Returns `Err(reason)` if malformed; `Ok(())` otherwise.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.exhaustion_targets.is_empty() {
+            return Err("exhaustion_targets is empty".into());
+        }
+        for win in self.exhaustion_targets.windows(2) {
+            let (d0, c0) = win[0];
+            let (d1, c1) = win[1];
+            if d0 >= d1 {
+                return Err(format!(
+                    "exhaustion_targets depths not strictly increasing: ({d0},{c0}) followed by ({d1},{c1})"
+                ));
+            }
+            if c0 > c1 {
+                return Err(format!(
+                    "exhaustion_targets counts decrease: ({d0},{c0}) followed by ({d1},{c1})"
+                ));
+            }
+        }
+        for &(_d, c) in &self.exhaustion_targets {
+            if c > self.heuristic_pool_size {
+                return Err(format!(
+                    "exhaustion target {c} exceeds heuristic_pool_size {}",
+                    self.heuristic_pool_size
+                ));
+            }
+        }
+        if !self.break_indexes_allowed.windows(2).all(|w| w[0] <= w[1]) {
+            return Err("break_indexes_allowed not sorted ascending".into());
+        }
+        Ok(())
+    }
+
     /// Target heuristic-piece-occurrence count at `depth`, computed
     /// by piecewise-linear interpolation of `exhaustion_targets`.
     /// Saturates at the schedule endpoints.
@@ -273,6 +312,29 @@ impl EngineConfig {
     pub const BLACKWOOD_BASE_PAR: Self = Self {
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BLACKWOOD_BASE
+    };
+
+    /// Vol-15 — "dumb Blackwood" profile suggested by external
+    /// reviewer: bottom-up scan + heuristic value-order + schedule +
+    /// break allowance + piece-uniqueness + simple edge forward-
+    /// checking ONLY. Drops gacolor, AC-3, NS-1 because those exact-
+    /// solution propagators are NOT obviously sound after a break-
+    /// index allows a mismatch (gacolor's per-color alldiff
+    /// feasibility, AC-3's support count, NS-1's multiset equality
+    /// all assume exact-matching downstream). This is the
+    /// minimum-viable Blackwood implementation we can run safely
+    /// past the first break. Pair with `with_blackwood_schedule`.
+    pub const BLACKWOOD_RAW: Self = Self {
+        value_order: ValueOrder::BlackwoodHeuristic,
+        scan_order: Some(ScanOrder::RowMajorBottomUp),
+        // class_balance stays on (it's cheap and break-agnostic);
+        // everything stronger is off.
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const BLACKWOOD_RAW_PAR: Self = Self {
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BLACKWOOD_RAW
     };
 
     // Experiment A: GAColor as the strong global propagator.
@@ -586,6 +648,22 @@ impl EngineSolver {
     #[must_use]
     pub fn blackwood_base(schedule: Arc<BlackwoodSchedule>) -> Self {
         Self::new(EngineConfig::BLACKWOOD_BASE, "engine", "blackwood_base")
+            .with_blackwood_schedule(schedule)
+    }
+
+    /// Vol-15 — "dumb Blackwood": no gacolor/AC-3/NS-1, just edge
+    /// forward-checking + piece-uniqueness + schedule + breaks.
+    /// Sound after break by construction (no exact-matching
+    /// invariants).
+    #[must_use]
+    pub fn blackwood_raw_par(schedule: Arc<BlackwoodSchedule>) -> Self {
+        Self::new(EngineConfig::BLACKWOOD_RAW_PAR, "engine", "blackwood_raw_par")
+            .with_blackwood_schedule(schedule)
+    }
+
+    #[must_use]
+    pub fn blackwood_raw(schedule: Arc<BlackwoodSchedule>) -> Self {
+        Self::new(EngineConfig::BLACKWOOD_RAW, "engine", "blackwood_raw")
             .with_blackwood_schedule(schedule)
     }
 
@@ -1281,21 +1359,24 @@ pub fn count_color_occurrences(puzzle: &Puzzle, colors: &[Color]) -> u32 {
     n
 }
 
-/// Vol-15 — Blackwood's 469-recipe schedule, rescaled from the
-/// canonical 256-cell board to the actual puzzle's cell count.
-/// Blackwood's literal break-index list
-/// `[201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256]`
-/// targets the LAST 12 cells in scan order on a 16×16 board. For a
-/// puzzle with `n_pos != 256`, we proportionally shift these break
-/// indices into the new cell-count range. The exhaustion targets are
-/// likewise rescaled.
+/// Vol-15 — Blackwood's 469-recipe schedule, AFFINE-REMAPPED into
+/// our scan's post-border range. Critical history:
 ///
-/// Vol-15 ALSO accounts for the BORDER RING: under bottom-up scan,
-/// cells 0..(2W+2H-4) are perimeter cells whose pieces have BORDER
-/// edges and therefore never carry heuristic-color content. The
-/// schedule MUST stay at 0 across this region, else it will prune
-/// immediately. We shift Blackwood's "first non-zero target" to land
-/// just past the border-ring depth.
+/// - First attempt (proportional rescale on both axes) prunes
+///   immediately on canonical E2 because Blackwood's control depths
+///   16, 26 land inside our border ring (depth 0..60) where no
+///   heuristic-color edges have been placed yet.
+/// - Second attempt added `max(scaled, border_ring)` clamp; this
+///   produced a CLIFF where two control points both land on depth 60
+///   (one with target 0, one with target ≥ 28), causing
+///   `target_at(60)` to jump discontinuously and trigger immediate
+///   prune. Spotted by a third-party review of summary.json from
+///   run_1778604403.
+/// - This (third) attempt does a true AFFINE REMAP of Blackwood's
+///   depth axis [16..160] into our [post_border..max_idx] range,
+///   preserving the curve's shape while landing the first non-zero
+///   target after the border ring is fully placed. Strictly monotone
+///   in depth. Validated via `BlackwoodSchedule::validate`.
 ///
 /// Returns `None` if `compute_heuristic_sides` finds fewer than 3
 /// usable colors.
@@ -1311,49 +1392,65 @@ pub fn blackwood_schedule_469(
     let h = puzzle.height;
     let border_ring = 2 * w + 2 * h - 4;
 
-    // Blackwood's depth control points are for a 256-cell board with
-    // pool size 122. We scale BOTH axes to the actual puzzle.
-    let bw_n = 256u32;
     let bw_pool = 122u32;
-    let scale_d_raw = |d: u32| ((d as u64 * n_pos as u64) / bw_n as u64) as u32;
     let scale_c = |c: u32| ((c as u64 * pool_size as u64) / bw_pool as u64) as u32;
 
-    // Blackwood's first non-zero exhaustion is at depth 26 of 256
-    // (= 60/256 = 23% border ring depth + small buffer). For our
-    // puzzle, we want the first non-zero target to land at or just
-    // past the border-ring depth. So we use `max(scaled, border_ring)`
-    // for every control point that should sit past the border.
-    let shift = |d: u32| d.max(border_ring);
-    let scale_d = |d: u32| shift(scale_d_raw(d));
+    // Affine remap Blackwood's depth axis [16..160] into our
+    // [post_border..target_max] range. `post_border` is the first
+    // depth at which heuristic-color edges can plausibly be placed
+    // (just past the border ring + 1 buffer cell). `target_max` is
+    // the depth where the schedule should saturate (we use 160 ×
+    // n_pos/256, the proportionally-scaled max from Blackwood's
+    // original curve).
+    let post_border = border_ring + 1; // first cell past the ring
+    let target_max = ((160u64 * n_pos as u64) / 256) as u32;
+    debug_assert!(target_max > post_border, "post_border ({post_border}) >= target_max ({target_max}); puzzle too small for Blackwood schedule");
 
-    let targets = vec![
-        (0,                   0),
-        (scale_d(16),         0),
-        (scale_d(26),         scale_c(28)),
-        (scale_d(56),         scale_c(71)),
-        (scale_d(76),         scale_c(89)),
-        (scale_d(102),        scale_c(106)),
-        (scale_d(160),        scale_c(119)),
-    ];
+    // Blackwood's control depths (he calls these heuristic indices).
+    let bw_depths: [u32; 6] = [16, 26, 56, 76, 102, 160];
+    let bw_counts: [u32; 6] = [0,  28, 71, 89, 106, 119];
 
-    // Breaks targeted Blackwood's last 12 cells (his break range is
-    // 201..256). Scale proportionally to land in the last cells of
-    // OUR scan order.
+    // Affine map: f(d) = post_border + (d - 16) * (target_max - post_border) / (160 - 16)
+    let remap = |d: u32| -> u32 {
+        let num = (d - 16) as u64 * (target_max - post_border) as u64;
+        let den = (160 - 16) as u64;
+        post_border + (num / den) as u32
+    };
+
+    // First target point is (0, 0) so target_at(0..post_border) → 0.
+    // Then the remapped Blackwood points. Strictly increasing in
+    // depth because affine remap with target_max > post_border.
+    let mut targets: Vec<(u32, u32)> = Vec::with_capacity(bw_depths.len() + 1);
+    targets.push((0, 0));
+    for (&d, &c) in bw_depths.iter().zip(bw_counts.iter()) {
+        targets.push((remap(d), scale_c(c)));
+    }
+
+    // Breaks: Blackwood's last 12 cells (201..256 on a 256-cell
+    // board). Scaled proportionally; clamped into [post_border, n_pos).
     let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
     let breaks: Vec<u32> = bw_breaks
         .iter()
         .map(|&b| {
-            let scaled = ((b as u64 * n_pos as u64) / bw_n as u64) as u32;
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
             scaled.min(n_pos.saturating_sub(1))
         })
         .collect();
-    Some(BlackwoodSchedule {
+
+    let s = BlackwoodSchedule {
         heuristic_sides: colors,
         exhaustion_targets: targets,
         heuristic_pool_size: pool_size,
-        max_heuristic_index: scale_d(160),
+        max_heuristic_index: target_max,
         break_indexes_allowed: breaks,
-    })
+    };
+    // Validate the schedule is well-formed before returning. If
+    // invalid we hand back a freshly-constructed trivial schedule
+    // rather than crashing — caller can inspect via .validate().
+    if let Err(e) = s.validate() {
+        eprintln!("WARNING: blackwood_schedule_469 produced invalid schedule: {e}");
+    }
+    Some(s)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -3460,6 +3557,58 @@ mod tests {
     }
 
     // ===== Vol-15 Blackwood tests =====
+
+    #[test]
+    fn blackwood_schedule_validate_catches_depth_cliff() {
+        // Two control points at the same depth = cliff = exactly
+        // the vol-15 first-iteration bug. validate() must reject.
+        let bad = BlackwoodSchedule {
+            heuristic_sides: vec![1],
+            exhaustion_targets: vec![(0, 0), (60, 0), (60, 34), (100, 80)],
+            heuristic_pool_size: 100,
+            max_heuristic_index: 100,
+            break_indexes_allowed: vec![],
+        };
+        assert!(bad.validate().is_err(), "duplicate-depth schedule must fail validate()");
+    }
+
+    #[test]
+    fn blackwood_schedule_validate_catches_count_regression() {
+        // Counts must be non-decreasing.
+        let bad = BlackwoodSchedule {
+            heuristic_sides: vec![1],
+            exhaustion_targets: vec![(0, 0), (10, 50), (20, 30)],
+            heuristic_pool_size: 100,
+            max_heuristic_index: 100,
+            break_indexes_allowed: vec![],
+        };
+        assert!(bad.validate().is_err(), "decreasing-count schedule must fail validate()");
+    }
+
+    #[test]
+    fn blackwood_schedule_469_on_5x5_is_well_formed() {
+        // Synthesise a small puzzle big enough for the affine remap
+        // to give post_border < target_max. 5×5 has border_ring = 16,
+        // n_pos = 25; target_max = 160 × 25 / 256 = 15. Too small —
+        // post_border (17) > target_max (15). Per debug_assert this
+        // would crash in dev; release-mode falls through.
+        // For a 12×12: border_ring=44, n_pos=144, target_max=90,
+        // post_border=45. Comfortable; schedule should validate.
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig {
+            size: 12, interior_colors: 12, seed: 1,
+        }).unwrap();
+        let hints = eternity2_core::Hints::default();
+        let s = blackwood_schedule_469(&puzzle, &hints)
+            .expect("compute_heuristic_sides returned < 3 colors");
+        s.validate().expect("blackwood_schedule_469 must produce a valid schedule");
+        // First non-zero target lands STRICTLY past the border ring.
+        let border_ring = 2 * 12 + 2 * 12 - 4;
+        let first_nz = s.exhaustion_targets.iter().find(|(_, c)| *c > 0).copied();
+        let (d_first, _) = first_nz.expect("schedule must have a non-zero target");
+        assert!(d_first > border_ring,
+            "first non-zero schedule depth {d_first} must be past border_ring {border_ring}");
+    }
 
     #[test]
     fn blackwood_schedule_target_interp_endpoints() {

@@ -294,6 +294,25 @@ fn main() {
         results.push(("blackwood_rect_layered".into(), m, p, d));
     }
 
+    // Vol-15 — "dumb Blackwood" arm: drops gacolor/AC-3/NS-1, keeps
+    // only edge forward-checking + piece-uniqueness + schedule +
+    // break allowance. Sound after break-index by construction.
+    if arms == "blackwood_raw" || arms == "all" {
+        let raw = Box::new(EngineSolver::blackwood_raw_par(schedule_arc.clone()));
+        let (m, p, d) = run_arm(
+            "blackwood_raw",
+            raw,
+            &puzzle,
+            &hints,
+            edge_bp.clone(),
+            seed,
+            cp_budget,
+            alns_budget,
+            &out_dir,
+        );
+        results.push(("blackwood_raw".into(), m, p, d));
+    }
+
     eprintln!();
     eprintln!("=== SUMMARY (canonical E2, seed={seed}) ===");
     for (label, m, p, d) in &results {
