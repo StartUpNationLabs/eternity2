@@ -416,3 +416,70 @@ warmup, frame-enumeration — we can flip the profile and get a
 README (vol-16) and integrated into the speed-vs-pruning
 tradeoff guide.
 
+### 2026-05-12 ~19:50 — rectangle×Blackwood composition: REFUTED
+
+After all bugs fixed (cliff + propagators), ran the user's
+"constraining more first = better seed" hypothesis cleanly:
+`blackwood_raw + HintRectangleLayered` on canonical E2 seed 1.
+
+Result: matched=382/480 (Δ vs baseline = −57; Δ vs
+blackwood_raw alone = −34). LOSES decisively.
+
+Diagnostic:
+- 349.5M nodes (vs blackwood_raw's 195.9M) — 1.8× MORE search.
+- depth wall same (80 vs 87) — layered didn't move the wall.
+- CP matched 113 (vs 156) — fewer matches at similar depth.
+- ALNS Δ +269 (vs +260 standalone) — nearly identical
+  per-cell-recovery, applied to a sparser seed.
+
+The layered ordering forces piece-placement choices that fail
+the schedule's heuristic-color constraint more often, so the
+engine churns through more dead branches. Same depth wall, more
+nodes, fewer matches, worse end-to-end.
+
+This is consistent with the CSP literature finding (vol-15 web
+search): static orderings (CHESS, rectangle, layered) lose to
+dynamic MRV in long-budget regimes when paired with
+chronological backtracking that doesn't learn between failures.
+The Ansótegui et al. CP'08 CHESS paper measured the same
+qualitative result.
+
+The composition would presumably win if we had no-good learning
+/ CDCL (per CSP theory + vol-14 hint-rectangle findings), but
+we don't.
+
+### Vol-15 closing scoreboard (canonical E2, seed 1)
+
+| arm                              | ALNS    | Δ vs baseline |
+|----------------------------------|--------:|--------------:|
+| baseline (joe_depth150_bp_par)   | **439** | —             |
+| blackwood ORIG (bugs)            | 395     | −44           |
+| blackwood × layered (bugs)       | 376     | −63           |
+| blackwood (cliff fix only)       | 405     | −34           |
+| **blackwood_raw (all fixes)**    | **416** | **−23**       |
+| blackwood_raw + layered          | 382     | −57           |
+
+**Best vol-15 cold-start: blackwood_raw at 416/480**.
+
+Vol-15 closes:
+- ✅ Blackwood algorithm shipped, validated, tested.
+- ✅ HintRectangle × Blackwood composition wired and measured;
+  refuted on canonical E2 at 300s budget.
+- ✅ Two engine bugs found and fixed (schedule cliff + unsound
+  propagators under break).
+- ✅ Throughput finding worth keeping: 47× speedup from
+  dropping exact-matching propagators in break-tolerant modes.
+- ❌ Tier 1 (≥454) NOT MET — best arm at 416/480, below
+  baseline 439/480 and well below Tier 1 threshold.
+
+Vol-16 path to Tier 1:
+1. Calibrate `BlackwoodSchedule.exhaustion_targets` from
+   community 469/468 cumulative heuristic-color curves on our
+   bottom-up scan order. Single afternoon of work.
+2. Re-run blackwood_raw with the calibrated schedule. Plausible
+   to exceed baseline (439) and approach Blackwood's community
+   ceiling (469) given the schedule is the binding constraint.
+3. The cleanup anchor remains valid: engine-config sprawl,
+   bench-audit duplication, registry drift must all be
+   resolved before vol-16 picks up new research directions.
+
