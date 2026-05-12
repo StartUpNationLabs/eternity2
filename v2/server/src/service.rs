@@ -50,16 +50,43 @@ impl SolverServiceImpl {
             ("engine", "border_first_full") => Some(Box::new(EngineSolver::border_first_full())),
             ("engine", "border_first_lcv_par") => Some(Box::new(EngineSolver::border_first_lcv_par())),
             ("engine", "border_first_full_par") => Some(Box::new(EngineSolver::border_first_full_par())),
+            ("engine", "border_first_gacolor") => Some(Box::new(EngineSolver::border_first_gacolor())),
+            ("engine", "border_first_gacolor_par") => Some(Box::new(EngineSolver::border_first_gacolor_par())),
+            ("engine", "chess_gacolor") => Some(Box::new(EngineSolver::chess_gacolor())),
+            ("engine", "chess_gacolor_par") => Some(Box::new(EngineSolver::chess_gacolor_par())),
+            ("engine", "chess_gacolor_ac3") => Some(Box::new(EngineSolver::chess_gacolor_ac3())),
+            ("engine", "gacolor_symbreak") => Some(Box::new(EngineSolver::gacolor_symbreak())),
+            ("engine", "gacolor_symbreak_par") => Some(Box::new(EngineSolver::gacolor_symbreak_par())),
             ("engine", "gacolor_ac3") => Some(Box::new(EngineSolver::gacolor_ac3())),
             ("engine", "gacolor_ac3_par") => Some(Box::new(EngineSolver::gacolor_ac3_par())),
+            ("engine", "gacolor_ac3_random_par") => Some(Box::new(EngineSolver::gacolor_ac3_random_par())),
+            ("engine", "gacolor_ac3_lcv") => Some(Box::new(EngineSolver::gacolor_ac3_lcv())),
+            ("engine", "gacolor_ac3_lcv_par") => Some(Box::new(EngineSolver::gacolor_ac3_lcv_par())),
             ("engine", "gacolor_ac3_ns1") => Some(Box::new(EngineSolver::gacolor_ac3_ns1())),
             ("engine", "gacolor_ac3_ns1_par") => Some(Box::new(EngineSolver::gacolor_ac3_ns1_par())),
+            ("engine", "verhaard_preferred") => Some(Box::new(EngineSolver::verhaard_preferred())),
+            ("engine", "verhaard_preferred_par") => Some(Box::new(EngineSolver::verhaard_preferred_par())),
             ("engine", "joe_depth150") => Some(Box::new(EngineSolver::joe_depth150())),
             ("engine", "joe_depth150_par") => Some(Box::new(EngineSolver::joe_depth150_par())),
             ("engine", "joe_depth150_bp") => Some(Box::new(EngineSolver::joe_depth150_bp())),
             ("engine", "joe_depth150_bp_par") => Some(Box::new(EngineSolver::joe_depth150_bp_par())),
             ("engine", "joe_depth150_bp_rec") => Some(Box::new(EngineSolver::joe_depth150_bp_rec())),
             ("engine", "joe_depth150_bp_rec_par") => Some(Box::new(EngineSolver::joe_depth150_bp_rec_par())),
+            ("engine", "joe_depth150_bp_rec_layered") => Some(Box::new(EngineSolver::joe_depth150_bp_rec_layered())),
+            ("engine", "joe_depth150_bp_rec_layered_par") => Some(Box::new(EngineSolver::joe_depth150_bp_rec_layered_par())),
+
+            // Vol-15 — Blackwood profiles need an Arc<BlackwoodSchedule>
+            // injected into EngineSolver; today's (solver_id, profile)
+            // pair lacks a place to carry it through the SolveRequest
+            // proto. They are listed in ListSolvers for discoverability,
+            // but Solve returns InvalidArgument until vol-17 ships a
+            // SolveRequest schedule attachment (or a JSON config
+            // overlay per the Cat-8 design decision).
+            ("engine", "blackwood_base")
+            | ("engine", "blackwood_base_par")
+            | ("engine", "blackwood_raw")
+            | ("engine", "blackwood_raw_par") => None,
+
             _ => None,
         }
     }
@@ -91,10 +118,26 @@ impl SolverService for SolverServiceImpl {
         let mut entries = Vec::with_capacity(req.selections.len());
         for sel in req.selections {
             let solver = self.instantiate(&sel.solver_id, &sel.heuristic_profile)
-                .ok_or_else(|| Status::invalid_argument(format!(
-                    "unknown solver/profile: ({}, {})",
-                    sel.solver_id, sel.heuristic_profile
-                )))?;
+                .ok_or_else(|| {
+                    // Blackwood profiles are listed but not yet wired up
+                    // for server-side instantiation (no schedule attachment
+                    // in SolveRequest yet — see V2_DESIGN.md
+                    // "Strategy composition (vol-16)" for the deferred
+                    // proto change).
+                    if sel.solver_id == "engine"
+                        && sel.heuristic_profile.starts_with("blackwood_")
+                    {
+                        Status::invalid_argument(format!(
+                            "profile ({}, {}) requires a BlackwoodSchedule attachment which is not yet wired into SolveRequest. Use the bench harnesses (run_e2_blackwood) for now; server-side support lands in vol-17.",
+                            sel.solver_id, sel.heuristic_profile
+                        ))
+                    } else {
+                        Status::invalid_argument(format!(
+                            "unknown solver/profile: ({}, {})",
+                            sel.solver_id, sel.heuristic_profile
+                        ))
+                    }
+                })?;
             let run_id = self.next_run_id.fetch_add(1, Ordering::Relaxed);
             entries.push(PortfolioEntry {
                 solver,
@@ -295,6 +338,125 @@ impl SolverService for SolverServiceImpl {
                         id: "joe_depth150_bp_rec_par".into(),
                         display_name: "Joe-Saunders + edge-BP + rectangle (multi-core)".into(),
                         description: "Multi-core variant of joe_depth150_bp_rec.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp_rec_layered".into(),
+                        display_name: "Joe-Saunders + edge-BP + layered skeleton".into(),
+                        description: "Vol-14 layered hint-rectangle (rect → interior → annulus → border) ordering.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp_rec_layered_par".into(),
+                        display_name: "Joe-Saunders + edge-BP + layered (multi-core)".into(),
+                        description: "Multi-core variant of joe_depth150_bp_rec_layered.".into(),
+                        is_default: false,
+                    },
+                    // Vol-9 — Verhaard preferred-pieces phase-1 ordering.
+                    HeuristicProfileEntry {
+                        id: "verhaard_preferred".into(),
+                        display_name: "Verhaard preferred-pieces".into(),
+                        description: "Loads deferred + worst good-set pieces into early placements. Requires SolveOpts.preferred_pieces.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "verhaard_preferred_par".into(),
+                        display_name: "Verhaard preferred-pieces (multi-core)".into(),
+                        description: "Multi-core variant of verhaard_preferred.".into(),
+                        is_default: false,
+                    },
+                    // Border-first + GAColor pre-search alldiff feasibility.
+                    HeuristicProfileEntry {
+                        id: "border_first_gacolor".into(),
+                        display_name: "Border first + GAColor".into(),
+                        description: "Border-first MRV with symmetric-alldiff per color (lighter than gacolor_ac3).".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "border_first_gacolor_par".into(),
+                        display_name: "Border first + GAColor (multi-core)".into(),
+                        description: "Multi-core variant of border_first_gacolor.".into(),
+                        is_default: false,
+                    },
+                    // CHESS heuristic from Ansótegui et al. CP'08.
+                    HeuristicProfileEntry {
+                        id: "chess_gacolor".into(),
+                        display_name: "CHESS + GAColor".into(),
+                        description: "CHESS variable order (corners → borders → interior spiral by checkerboard parity) + GAColor.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "chess_gacolor_par".into(),
+                        display_name: "CHESS + GAColor (multi-core)".into(),
+                        description: "Multi-core variant of chess_gacolor.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "chess_gacolor_ac3".into(),
+                        display_name: "CHESS + GAColor + AC-3".into(),
+                        description: "CHESS variable order + GAColor + arc-consistency.".into(),
+                        is_default: false,
+                    },
+                    // GAColor + symmetry break standalone.
+                    HeuristicProfileEntry {
+                        id: "gacolor_symbreak".into(),
+                        display_name: "GAColor + symbreak".into(),
+                        description: "GAColor with rotational-symmetry break only (no AC-3).".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "gacolor_symbreak_par".into(),
+                        display_name: "GAColor + symbreak (multi-core)".into(),
+                        description: "Multi-core variant of gacolor_symbreak.".into(),
+                        is_default: false,
+                    },
+                    // GAColor + AC-3 with seeded random tie-break, useful
+                    // for portfolio diversification.
+                    HeuristicProfileEntry {
+                        id: "gacolor_ac3_random_par".into(),
+                        display_name: "GAColor + AC-3 + random (multi-core)".into(),
+                        description: "GAColor + AC-3 with seeded random tie-break.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "gacolor_ac3_lcv".into(),
+                        display_name: "GAColor + AC-3 + LCV".into(),
+                        description: "GAColor + AC-3 with least-constraining-value value order.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "gacolor_ac3_lcv_par".into(),
+                        display_name: "GAColor + AC-3 + LCV (multi-core)".into(),
+                        description: "Multi-core variant of gacolor_ac3_lcv.".into(),
+                        is_default: false,
+                    },
+                    // Vol-15 — Blackwood algorithm profiles. Listed for
+                    // discoverability but require a BlackwoodSchedule
+                    // attachment which is not yet wired into SolveRequest;
+                    // server returns InvalidArgument on Solve. Use the
+                    // run_e2_blackwood bench harness in the meantime.
+                    HeuristicProfileEntry {
+                        id: "blackwood_base".into(),
+                        display_name: "Blackwood (base) — schedule required, not yet wired".into(),
+                        description: "Vol-15 Blackwood 2020 algorithm: heuristic-side schedule + break-index allowance. Server Solve returns InvalidArgument until vol-17 ships schedule attachment. Use run_e2_blackwood bench bin.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "blackwood_base_par".into(),
+                        display_name: "Blackwood (base, multi-core) — schedule required, not yet wired".into(),
+                        description: "Multi-core variant of blackwood_base. Server-side not yet wired (see blackwood_base).".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "blackwood_raw".into(),
+                        display_name: "Blackwood RAW (no exact-match props) — schedule required, not yet wired".into(),
+                        description: "Vol-15 break-tolerant Blackwood: drops AC-3/GAColor/NS-1 (unsound under break-index). 55x throughput vs baseline. Server-side not yet wired.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "blackwood_raw_par".into(),
+                        display_name: "Blackwood RAW (multi-core) — schedule required, not yet wired".into(),
+                        description: "Multi-core variant of blackwood_raw. 650k nps on canonical E2. Server-side not yet wired.".into(),
                         is_default: false,
                     },
                 ],

@@ -18,27 +18,41 @@ import "google/protobuf/empty.proto";
 //     the proto.
 //
 // Solver registry (canonical, returned by ListSolvers):
-//   (naive,  row_by_row)            educational default — no propagation
-//   (naive,  spiral)                educational alternative ordering
-//   (engine, border_first_lcv)      research default — edge-color propagation
-//                                   + class-balance + border-first MRV
-//   (engine, rare_color_first)      border-first; ties by rare-color heuristic
-//   (engine, border_first_random)   border-first; ties broken randomly (seeded)
-//   (engine, border_first_parity)   adds checkerboard parity propagator
-//   (engine, border_first_full)     all available propagators (parity + island)
-//   (engine, joe_depth150)          gacolor + AC-3 + NS-1, Step-8 gated at depth ≥ 150
-//   (engine, joe_depth150_par)      joe_depth150 + multi-core root-split
-//   (engine, joe_depth150_bp)       joe_depth150 + vol-12 edge-color BP value-order
-//   (engine, joe_depth150_bp_par)   joe_depth150_bp + multi-core
-//   (engine, joe_depth150_bp_rec)   joe_depth150_bp + vol-14 auto-injected
-//                                   hint-rectangle skeleton path (PathSkeleton::HintRectangle)
-//   (engine, joe_depth150_bp_rec_par) multi-core variant
+//   (naive,  row_by_row)              educational default — no propagation
+//   (naive,  spiral)                  educational alternative ordering
+//   (engine, border_first_lcv)        research default — edge-color propagation
+//                                     + class-balance + border-first MRV
+//   (engine, rare_color_first)        border-first; ties by rare-color heuristic
+//   (engine, border_first_random)     border-first; ties broken randomly (seeded)
+//   (engine, border_first_parity)     adds checkerboard parity propagator
+//   (engine, border_first_full)       all available propagators (parity + island)
+//   (engine, border_first_{lcv,full}_par)  multi-core root-split variants
+//   (engine, border_first_gacolor{,_par})  border-first MRV + GAColor only
+//   (engine, chess_gacolor{,_par})    CHESS variable order + GAColor (Ansótegui CP'08)
+//   (engine, chess_gacolor_ac3)       CHESS + GAColor + AC-3
+//   (engine, gacolor_symbreak{,_par}) GAColor + rotational symmetry break
+//   (engine, gacolor_ac3{,_par})      GAColor + AC-3, strongest single-step propagation
+//   (engine, gacolor_ac3_random_par)  GAColor + AC-3 + seeded random tie-break
+//   (engine, gacolor_ac3_lcv{,_par})  GAColor + AC-3 + least-constraining-value
+//   (engine, gacolor_ac3_ns1{,_par})  + Hopfer 2022 multiset-equality (NS-1)
+//   (engine, verhaard_preferred{,_par})  vol-9 preferred-pieces phase-1 ordering
+//   (engine, joe_depth150{,_par})     Step-8 propagators gated at depth ≥ 150
+//   (engine, joe_depth150_bp{,_par})  joe_depth150 + vol-12 edge-color BP value-order
+//   (engine, joe_depth150_bp_rec{,_par})  + vol-14 auto-injected hint-rectangle skeleton
+//   (engine, joe_depth150_bp_rec_layered{,_par})  vol-14 layered rectangle variant
+//   (engine, blackwood_base{,_par})   vol-15 Blackwood algorithm with full propagator
+//                                     stack — REQUIRES Arc<BlackwoodSchedule> attachment
+//                                     not yet wired into SolveRequest (vol-17). Listed
+//                                     in ListSolvers for discoverability; Solve returns
+//                                     InvalidArgument. Use run_e2_blackwood bench bin.
+//   (engine, blackwood_raw{,_par})    Blackwood without AC-3/GAColor/NS-1 (unsound under
+//                                     break-index allowance). 55× throughput vs baseline.
+//                                     Same schedule-attachment caveat as blackwood_base.
 //
-// (Profiles above are the long-tail ones added in vol-12/vol-14; the
-// full canonical list is what `ListSolvers` returns at runtime — see
-// `server::service::list_solvers`. New strategies opt in by adding
-// to ListSolvers + `instantiate` together; this comment block stays
-// in sync as a navigation aid.)
+// (The full authoritative list is what `ListSolvers` returns at
+// runtime — see `server::service::list_solvers` and `instantiate`.
+// New strategies opt in by adding to ListSolvers + `instantiate`
+// together; this comment block stays in sync as a navigation aid.)
 //
 // Implementation note: the legacy `dlx` and `csp` families collapsed into
 // a single "engine" once written cleanly in Rust — they share the search
