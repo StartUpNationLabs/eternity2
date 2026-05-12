@@ -543,5 +543,33 @@ this same starting board so we control for CP variance.
 | H5 | CP-primary repair beats SA-primary                      | 447 (CP) vs 455 (SA), -8  | REFUTED       |
 | H6 | More destroy ops (11 vs 5) helps                        | 447 (11), 454 (10), 455 (5) | REFUTED   |
 | H7 | Polish (rotation + swap) lifts beyond ALNS              | rot=+0, swap=+0 on 447 + 455 | REFUTED |
-| H8 | Parallel chains with t-ladder beat single chain         | E2 running                | (pending)     |
+| H8 | Parallel chains with t-ladder beat single chain         | 4-chain 456 vs single 455 | WEAKLY CONFIRMED (+1) |
+| H9 | Higher temperatures (t ∈ 1.0-5.5) keep helping          | E2 (456) = E3 (456) IDENTICAL  | REFUTED — t-insensitive in [0.5, 5.5] |
+| H10 | More iters (10 min ALNS) beat 5 min                    | E4 running                | (pending)     |
+
+## 00:23 — Temperature insensitivity finding (E3 = E2)
+
+Both E2 (t-range [0.5, 2.0]) and E3 (t-range [1.0, 5.5]) produced
+IDENTICAL chain scores: 454, 455, 454, 456. Same seeds → same scores
+regardless of t.
+
+The seed (specifically: the per-chain RNG seed derived from `--seed 1`)
+fully determines the outcome. SA temperature is effectively a no-op
+in this regime because most deltas are 0 (iso-score moves), which are
+unconditionally accepted at all t≥0.5.
+
+acc_imp=0 for all chains — meaning ZERO strictly-improving moves
+across 200 iters per chain. The score climbs from 362 (CP) to 455
+ENTIRELY via worse-or-equal acceptances. Iso-score exploration is
+the mechanism, not temperature-mediated improvement.
+
+This is a fundamental insight: **vol-17's ALNS landscape on canonical
+E2 is dominated by iso-score plateaus**. To escape, we need either:
+- LOWER temperatures (t < 0.1) that REJECT non-improvements.
+- DIFFERENT acceptance criteria (Late-Acceptance Hill Climbing?).
+- Cluster-aware destroy ops that LOCALLY guarantee positive delta
+  (like polish_rotations but at cluster scale).
+
+NEXT: E4 = 10-min single chain. Measures if more iters in the same
+plateau-exploration regime hits a higher peak.
 
