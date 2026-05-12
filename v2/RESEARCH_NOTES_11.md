@@ -537,6 +537,75 @@ the corpus.
    Rust work and the BP-marginal infrastructure here are
    complementary; bp_marginals.json is now Rust-loadable.
 
+### Late-session nodes/sec calibration (2026-05-12)
+
+Built a scratch standalone Rust bench in `/tmp/v11_node_bench/`
+(not in repo) to measure our `EngineSolver::gacolor_ac3` on
+canonical 16×16 E2 for 60 s. Result:
+
+| metric | value |
+|--------|------:|
+| nodes/sec | **2,101** |
+| backtracks/sec | 340 |
+| propagations/sec | 2,053,456 |
+| max_depth in 60s | 164 / 256 |
+| total nodes | 126,045 |
+| total propagations | 123,213,060 |
+
+**~1,000 propagations per node** — AC-3 + gacolor + island + parity
++ class_balance fire on every node. Each of our nodes does
+fundamentally more work than McGavin's bare-edge-equality node
+(295M/s reference).
+
+Read of the gap: 140,000× raw throughput gap to McGavin. Roughly:
+- ~1,000× from per-node propagation work (architectural choice).
+- ~140× from inner-loop constant factor (Rust vs hand-unrolled C).
+
+**The 140× constant-factor gap is the addressable target.** The
+other agent's `project_todo_engine_bitset` memory entry
+(bitset domains, expected 2-5× wall-clock) is the first concrete
+step toward closing it.
+
+**Implication confirmed**: Joe's "no propagation under depth 150"
+policy from `05_Joe_pruning_method_thread.md` is exactly the right
+remedy. Our per-node cost makes the early search the bottleneck,
+not the late search.
+
+### Vol-12 prompt sketch (carry forward)
+
+Recommended vol-12 mission: **port Joe's prune-back-to-150 +
+bitset domains, then measure**. Specifically:
+
+1. Implement bitset domain rep alongside existing `Vec<Vec<u32>>`
+   (first 1-2 hours per the bitset TODO memo). Run the bench-audit
+   `fleet` harness with `--budget-ms 60000` baseline + after.
+2. Add `EngineConfig::depth_threshold_for_propagators: Option<u32>`
+   — propagators only run at depth ≥ threshold. Sweep threshold
+   ∈ {0, 100, 150, 180}.
+3. Re-measure nodes/sec on canonical E2. Target: 100k+ nodes/sec
+   at low depth, falling back to current ~2k once propagators
+   kick in past threshold.
+4. With the new throughput, run a fresh 60s/300s/3600s sweep on
+   canonical E2. Honest expected outcome: best_depth climbs from
+   164 to 200+, possibly reaching the funnel regime.
+5. As a side track, ship the NS-1 deficit propagator (cheap,
+   triggers at border closure, no depth threshold needed).
+
+This is "boring engineering work that moves the score number"
+rather than another cross-disciplinary innovation pass. It's
+also the work the prior session journals have repeatedly
+recommended and we have repeatedly deferred.
+
+Memory entries to load at vol-12 start:
+- `project_e2_state.md` (state)
+- `project_e2_dead_ends.md` (READ THIS FIRST — would have saved
+  vol-11 from re-running SP)
+- `project_todo_engine_bitset.md` (concrete plan)
+- `project_e2_ns1_deficit_invariant.md` (new vol-11 finding)
+- `reference_e2_bp_measurements.md` (vol-11 measurements)
+- `05_Joe_pruning_method_thread.md` (depth-150 policy)
+- `09_Blackwood_solver_thread.md` (469 parameter set)
+
 ## NS-1 backlog spec (kept for follow-up)
 
 **Statement** (Hopfer 2022, vol-10 NS-1). The multiset of inward-facing
