@@ -107,6 +107,53 @@ Score is 453/480; any move that yields 454+ is the headline.
 
 ## Vol-7 dispatch log
 
+### USER PIVOT 08:35 — BORDER DIVERSITY IS A MASSIVE OVERSIGHT
+
+**User observation**: *"I think it also might be interesting to try
+new boards, with new borders, with mostly tested with the same one
+which is an oversight as there are many many borders possible."*
+
+**Empirical verification (vol-7 check)**: across our entire corpus of
+boards ≥443/480 (18 boards at 451-453 + 6 frame-first boards at 443-
+450), there are only **7 distinct border signatures**, and:
+
+| Border family | n boards | max score |
+|---|---|---|
+| 0 (vol-4 base 0xCAFEFEED) | **18** | **453** |
+| 1 (GA-LARGE #17 novel) | 1 | 451 |
+| 2 (vol-4 0xCAFEFEED) | 3 | 450 |
+| 3 (NE1 stage-1 0xCAFEFEEC) | 1 | 450 |
+| 4 (NE1 stage-2 0xCAFEFEEC+8) | 1 | 450 |
+| 5 (frame-first 1778529843) | 1 | 446 |
+| 6 (frame-first 1778532175) | 1 | 443 |
+
+**All 18 boards in the 451-453 basin share ONE border.** The 453-
+optimality proof of vol-6 is *conditional on this single border*.
+Vol-5 ran 30 borders × 90s in NE1 stage 1 and the ceiling was 450;
+vol-6 only worked on the inner of the 453-border.
+
+This is **textbook sampling bias**. We never produced a single 451+
+board on a non-family-0 border. The "453 ceiling" might be the
+ceiling for family-0; another border could have a higher inner
+optimum.
+
+**Decision: pivot vol-7 to massive border diversification.**
+
+Plan:
+1. Launch frame_first_e2 with `--n-borders 200 --cp-seconds 15
+   --pt-seconds 30 --border-gen-seconds 5`. This is ~3h wall on 8
+   cores at 200 × 50s ≈ 167 min, before subprocess overhead.
+2. Filter the resulting borders to top-K by stage-1 PT score
+   (target: K=20 borders with stage-1 ≥445).
+3. **For each top-K border, do GA crossover** with the existing
+   453-class board as parent A, the new-border board as parent B.
+   Region size 4×4 (vol-5's sweet spot), 60s PT polish each.
+4. Score every product, log basin-membership via bucas-overlap.
+5. If ANY 451+ appears on a new border, that's the breakthrough.
+
+This is the right vol-7 move; Houdayer / Verhaard / Selby-Riordan
+all stay queued behind this.
+
 ### MAJOR DISCOVERY 08:25 — Houdayer-in-PT IS ALREADY BUILT
 
 While preparing the X1-suggested Houdayer prototype I found:
