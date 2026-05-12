@@ -302,33 +302,82 @@ def main():
         print(f"archive summary: {archive.summary()}")
         archive.save(out_dir / "archive_init.json")
 
-    # MAP-Elites iterations
+    # MAP-Elites iterations.
+    # Two mutation modes:
+    #   destroy: pick one elite, destroy a kxk region, refill via PT
+    #   crossover: pick two distinct-descriptor elites, transplant a region
     print(f"\n=== MAP-Elites: {args.n_iters} iterations, {args.pt_seconds}s/mut ===")
     for it in range(args.n_iters):
         if archive.size() == 0:
             print(f"iter {it}: empty archive, abort")
             break
-        d, parent_score, parent_path = archive.random_elite_path(rng)
-        # Bias region selection toward mismatched-cell zones of the parent
-        with open(parent_path) as f:
-            parent_placement = json.load(f).get("placement", [])
-        if not parent_placement:
-            continue
-        parent_mm = mismatched_cells(parent_placement, pieces)
-        if parent_mm and rng.random() < 0.8:
-            # Pick a random mismatched cell, center 4x4 on its neighbourhood
-            cx, cy = rng.choice(list(parent_mm))
-            rx = max(1, min(W - args.region_k - 1, cx - args.region_k // 2))
-            ry = max(1, min(W - args.region_k - 1, cy - args.region_k // 2))
-        else:
+        # Bias toward crossover when we have ≥2 elites with different descriptors
+        if archive.size() >= 2 and rng.random() < 0.6:
+            keys = list(archive.elites.keys())
+            d_a = rng.choice(keys)
+            d_b_choices = [k for k in keys if k != d_a]
+            d_b = rng.choice(d_b_choices)
+            score_a, path_a = archive.elites[d_a]
+            score_b, path_b = archive.elites[d_b]
+            # Crossover: take 4x4 region from B, paste into A, repair duplicates
+            seed_mut = rng.randint(1, 2**31)
             rx = rng.randint(1, W - args.region_k - 1)
             ry = rng.randint(1, W - args.region_k - 1)
-        seed_mut = rng.randint(1, 2**31)
-        print(f"iter {it}: parent desc={d} score={parent_score} -> region ({rx},{ry})+{args.region_k}, seed={seed_mut}")
-        child_path = mutate_via_pt(
-            parent_path, (rx, ry), args.region_k,
-            args.pt_seconds, seed_mut, args.pt_binary, out_dir,
-        )
+            cross_path = out_dir / f"cross_{it}_{seed_mut}.json"
+            cmd = [
+                "python3", "scripts/ga_crossover.py",
+                str(path_a), str(path_b),
+                "--region-x", str(rx), "--region-y", str(ry),
+                "--region-k", str(args.region_k),
+                "--out", str(cross_path),
+                "--seed", str(seed_mut),
+            ]
+            print(f"iter {it} [crossover]: A={d_a}(s={score_a}) B={d_b}(s={score_b}) region ({rx},{ry})+{args.region_k}, seed={seed_mut}")
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if r.returncode != 0 or not cross_path.exists():
+                print(f"  crossover failed: {r.stderr[:200]}")
+                continue
+            # Polish the crossover child with PT (full board free except hints + perimeter)
+            polished_log = out_dir / f"polish_{it}_{seed_mut}.log"
+            polish_cmd = [
+                args.pt_binary,
+                "--start-from", str(cross_path),
+                "--pin-perimeter",  # only the perimeter is pinned; interior is fully free
+                "--pt-seconds", str(args.pt_seconds),
+                "--skip-sa-compare",
+                "--seed", str(seed_mut + 1),
+                "--n-replicas", "4",
+            ]
+            with open(polished_log, "w") as f:
+                p = subprocess.run(polish_cmd, stdout=f, stderr=f, timeout=args.pt_seconds + 60)
+            if p.returncode != 0:
+                print(f"  polish failed")
+                continue
+            with open(polished_log) as f:
+                log = f.read()
+            import re
+            m = re.search(r"Report:\s+(\S+)", log)
+            child_path = Path(m.group(1)) if m else None
+        else:
+            d, parent_score, parent_path = archive.random_elite_path(rng)
+            with open(parent_path) as f:
+                parent_placement = json.load(f).get("placement", [])
+            if not parent_placement:
+                continue
+            parent_mm = mismatched_cells(parent_placement, pieces)
+            if parent_mm and rng.random() < 0.8:
+                cx, cy = rng.choice(list(parent_mm))
+                rx = max(1, min(W - args.region_k - 1, cx - args.region_k // 2))
+                ry = max(1, min(W - args.region_k - 1, cy - args.region_k // 2))
+            else:
+                rx = rng.randint(1, W - args.region_k - 1)
+                ry = rng.randint(1, W - args.region_k - 1)
+            seed_mut = rng.randint(1, 2**31)
+            print(f"iter {it} [destroy]: parent desc={d} score={parent_score} -> region ({rx},{ry})+{args.region_k}, seed={seed_mut}")
+            child_path = mutate_via_pt(
+                parent_path, (rx, ry), args.region_k,
+                args.pt_seconds, seed_mut, args.pt_binary, out_dir,
+            )
         if not child_path or not child_path.exists():
             print(f"  mutation failed")
             continue
