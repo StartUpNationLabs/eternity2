@@ -1716,6 +1716,13 @@ pub(crate) struct SearchState<'a> {
     /// Built once at SearchState::new from the static row table.
     /// Size: rows.len() * 16 bytes = ~16 KB on canonical E2.
     pub(crate) same_piece_rots: Vec<u8>,
+    /// Vol-16 Cat-4g — reusable scratch buffer for the AC-3 inner
+    /// "rows to support-check" list. Was a per-queue-pop allocation;
+    /// recycle the capacity on each AC-3 invocation.
+    pub(crate) ac3_to_check: Vec<u32>,
+    /// Vol-16 Cat-4g — reusable AC-3 work queue (was Vec::with_capacity(16)
+    /// per invocation). LIFO discipline.
+    pub(crate) ac3_queue: Vec<Position>,
     /// Vol-16 Cat-4 — single arena for all UndoEntry bit-diff buffers.
     /// `UndoEntry { pos, words_start }` references a contiguous slice
     /// `[words_start..words_start + words_per_pos]`. The arena grows
@@ -2026,6 +2033,8 @@ impl<'a> SearchState<'a> {
             },
             placed_heuristic_count: 0,
             same_piece_rots,
+            ac3_to_check: Vec::with_capacity(1024),
+            ac3_queue: Vec::with_capacity(256),
             // Vol-16 Cat-4 — pre-reserve the arena for the worst-case
             // undo log: 4 prunes + n_pos piece-uniqueness entries per
             // place_and_propagate_opts call, * wpp words per entry,
@@ -2501,7 +2510,9 @@ impl<'a> SearchState<'a> {
                 }
             }
         }
-        let mut queue: Vec<Position> = Vec::with_capacity(16);
+        // Vol-16 Cat-4g — reuse the queue scratch across AC-3 calls.
+        self.ac3_queue.clear();
+        let queue = &mut self.ac3_queue;
         // Seed: all unplaced neighbours of start_pos (and their unplaced
         // neighbours).
         let seed_neighbors = |p: Position, w: u32, h: u32| -> [Option<Position>; 4] {
@@ -2567,7 +2578,10 @@ impl<'a> SearchState<'a> {
             // in-place when a row is unsupported (the iteration takes a
             // snapshot before the loop body so we don't observe our own
             // mutations).
-            let mut to_check: Vec<u32> = Vec::with_capacity(64);
+            // Vol-16 Cat-4g — reuse the scratch Vec across queue pops.
+            // Length-reset (no reallocation); capacity persists for the
+            // lifetime of SearchState.
+            self.ac3_to_check.clear();
             {
                 let base = a_u * words_per_pos;
                 for w in 0..words_per_pos {
@@ -2575,11 +2589,15 @@ impl<'a> SearchState<'a> {
                     while word != 0 {
                         let bit = word.trailing_zeros();
                         word &= word - 1;
-                        to_check.push((w as u32) * 64 + bit);
+                        self.ac3_to_check.push((w as u32) * 64 + bit);
                     }
                 }
             }
-            for r_id in to_check {
+            // Clone the small Vec out of self so we don't double-borrow
+            // (the inner loop mutates other fields of self).
+            let to_check_len = self.ac3_to_check.len();
+            for ti in 0..to_check_len {
+                let r_id = self.ac3_to_check[ti];
                 let r = self.rows[r_id as usize];
                 let mut supported = true;
                 let pid_base = usize::from(r.piece_id) * 4;
