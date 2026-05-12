@@ -453,6 +453,29 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### GA-LARGE early hits 05:07 — 100% basin-overlap with original 452
+
+**First 2 hits at 451+ from GA-LARGE: BOTH identical to the original
+452 board** (100% bucas overlap).
+
+- Hit #1 (cross #5, canonical 449 + HISTORIC 452, region (11,4)+4): 452.
+- Hit #2 (cross #10, canonical 449 + HISTORIC 452, region (9,11)+4): 452.
+
+**Pattern**: when 452 is one of the parents, small-region crossovers
+disturb the 452 minimally; PT polishes back to the 452 basin
+exactly. GA-LARGE is reliably REPRODUCING the 452 but not finding
+new basins.
+
+**Implication**: with the current parent pool, GA cannot escape the
+452 basin. To find 453+ we'd need:
+- Crossovers using ONLY non-452 parents (which produce mostly 446-451).
+- Wider regions (8×8+) to inject more diversity.
+- Multiple 452-ancestors crossed together (= cross 452 with one of
+  the 451 children).
+
+GA-LARGE will continue running. Predicted total: 6-9 hits at 451+,
+most converging to the same 452 basin.
+
 ### 451+ BASIN ANALYSIS 04:20 — all 3 are in the SAME BASIN
 
 **Setup**: pairwise bucas-string overlap of the 3 distinct 451+ boards
