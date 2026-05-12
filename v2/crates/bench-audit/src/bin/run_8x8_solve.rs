@@ -157,8 +157,11 @@ fn main() {
     } else {
         let mut s = match profile.as_str() {
             "joe_par"               => EngineSolver::joe_depth150_par(),
+            "joe_depth150"          => EngineSolver::joe_depth150(),
             "joe_ns1_par"           => EngineSolver::gacolor_ac3_ns1_par(),
             "gacolor_ac3_par"       => EngineSolver::gacolor_ac3_par(),
+            "gacolor_ac3"           => EngineSolver::gacolor_ac3(),
+            "gacolor_ac3_ns1"       => EngineSolver::gacolor_ac3_ns1(),
             "border_first_lcv_par"  => EngineSolver::border_first_lcv_par(),
             "border_first_lcv"      => EngineSolver::border_first_lcv(),
             _ => panic!("unknown profile {profile}"),

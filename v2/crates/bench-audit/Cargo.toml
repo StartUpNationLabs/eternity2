@@ -83,3 +83,7 @@ path = "src/bin/run_e2_initial_domains.rs"
 [[bin]]
 name = "run_8x8_solve"
 path = "src/bin/run_8x8_solve.rs"
+
+[[bin]]
+name = "run_generated_pipeline"
+path = "src/bin/run_generated_pipeline.rs"
