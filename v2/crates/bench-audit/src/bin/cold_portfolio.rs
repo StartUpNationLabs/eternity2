@@ -32,7 +32,7 @@ use eternity2_core::{Board, Hints, Puzzle};
 use eternity2_localsearch::{
     run_alns, Acceptance, AlnsConfig, ComponentDestroy, ComponentPlusHaloDestroy,
     ConflictDriven, DestroyOp, MwpmDefectPair, RandomRegion, RepairKind, WorstBand,
-    WorstWindow,
+    WorstRow, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_calibrated_v17a, load_edge_bp_marginals, EngineSolver,
@@ -108,6 +108,7 @@ fn run_one_arm(
         Box::new(WorstBand { k_rows: 4 }),
         Box::new(ComponentDestroy { max_size: 100, min_size: 6 }),
         Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),
+        Box::new(WorstRow),
     ];
     let cfg = AlnsConfig {
         time_budget_ms: alns_ms,

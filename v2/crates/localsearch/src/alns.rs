@@ -521,6 +521,44 @@ impl DestroyOp for WorstBand {
     }
 }
 
+/// Vol-17 NOVEL — destroy a single ROW (1 × W = 16 cells) whose
+/// mismatch density is the worst. Smaller than WorstBand{4} but still
+/// touches the entire row, allowing piece-uniqueness across a thin
+/// strip to be re-optimised.
+///
+/// Useful as a "scalpel" complement to the bigger WorstBand: probe
+/// individual rows of the cluster, each of which is a tractable
+/// 16-cell CP-repair problem.
+pub struct WorstRow;
+
+impl DestroyOp for WorstRow {
+    fn name(&self) -> &str { "worst_row" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        let mut per_row = vec![0u32; h as usize];
+        for m in &mismatches {
+            per_row[(m.cell_a / w) as usize] += 1;
+            let yb = m.cell_b / w;
+            if yb != m.cell_a / w { per_row[yb as usize] += 1; }
+        }
+        let mut best_row = 0u32;
+        let mut best_score = 0u32;
+        for y in 0..h {
+            if per_row[y as usize] > best_score {
+                best_score = per_row[y as usize];
+                best_row = y;
+            }
+        }
+        let mut out = BTreeSet::new();
+        for x in 0..w {
+            out.insert(best_row * w + x);
+        }
+        out
+    }
+}
+
 /// Vol-17 NOVEL — destroy the ENTIRE connected component of mismatched
 /// cells, no matter how big. Adjacent (4-neighbour) cells that both
 /// touch at least one mismatch are part of the same component.
