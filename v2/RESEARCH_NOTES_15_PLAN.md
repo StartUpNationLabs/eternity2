@@ -100,6 +100,24 @@ Test as a portfolio (parallel seeds, pick best):
 
 ~4 hours of integration + testing once Blackwood lands.
 
+**Backtracking subtlety**: PathPolicy::PrefixConstraint forces
+*cell order* at depths < k but does NOT prevent backtracking. If
+Blackwood detects schedule violation at depth 50, the engine
+backtracks normally — depth 50 → 49 → ... possibly all the way to
+depth 0 — trying different pieces at each rectangle cell. This is
+correct behaviour.
+
+The risk: if NO (piece, rotation) combination at the rectangle's
+49 fixed cells satisfies Blackwood's exhaustion schedule, the
+search will exhaust and return Exhausted with 0 found. The cells
+are fixed; only the pieces vary. Diagnostic: monitor outcome type.
+- Exhausted with depth < 50: composition infeasible at current
+  schedule; LOOSEN Blackwood's `exhaustion_targets` at early
+  depths (try (idx 26 → exhaust 14), down from 28).
+- TimedOut with depth ≥ 50: composition feasible; compare score
+  to standalone Blackwood.
+- Solved at depth 256: 480 found, vol-15 done.
+
 ### Priority 2 (CHEAP — capitalize on user's fail-fast insight)
 **Hint-cluster sub-CSP enumeration**:
 
