@@ -324,3 +324,61 @@ asserting on its propagator config; tests are end-to-end solves
 which still succeed (slower or with different node counts).
 Vol-17 follow-up: add per-profile `assert_eq!(profile.propagators.ac3, true)` etc.
 unit tests to catch this class of regression.
+
+### 2026-05-12 ~22:00 — Cat-4d: O(1) Puzzle::piece(id) (algorithmic)
+
+User question: "is it worth optimising other algorithms/paths?"
+Yes — ALNS-fill runs for minutes per arm and was repeatedly
+calling an O(n) helper.
+
+Old: `Puzzle::piece(id)` ⇒ `pieces.iter().find(|p| p.id == id)`
+— linear search across 256 pieces.
+
+`score_board` calls `lookup_piece(puzzle, pid)` up to 3× per cell
+(self + east + south neighbour). On a fully-placed 16×16 board:
+~768 lookups × 256 compares = **~200k compares per score_board call**.
+ALNS calls score_board after every repair, ~50k iterations per
+5-min arm ⇒ ~10 billion redundant compares per arm.
+
+Fix:
+1. `Puzzle` gains a `pieces_by_id: Vec<u32>` index built at
+   construction; `Puzzle::piece(id)` is now O(1) array lookup.
+2. Auto-replace 22 file sites that used the old `iter().find`
+   pattern (mostly in localsearch/, benchmark/, propagators/).
+
+Algorithmic impact: score_board went **O(N² × C) → O(N × C)**
+on a fully-placed board. ~240× ops eliminated per call.
+End-to-end CP-only benchmark unchanged (~366 kNps) because the
+engine wires through `self.rows` (row-id indexed), not
+`puzzle.piece(id)`. The win is entirely in ALNS, repair, PT, and
+benchmark/reporting code — exactly where vol-16 had not yet
+touched.
+
+This is the most impactful kind of optimization in the codebase:
+algorithmic complexity reduction hiding behind a clean API.
+Vol-17 should sweep for similar patterns:
+- `propagators::gacolor_check` allocates `Vec<i32>` per call
+  (53 `vec!` in the propagators crate — clear opportunity).
+- `propagate_ac3` has its own arena pattern that mirrors Cat-4's
+  fix; the inner BFS could also benefit.
+- PT's board-fingerprint computation likely O(N) per swap when
+  a Zobrist-style incremental hash would be O(1).
+
+### 2026-05-12 ~22:10 — vol-15 Blackwood 1h+1h run landed
+
+User committed `be4f592` while I was working: the 1h CP + 1h ALNS
+pilot of `blackwood_raw_rect_layered` terminated with:
+- CP final: depth 80, placed 85, matched 113/480, nodes 3.4 G
+- ALNS final: **382/480** — identical to 5-min run
+
+12× wall-clock, 10× nodes, IDENTICAL outcome. Publishable null:
+more time alone doesn't fix the Blackwood + layered combination.
+The depth-80 wall is structural (schedule + ordering
+incompatibility), not search-budget bound. Don't try this
+configuration with bigger budgets in vol-17.
+
+Final vol-15 scoreboard:
+  baseline (joe_depth150_bp_par):    439/480   —
+  blackwood_raw (best vol-15):       416/480   −23
+  blackwood_raw + layered (5min):    382/480   −57
+  blackwood_raw + layered (1h+1h):   382/480   −57 (unchanged)
