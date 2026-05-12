@@ -58,10 +58,12 @@ impl EventSink for RoundSink {
     }
 }
 
+/// Canonical E2 score: matched internal edges out of total internal
+/// edges (480 on canonical 16x16). Unplaced cells contribute 0.
 fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
-    let mut matched = 0u32;
-    let mut total = 0u32;
     let (w, h) = (puzzle.width, puzzle.height);
+    let total = (w - 1) * h + w * (h - 1);
+    let mut matched = 0u32;
     for y in 0..h {
         for x in 0..w {
             let pos = y * w + x;
@@ -70,7 +72,6 @@ fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
             let e = p.edges.rotated(rot).as_array();
             if x + 1 < w {
                 if let Some((npid, nrot)) = board.get(y * w + (x + 1)) {
-                    total += 1;
                     let np = puzzle.piece(npid).unwrap();
                     let ne = np.edges.rotated(nrot).as_array();
                     if e[1] == ne[3] { matched += 1; }
@@ -78,7 +79,6 @@ fn score_board(puzzle: &eternity2_core::Puzzle, board: &Board) -> (u32, u32) {
             }
             if y + 1 < h {
                 if let Some((npid, nrot)) = board.get((y + 1) * w + x) {
-                    total += 1;
                     let np = puzzle.piece(npid).unwrap();
                     let ne = np.edges.rotated(nrot).as_array();
                     if e[2] == ne[0] { matched += 1; }
