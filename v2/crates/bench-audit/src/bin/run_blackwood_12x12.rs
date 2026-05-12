@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use eternity2_bench_audit::ProgressSink;
+use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Puzzle};
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_localsearch::{
@@ -30,6 +31,33 @@ use eternity2_solver_engine::{
     blackwood_schedule_469, BlackwoodSchedule, EngineSolver,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
+
+fn write_board_json(
+    out_dir: &std::path::Path,
+    label: &str,
+    stage: &str,
+    puzzle: &Puzzle,
+    board: &Board,
+) -> String {
+    let url = bucas_url(puzzle, board, &format!("v15_{label}_{stage}"));
+    let json = serde_json::json!({
+        "placement": (0..puzzle.cell_count()).map(|p| {
+            board.get(p).map(|(pid, rot)| serde_json::json!({
+                "pos": p,
+                "piece_id": u32::from(pid),
+                "rotation": rot.as_u8(),
+            }))
+        }).collect::<Vec<_>>(),
+        "bucas_url": &url,
+    });
+    let path = out_dir.join(format!("{label}_{stage}_board.json"));
+    let _ = std::fs::write(&path, serde_json::to_string_pretty(&json).unwrap());
+    let _ = std::fs::write(
+        out_dir.join(format!("{label}_{stage}_board.url.txt")),
+        format!("{url}\n"),
+    );
+    url
+}
 
 fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     let (w, h) = (puzzle.width, puzzle.height);
@@ -78,7 +106,8 @@ fn run_cp(
     seed: u64,
     cp_budget_ms: u64,
     log_path: &std::path::Path,
-) -> (Board, StageScore) {
+    out_dir: &std::path::Path,
+) -> (Board, StageScore, String) {
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = cp_budget_ms;
     opts.seed = seed;
@@ -111,8 +140,10 @@ fn run_cp(
         "[{label}] CP: elapsed={elapsed_s:.1}s  depth={depth}  placed={p}/{}  matched={m}/{t_total}  nodes={nodes}",
         puzzle.cell_count()
     );
+    let url = write_board_json(out_dir, label, "cp", puzzle, &board);
+    eprintln!("[{label}] CP bucas: {url}");
 
-    (board, StageScore { elapsed_s, placed: p, matched: m, total: t_total, depth, nodes })
+    (board, StageScore { elapsed_s, placed: p, matched: m, total: t_total, depth, nodes }, url)
 }
 
 fn run_alns_stage(
@@ -121,7 +152,8 @@ fn run_alns_stage(
     cp_board: &Board,
     alns_budget_ms: u64,
     seed: u64,
-) -> StageScore {
+    out_dir: &std::path::Path,
+) -> (StageScore, String) {
     let mut ops: Vec<Box<dyn DestroyOp>> = vec![
         Box::new(RandomRegion { k: 4 }),
         Box::new(WorstWindow { k: 5 }),
@@ -148,7 +180,12 @@ fn run_alns_stage(
         "[{label}] ALNS: elapsed={elapsed_s:.1}s  iters={}  matched={m}/{total}  placed={p}/{}",
         stats.iters, puzzle.cell_count()
     );
-    StageScore { elapsed_s, placed: p, matched: m, total, depth: 0, nodes: stats.iters as u64 }
+    let url = write_board_json(out_dir, label, "alns", puzzle, &board);
+    eprintln!("[{label}] ALNS bucas: {url}");
+    (
+        StageScore { elapsed_s, placed: p, matched: m, total, depth: 0, nodes: stats.iters as u64 },
+        url,
+    )
 }
 
 fn main() {
@@ -213,32 +250,38 @@ fn main() {
 
     // === Arm 1: baseline (joe_depth150_par) ===
     let baseline_solver = Box::new(EngineSolver::joe_depth150_par());
-    let (baseline_cp_board, baseline_cp) = run_cp(
+    let (baseline_cp_board, baseline_cp, baseline_cp_url) = run_cp(
         "baseline",
         baseline_solver,
         &puzzle,
         seed,
         cp_budget,
         &out_dir.join("baseline_cp.log"),
+        &out_dir,
     );
     let baseline_alns = if alns_budget > 0 && baseline_cp.matched < internal_total {
-        Some(run_alns_stage("baseline", &puzzle, &baseline_cp_board, alns_budget, seed))
+        Some(run_alns_stage(
+            "baseline", &puzzle, &baseline_cp_board, alns_budget, seed, &out_dir,
+        ))
     } else {
         None
     };
 
     // === Arm 2: Blackwood ===
     let bw_solver = Box::new(EngineSolver::blackwood_base_par(schedule_arc.clone()));
-    let (bw_cp_board, bw_cp) = run_cp(
+    let (bw_cp_board, bw_cp, bw_cp_url) = run_cp(
         "blackwood",
         bw_solver,
         &puzzle,
         seed,
         cp_budget,
         &out_dir.join("blackwood_cp.log"),
+        &out_dir,
     );
     let bw_alns = if alns_budget > 0 && bw_cp.matched < internal_total {
-        Some(run_alns_stage("blackwood", &puzzle, &bw_cp_board, alns_budget, seed))
+        Some(run_alns_stage(
+            "blackwood", &puzzle, &bw_cp_board, alns_budget, seed, &out_dir,
+        ))
     } else {
         None
     };
@@ -248,22 +291,53 @@ fn main() {
     eprintln!("=== SUMMARY (size={size} colors={colors} seed={seed}) ===");
     eprintln!("  baseline   CP   matched={}/{}  placed={}/{}  depth={}",
         baseline_cp.matched, baseline_cp.total, baseline_cp.placed, puzzle.cell_count(), baseline_cp.depth);
-    if let Some(a) = &baseline_alns {
+    if let Some((a, _)) = &baseline_alns {
         eprintln!("  baseline   ALNS matched={}/{}  placed={}/{}",
             a.matched, a.total, a.placed, puzzle.cell_count());
     }
     eprintln!("  blackwood  CP   matched={}/{}  placed={}/{}  depth={}",
         bw_cp.matched, bw_cp.total, bw_cp.placed, puzzle.cell_count(), bw_cp.depth);
-    if let Some(a) = &bw_alns {
+    if let Some((a, _)) = &bw_alns {
         eprintln!("  blackwood  ALNS matched={}/{}  placed={}/{}",
             a.matched, a.total, a.placed, puzzle.cell_count());
     }
 
     // Determine arm scores for delta reporting.
-    let base_final = baseline_alns.as_ref().map(|a| a.matched).unwrap_or(baseline_cp.matched);
-    let bw_final = bw_alns.as_ref().map(|a| a.matched).unwrap_or(bw_cp.matched);
+    let base_final = baseline_alns.as_ref().map(|(a, _)| a.matched).unwrap_or(baseline_cp.matched);
+    let bw_final = bw_alns.as_ref().map(|(a, _)| a.matched).unwrap_or(bw_cp.matched);
     eprintln!();
     eprintln!("  baseline final = {base_final}/{internal_total}");
     eprintln!("  blackwood final = {bw_final}/{internal_total}");
     eprintln!("  Δ (blackwood − baseline) = {:+}", bw_final as i32 - base_final as i32);
+
+    // Summary JSON with every board's bucas URL for quick inspection.
+    let summary = serde_json::json!({
+        "puzzle": { "size": size, "colors": colors, "seed": seed },
+        "schedule": {
+            "heuristic_sides": &schedule_arc.heuristic_sides,
+            "pool_size": schedule_arc.heuristic_pool_size,
+            "max_heuristic_index": schedule_arc.max_heuristic_index,
+            "break_indexes_allowed": &schedule_arc.break_indexes_allowed,
+            "exhaustion_targets": &schedule_arc.exhaustion_targets,
+        },
+        "baseline": {
+            "cp":   { "matched": baseline_cp.matched, "placed": baseline_cp.placed, "depth": baseline_cp.depth, "bucas": baseline_cp_url },
+            "alns": baseline_alns.as_ref().map(|(a, u)| serde_json::json!({
+                "matched": a.matched, "placed": a.placed, "bucas": u
+            })),
+        },
+        "blackwood": {
+            "cp":   { "matched": bw_cp.matched, "placed": bw_cp.placed, "depth": bw_cp.depth, "bucas": bw_cp_url },
+            "alns": bw_alns.as_ref().map(|(a, u)| serde_json::json!({
+                "matched": a.matched, "placed": a.placed, "bucas": u
+            })),
+        },
+        "delta": bw_final as i32 - base_final as i32,
+    });
+    let summary_path = out_dir.join("summary.json");
+    let _ = std::fs::write(&summary_path, serde_json::to_string_pretty(&summary).unwrap());
+    eprintln!();
+    eprintln!("Summary JSON: {}", summary_path.display());
 }
+
+fn _silence_unused(_: String) {} // silence baseline_cp_url under blackwood-only path

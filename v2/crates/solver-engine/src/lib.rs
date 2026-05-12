@@ -1464,23 +1464,16 @@ pub(crate) struct SearchState<'a> {
     /// `heuristic_color_mask[c as usize] = true` iff `c` is in
     /// `schedule.heuristic_sides`. Empty when no schedule.
     pub(crate) heuristic_color_mask: Vec<bool>,
-    /// Vol-15 — sorted, unique `break_indexes_allowed` lifted into a
-    /// bitvec by engine-traversal DEPTH for O(1) membership during
-    /// recurse. `is_break_index[depth as usize] = true` iff `depth` is
-    /// a Blackwood break depth. Empty when no schedule.
-    ///
-    /// Note: under bottom-up scan order with no rectangle skeleton,
-    /// depth == bottom-up scan index, so this matches the spec's
-    /// `break_indexes_allowed`. Under HintRectangle composition, depth
-    /// is "position in path_order" — the rectangle's prefix shifts
-    /// the bottom-up scan into the tail, and break-indexes still mean
-    /// "at the i-th cell placed". See SearchState::new for the
-    /// composition rule.
+    /// Vol-15 — `break_indexes_allowed` lifted into a bitvec indexed
+    /// by SCAN-ORDER INDEX (not engine traversal depth). At each
+    /// recurse depth the engine fetches `pos`, then tests
+    /// `is_break_index[scan_index_of_cell[pos]]`. This handles the
+    /// case where hint cells are skipped from the engine traversal
+    /// (depth ≠ scan_index) and HintRectangle composition (scan_index
+    /// is still well-defined for each cell). Empty when no schedule.
     pub(crate) is_break_index: Vec<bool>,
-    /// Vol-15 — scan-order index of each cell, retained for
-    /// diagnostics / future schedules that key off raw scan-position
-    /// rather than engine-traversal-depth. Built when scan_order is
-    /// set; empty otherwise.
+    /// Vol-15 — scan-order index of each cell. Built when scan_order
+    /// is set; empty otherwise.
     pub(crate) scan_index_of_cell: Vec<u32>,
     /// Vol-15 — running count of placed heuristic-color edge
     /// occurrences (Σ over placed rows of count of heuristic-colored
@@ -2679,29 +2672,25 @@ impl<'a> SearchState<'a> {
 
         // Vol-15 — Blackwood schedule prune: BEFORE picking a position,
         // verify the running heuristic-color count is on-schedule for
-        // the *current depth*. If we've fallen behind, this branch can
-        // never recover (only more cells get placed from here, each
-        // adding ≤ 4 heuristic-color edges, monotone non-decreasing).
-        // Returning Exhausted from here is correct: there's no
-        // assignment to the next cell that can satisfy the schedule.
+        // the total number of placed cells (= depth + hint count).
+        // The schedule is calibrated against TOTAL cells-on-board
+        // (Blackwood includes hints in his cell index). Our engine's
+        // `depth` is search-depth starting after hints; we add
+        // `hint_offset` to make the schedule comparison total-cells-
+        // accurate. If we've fallen behind, the branch can't recover:
+        // only more cells get placed from here, each adding ≤ 4
+        // heuristic-color edges (monotone non-decreasing).
         if let Some(sched) = self.blackwood.as_ref() {
+            let hint_offset = self.opts.hints.hints.len() as u32;
+            let total_placed = depth + hint_offset;
             let max_idx = sched.max_heuristic_index;
-            if depth <= max_idx {
-                let target = sched.target_at(depth);
+            if total_placed <= max_idx {
+                let target = sched.target_at(total_placed);
                 if self.placed_heuristic_count < target {
-                    // Diagnostic: track best (deepest) schedule-feasible
-                    // depth so harnesses can report where the schedule
-                    // bit. `stats.schedule_prune_max_depth` is a vol-15
-                    // soft counter; we reuse `max_depth_seen` here as
-                    // it's already wired (and a schedule-prune is a
-                    // form of backtrack).
                     return RecurseResult::Exhausted;
                 }
-                // Conversely: pool exhausted but more depth still to go
-                // before max_heuristic_index — can't keep up the
-                // schedule beyond this point.
                 if self.placed_heuristic_count >= sched.heuristic_pool_size
-                    && depth < max_idx
+                    && total_placed < max_idx
                     && sched.target_at(max_idx) > sched.heuristic_pool_size
                 {
                     return RecurseResult::Exhausted;
@@ -2887,7 +2876,7 @@ impl<'a> SearchState<'a> {
         // priority over relaxed ones; among relaxed, prefer rows that
         // satisfy more of the schedule.
         let break_candidates: Vec<(u32, u8)> = if !self.is_break_index.is_empty()
-            && self.is_break_depth(depth)
+            && self.is_pos_break_index(pos)
         {
             let n_rows = self.rows.len() as u32;
             let mut admitted: Vec<(u32, u8)> = Vec::new();
@@ -3077,17 +3066,16 @@ impl<'a> SearchState<'a> {
             && on_left == (edges[3] == BORDER)
     }
 
-    /// Vol-15 — is engine-traversal `depth` a Blackwood break depth?
-    /// `is_break_index` is indexed by depth (= position-in-path_order)
-    /// so this is just a bitvec lookup. Returns false when no
-    /// schedule is attached.
+    /// Vol-15 — is the cell at `pos` a Blackwood break cell? Tests
+    /// `is_break_index[scan_index_of_cell[pos]]`. Returns false when
+    /// no schedule is attached or scan_order isn't set.
     #[inline]
-    fn is_break_depth(&self, depth: u32) -> bool {
-        if self.is_break_index.is_empty() {
+    fn is_pos_break_index(&self, pos: Position) -> bool {
+        if self.is_break_index.is_empty() || self.scan_index_of_cell.is_empty() {
             return false;
         }
-        (depth as usize) < self.is_break_index.len()
-            && self.is_break_index[depth as usize]
+        let scan_idx = self.scan_index_of_cell[pos as usize] as usize;
+        scan_idx < self.is_break_index.len() && self.is_break_index[scan_idx]
     }
 }
 

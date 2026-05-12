@@ -255,4 +255,23 @@ fn main() {
     }
     eprintln!();
     eprintln!("Boards + logs: {}", out_dir.display());
+
+    // Summary JSON with bucas URLs for both arms.
+    let summary = serde_json::json!({
+        "puzzle": "canonical_5_clue_16x16",
+        "seed": seed,
+        "schedule": {
+            "heuristic_sides": &schedule_arc.heuristic_sides,
+            "pool_size": schedule_arc.heuristic_pool_size,
+            "max_heuristic_index": schedule_arc.max_heuristic_index,
+            "break_indexes_allowed": &schedule_arc.break_indexes_allowed,
+            "exhaustion_targets": &schedule_arc.exhaustion_targets,
+        },
+        "arms": results.iter().map(|(label, m, p, d)| serde_json::json!({
+            "label": label, "matched_final": m, "placed_final": p, "cp_depth": d
+        })).collect::<Vec<_>>(),
+    });
+    let summary_path = out_dir.join("summary.json");
+    let _ = std::fs::write(&summary_path, serde_json::to_string_pretty(&summary).unwrap());
+    eprintln!("Summary JSON: {}", summary_path.display());
 }
