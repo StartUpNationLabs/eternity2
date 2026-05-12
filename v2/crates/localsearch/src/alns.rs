@@ -1580,7 +1580,7 @@ pub fn run_alns_pt_multi_init(
         // PHASE A: each chain runs `inner_iters_per_round` ALNS iterations.
         let pinned_set: BTreeSet<Position> = cfg.pinned_positions.iter().copied().collect();
         // Build bundles per chain. Use Index by index to avoid aliasing.
-        let bundles: Vec<(usize, &Board, &[Position], u64, f64)> = (0..n)
+        let _bundles: Vec<(usize, &Board, &[Position], u64, f64)> = (0..n)
             .map(|i| (i, &boards[i], &cfg.pinned_positions[..], chain_seeds[i], temps[i]))
             .collect();
         // Run in parallel via rayon. Each task produces (new_board, new_score,

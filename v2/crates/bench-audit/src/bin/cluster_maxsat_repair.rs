@@ -34,7 +34,7 @@ use std::time::Instant;
 use eternity2_bench_audit::{placed_count, score_board_dense as score_board};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
-use eternity2_core::{Board, Hints, Rotation};
+use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::find_mismatches;
 use eternity2_sat_encoder::{encode_with_pinned, write_wcnf_old, EncodeOptions, PinnedMap, VarMap};
 
@@ -202,10 +202,10 @@ fn main() {
 
     // Decode model: for each piece-var with positive assignment, place
     // that piece at that cell with that rotation.
-    let mut new_board = board.clone();
+    let _new_board = board.clone();
     // First, clear all free cells (in case the model places different pieces).
     // We'll reconstruct from model.
-    for &pos in &free {
+    for &_pos in &free {
         // remove placement at pos
         // No direct "unset" in Board; emulate by re-placing pinned cells.
     }
