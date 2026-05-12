@@ -670,6 +670,137 @@ impl DestroyOp for ComponentPlusHaloDestroy {
     }
 }
 
+/// Vol-17 NOVEL — destroy the "hinge cells" of the mismatch component:
+/// the articulation points (cut vertices) of the cell graph induced by
+/// the mismatch component. Removing an articulation point disconnects
+/// the graph into smaller pieces, each of which is then a tractable
+/// CP-repair problem.
+///
+/// Why this might work: the vol-17 calibrated_v17a 447 board has all
+/// 51 mismatch cells in ONE connected component. ComponentDestroy
+/// frees the whole thing (CP must reconstruct 51 cells). HingeDestroy
+/// frees just the few hinges (3-8 cells typically), leaving most of
+/// the component pinned. CP-repair on 3-8 cells is fast; if successful,
+/// the cluster fragments. Then ComponentDestroy on the smaller frags
+/// is easy.
+///
+/// Algorithm: Tarjan's articulation-point detection (O(V+E)) on the
+/// graph of mismatch cells with 4-neighbour edges.
+pub struct HingeDestroy {
+    /// Halo cells around each hinge (Manhattan radius). 0 = just the
+    /// hinges themselves; 1 = hinge + 4 neighbours. Recommended 1.
+    pub halo: u32,
+}
+
+impl DestroyOp for HingeDestroy {
+    fn name(&self) -> &str { "hinge_destroy" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        if mismatches.is_empty() {
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+        // Build the mismatch cell set + adjacency.
+        let mut mismatch_cells: Vec<Position> = Vec::new();
+        let mut mismatch_set: BTreeSet<Position> = BTreeSet::new();
+        for m in &mismatches {
+            if mismatch_set.insert(m.cell_a) { mismatch_cells.push(m.cell_a); }
+            if mismatch_set.insert(m.cell_b) { mismatch_cells.push(m.cell_b); }
+        }
+        // Tarjan needs cell -> index in component. Build adjacency lists.
+        let n = mismatch_cells.len();
+        if n < 3 {
+            // Tarjan articulation points need at least 3 nodes.
+            return ConflictDriven { max_size: 30 }.destroy(puzzle, board, rng);
+        }
+        let idx_of: std::collections::HashMap<Position, usize> = mismatch_cells
+            .iter().enumerate().map(|(i, &p)| (p, i)).collect();
+        let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n];
+        for (i, &p) in mismatch_cells.iter().enumerate() {
+            let x = p % w; let y = p / w;
+            for (dx, dy) in [(1i32, 0i32), (-1, 0), (0, 1), (0, -1)] {
+                let (nx, ny) = (x as i32 + dx, y as i32 + dy);
+                if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 { continue; }
+                let np = (ny as u32) * w + (nx as u32);
+                if let Some(&j) = idx_of.get(&np) {
+                    adj[i].push(j);
+                }
+            }
+        }
+        // Tarjan's algorithm: iterative DFS finding articulation points.
+        let mut disc = vec![0u32; n];
+        let mut low = vec![0u32; n];
+        let mut parent = vec![usize::MAX; n];
+        let mut visited = vec![false; n];
+        let mut is_articulation = vec![false; n];
+        let mut timer = 0u32;
+        // Stack of (node, iter_idx). iter_idx tracks which child we're processing.
+        let mut stack: Vec<(usize, usize)> = Vec::new();
+        for root in 0..n {
+            if visited[root] { continue; }
+            stack.push((root, 0));
+            visited[root] = true;
+            disc[root] = timer; low[root] = timer; timer += 1;
+            let mut root_children = 0u32;
+            while let Some(&(u, ci)) = stack.last() {
+                if ci >= adj[u].len() {
+                    // Done with u. Update parent's low if any.
+                    if parent[u] != usize::MAX {
+                        let p = parent[u];
+                        low[p] = low[p].min(low[u]);
+                        if parent[p] != usize::MAX && low[u] >= disc[p] {
+                            is_articulation[p] = true;
+                        }
+                    } else {
+                        // Root: articulation iff has >1 children.
+                        if root_children > 1 {
+                            is_articulation[u] = true;
+                        }
+                    }
+                    stack.pop();
+                    continue;
+                }
+                // Advance ci before potential push.
+                let v = adj[u][ci];
+                stack.last_mut().unwrap().1 += 1;
+                if !visited[v] {
+                    visited[v] = true;
+                    parent[v] = u;
+                    if u == root { root_children += 1; }
+                    disc[v] = timer; low[v] = timer; timer += 1;
+                    stack.push((v, 0));
+                } else if Some(v) != parent.get(u).copied().filter(|&p| p != usize::MAX) {
+                    low[u] = low[u].min(disc[v]);
+                }
+            }
+        }
+        // Collect articulation points into a BTreeSet plus halo.
+        let mut out = BTreeSet::new();
+        for (i, &is_a) in is_articulation.iter().enumerate() {
+            if !is_a { continue; }
+            let p = mismatch_cells[i];
+            out.insert(p);
+            if self.halo > 0 {
+                let x = p % w; let y = p / w;
+                for dy in -(self.halo as i32)..=(self.halo as i32) {
+                    for dx in -(self.halo as i32)..=(self.halo as i32) {
+                        let (nx, ny) = (x as i32 + dx, y as i32 + dy);
+                        if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 { continue; }
+                        out.insert((ny as u32) * w + (nx as u32));
+                    }
+                }
+            }
+        }
+        if out.is_empty() {
+            // No articulation points (e.g. component is a clique-ish blob).
+            // Fall back to ConflictDriven.
+            return ConflictDriven { max_size: 30 }.destroy(puzzle, board, rng);
+        }
+        out
+    }
+}
+
 // ----- Acceptance criterion --------------------------------------------
 
 #[derive(Debug, Clone, Copy)]

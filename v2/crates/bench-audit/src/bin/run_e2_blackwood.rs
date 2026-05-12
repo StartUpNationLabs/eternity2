@@ -22,8 +22,8 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Puzzle};
 use eternity2_localsearch::{
     run_alns, Acceptance, AlnsConfig, ComponentDestroy, ComponentPlusHaloDestroy,
-    ConflictDriven, DestroyOp, MwpmDefectPair, RandomRegion, RepairKind, WorstBand,
-    WorstRow, WorstWindow,
+    ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair, RandomRegion, RepairKind,
+    WorstBand, WorstRow, WorstWindow,
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
@@ -110,6 +110,7 @@ fn run_arm(
         Box::new(ComponentDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
         Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
         Box::new(WorstRow),  // vol-17 novel — 16-cell scalpel
+        Box::new(HingeDestroy { halo: 1 }),  // vol-17 novel — Tarjan articulation points
     ];
     let cfg = AlnsConfig {
         time_budget_ms: alns_budget_ms,
