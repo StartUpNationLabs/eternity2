@@ -30,6 +30,9 @@ import "google/protobuf/empty.proto";
 //   (engine, joe_depth150_par)      joe_depth150 + multi-core root-split
 //   (engine, joe_depth150_bp)       joe_depth150 + vol-12 edge-color BP value-order
 //   (engine, joe_depth150_bp_par)   joe_depth150_bp + multi-core
+//   (engine, joe_depth150_bp_rec)   joe_depth150_bp + vol-14 auto-injected
+//                                   hint-rectangle skeleton path (PathSkeleton::HintRectangle)
+//   (engine, joe_depth150_bp_rec_par) multi-core variant
 //
 // (Profiles above are the long-tail ones added in vol-12/vol-14; the
 // full canonical list is what `ListSolvers` returns at runtime — see

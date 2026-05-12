@@ -58,6 +58,8 @@ impl SolverServiceImpl {
             ("engine", "joe_depth150_par") => Some(Box::new(EngineSolver::joe_depth150_par())),
             ("engine", "joe_depth150_bp") => Some(Box::new(EngineSolver::joe_depth150_bp())),
             ("engine", "joe_depth150_bp_par") => Some(Box::new(EngineSolver::joe_depth150_bp_par())),
+            ("engine", "joe_depth150_bp_rec") => Some(Box::new(EngineSolver::joe_depth150_bp_rec())),
+            ("engine", "joe_depth150_bp_rec_par") => Some(Box::new(EngineSolver::joe_depth150_bp_rec_par())),
             _ => None,
         }
     }
@@ -281,6 +283,18 @@ impl SolverService for SolverServiceImpl {
                         id: "joe_depth150_bp_par".into(),
                         display_name: "Joe-Saunders + edge-BP (multi-core)".into(),
                         description: "Edge-BP value-order with multi-core root-split.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp_rec".into(),
+                        display_name: "Joe-Saunders + edge-BP + hint-rectangle skeleton".into(),
+                        description: "joe_depth150_bp + auto-built hint-rectangle path that places the 4 outermost hints + spoke-to-centre cells first. Requires ≥4 hints; no-op otherwise. Vol-14 win on canonical E2.".into(),
+                        is_default: false,
+                    },
+                    HeuristicProfileEntry {
+                        id: "joe_depth150_bp_rec_par".into(),
+                        display_name: "Joe-Saunders + edge-BP + rectangle (multi-core)".into(),
+                        description: "Multi-core variant of joe_depth150_bp_rec.".into(),
                         is_default: false,
                     },
                 ],

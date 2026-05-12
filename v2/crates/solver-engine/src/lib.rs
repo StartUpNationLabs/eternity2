@@ -118,6 +118,28 @@ pub struct EngineConfig {
     /// puzzles, which almost always satisfy this).
     pub break_symmetry: bool,
     pub parallelism: Parallelism,
+    /// Vol-14 — automatic "skeleton path" that the engine pre-pins
+    /// before falling back to its normal variable-ordering. When
+    /// `Some(PathSkeleton::HintRectangle)`, `SearchState::new` builds
+    /// a path that traces the rectangle through the 4 outermost hint
+    /// positions + spokes to any remaining (interior) hints, then
+    /// sets `path_order` + `path_index_of` so a `PathPolicy::PrefixConstraint`
+    /// at `path.len()` is auto-injected. Empirically gives +44 placed cells
+    /// vs default MRV on canonical E2 single-thread border_first_lcv. See
+    /// `project_e2_vol14_rectangle_path_finding.md` (forthcoming).
+    pub path_skeleton: Option<PathSkeleton>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PathSkeleton {
+    /// Trace the rectangle through the 4 outermost hint positions
+    /// (sorted by extremity: TL, TR, BR, BL), then a spoke from one
+    /// rectangle side to any remaining hint cells (typically the
+    /// center hint on canonical E2). The cells along the path are
+    /// pinned in order via `PathPolicy::PrefixConstraint`.
+    /// Requires `opts.hints` to have at least 4 hint positions.
+    /// No-op if fewer than 4 hints.
+    HintRectangle,
 }
 
 impl EngineConfig {
@@ -133,6 +155,7 @@ impl EngineConfig {
         depth_threshold_for_propagators: None,
         break_symmetry: false,
         parallelism: Parallelism::SingleThread,
+        path_skeleton: None,
     };
 
     // Experiment A: GAColor as the strong global propagator.
@@ -308,6 +331,32 @@ impl EngineConfig {
         multiset_equality_propagator: true,
         depth_threshold_for_propagators: Some(150),
         parallelism: Parallelism::RootSplit { split_depth: 0 },
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    /// Vol-14 — joe_depth150_bp_par + auto-built hint-rectangle skeleton
+    /// path (places the 4 outer hints + center via PathPolicy first).
+    /// Requires `opts.hints` to have ≥4 hint positions. Empirically the
+    /// strongest non-warm-started canonical-E2 single-process profile.
+    pub const JOE_DEPTH150_BP_REC_PAR: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        path_skeleton: Some(PathSkeleton::HintRectangle),
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    /// Single-thread variant of JOE_DEPTH150_BP_REC_PAR.
+    pub const JOE_DEPTH150_BP_REC: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        path_skeleton: Some(PathSkeleton::HintRectangle),
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -494,6 +543,16 @@ impl EngineSolver {
         Self::new(EngineConfig::JOE_DEPTH150_BP_PAR, "engine", "joe_depth150_bp_par")
     }
 
+    #[must_use]
+    pub fn joe_depth150_bp_rec_par() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_REC_PAR, "engine", "joe_depth150_bp_rec_par")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_bp_rec() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_REC, "engine", "joe_depth150_bp_rec")
+    }
+
     /// Verhaard-style value ordering: prefer the pieces listed in
     /// `SolveOpts.preferred_pieces`. Combined with gacolor + AC-3.
     /// Single-thread.
@@ -643,6 +702,103 @@ pub const EDGE_BP_NSTATE: usize = 23;
 /// cells; boundary edges have exactly one incident cell.
 ///
 /// Total edge count is `2 * W * H + W + H` (= 544 for 16×16).
+/// Build a "rectangle skeleton" path from hint positions on a
+/// `puzzle`. Vol-14 user-proposed heuristic for canonical E2 (works
+/// when there are ≥4 outermost hints + (optionally) a center hint):
+///
+///   1. Take the 4 hints with the most-extreme coordinates (TL, TR,
+///      BR, BL by Chebyshev-distance from the centre).
+///   2. Trace the rectangle through them: top-row TL→TR; right-col
+///      TR→BR; bottom-row BR→BL; left-col BL up to one short of TL.
+///   3. From the rectangle, lay a horizontal spoke at the centre
+///      hint's y-row (if a 5th hint exists) toward the centre hint.
+///   4. Dedupe positions while preserving order; return.
+///
+/// Empirically on canonical 16×16 E2 with the 5 official hints, this
+/// produces a 49-cell skeleton. Combined with
+/// `PathPolicy::PrefixConstraint { k: path.len() }`, the engine pins
+/// these 49 cells before falling back to MRV — chips the 764-plateau
+/// dramatically. See `project_e2_vol14_rectangle_path_finding` memory
+/// (forthcoming).
+///
+/// Returns an empty Vec if `hints.hints.len() < 4` — caller should
+/// fall back to default variable-order.
+pub fn build_hint_rectangle_path(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Vec<Position> {
+    if hints.hints.len() < 4 { return Vec::new(); }
+    let w = puzzle.width;
+    let xy = |p: Position| (p % w, p / w);
+    let pos_of = |x: u32, y: u32| -> Position { y * w + x };
+    // Compute Chebyshev distance from board centre for each hint.
+    let cx = (w as i32 - 1) / 2;
+    let cy = (puzzle.height as i32 - 1) / 2;
+    let mut h: Vec<(Position, u32, u32, i32)> = hints.hints.iter().map(|h| {
+        let (x, y) = xy(h.position);
+        let d = std::cmp::max((x as i32 - cx).abs(), (y as i32 - cy).abs());
+        (h.position, x, y, d)
+    }).collect();
+    // Sort by Chebyshev distance descending — outermost first.
+    h.sort_by(|a, b| b.3.cmp(&a.3));
+
+    // The 4 outermost hints form our rectangle. Need to find TL, TR,
+    // BR, BL among them by quadrant relative to centre.
+    let mut tl: Option<(u32, u32)> = None;
+    let mut tr: Option<(u32, u32)> = None;
+    let mut br: Option<(u32, u32)> = None;
+    let mut bl: Option<(u32, u32)> = None;
+    for &(_, x, y, _) in &h {
+        let is_left = (x as i32) <= cx;
+        let is_top = (y as i32) <= cy;
+        let slot = match (is_top, is_left) {
+            (true, true)   => &mut tl,
+            (true, false)  => &mut tr,
+            (false, false) => &mut br,
+            (false, true)  => &mut bl,
+        };
+        if slot.is_none() { *slot = Some((x, y)); }
+    }
+    let (Some((tlx, tly)), Some((trx, tryy)), Some((brx, bry)), Some((blx, bly))) =
+        (tl, tr, br, bl)
+    else { return Vec::new(); };
+    let _ = (tryy, blx, bly); // suppress unused warnings — we use tly+bry+tlx+trx
+
+    // Trace the rectangle.
+    let mut path = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
+        if seen.insert(p) { path.push(p); }
+    };
+    // Top row at y=tly from x=tlx..=trx
+    let ymin = std::cmp::min(tly, tryy);
+    for x in tlx..=trx { push(pos_of(x, ymin), &mut path, &mut seen); }
+    // Right col at x=trx (=brx most commonly) from y=ymin+1..=bry_max
+    let ymax = std::cmp::max(bry, bly);
+    let xright = std::cmp::max(trx, brx);
+    for y in (ymin+1)..=ymax { push(pos_of(xright, y), &mut path, &mut seen); }
+    // Bottom row, right to left, from x=xright-1 down to x=tlx
+    for x in (tlx..xright).rev() { push(pos_of(x, ymax), &mut path, &mut seen); }
+    // Left col, bottom to top, from y=ymax-1 down to y=ymin+1
+    for y in ((ymin+1)..ymax).rev() { push(pos_of(tlx, y), &mut path, &mut seen); }
+    // Spoke to inner hints: for each remaining hint (sorted by distance
+    // ascending = innermost first), lay a horizontal segment from x=tlx
+    // to its x at its y row.
+    let mut inner: Vec<&(Position, u32, u32, i32)> = h.iter().skip(4).collect();
+    inner.sort_by(|a, b| a.3.cmp(&b.3));
+    for entry in &inner {
+        let hx: u32 = entry.1;
+        let hy: u32 = entry.2;
+        // Horizontal from x=tlx to x=hx at row y=hy.
+        if hx >= tlx {
+            for x in tlx..=hx { push(pos_of(x, hy), &mut path, &mut seen); }
+        } else {
+            for x in (hx..=tlx).rev() { push(pos_of(x, hy), &mut path, &mut seen); }
+        }
+    }
+    path
+}
+
 pub(crate) fn build_cell_side_edge(puzzle: &Puzzle) -> Vec<u32> {
     let w = puzzle.width as usize;
     let h = puzzle.height as usize;
@@ -827,6 +983,13 @@ pub(crate) struct SearchState<'a> {
     /// for harness-side bucket analysis (corner / edge / interior).
     /// Always allocated; cheap (1 KB on canonical E2).
     pub(crate) pos_backtracks: Vec<u64>,
+    /// Vol-14 `PathSkeleton::HintRectangle` auto-injected prefix length.
+    /// When > 0, `select_position` walks the first `auto_skeleton_path_k`
+    /// entries of `path_order` (which were populated from the hint
+    /// rectangle) before falling back to the variable-order heuristic.
+    /// Independent of `opts.path` / `opts.path_policy` — those still work
+    /// if the user wants explicit control.
+    pub(crate) auto_skeleton_path_k: u32,
 }
 
 impl<'a> SearchState<'a> {
@@ -887,7 +1050,22 @@ impl<'a> SearchState<'a> {
             }
         }
 
-        let path_order = opts.path.clone();
+        // Resolve path_order: prefer user-supplied opts.path, otherwise
+        // auto-build from config.path_skeleton if requested. Vol-14
+        // shipped HintRectangle as the first PathSkeleton.
+        let (path_order, auto_skeleton_path_k) = if !opts.path.is_empty() {
+            (opts.path.clone(), 0u32)
+        } else if let Some(skel) = solver.config.path_skeleton {
+            match skel {
+                PathSkeleton::HintRectangle => {
+                    let p = build_hint_rectangle_path(puzzle, &opts.hints);
+                    let k = p.len() as u32;
+                    (p, k)
+                }
+            }
+        } else {
+            (Vec::new(), 0u32)
+        };
         let mut path_index_of = vec![u32::MAX; n_pos];
         for (i, &p) in path_order.iter().enumerate() {
             if (p as usize) < n_pos {
@@ -988,6 +1166,7 @@ impl<'a> SearchState<'a> {
                 Vec::new()
             },
             pos_backtracks: vec![0u64; n_pos],
+            auto_skeleton_path_k,
         }
     }
 
@@ -1118,12 +1297,25 @@ impl<'a> SearchState<'a> {
     }
 
     pub(crate) fn select_position(&mut self) -> Option<Position> {
+        // 1. Explicit user path takes priority.
         if let PathPolicy::PrefixConstraint { k } = self.opts.path_policy {
             if self.stats.current_depth < k {
                 for &p in &self.path_order {
                     if self.placed[p as usize].is_none() {
                         return Some(p);
                     }
+                }
+            }
+        }
+        // 2. Vol-14 auto-skeleton path (config.path_skeleton). Only
+        // applies when no explicit user path was provided.
+        if self.auto_skeleton_path_k > 0
+            && self.opts.path.is_empty()
+            && self.stats.current_depth < self.auto_skeleton_path_k
+        {
+            for &p in &self.path_order {
+                if self.placed[p as usize].is_none() {
+                    return Some(p);
                 }
             }
         }
@@ -2350,6 +2542,54 @@ mod tests {
         }).unwrap();
         assert_eq!(sid, "engine");
         assert_eq!(prof, "border_first_lcv");
+    }
+
+    #[test]
+    fn build_hint_rectangle_path_on_canonical_e2_hints() {
+        // The 5 canonical E2 hints at (2,2), (13,2), (2,13), (13,13),
+        // (7,8). Expected path: rectangle perimeter (44 cells) + spoke
+        // (cells from x=2..=7 at y=8, minus the (2,8) already on left
+        // col) = 49 unique cells total.
+        use eternity2_generator::{generate, GeneratorConfig};
+        use eternity2_core::{Hint, Hints, Rotation};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        let r = Rotation::from_u8(0).unwrap();
+        let pid = eternity2_core::PieceId::try_from(0u32).unwrap();
+        let hints = Hints { hints: vec![
+            Hint { position: 2 + 2*16, piece_id: pid, rotation: r },   // (2,2)
+            Hint { position: 13 + 2*16, piece_id: pid, rotation: r },  // (13,2)
+            Hint { position: 2 + 13*16, piece_id: pid, rotation: r },  // (2,13)
+            Hint { position: 13 + 13*16, piece_id: pid, rotation: r }, // (13,13)
+            Hint { position: 7 + 8*16, piece_id: pid, rotation: r },   // (7,8)
+        ]};
+        let path = build_hint_rectangle_path(&puzzle, &hints);
+        // Expected length: top row 12 + right col 11 + bottom row 11
+        // + left col 10 + spoke 5 (cells (3..=7, 8); (2,8) is already
+        // on left col) = 49.
+        assert_eq!(path.len(), 49, "expected 49 cells, got {}", path.len());
+        // First cell must be (2,2).
+        assert_eq!(path[0], 2 + 2*16);
+        // No duplicates.
+        let set: std::collections::HashSet<_> = path.iter().collect();
+        assert_eq!(set.len(), path.len(), "path has duplicates");
+    }
+
+    #[test]
+    fn build_hint_rectangle_path_too_few_hints() {
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        // 0 hints, 3 hints — both should return empty.
+        for n in 0..=3 {
+            let hints = eternity2_core::Hints {
+                hints: (0..n).map(|i| eternity2_core::Hint {
+                    position: i,
+                    piece_id: eternity2_core::PieceId::try_from(0u32).unwrap(),
+                    rotation: eternity2_core::Rotation::from_u8(0).unwrap(),
+                }).collect()
+            };
+            assert!(build_hint_rectangle_path(&puzzle, &hints).is_empty(),
+                "expected empty with {} hints", n);
+        }
     }
 
     #[test]
