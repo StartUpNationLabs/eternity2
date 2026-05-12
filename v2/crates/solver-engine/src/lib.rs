@@ -1577,6 +1577,14 @@ pub(crate) struct SearchState<'a> {
     /// edges in that row). Maintained incrementally by
     /// place_and_propagate / undo_place. 0 when no schedule.
     pub(crate) placed_heuristic_count: u32,
+    /// Vol-16 Cat-4 — single arena for all UndoEntry bit-diff buffers.
+    /// `UndoEntry { pos, words_start }` references a contiguous slice
+    /// `[words_start..words_start + words_per_pos]`. The arena grows
+    /// monotonically within a `place_and_propagate_opts` call and is
+    /// truncated back when `restore()` runs after the recurse child
+    /// returns (LIFO discipline). Replaces ~42% of pre-vol-16 CPU
+    /// spent in System::alloc/dealloc inside the `prune` closure.
+    pub(crate) undo_words_arena: Vec<u64>,
 }
 
 impl<'a> SearchState<'a> {
@@ -1847,6 +1855,14 @@ impl<'a> SearchState<'a> {
                 }
             },
             placed_heuristic_count: 0,
+            // Vol-16 Cat-4 — pre-reserve the arena for the worst-case
+            // undo log: 4 prunes + n_pos piece-uniqueness entries per
+            // place_and_propagate_opts call, * wpp words per entry,
+            // * (n_pos) recursion depth. Conservative upper bound;
+            // typical canonical-E2 usage is well under 10× smaller.
+            undo_words_arena: Vec::with_capacity(
+                (n_pos as usize) * (n_pos as usize + 4) * words_per_pos,
+            ),
         }
     }
 
@@ -2074,8 +2090,12 @@ impl<'a> SearchState<'a> {
             //   rows belonging to the just-placed piece.
             let sc_base = (neighbor_edge_idx * n_colors + req_idx) * wpp;
             let pm_base = usize::from(row.piece_id) * wpp;
-            // Bit-diff form: build a wpp-word diff and update bits in-place.
-            let mut diff = vec![0u64; wpp];
+            // Vol-16 Cat-4 — write the diff directly into the arena
+            // instead of allocating a per-call Vec. Reserve `wpp`
+            // zeroed words; truncate back to `arena_start` if popcount
+            // ends up zero (no actual entry produced).
+            let arena_start = this.undo_words_arena.len();
+            this.undo_words_arena.resize(arena_start + wpp, 0);
             let mut popcount: u32 = 0;
             for w in 0..wpp {
                 let cur = this.domain_bits[bit_base + w];
@@ -2087,20 +2107,22 @@ impl<'a> SearchState<'a> {
                 };
                 let drop = cur & !keep;
                 if drop != 0 {
-                    diff[w] = drop;
+                    this.undo_words_arena[arena_start + w] = drop;
                     popcount += drop.count_ones();
                     this.domain_bits[bit_base + w] = cur & keep;
                 }
             }
             if popcount > 0 {
                 this.stats.propagations += popcount as u64;
-                let entry = UndoEntry { pos: neighbor, words: diff };
+                let entry = UndoEntry { pos: neighbor, words_start: arena_start as u32 };
                 if this.domain_is_empty(neighbor as usize) {
                     PruneResult::Wipeout { entry }
                 } else {
                     PruneResult::Removed(entry)
                 }
             } else {
+                // No diff produced — give back the arena reservation.
+                this.undo_words_arena.truncate(arena_start);
                 PruneResult::Ok
             }
         };
@@ -2141,20 +2163,21 @@ impl<'a> SearchState<'a> {
         for p in 0..self.puzzle.cell_count() {
             if p == pos || self.placed[p as usize].is_some() { continue; }
             let bit_base = (p as usize) * words_per_pos;
-            let mut diff = vec![0u64; words_per_pos];
+            let arena_start = self.undo_words_arena.len();
+            self.undo_words_arena.resize(arena_start + words_per_pos, 0);
             let mut popcount: u32 = 0;
             for w in 0..words_per_pos {
                 let cur = self.domain_bits[bit_base + w];
                 let drop = cur & self.piece_mask[pm_base + w];
                 if drop != 0 {
-                    diff[w] = drop;
+                    self.undo_words_arena[arena_start + w] = drop;
                     popcount += drop.count_ones();
                     self.domain_bits[bit_base + w] = cur & !self.piece_mask[pm_base + w];
                 }
             }
             if popcount > 0 {
                 self.stats.propagations += popcount as u64;
-                let entry = UndoEntry { pos: p, words: diff };
+                let entry = UndoEntry { pos: p, words_start: arena_start as u32 };
                 if self.domain_is_empty(p as usize) {
                     other_undo.push(entry);
                     self.stats.domain_wipeouts += 1;
@@ -2163,6 +2186,9 @@ impl<'a> SearchState<'a> {
                     return PropagationOutcome::Wipeout { undo };
                 }
                 other_undo.push(entry);
+            } else {
+                // No diff — return the arena reservation.
+                self.undo_words_arena.truncate(arena_start);
             }
         }
         undo.extend(other_undo);
@@ -2327,8 +2353,10 @@ impl<'a> SearchState<'a> {
 
             // Accumulate the bit-diff for position `a` as words_per_pos
             // u64s — cheaper to OR back on restore than to iterate
-            // individual row-ids.
-            let mut removed_diff = vec![0u64; words_per_pos];
+            // individual row-ids. Vol-16 Cat-4: write directly into
+            // the SearchState arena instead of allocating a Vec.
+            let arena_start = self.undo_words_arena.len();
+            self.undo_words_arena.resize(arena_start + words_per_pos, 0);
             let mut removed_popcount: u32 = 0;
             let a_u = a as usize;
             // Iterate set bits of domain_bits[a_u]. Mutate the bitset
@@ -2378,7 +2406,7 @@ impl<'a> SearchState<'a> {
                     let r_idx = r_id as usize;
                     let word_idx = r_idx / 64;
                     let bit_mask = 1u64 << (r_idx % 64);
-                    removed_diff[word_idx] |= bit_mask;
+                    self.undo_words_arena[arena_start + word_idx] |= bit_mask;
                     removed_popcount += 1;
                     present[a_u * words_per_pos + word_idx] &= !bit_mask;
                     self.domain_bits[a_u * words_per_pos + word_idx] &= !bit_mask;
@@ -2394,7 +2422,7 @@ impl<'a> SearchState<'a> {
                     let base = a_u * words_per_pos;
                     self.domain_bits[base..base + words_per_pos].iter().all(|&w| w == 0)
                 };
-                all_removed.push(UndoEntry { pos: a, words: removed_diff });
+                all_removed.push(UndoEntry { pos: a, words_start: arena_start as u32 });
                 if empty {
                     self.stats.domain_wipeouts += 1;
                     self.emit(sink, depth, EventBody::DomainWipeout { position: a });
@@ -2409,6 +2437,9 @@ impl<'a> SearchState<'a> {
                         on_queue[*nb as usize] = true;
                     }
                 }
+            } else {
+                // No diff produced — give back the arena reservation.
+                self.undo_words_arena.truncate(arena_start);
             }
         }
         Ac3Outcome::Ok { removed: all_removed }
@@ -2507,12 +2538,23 @@ impl<'a> SearchState<'a> {
 
     pub(crate) fn restore(&mut self, undo: Vec<UndoEntry>) {
         let words_per_pos = self.words_per_pos;
-        for entry in undo {
+        // Track the lowest arena offset we need to keep — everything
+        // above it was reserved by these entries and is safe to drop.
+        // Entries are pushed in order during place_and_propagate, so
+        // the minimum is the first entry's words_start. Empty undo log
+        // means nothing was reserved here.
+        let arena_keep = undo.iter().map(|e| e.words_start as usize).min();
+        for entry in &undo {
             let pos_u = entry.pos as usize;
             let bit_base = pos_u * words_per_pos;
+            let ws = entry.words_start as usize;
             for w in 0..words_per_pos {
-                self.domain_bits[bit_base + w] |= entry.words[w];
+                self.domain_bits[bit_base + w] |= self.undo_words_arena[ws + w];
             }
+        }
+        drop(undo);
+        if let Some(keep) = arena_keep {
+            self.undo_words_arena.truncate(keep);
         }
     }
 
@@ -3180,12 +3222,16 @@ impl<'a> SearchState<'a> {
 pub(crate) enum RecurseResult { Found, Exhausted, TimedOut, Cancelled }
 
 /// Single undo entry: a bit-diff to OR back into `domain_bits[pos]` on
-/// restore. `words` has length `words_per_pos`. Built by the prune in
-/// O(wpp) and restored in O(wpp) — no per-removed-row iteration.
-#[derive(Clone)]
+/// restore. The actual bit-diff lives in `SearchState::undo_words_arena`,
+/// in the slot `[words_start..words_start + words_per_pos]`. Recurse-stack
+/// discipline guarantees arena slots are popped LIFO with the entries
+/// themselves, so no entry outlives its slot. (Vol-16 Cat-4 perf
+/// cleanup: dropped per-entry `Vec<u64>` allocation, was ~17.5% of CPU
+/// in System::alloc_zeroed.)
+#[derive(Clone, Copy)]
 pub(crate) struct UndoEntry {
     pub pos: Position,
-    pub words: Vec<u64>,
+    pub words_start: u32,
 }
 
 pub(crate) enum PropagationOutcome {
