@@ -313,6 +313,53 @@ fn main() {
         results.push(("blackwood_raw".into(), m, p, d));
     }
 
+    // Vol-15 — RAW Blackwood composed with the HintRectangleLayered
+    // skeleton (rectangle → interior spiral → annulus → outer
+    // border). User-proposed composition: cliff-fixed schedule +
+    // minimal propagators + layered cell ordering.
+    if arms == "blackwood_raw_rect_layered" || arms == "all" {
+        let mut cfg = EngineConfig::BLACKWOOD_RAW_PAR;
+        cfg.path_skeleton = Some(PathSkeleton::HintRectangleLayered);
+        let raw_layered = Box::new(
+            EngineSolver::new(cfg, "engine", "blackwood_raw_rect_layered_par")
+                .with_blackwood_schedule(schedule_arc.clone()),
+        );
+        let (m, p, d) = run_arm(
+            "blackwood_raw_rect_layered",
+            raw_layered,
+            &puzzle,
+            &hints,
+            edge_bp.clone(),
+            seed,
+            cp_budget,
+            alns_budget,
+            &out_dir,
+        );
+        results.push(("blackwood_raw_rect_layered".into(), m, p, d));
+    }
+
+    // And the plain (non-layered) rectangle composed with RAW.
+    if arms == "blackwood_raw_rect" || arms == "all" {
+        let mut cfg = EngineConfig::BLACKWOOD_RAW_PAR;
+        cfg.path_skeleton = Some(PathSkeleton::HintRectangle);
+        let raw_rect = Box::new(
+            EngineSolver::new(cfg, "engine", "blackwood_raw_rect_par")
+                .with_blackwood_schedule(schedule_arc.clone()),
+        );
+        let (m, p, d) = run_arm(
+            "blackwood_raw_rect",
+            raw_rect,
+            &puzzle,
+            &hints,
+            edge_bp.clone(),
+            seed,
+            cp_budget,
+            alns_budget,
+            &out_dir,
+        );
+        results.push(("blackwood_raw_rect".into(), m, p, d));
+    }
+
     eprintln!();
     eprintln!("=== SUMMARY (canonical E2, seed={seed}) ===");
     for (label, m, p, d) in &results {
