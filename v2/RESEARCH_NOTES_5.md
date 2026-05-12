@@ -453,6 +453,31 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### CASCADE PHASE A 03:50 — 1800s PT CANNOT push 452 → 453
+
+**Setup**: cascade Phase A ran 1800s of PT on the new 452 board.
+
+**Result**: best stayed at **452/480**. PT (52,728 rounds!) found
+no improvement.
+
+**Conclusion**: the 452 is a PT-local-optimum, **same plateau pattern
+as 449/450 just at a higher score level**. PT polish alone cannot
+push 452 → 453.
+
+This **EXACTLY matches the synthesis prediction**: every plateau at
+every score level is a local-search ceiling, breakable only by
+≥6-piece simultaneous moves (= crossover). The 452 plateau is
+the new instance of this pattern.
+
+### CASCADE PHASE B starting — first cascade cross hits 451
+
+**First cascade crossover** (52 + 449/fmm=0, 5×5 region at (4,1)):
+**polished to 451/480**. Second 451+ score of the night.
+
+This validates the "452-as-parent" hypothesis: crossover from the
+452 itself (with another good parent) reproduces the breakthrough
+at a comparable score. Phase B has 7 more cascades to run.
+
 ### 452 STRUCTURAL ANALYSIS 03:20 — invariants hold, budget refined
 
 **Setup**: applied `mismatch_color_analysis.py` and top-6 verifier to
