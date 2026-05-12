@@ -76,6 +76,30 @@ Components:
 Estimated cost: 1-2 weeks.
 Expected gain: +20-30 matched edges (443 baseline → 463+).
 
+### Priority 1.5 (after Blackwood ships, test composition)
+**Blackwood × HintRectangle / HintRectangleLayered composition**.
+
+The two features are config-orthogonal (different EngineConfig
+axes). Composing them is one line: set both `path_skeleton` and
+`blackwood_schedule` on the same EngineConfig.
+
+But composition might FIGHT because:
+- HintRectangle forces a specific cell-order for the first ~49
+  cells.
+- Blackwood's heuristic-color exhaustion schedule expects a
+  specific color-distribution at each depth.
+- If the rectangle's first 49 cells under-exhaust heuristic
+  colors vs the schedule, Blackwood will prune the whole branch
+  immediately and the rectangle becomes a dead-end skeleton.
+
+Test as a portfolio (parallel seeds, pick best):
+- arm 1: Blackwood alone (validate standalone first).
+- arm 2: Blackwood + HintRectangle (composition).
+- arm 3: Blackwood + HintRectangleLayered (deeper composition).
+- arm 4: HintRectangle alone (already shipped baseline).
+
+~4 hours of integration + testing once Blackwood lands.
+
 ### Priority 2 (CHEAP — capitalize on user's fail-fast insight)
 **Hint-cluster sub-CSP enumeration**:
 
