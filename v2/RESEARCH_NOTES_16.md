@@ -193,3 +193,35 @@ to memory as a clean null.
 (Throughput: 3.4 G nodes in 3600s ⇒ 944 kNps multi-core. That
 matches the BLACKWOOD_RAW design — 7 cores × ~140k single-thread
 post-vol-16 = ~1 MNps would be expected today.)
+
+### 2026-05-12 ~21:30 — vol-16 re-profile validation
+
+Recorded 30s post-vol-16 BLACKWOOD_RAW profile at
+`output/v16_profile/blackwood_raw_30s_post_vol16_sym.json.gz`
+(+ syms sidecar). Comparison to vol-15:
+
+| metric | vol-15 (pre) | vol-16 (post) | Δ |
+|---|---:|---:|---|
+| nps (single-thread) | ~80k | ~234k | +193% |
+| place_and_propagate_opts self | 7.9% | 70.2% | (relative ↑ as everything else shrank) |
+| class_balance_check self | 7.6% | 0.0% | confirmed off |
+| System::alloc_zeroed inclusive | 17.5% | <1% | confirmed gone |
+| System::dealloc inclusive | 24.1% | <1% | confirmed gone |
+| Total allocator inclusive | ~42% | 2.3% | **-40 percentage points** |
+| `<usize as PartialOrd>::lt` self | 14.6% | not visible | (moved into other functions) |
+
+`SearchState::restore` is now the second-largest self-time
+contributor at 19.1% — it's the arena-restore loop that ORs
+diffs back into `domain_bits`. The work was previously hidden
+inside `Vec::drop`-induced `System::dealloc`. With the arena it's
+now O(undo_log_size × wpp) of cache-friendly work, but visible.
+
+Vol-17 follow-up: the recurse path's restore is the new hotspot.
+Investigate whether the OR-back loop can be replaced by a
+saved-snapshot pattern (memcpy of `domain_bits[base..]` slice on
+entry, memcpy back on exit). Trade-off: more bytes copied per
+call vs no per-entry restore loop. Worth a measurement.
+
+profile_blackwood_raw also widened my view of allocator surface:
+post-vol-16, only `BufferSink::drop` + a handful of macOS malloc
+calls contribute. The arena strategy is correct and complete.
