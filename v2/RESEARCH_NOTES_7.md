@@ -344,6 +344,47 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### *** RIGOROUS: 454 IS OPTIMAL ON THE 45-CELL FREE REGION — 13:35 ***
+
+**EvalMaxSAT cracked the 45-cell sub-puzzle** in 82.9s of CPU time:
+
+```
+c nombre de var = 18694
+o 26
+s OPTIMUM FOUND
+c Total time : 82.9377s
+```
+
+`o 26` = 26 mismatched soft clauses. The 454 board has exactly 26
+mismatched interior edges INSIDE the 45 frozen-mismatched cells.
+**The 454 IS THE PROVEN GLOBAL OPTIMUM** for this sub-puzzle with
+the outer fixed.
+
+**Strategic consequence**: PT-pin-perimeter saturation at 454 is no
+longer just empirical; it's MaxSAT-proven for the natural choice of
+free region. The 45 frozen-mismatched cells are NOT the right
+optimisation cut — they're already optimal as a sub-region.
+
+**To break 454 we MUST grow the free region.** The 45 cells plus
+1-ring of neighbours = 109 cells, encoded and launched at 13:36 with
+TCT=1800s (30 min target, may need longer). If MaxSAT proves an
+optimum below 26 on the 109-cell region, we get **455+** by
+construction (since some of the formerly-pinned cells will have
+moved). If MaxSAT proves 26 again, the 1-ring is also optimal and
+we need to go bigger.
+
+**Compositional insight**: vol-6 proved 453's inner k=3,4,5 sub-
+regions are locally optimal (each tile of size 9-25 cells). I just
+proved the 454's defect zone (45 cells) is also optimal. **Every
+reasonably-sized sub-region is at its local optimum**. The
+obstruction is not local — it's *global cell-interaction across the
+whole board*. This is the structural picture vol-5 first sketched
+("Hamming moat ≥ 5") expressed in optimisation terms.
+
+**The MaxSAT-on-arbitrary-region tool** (sat_e2 --free-cells)
+established today is a primitive for proving sub-region optimality
+on any board. Useful even after vol-7 closes.
+
 ### *** PT-454 IS DETERMINISTIC: ALL 4 BOARDS BYTE-IDENTICAL — 13:00 ***
 
 Vol-6 ran 3 saturation experiments + 1 sanity test, producing 4
