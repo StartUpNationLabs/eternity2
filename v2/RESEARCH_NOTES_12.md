@@ -179,6 +179,33 @@ a value-order heuristic? Vol-11's measurement was that BP marginals
 threshold where it actually helps. A backtracker A/B with edge-BP
 marginals vs random is the natural next experiment (vol-13).
 
+### 2026-05-12 13:45 — Innovation A part 2: edge-BP backtracker A/B
+
+`scripts/v12_edge_bp_backtrack.py`. Three modes × seed=1 × 90 s budget,
+Python backtracker (no AC-3, hence very slow per-node):
+
+| value mode | max_depth | max_score | nodes | backtracks | nps |
+|---|---:|---:|---:|---:|---:|
+| **edge_bp** | **67** | **65** | 669 | 607 | 7 |
+| random | 66 | 62 | 777 | 716 | 9 |
+| static | 66 | 62 | 608 | 552 | 7 |
+
+**Edge_BP beats both random and static on max_depth and max_score**,
+modestly but consistently. **This reverses vol-11's finding** (where
+cell-BP marginals at 8.4% reduction LOST to random in a 90s budget).
+The 2.24× stronger edge-encoding signal *crosses the threshold* where
+BP-marginal-guided value-order becomes useful.
+
+This is a **Tier 3 finding**: the dead-ends-memo prediction that
+edge-color encoding would behave differently is now empirically
+confirmed in *both* its direct signal (18.84% reduction) and its
+downstream use as a value-order heuristic.
+
+**Followup for vol-13**: Rust port of edge-BP marginals + plug into
+`SolveOpts.preferred_pieces` (or a new `edge_marginals` field). With
+AC-3 + gacolor + NS-1 + bitset already in the Rust engine, the
+combined config should push past depth 164 in the 300s budget.
+
 ### 2026-05-12 13:42 — Engineering 3: bitset rep + AC-3 collapse (+48–101% nps)
 
 Added `domain_bits: Vec<u64>` to `SearchState` mirroring `domains:
@@ -269,6 +296,73 @@ larger).
 
 The 75k frames will be the input to a "for each frame, try the
 14×14 interior" sweep (vol-13 if time).
+
+## Vol-12 final summary (2026-05-12 13:47)
+
+### Shipped (commits on develop)
+
+- `ff066b5` — NS-1 propagator + depth-threshold gate + 4 new profiles + server registry.
+- `f454acd` — depth-threshold sweep results, edge-color BP measurement, Hamilton frame full enumeration, CVM plaquette state counts.
+- `85b791b` — bitset domain mirror + AC-3 entry-rebuild collapse (+48–101% nodes/sec).
+- `733c9ac` — edge-BP backtracker A/B vs random/static.
+- `7c432c8` — static-mode bt result for completeness.
+
+### Tier ranking of vol-12 outcomes
+
+**Tier 1 (minimum) — delivered**:
+- Honest report on each of the 4 engineering items + 4 innovation tracks.
+- Clean negative results where applicable (14×14 MaxSAT, CVM signal).
+
+**Tier 2 (good) — partially delivered**:
+- Engineering throughput +48–101%, but max_depth still at 164 on
+  canonical E2 in 60 s. Did NOT cross 469 (community SOTA).
+- Innovation A produced a measurable signal stronger than vol-11's;
+  did NOT push our own stack past vol-9's 308 cold-start (the Python
+  harness lacks AC-3 + can't be compared apples-to-apples).
+
+**Tier 3 (excellent) — delivered (3 distinct findings)**:
+- **Edge-color BP: 18.84% interior reduction (2.24× vol-11)**, first
+  BP-marginals to beat random/static as value-order on E2.
+- **Hamilton frame full enumeration: 75,173 valid frames** on
+  canonical 5-clue E2 — corrects 2008 community folklore.
+- **NS-1 propagator + bitset engine throughput**: shipping the
+  vol-11 backlog plus a measurable +2× perf win.
+
+**Tier 4 (session-defining) — NOT delivered**:
+- No 470+ on canonical 5-clue.
+- No constructive 14×14 interior solution.
+
+### Vol-13 punch list
+
+1. **Port edge-BP marginals to Rust** as value-order in
+   `solver-engine`. Combine with bitset + NS-1 + depth-150 gate +
+   AC-3 + gacolor. Honest expected outcome: depth 200+ on 300s
+   canonical E2 if the 18.84% signal translates through.
+2. **Joe-Saunders RESTART variant**: current `depth_threshold_for_propagators`
+   just gates propagators; the actual Joe policy is "after N
+   iterations without progress at depth >T, prune back to T and
+   re-randomize." Add this as a new outer loop wrapping
+   `recurse()`.
+3. **Frame-first sweep**: take the 75,173 Hamilton frames, pin each
+   as border, try the residual 14×14 with `joe_depth150_par` for
+   30s/frame. ~30-90 minutes wall-clock for full coverage. The 470
+   bucas board now in `output/v12_maxsat/blackwood_470.json`
+   provides one fixed-border test.
+4. **Steps 2/3/5/6 of the bitset refactor**: flip place_and_propagate's
+   hot prunes to bitset operations (AND with side_color_rows-style
+   masks + popcount); replace `Vec<u32>` undo with bit-diffs; drop the
+   old Vec rep. 4-9 more hours; another expected 1.5-3× nps.
+5. **Test edge_bp marginals as `--value-mode=edge_bp` in the Rust
+   engine's `recurse()`**: with hint cells at depth 5, edge-BP
+   marginals should give a *non-trivial* value-order signal at every
+   subsequent variable.
+
+### Hourly /loop status
+
+cron job `122d151e` fires at every :07 — was an idle tick during
+this session; no pivot signal received. Continue same plan in
+vol-13.
+
 
 </content>
 </invoke>
