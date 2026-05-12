@@ -237,30 +237,82 @@ order in isolation) and a major frame-first naivety (Hamilton frames
 ≠ CSP-valid frames), and corrected the in-pipeline measurement
 methodology.
 
-## Recommendations for vol-15
+## Recommendations for vol-15 (in priority order)
 
-1. **CP-search policy axis is exhausted on canonical E2.** Five
-   independent attempts (vol-9 Verhaard, vol-12 NS-1+depth-gate,
-   vol-14 #1 BP, vol-14 #2 restart, vol-9-10 generic LCV) all
-   plateau at depth 162-174 in 5 min. Cumulative null.
-2. **The ALNS-fill stage is the binding lift mechanism.** A 1-point
-   improvement in ALNS-final score (442 → 443) from a *worse* CP
-   seed (303 → 292) suggests the ALNS escape ladder is the actual
-   limit. Improving ALNS — better destroy operators, PT acceptance,
-   cooling, Houdayer — likely beats more CP work.
-3. **Frame-first needs a global-CSP-aware enumerator.** vol-12's
-   Hamilton frame catalog is *not* directly composable. A new
-   enumerator that runs gacolor + AC-3 during ring DFS, plus a
-   per-frame check against the 4 interior canonical hints, would
-   produce a much smaller (likely O(100)) usable-frame set worth
-   exhaustive interior sweep.
-4. **PT-from-303-CP-partial is the highest-EV vol-15 move.** Vol-6
-   hit 454 starting from a 453 seed. We have CP partials at 303
-   and an ALNS ceiling of 443. Running vol-6's full PT pipeline
-   on the 443 partial — not a CP partial — is plausibly the path
-   to ≥454 cold-start.
+1. **🚨 Verify and re-validate**: with the ALNS-pinning fix in place,
+   re-run vol-12 baseline + vol-14 BP+restart fills, get HONEST
+   canonical-E2 scores. The vol-12 result is probably more like
+   430-440, not 443. **Until this is done, all our published
+   "scores" are suspect.**
+2. **Implement Blackwood's algorithm** (`V15_BLACKWOOD_SPEC.md`).
+   Without it we cannot reach 469. This is the binding constraint.
+3. **CP-search policy axis is exhausted**: heuristic-side
+   schedule + break-index allowance is the missing piece, not
+   smarter LCV/BP/restart. See `project_e2_mcgavin_blackwood_gap_analysis`.
+4. **Fix pt_e2 to validate hint integrity** when loading
+   `--start-from`. Reject or auto-fix boards that violate hints.
+5. **CSP-aware frame enumerator** (`V15_FRAME_ENUMERATOR_SPEC.md`).
+6. **ALNS improvements**: cluster-sized repair (vol-14 finding:
+   the defect cluster is ~62 cells, k=5 repair too small).
+7. **PT tabu list** (`project_e2_vol14_pt_no_tabu`).
+8. **Mismatch geometry awareness**: support bottom-up scan order
+   to see if cluster moves to top (matching community 469s'
+   geometry).
 
-## What shipped this session (5 commits on develop)
+## 🛑 LATE SESSION: ALNS HINT-PINNING BUG DISCOVERED
+
+While studying the structural overlap between our 443/480 board
+and community 469s, found that **our 443 has piece 215 at pos 135
+instead of canonical piece 138**. Tracing showed: alns_e2 was
+freeing hint cells during destroy operators — the canonical hints
+were not pinned. **All previous ALNS-fill scores (vol-12's 443,
+vol-14's 442/443/436) are on the WRONG puzzle** — the canonical-E2
+score is lower.
+
+**Fix (commit `afb3dc9`)**: added `AlnsConfig.pinned_positions` +
+applied at destroy time. Wired up in alns_e2 binary from file_hints.
+
+**Re-running**: BP-seeded ALNS-fill with patched binary, results in
+`output/v14_fill_fixed/`. Expected: canonical-E2 score < 443 (since
+the "wrong piece" was helping the score before).
+
+PT pinning was correct (`run_pt::pinned_positions` was always
+wired), BUT the PT push earlier in this session started from the
+*broken* 443 seed and PT pinned the (wrong) piece-215 at pos 135.
+The 446 PT result was therefore also on the wrong puzzle.
+
+This is a **major bug discovery** that invalidates vol-12 + early
+vol-14 measurements. Memory entry:
+`project_e2_vol14_alns_hint_bug.md`.
+
+## Discoveries while PT ran (parallel research)
+
+While the (broken) PT push was running, I:
+1. **Reverse-engineered McGavin/Blackwood/Joe**: read
+   `docs/community-mining/09_Blackwood` and `05_Joe`. Identified
+   FOUR mechanisms we don't have: heuristic-side schedule,
+   break-index allowance, in-place prune-restart, fit_table
+   engineering. We are 20 000× slower in raw nps and missing the
+   actual algorithm that gets to 469. Memory:
+   `project_e2_mcgavin_blackwood_gap_analysis.md`.
+2. **Compared mismatch geometry** across our 443 + vol-6's 454 +
+   community 469/468 boards. **Our 443 and vol-6 454 BOTH have
+   mismatches clustered in center-bottom (rows 4-14, cols 2-12);
+   community 469/468 have them at the TOP**. Geometry is
+   search-order-determined. Memory:
+   `project_e2_vol14_443_mismatch_geometry.md`,
+   `project_e2_vol14_mismatch_geometry_universal.md`.
+3. **Wrote V15_FRAME_ENUMERATOR_SPEC.md** — design for CSP-aware
+   replacement of vol-12's pairwise enumerator.
+4. **Wrote V15_BLACKWOOD_SPEC.md** — full implementation blueprint
+   for Blackwood's 2020 algorithm (the actual path to 469).
+5. **Audited MEMORY.md** — updated 4 stale entries.
+6. **Found the structural overlap**: our 443 and community 469 (c)
+   share only **1 piece in the same position out of 256**. We are
+   in different basins entirely. Community 469s are NOT a warm-start
+   for our stack.
+
+## What shipped this session (8 commits on develop)
 
 | commit | description |
 |---|---|
@@ -268,7 +320,11 @@ methodology.
 | `6679045` | #1: ValueOrder::EdgeBpMarginals + load_edge_bp_marginals + tests + JOE_DEPTH150_BP{,_PAR} profiles + server registry update |
 | `2bef02a` | #2 PoC + timestamped run dirs + output cleanup |
 | `51e46c0` | metric fix (matched/480) + rescore_board bin + run_e2_framefirst bin + 500-frame survey |
-| (this) | closeout: vol-14 tier-3 finding + memory updates |
+| `f148bbc` | mid-session closeout: tier-3 (BP wins end-to-end on broken puzzle, frame-first null) |
+| `9af4f92` | V15_FRAME_ENUMERATOR_SPEC.md |
+| `e9cae31` | V15_BLACKWOOD_SPEC.md + mismatch geometry analysis |
+| `afb3dc9` | **CRITICAL BUG FIX**: ALNS was unpinning canonical hints |
+| (this) | closeout: vol-14 final state + memory updates |
 
 ## Output-dir cleanup (2026-05-12 14:56)
 
