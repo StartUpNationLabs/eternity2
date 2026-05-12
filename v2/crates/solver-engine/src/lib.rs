@@ -1682,9 +1682,14 @@ pub fn blackwood_schedule_calibrated_v17c(
     let mut s = blackwood_schedule_calibrated_v17b(puzzle, hints)?;
     let n_pos = puzzle.cell_count();
     let last_idx = n_pos.saturating_sub(1);
-    // Shift breaks earlier. New: starting at 180, every ~5 cells.
-    let new_breaks: [u32; 14] = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 250];
-    s.break_indexes_allowed = new_breaks.iter().map(|&b| b.min(last_idx)).collect();
+    // EMPIRICALLY DERIVED from the McGavin 469 board's actual mismatch
+    // positions in bottom-up row-major scan order (vol-17 measurement,
+    // `scripts/find_mcgavin_breaks.py`). McGavin's 11 mismatched edges
+    // have their "later cell" at these 11 scan indices. So if our
+    // engine searches in the SAME order as McGavin and accepts breaks
+    // at these exact positions, it can reproduce McGavin's solution.
+    let mcg_breaks: [u32; 11] = [187, 188, 190, 199, 200, 202, 206, 216, 222, 233, 249];
+    s.break_indexes_allowed = mcg_breaks.iter().map(|&b| b.min(last_idx)).collect();
     Some(s)
 }
 
