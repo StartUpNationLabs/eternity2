@@ -453,6 +453,42 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### 452 STRUCTURAL ANALYSIS 03:20 — invariants hold, budget refined
+
+**Setup**: applied `mismatch_color_analysis.py` and top-6 verifier to
+the new 452 board.
+
+**Findings**:
+
+1. **Rare-color invariance HOLDS**: colors 1-5 have 0 mismatches each.
+   The 452 board's 28 mismatches are ALL between abundant-color edges.
+   Consistent with 29/29 plateau-board corpus invariance.
+
+2. **NEW top-6 universal mismatches: 6/6 MATCHED.** Better than vol-4
+   450 (5/6) and equal to NE1 stage-2 450 (6/6). The 452 sustains
+   the structural-clean status of its parents.
+
+3. **Pair scarcity persists**: pair (13, 20) has 2 mismatches, only 5
+   pieces have both colors. Same pattern as pair (18, 21) on the 450.
+   Different colors but same combinatorial-trap signature.
+
+4. **Worst-mismatched color shifts**: 450 had colors 15 & 22 at 21%
+   each. 452 has color 13 at 12% (max) — distribution flatter.
+
+**Key empirical update**: the 31-mismatch / 30-mismatch budget is
+NOT a hard floor. The 452 has 28 mismatches. The crossover broke
+the budget by **2 edges**.
+
+**Structural picture refined**: the abundant-color combinatorial-
+trap minimum is ≤ 28 for this hint set, NOT ≥ 30 as previously
+hypothesized. The "30-budget" was the local-search PT-reachable
+minimum, not the structural minimum.
+
+**Implication for next steps**: scaling GA crossover may push the
+empirical minimum further down. Each crossover that produces 451+
+gives a new budget data point. Need ~50+ crossovers for statistical
+confidence on the true minimum.
+
 ### GA-LIGHT FINAL 03:18 — 12 crossovers, best = 452 (1 hit)
 
 **Full results table**:
