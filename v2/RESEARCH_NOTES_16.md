@@ -262,3 +262,65 @@ Recommendation for vol-17: coordinated tonic 0.12 → 0.14 +
 prost 0.13 → 0.14 upgrade (proto codegen lands in same PR).
 Criterion upgrade is optional and dev-only. None block any
 research direction.
+
+### 2026-05-12 ~21:50 — Cat-2 Stage A bug + fix, Cat-4c reality check
+
+User pushed back with "you can much more than you think" → I
+attempted Cat-2 Stage A (PropagatorConfig sub-struct).
+
+What shipped:
+- `PropagatorConfig` extracted from EngineConfig's 7 flat
+  propagator fields (6 bools + Option<u32> depth gate).
+- 30 named profile slabs updated to use nested FRU pattern.
+- 16 read sites in lib.rs + 2 in sweep_depth.rs renamed.
+- ~120 lines of mechanical rewrite via /tmp/cat2_rewrite2.py.
+
+Then I followed up with **Cat-4c**: slice-based inner loops in
+SearchState::restore + place_and_propagate_opts prune closure +
+piece-uniqueness loop. Iter().zip() pattern for bounds elision.
+
+Initial Cat-4c benchmark: **264-268 kNps**. Reported as 3.35×
+speedup vs vol-15 baseline ~80k.
+
+Then re-profiled and found `class_balance_check` BACK at 19.1%
+self time — but BLACKWOOD_RAW should have class_balance OFF
+(from Cat-4b). Debug found the Cat-2 Stage A rewrite script
+**had a regex bug**: `[A-Z_]+` didn't match slab names containing
+digits (GACOLOR_AC3, JOE_DEPTH150, ...). 17 of 30 slabs silently
+fell back to BORDER_FIRST_LCV defaults (class_balance: true,
+all others false).
+
+Fix script (cat2_full_fix.py) extracts truth from the pre-Cat-2
+source and re-injects via nested FRU on `Self::BORDER_FIRST_LCV.propagators`.
+17 slabs restored.
+
+**True Cat-4c benchmark after fix**: 364-367 kNps.
+
+| stage | nps | total speedup vs vol-15 baseline |
+|---|---:|---:|
+| vol-15 baseline | ~80k | 1.00× |
+| Cat-4 alloc cleanup | ~98k | 1.22× |
+| Cat-4b drop class_balance from RAW | ~230k | 2.87× |
+| Cat-2 Stage A + Cat-4c slice loops (reported, broken) | ~268k | 3.35× |
+| **Cat-2 Stage A fix + Cat-4c** | **~367k** | **4.6×** |
+
+The +38% jump from "Cat-4c broken" to "Cat-4c fixed" is
+explained by:
+- Previously BLACKWOOD_RAW silently had class_balance ON (Cat-2
+  regression). That cost ~38% throughput per Cat-4b's measurement.
+- The fix restores Cat-4b's correctness; slice loops give the
+  rest.
+
+Honest framing: I committed a CORRECTNESS regression in Cat-2
+Stage A. The Cat-4c headline number (268 kNps) was measured on
+a misconfigured engine. The fix commit (b55f59c) documents this
+clearly. No published vol-16 numbers between 11c5141 and b55f59c
+should be trusted on non-RAW profiles (joe_depth150_par etc.
+were running with wrong propagator stacks during that window).
+
+All 107 workspace tests pass throughout — the test suite didn't
+catch this because no test exercises a specific named profile by
+asserting on its propagator config; tests are end-to-end solves
+which still succeed (slower or with different node counts).
+Vol-17 follow-up: add per-profile `assert_eq!(profile.propagators.ac3, true)` etc.
+unit tests to catch this class of regression.
