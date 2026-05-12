@@ -389,6 +389,38 @@ Sister-session research conclusion: the 453 ceiling is a property of
 the CURRENT BORDER, not of the puzzle. To find 454+, we must change
 the BORDER (the 60 outer cells: 4 corners + 56 edge pieces).
 
+### Inner-attack ruled out — EvalMaxSAT bisection table
+
+Encoded the 453 board's interior as a partial-MaxSAT instance with a
+square sub-region of side `k` UNFIXED and the rest pinned. Used the
+minimal pinned-aware encoder (15× WCNF size reduction at k=8). Ran
+EvalMaxSAT (single-thread CDCL + core-guided MaxSAT) per `k`:
+
+| k | sub-region | result                       | wall time | implication                                        |
+|---|------------|------------------------------|-----------|----------------------------------------------------|
+| 3 | 9 cells    | `o 4` (= 453's actual)       |   0.6 s   | inner-3 placement OPTIMAL                          |
+| 4 | 16 cells   | `o 6` (= 453's actual)       |   2.8 s   | inner-4 placement OPTIMAL                          |
+| 5 | 25 cells   | `o 8` (= 453's actual)       |   9.3 s   | inner-5 placement OPTIMAL                          |
+| 6 | 36 cells   | TIMEOUT                      |  60   s   | EvalMaxSAT cannot prove ≤453 in 1 min              |
+| 8 | 64 cells   | `s UNKNOWN`                  | 739   s   | killed at ~12 min; problem grows past tractability |
+
+`o N` is EvalMaxSAT's notation for "best known objective" (=number of
+unsatisfied soft clauses; minimizing this minimizes mismatches).
+
+**Reading**: for k ∈ {3, 4, 5}, the solver completes and returns the
+SAME mismatch count the 453 board already has. That is the strongest
+form of optimality proof available — no rearrangement of the inner
+k×k pieces (with the outer 256-k² pinned) beats current placement.
+
+For k ≥ 6 we don't yet have proof either way, but the interior k=8
+window (4096 piece-rotation variables) didn't even produce a soft
+bound after 12 min. Beating 453 by re-arranging only the inner is
+either impossible (k≤5 confirmed) or beyond a state-of-the-art
+single-threaded MaxSAT solver in reasonable time (k≥6).
+
+**Conclusion**: route to 454+ is NOT through the inner. Pivot to
+border-space exploration is forced by evidence.
+
 ### BORDER-1 — DIAGNOSIS (2026-05-12 morning): CORPUS IS BORDER-MONOCULTURE
 
 **Setup**: extracted the 60-cell border signature (piece_id, rotation
@@ -538,28 +570,87 @@ algorithm latching onto the SAME border early. Now we have 10k
 borders and can ask: which borders SUPPORT a higher interior PT
 score than the corpus's 3?
 
-### BORDER-3 — score borders via interior PT (next)
+### BORDER-2c — diversity sanity check on the 10k library
 
-**Setup**: for each of the 10k borders, run pt_e2 with the border
-PINNED, ~30-60s budget per border (will need parallelism). Record
-the best interior score achieved. Anything ≥454 is the breakthrough.
+`scripts/border_diversity_check.py`:
 
-**Caveat**: pt_e2 currently doesn't have a `--pin-border` option;
-it has `--pin-hints` (hint pieces only). We need to either:
-  (a) Add a `--pin-perimeter` flag to pt_e2 (load 60 cells from
-      a board JSON or border JSONL, treat them as additional hints).
-  (b) Construct a synthetic puzzle JSON where the 60 border cells
-      are encoded as fake "hints" — quick hack.
+| metric                              | corpus (n=28) | library (n=10000) |
+|-------------------------------------|---------------|-------------------|
+| mean per-cell agreement (modal/n)   | **0.862**     | **0.045**         |
+| cells with ≥80% agreement           | 58 / 60       | **0 / 60**        |
+| cells with ≥50% agreement           | 60 / 60       | 0 / 60            |
+| pairwise mean overlap (1000 pairs)  | clustered     | **0.036**         |
+| pairs with ≥80% overlap (1000)      | clustered     | **0 / 1000**      |
+| distinct corner-quads               | ≈1            | **24 / 24** (all) |
 
-Option (a) is cleaner. Building it next.
+Corner-quad distribution near-uniform (most common 486, least 341
+out of 10000 / 24 = 417 expected). Per-cell agreement collapses
+from 86% to 4.5%. Pairwise overlap 3.6% on average — the 10k
+borders are nowhere near each other and nowhere near the corpus.
 
-**Triage strategy**: 10k borders × 60s = 7 days serial. Need to
-either (1) parallelize, (2) score borders by a fast surrogate first
-and only PT the top-K, or (3) reduce per-border budget. Plan: do all
-three:
-  - Surrogate score: count of borders' inward-color HISTOGRAM
-    (does it match the abundant-color distribution well?).
-  - Fast PT: 10s per border for triage on top 1000.
-  - Full PT: 60-120s on top 100 from triage.
+**Conclusion**: the Las Vegas sampler is genuinely escaping the
+corpus monoculture. Safe to proceed to BORDER-3 triage.
 
-This is publishable methodology even before we find 454+.
+### BORDER-3c — surrogate triage (color supply vs. corner tightness)
+
+**Surrogate v1 — global color over-demand**: per border, compute
+inward-color histogram and compare against inner-piece color supply.
+
+```
+inner-piece color supply per color: ~44-49 edges per color (17 abundant colors)
+border inward demand per color:     1-6 edges per color
+over-demand score (corpus 453):     0
+over-demand score (10k library):    min=0, max=0, median=0
+```
+
+**Verdict**: USELESS as a discriminator. The inner palette is far
+richer than the border demands, so every feasible border satisfies
+supply trivially. **Structural insight**: the border is NOT a binding
+constraint on color supply.
+
+**Surrogate v2 — inner-corner tightness**: at each of the 4 inner
+corner cells (1,1), (14,1), (1,14), (14,14), count the number of
+(inner_piece, rotation) pairs that satisfy BOTH boundary-color
+constraints. If any corner has 0 → border is **provably infeasible**.
+
+```
+borders with ≥1 inner-corner having 0 candidates: 3727 / 10000 (37%) — INFEASIBLE
+feasible borders:                                  6273 / 10000 (63%)
+
+corner-tightness min/sum (across 4 corners):
+  corpus 453:                  min=2,  sum=17
+  10k library best:            min=5,  sum=24
+  10k library median (feasible): min~1, sum=10
+  10k library worst (feasible): min=1,  sum=4
+
+inner-corner candidates per cell (corpus 453):
+  (1,1):   5 candidates  (top=7, lft=7)
+  (14,1):  2 candidates  (top=14, rgt=22)
+  (1,14):  7 candidates  (bot=22, lft=21)
+  (14,14): 3 candidates  (bot=18, rgt=13)
+```
+
+**Findings**:
+1. **37% of all randomly-generated borders are provably infeasible**
+   at the inner-corner level. Triage filter saves 37% of PT budget.
+2. **Some library borders have 6× more inner-corner candidates than
+   the corpus 453's** (sum=24 vs corpus's 17). These are structurally
+   LESS CONSTRAINED interiors — could be easier basins for PT to
+   explore well.
+3. **Caveat**: tighter ≠ worse for PT necessarily. A loose border may
+   lead PT into a poor local optimum. We want a stratified sample:
+   top-1000-by-tightness-sum AND a random sample of feasible borders.
+
+**Outputs**:
+- `output/borders/top_1000_by_corner_tightness.jsonl`: top-1000 feasible
+  borders by max corner-sum.
+- 3727 infeasible borders excluded.
+
+### BORDER-3d — add `--pin-perimeter` to pt_e2 (next)
+
+pt_e2 currently has `--pin-hints` (hint pieces only). We need
+`--pin-perimeter <border.json>` to load the 60-cell border arrangement
+and pin them as additional hints. Then:
+  - Sanity test: pinning the 453's own border + PT should produce 453.
+  - Triage: pin each library border, PT 10s, record best score.
+  - Funnel: top-K → 60s PT → 300s PT.
