@@ -137,12 +137,25 @@ fn run_one_arm(
     let alns_bucas = bucas_url(puzzle, &alns_board, &format!("v17_{arm}_s{seed}_alns"));
 
     // Persist board JSONs for any seed-arm we might want to inspect.
+    // Vol-17 — also save full `placement` arrays so cold_portfolio outputs
+    // are usable as `--cp-board` inputs for alns_only / alns_pt experiments.
+    let cp_placement: Vec<_> = (0..puzzle.cell_count()).map(|p| {
+        cp_board.get(p).map(|(pid, rot)| serde_json::json!({
+            "pos": p, "piece_id": u32::from(pid), "rotation": rot.as_u8(),
+        }))
+    }).collect();
+    let alns_placement: Vec<_> = (0..puzzle.cell_count()).map(|p| {
+        alns_board.get(p).map(|(pid, rot)| serde_json::json!({
+            "pos": p, "piece_id": u32::from(pid), "rotation": rot.as_u8(),
+        }))
+    }).collect();
     let _ = std::fs::write(
         out_dir.join(format!("{arm}_seed{seed}_cp.json")),
         serde_json::to_string_pretty(&serde_json::json!({
             "seed": seed, "arm": arm,
             "matched": cp_m, "placed": cp_p, "depth": cp_d,
             "bucas_url": &cp_bucas,
+            "placement": cp_placement,
         })).unwrap(),
     );
     let _ = std::fs::write(
@@ -151,6 +164,7 @@ fn run_one_arm(
             "seed": seed, "arm": arm,
             "matched": am, "placed": ap,
             "bucas_url": &alns_bucas,
+            "placement": alns_placement,
         })).unwrap(),
     );
 
