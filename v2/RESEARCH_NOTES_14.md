@@ -74,7 +74,23 @@ Bench output → `output/v14_bp/run_e2_5min.log` and `_board.json`.
 
 ## Status
 
-- [ ] #1 EdgeBpMarginals ported + green tests
-- [ ] #1 5-min bench vs `joe_depth150_par` baseline
+- [x] #1 EdgeBpMarginals ported + green tests (commit `6679045`)
+- [x] #1 30 s smoke A/B: BP +4 depth, +10 edge matches, +4 placed
+- [ ] #1 5 min A/B in progress (PID 87879, started 14:54)
 - [ ] Tier rating + memory update
 - [ ] (Stretch) #2 Joe RESTART
+
+## Output-dir cleanup (2026-05-12 14:56)
+
+- 74 stale top-level exploration boards swept into
+  `output/_archive/loose_top_level/` (vol-7..10 pt_e2 + alns_e2 runs).
+  HISTORIC + all 454-class boards retained at top level.
+- v14 bench harnesses now write to `output/v14_<topic>/run_<unixsecs>/`
+  so reruns don't overwrite. A `latest` symlink points to the most
+  recent run.
+- `/output` is already `.gitignore`d — these moves are filesystem-only,
+  no commits.
+
+Convention for vol-15+: any new bench bin should call
+`output/v14_<topic>/run_<unix>/` (see
+`crates/bench-audit/src/bin/run_e2_5min_bp_ab.rs::main`).

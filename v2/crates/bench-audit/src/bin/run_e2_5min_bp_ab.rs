@@ -222,8 +222,21 @@ fn run_arm(
 fn main() {
     let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
     let bp_path = PathBuf::from("output/v12_bp/edge_bp_60i.json");
-    let out_dir = PathBuf::from("output/v14_bp");
+    // Timestamped run dir so reruns don't overwrite each other. Convention
+    // for vol-14+ bench harnesses: write under `output/v14_<topic>/run_<unix>/`.
+    let run_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let out_dir = PathBuf::from(format!("output/v14_bp/run_{run_id}"));
     std::fs::create_dir_all(&out_dir).expect("mkdir");
+    // Also write a "latest" symlink (best-effort; harmless if it fails).
+    #[cfg(unix)]
+    {
+        let latest = PathBuf::from("output/v14_bp/latest");
+        let _ = std::fs::remove_file(&latest);
+        let _ = std::os::unix::fs::symlink(format!("run_{run_id}"), &latest);
+    }
 
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
     eprintln!(
