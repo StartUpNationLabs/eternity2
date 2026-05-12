@@ -927,6 +927,7 @@ impl Default for AlnsConfig {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct AlnsStats {
     pub iters: u32,
     pub repair_failures: u32,
@@ -1269,6 +1270,75 @@ fn count_neighbour_matches(puzzle: &Puzzle, board: &Board, pos: Position, e: [u8
         }
     }
     c
+}
+
+/// Vol-17 — embarrassingly parallel best-of-K ALNS portfolio.
+///
+/// Run `n_chains` independent ALNS chains in parallel via rayon,
+/// each with the SAME initial board but a DIFFERENT seed (seed,
+/// seed+1, ..., seed+n-1). Returns the best board found across all
+/// chains plus the score of each chain.
+///
+/// On 8-core hardware with `n_chains=4`, each chain gets ~2 cores
+/// (the CP-repair inside is rayon-multi-core too). Should give
+/// ~3-4x throughput vs single chain. Variance reduction comes from
+/// seed diversity — different chains explore different basins.
+///
+/// `acceptance_for_chain(i)` lets you specify a per-chain acceptance
+/// (e.g. different SA temperatures for "temperature-ladder portfolio"):
+/// passing |i| `Acceptance::SimulatedAnnealing { t: 0.5 + 0.5 * i as f64 }`
+/// gives 4 chains at t = 0.5, 1.0, 1.5, 2.0.
+pub fn run_alns_portfolio<F>(
+    puzzle: &Puzzle,
+    initial: &Board,
+    ops_factory: impl Fn(usize) -> Vec<Box<dyn DestroyOp>> + Send + Sync,
+    base_cfg: &AlnsConfig,
+    n_chains: usize,
+    acceptance_for_chain: F,
+) -> (Board, Vec<(u32, AlnsStats)>)
+where
+    F: Fn(usize) -> Acceptance + Send + Sync,
+{
+    use rayon::prelude::*;
+    let chains: Vec<(usize, u64)> = (0..n_chains)
+        .map(|i| (i, base_cfg.seed.wrapping_add(i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)))
+        .collect();
+    let results: Vec<(Board, AlnsStats)> = chains
+        .into_par_iter()
+        .map(|(i, seed)| {
+            let mut cfg = AlnsConfig {
+                time_budget_ms: base_cfg.time_budget_ms,
+                repair_budget_ms: base_cfg.repair_budget_ms,
+                acceptance: acceptance_for_chain(i),
+                segment_iters: base_cfg.segment_iters,
+                seed,
+                verbose: false,
+                repair: base_cfg.repair,
+                cp_fallback_to_sa: base_cfg.cp_fallback_to_sa,
+                pinned_positions: base_cfg.pinned_positions.clone(),
+            };
+            cfg.seed = seed;
+            let mut ops = ops_factory(i);
+            run_alns(puzzle, initial, ops.as_mut_slice(), &cfg)
+        })
+        .collect();
+    // Pick best.
+    let mut best_idx = 0usize;
+    let mut best_score = 0u32;
+    let stats_with_scores: Vec<(u32, AlnsStats)> = results
+        .iter()
+        .enumerate()
+        .map(|(i, (b, s))| {
+            let score = score_board(puzzle, b);
+            if score > best_score {
+                best_score = score;
+                best_idx = i;
+            }
+            (score, s.clone())
+        })
+        .collect();
+    let best_board = results[best_idx].0.clone();
+    (best_board, stats_with_scores)
 }
 
 // Re-export so the binary doesn't need to know internal modules.

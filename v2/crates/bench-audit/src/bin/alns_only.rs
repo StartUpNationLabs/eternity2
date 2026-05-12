@@ -166,6 +166,13 @@ fn main() {
         "ALNS: elapsed={:.1}s iters={} placed={ap}/256 matched={am}/480 polish_rot=+{rg} polish_swap=+{sg}",
         elapsed.as_secs_f64(), stats.iters
     );
+    // Vol-17 — show when new bests were found.
+    if !stats.best_score_history.is_empty() {
+        eprintln!("  best_score_history: {} entries", stats.best_score_history.len());
+        for (iter, score) in &stats.best_score_history {
+            eprintln!("    iter={iter:>4}  new_best={score}");
+        }
+    }
     for (i, name) in stats.op_names.iter().enumerate() {
         let inv = stats.per_op_invocations[i];
         let acc = stats.per_op_accepts[i];
