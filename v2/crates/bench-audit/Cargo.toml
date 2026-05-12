@@ -67,3 +67,7 @@ path = "src/bin/rescore_board.rs"
 [[bin]]
 name = "run_e2_framefirst"
 path = "src/bin/run_e2_framefirst.rs"
+
+[[bin]]
+name = "run_e2_hintcentric"
+path = "src/bin/run_e2_hintcentric.rs"
