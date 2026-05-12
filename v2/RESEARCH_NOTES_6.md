@@ -123,6 +123,39 @@ disagree, and everything else is consensus.
 **Next experiment**: build a focused CP/MaxSAT solver for the 32-cell
 sub-puzzle. Estimated 4-8h.
 
+### A continued — consensus-threshold sweep (07:14)
+
+**Setup**: try multiple consensus thresholds for skeleton.
+
+| Threshold | Skeleton size | Free cells | Zero-cand cells | Total candidates |
+|---|---|---|---|---|
+| 0.95 | 174 | 82 | 1 | 14,644 |
+| 0.90 | 188 | 68 | 3 | 7,752 |
+| 0.80 | 224 | 32 | 9 | 467 |
+| 0.70 | 228 | 28 | 7 | 280 |
+| 0.60 | 242 | 14 | 8 | 10 |
+
+**Observation**: at 0.80 threshold, 9 of 32 cells have ZERO valid
+candidates. The skeleton is OVER-constraining for those cells —
+no free piece can fit their surrounding colors. This means the
+"true skeleton" includes some cells that need to be reconsidered.
+
+**At 0.95**: only 1 zero-candidate cell out of 82 free. This is
+much closer to the actual structure: the truly-invariant skeleton
+is ~174 cells, with 82 cells genuinely uncertain.
+
+**Refined strategy**: use 0.95-threshold skeleton (174 cells) and
+solve the 82-cell sub-puzzle with focused methods. Total candidate
+state space ≈ 14,644 root-level candidates with constraint
+propagation — still tractable for CP with branch-and-bound.
+
+**Even better**: instead of hard skeleton + hard free, use the
+consensus AS A PRIOR for variable ordering and value picking in
+PT/SA. PT would still consider all cells but be biased toward
+the consensus placements. This is a **soft-skeleton** approach.
+
+
+
 ---
 
 ### Structure of this notes file
