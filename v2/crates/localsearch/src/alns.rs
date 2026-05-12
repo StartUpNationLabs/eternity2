@@ -245,7 +245,7 @@ pub fn repair(
 
 // ----- Destroy operators ------------------------------------------------
 
-pub trait DestroyOp {
+pub trait DestroyOp: Send {
     fn name(&self) -> &str;
     fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position>;
 }
@@ -1346,6 +1346,209 @@ where
         .collect();
     let best_board = results[best_idx].0.clone();
     (best_board, stats_with_scores)
+}
+
+/// Vol-17 NOVEL — Parallel Tempering on ALNS (PT-on-ALNS).
+///
+/// N chains at fixed temperatures `[t_min, ..., t_max]` (geometric ladder
+/// by default; linear if `linear_ladder=true`). Each chain runs ALNS
+/// with its own state. Periodically (every `exchange_every_rounds`
+/// outer rounds), an exchange step proposes swapping adjacent chains'
+/// CURRENT boards according to Metropolis criterion.
+///
+/// Differs from `run_alns_portfolio`: portfolio runs chains independently
+/// to the time budget; PT exchanges boards between adjacent chains. The
+/// exchange lets a high-scoring board found by a hot chain "fall" to a
+/// colder chain that exploits it, while the hot chain takes the
+/// previously-cold board and explores around it.
+///
+/// `chain_ops_factory(chain_idx)` — each chain gets its own destroy op
+/// set (allows e.g. different ops per chain).
+///
+/// Returns: best board across all chains + per-chain stats + exchange
+/// acceptance stats.
+pub struct PtAlnsConfig {
+    pub n_chains: usize,
+    pub t_min: f64,
+    pub t_max: f64,
+    pub geometric_ladder: bool,
+    pub inner_iters_per_round: u32,
+    pub time_budget_ms: u64,
+    pub repair_budget_ms: u64,
+    pub segment_iters: u32,
+    pub seed: u64,
+    pub verbose: bool,
+    pub repair: RepairKind,
+    pub cp_fallback_to_sa: bool,
+    pub pinned_positions: Vec<Position>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PtAlnsStats {
+    pub rounds: u64,
+    pub exchange_proposals: u64,
+    pub exchange_accepts: u64,
+    pub per_chain_scores: Vec<u32>,
+    pub per_chain_iters: Vec<u32>,
+    pub global_best_score: u32,
+    pub global_best_seen_at_round: u64,
+    pub global_best_seen_at_chain: usize,
+}
+
+pub fn run_alns_pt(
+    puzzle: &Puzzle,
+    initial: &Board,
+    chain_ops_factory: impl Fn(usize) -> Vec<Box<dyn DestroyOp>> + Send + Sync,
+    cfg: &PtAlnsConfig,
+) -> (Board, PtAlnsStats) {
+    use rayon::prelude::*;
+    assert!(cfg.n_chains >= 2, "PT needs ≥2 chains");
+    assert!(cfg.t_min > 0.0 && cfg.t_max > cfg.t_min, "bad temperature range");
+
+    // Build temperature ladder.
+    let n = cfg.n_chains;
+    let temps: Vec<f64> = if cfg.geometric_ladder {
+        let ratio = (cfg.t_max / cfg.t_min).powf(1.0 / (n as f64 - 1.0));
+        (0..n).map(|i| cfg.t_min * ratio.powi(i as i32)).collect()
+    } else {
+        let denom = (n - 1).max(1) as f64;
+        (0..n).map(|i| cfg.t_min + (cfg.t_max - cfg.t_min) * (i as f64) / denom).collect()
+    };
+
+    // Build per-chain initial state.
+    let mut boards: Vec<Board> = vec![initial.clone(); n];
+    let mut scores: Vec<u32> = boards.iter().map(|b| score_board(puzzle, b)).collect();
+    let mut best_board = boards[0].clone();
+    let mut best_score = scores[0];
+    let mut best_chain = 0;
+    let mut best_round = 0u64;
+    for i in 1..n {
+        if scores[i] > best_score {
+            best_score = scores[i];
+            best_board = boards[i].clone();
+            best_chain = i;
+        }
+    }
+
+    // Per-chain op sets, RNGs, weights.
+    let mut chain_ops: Vec<Vec<Box<dyn DestroyOp>>> = (0..n).map(|i| chain_ops_factory(i)).collect();
+    let mut chain_seeds: Vec<u64> = (0..n)
+        .map(|i| cfg.seed.wrapping_add((i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)))
+        .collect();
+    let mut total_iters: Vec<u32> = vec![0; n];
+
+    let mut stats = PtAlnsStats {
+        rounds: 0,
+        exchange_proposals: 0,
+        exchange_accepts: 0,
+        per_chain_scores: scores.clone(),
+        per_chain_iters: vec![0; n],
+        global_best_score: best_score,
+        global_best_seen_at_round: 0,
+        global_best_seen_at_chain: best_chain,
+    };
+
+    // Exchange RNG (separate so chain RNGs aren't biased by exchange order).
+    let mut exchange_rng = AlnsRng::new(cfg.seed ^ 0xDEAD_BEEF_CAFE_BABE);
+
+    let t_start = std::time::Instant::now();
+
+    while t_start.elapsed().as_millis() < cfg.time_budget_ms as u128 {
+        stats.rounds += 1;
+
+        // PHASE A: each chain runs `inner_iters_per_round` ALNS iterations.
+        let pinned_set: BTreeSet<Position> = cfg.pinned_positions.iter().copied().collect();
+        // Build bundles per chain. Use Index by index to avoid aliasing.
+        let bundles: Vec<(usize, &Board, &[Position], u64, f64)> = (0..n)
+            .map(|i| (i, &boards[i], &cfg.pinned_positions[..], chain_seeds[i], temps[i]))
+            .collect();
+        // Run in parallel via rayon. Each task produces (new_board, new_score,
+        // new_seed, iter_count). We can't hold &mut ops across the parallel
+        // iterator, so we use `chain_ops` indexed by chain_id; pop the ops out
+        // before the parallel call and reinstate after.
+        let ops_taken: Vec<Vec<Box<dyn DestroyOp>>> = std::mem::take(&mut chain_ops);
+        let pinned_clone = pinned_set.clone();
+        let pinned_positions = cfg.pinned_positions.clone();
+        let results: Vec<(usize, Board, u32, u64, u32, Vec<Box<dyn DestroyOp>>)> = ops_taken
+            .into_par_iter()
+            .enumerate()
+            .map(|(i, mut ops)| {
+                let cfg_chain = AlnsConfig {
+                    time_budget_ms: cfg.time_budget_ms, // generous; iter_budget caps it
+                    repair_budget_ms: cfg.repair_budget_ms,
+                    acceptance: Acceptance::SimulatedAnnealing { t: temps[i] },
+                    segment_iters: cfg.segment_iters,
+                    seed: chain_seeds[i],
+                    verbose: false,
+                    repair: cfg.repair,
+                    cp_fallback_to_sa: cfg.cp_fallback_to_sa,
+                    pinned_positions: pinned_positions.clone(),
+                    iter_budget: cfg.inner_iters_per_round,
+                };
+                let (new_board, new_stats) = run_alns(puzzle, &boards[i], ops.as_mut_slice(), &cfg_chain);
+                let new_score = score_board(puzzle, &new_board);
+                let new_seed = chain_seeds[i].wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+                (i, new_board, new_score, new_seed, new_stats.iters, ops)
+            })
+            .collect();
+        let _ = pinned_clone;
+        // Re-insert ops, update state.
+        chain_ops = (0..n).map(|_| Vec::new()).collect();
+        for (i, new_board, new_score, new_seed, iters, ops) in results {
+            boards[i] = new_board;
+            scores[i] = new_score;
+            chain_seeds[i] = new_seed;
+            total_iters[i] += iters;
+            chain_ops[i] = ops;
+            if new_score > best_score {
+                best_score = new_score;
+                best_board = boards[i].clone();
+                best_chain = i;
+                best_round = stats.rounds;
+                stats.global_best_score = best_score;
+                stats.global_best_seen_at_round = best_round;
+                stats.global_best_seen_at_chain = best_chain;
+            }
+        }
+
+        // PHASE B: exchange step for adjacent pairs.
+        // Process pairs in alternating odd/even order to avoid bias.
+        let pair_order_offset = (stats.rounds % 2) as usize;
+        let mut pair = pair_order_offset;
+        while pair + 1 < n {
+            let i = pair;
+            let j = pair + 1;
+            stats.exchange_proposals += 1;
+            // Metropolis: accept if u < exp((s_i - s_j) × (1/t_j - 1/t_i)).
+            // Equivalently, when s_j > s_i, the colder chain (i, smaller t)
+            // wants to take s_j; this happens with prob 1 if the math works.
+            let delta = (scores[i] as f64 - scores[j] as f64)
+                * (1.0 / temps[j] - 1.0 / temps[i]);
+            let p = delta.exp().min(1.0);
+            let u = exchange_rng.next_f64();
+            if u < p {
+                stats.exchange_accepts += 1;
+                boards.swap(i, j);
+                scores.swap(i, j);
+            }
+            pair += 2;
+        }
+
+        if cfg.verbose {
+            eprintln!(
+                "[PT-ALNS round {}] t_start={:.1}s scores={:?} best={} (chain {})",
+                stats.rounds,
+                t_start.elapsed().as_secs_f64(),
+                scores,
+                best_score,
+                best_chain,
+            );
+        }
+    }
+
+    stats.per_chain_scores = scores;
+    stats.per_chain_iters = total_iters;
+    (best_board, stats)
 }
 
 // Re-export so the binary doesn't need to know internal modules.
