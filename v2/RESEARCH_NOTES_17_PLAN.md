@@ -174,20 +174,59 @@ The technique is documented; we just need to ship it.
 **Effort:** 2–3 days. **Expected:** stable 460–467 cold-start score IF the
 phase-2 completion works. The phase-2 completion is the hard part.
 
+### K. Blackwood-then-CSP pipeline (user idea, vol-15 closeout)
+
+**What:** Run BLACKWOOD_RAW for N min CP → take placed cells as additional
+Hints → run `joe_depth150_bp_par` to fill the rest → ALNS. Three variants
+(sequential / mid-search switch / portfolio crossover) detailed in
+[[project-e2-vol17-blackwood-then-csp]]. Variant A is the half-day starter.
+
+**Why it might work:** vol-15 measured **+260-270 ALNS lift** from Blackwood
+seeds (vs baseline's +147). Strong evidence Blackwood partials are
+higher-quality per cell despite being sparser. Treating Blackwood as a
+SEED-GENERATOR (not a solver) composes its strengths with CSP's coverage
+and ALNS's repair.
+
+**Effort:** half-day for Variant A; couple of days with vol-16's strategy
+trait once Cat-2 Stage B lands.
+**Expected:** plausible 440-455 cold-start. **Critical caveat:**
+break-mismatched partials may violate AC-3/gacolor/NS-1 invariants when
+pinned; must validate via `apply_symmetry_and_hints` before pinning, or
+use `BLACKWOOD_RAW` schedule with no breaks for the first try.
+
+### L. Cold portfolio: best-of-K baseline seeds (the cheap T1 hedge)
+
+**What:** Run `joe_depth150_bp_par` cold-start at the post-vol-16 4.6×
+throughput on 8 different seeds (5min CP + 5min ALNS each, sequential).
+Take the best. With Cat-4d's O(n²)→O(n) `score_board`, even ALNS now
+scales better.
+
+**Why it might work:** we've NEVER measured baseline variance across seeds.
+Vol-15 seed-1 hit 439/480; median across seeds is unknown, but log-normal
+search heuristics suggest best-of-8 typically beats median by 5-15
+matched edges. Plausible 444-454 cold-start with zero new algorithm work.
+
+**Effort:** 0 dev (just runs harness already shipped). **Expected:**
+44x-454, with calibrated variance — useful AS DATA for vol-17's other
+experiments (every new algorithm now has a variance-aware comparison
+baseline).
+
 ## Suggested ordering
 
 | order | idea | why first |
 |---|---|---|
 | 1 | A. Schedule calibration | unblocks T1, single afternoon |
-| 2 | D. Zobrist for PT | small, clean, enables E better tabu |
-| 3 | B. Cluster-swap ALNS | direct lever on the 446 → ≥455 gap |
-| 4 | H. Fiedler ordering | quick PoC; refute or commit |
-| 5 | C. Bipartite gacolor v2 | structural prune improvement |
-| 6 | J. Verhaard set-SA | high-EV historical method |
-| 7 | F. PMPS | wild card; publishable null OK |
-| 8 | I. CP+SAT cooperative | infrastructure-heavy; later |
-| 9 | E. Ring enumeration | only after 1-clue context is needed |
-| 10 | G. GNN piece embedding | last; needs trained model |
+| 2 | L. Cold portfolio | 0 dev, gives variance + plausible T1 |
+| 3 | K. Blackwood-then-CSP | user-proposed, composes vol-15 finding |
+| 4 | D. Zobrist for PT | small, clean, enables better tabu |
+| 5 | B. Cluster-swap ALNS | direct lever on the 446 → ≥455 gap |
+| 6 | H. Fiedler ordering | quick PoC; refute or commit |
+| 7 | C. Bipartite gacolor v2 | structural prune improvement |
+| 8 | J. Verhaard set-SA | high-EV historical method |
+| 9 | F. PMPS | wild card; publishable null OK |
+| 10 | I. CP+SAT cooperative | infrastructure-heavy; later |
+| 11 | E. Ring enumeration | only after 1-clue context is needed |
+| 12 | G. GNN piece embedding | last; needs trained model |
 
 ## Bars for vol-17
 
