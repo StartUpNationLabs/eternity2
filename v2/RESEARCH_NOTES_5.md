@@ -453,6 +453,37 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### CASCADE PHASE B FINAL 04:04 — 2/8 reached 451, none broke 452
+
+**Setup**: 8 cascade crossovers using the 452 board + various 449/450
+parents at random regions (3×3 to 5×5) × 120s PT each.
+
+**Results**:
+| # | Region | B parent | Polished |
+|---|---|---|---|
+| 1 | 5×5 (4,1)   | NE2-K10 449 | **451** |
+| 2 | 5×5 (7,6)   | NE1-stage1 450 | 445 |
+| 3 | 4×4 (2,10)  | canonical 449 | 447 |
+| 4 | 3×3 (4,7)   | canonical 449 | 448 |
+| 5 | 4×4 (9,4)   | vol-4 450 | 446 |
+| 6 | 4×4 (5,5)   | vol-4 450 | 448 |
+| 7 | 4×4 (6,11)  | vol-4 450 | 448 |
+| 8 | 3×3 (1,11)  | NE2-K10 449 | **451** |
+
+**2 of 8 reached 451+** (25% — improvement over GA-light's 8% rate
+because parent A is the 452, structurally stronger). **None broke
+452.**
+
+**The 452 remains the night's record.** Cascade-from-452 reliably
+produces 451-class results but doesn't push higher with this setup.
+
+**Cumulative 451+ tally tonight**:
+- 1 × 452 (GA-light cross #4, vol-4 450 + NE2-K10 449, region (11,1)+4)
+- 3 × 451 (1 from GA-light, 2 from cascade)
+
+Total of **4 boards with score ≥ 451 produced tonight** from algorithms
+that did not exist at session start.
+
 ### CASCADE PHASE A 03:50 — 1800s PT CANNOT push 452 → 453
 
 **Setup**: cascade Phase A ran 1800s of PT on the new 452 board.
