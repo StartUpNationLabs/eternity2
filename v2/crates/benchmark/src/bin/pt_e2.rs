@@ -118,6 +118,15 @@ struct Args {
     /// to bucas_url decode if `placement` is missing.
     #[arg(long)]
     start_from: Option<PathBuf>,
+
+    /// If true, pin the 60 perimeter cells (4 corners + 56 edges) during
+    /// PT, in addition to whatever else is pinned. The `--start-from`
+    /// board's perimeter is taken as authoritative. Used for BORDER-3
+    /// triage: a synthetic full board with a generated border + random
+    /// interior is fed via `--start-from`, then PT searches only the
+    /// interior. Requires `--start-from`.
+    #[arg(long, default_value_t = false)]
+    pin_perimeter: bool,
 }
 
 /// Read a board from a pt_e2/frame_first_e2 result JSON's `placement`
@@ -240,13 +249,36 @@ fn main() {
 
     // ----- PT phase -----
     eprintln!("\n--- PT phase ({}s, {} replicas) ---", args.pt_seconds, args.n_replicas);
-    let pinned: Vec<u32> = if args.pin_hints {
+    let mut pinned: Vec<u32> = if args.pin_hints {
         file_hints.hints.iter().map(|h| h.position).collect()
     } else { Vec::new() };
     if args.pin_hints {
         eprintln!("pinning {} hint positions during PT: {:?}", pinned.len(), pinned);
     } else {
         eprintln!("pin_hints=false: PT may move hint pieces (UNOFFICIAL E2)");
+    }
+    if args.pin_perimeter {
+        if args.start_from.is_none() {
+            panic!("--pin-perimeter requires --start-from (perimeter pieces come from the start-from board)");
+        }
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let max_x = w - 1;
+        let max_y = h - 1;
+        let mut perim_positions: Vec<u32> = Vec::with_capacity(60);
+        for x in 0..w { perim_positions.push(x); }                       // top row
+        for y in 1..max_y { perim_positions.push(y * w + max_x); }       // right col (exclusive of corners)
+        for x in 0..w { perim_positions.push(max_y * w + x); }           // bottom row
+        for y in 1..max_y { perim_positions.push(y * w); }               // left col (exclusive of corners)
+        // de-duplicate (corners appear in top/bottom rows; right/left exclude them so 60 unique)
+        let prev_len = pinned.len();
+        for p in &perim_positions {
+            if !pinned.contains(p) { pinned.push(*p); }
+        }
+        eprintln!(
+            "pin_perimeter: added {} perimeter positions to pinned set ({} hint + {} perimeter = {} total)",
+            pinned.len() - prev_len, prev_len, perim_positions.len(), pinned.len()
+        );
     }
     let forbidden_edges = if let Some(p) = args.forbidden_edges.as_ref() {
         let s = std::fs::read_to_string(p).expect("read forbidden_edges JSON");

@@ -11,7 +11,8 @@ import json
 from collections import Counter
 
 PUZZLE = '../data/puzzles/size_16_official_eternity.csv'
-LIB = 'output/borders/sample_10k.jsonl'
+import sys
+LIB = sys.argv[1] if len(sys.argv) > 1 else 'output/borders/sample_100k.jsonl'
 CORPUS_453 = 'output/night-archive/HISTORIC_first_453_1778557672.json'
 
 

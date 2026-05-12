@@ -646,11 +646,78 @@ inner-corner candidates per cell (corpus 453):
   borders by max corner-sum.
 - 3727 infeasible borders excluded.
 
-### BORDER-3d — add `--pin-perimeter` to pt_e2 (next)
+### BORDER-3d — `--pin-perimeter` flag in pt_e2
 
-pt_e2 currently has `--pin-hints` (hint pieces only). We need
-`--pin-perimeter <border.json>` to load the 60-cell border arrangement
-and pin them as additional hints. Then:
-  - Sanity test: pinning the 453's own border + PT should produce 453.
-  - Triage: pin each library border, PT 10s, record best score.
-  - Funnel: top-K → 60s PT → 300s PT.
+Implemented as a simple extension of the existing `pinned_positions`
+infrastructure. When `--pin-perimeter` is set, all 60 perimeter
+positions (row 0, row 15, col 0, col 15) are appended to the pinned
+set. The pieces at those positions come from `--start-from`. Total
+PT freedom: 196 interior cells (excluding the 5 hint cells, which
+remain pinned via `--pin-hints`).
+
+### BORDER-3d.5 — **NEW RECORD: 454/480 (2026-05-12 ~08:37)** ⭐
+
+**Sanity-test setup**: pin the corpus 453's OWN border, run 30s PT.
+Expected: PT should approximately reproduce 453 (since EvalMaxSAT
+proved inner-k≤5 sub-regions are optimal).
+
+**Actual result**: **PT reached 454/480**, beating 453 by ONE matched
+edge. All hints in correct positions; all 256 piece IDs unique;
+independently re-counted matched edges = 454. Saved as
+`output/HISTORIC_first_454_1778567792.json`.
+
+```
+PT done in 30.0s: rounds=1330 best=454/480 (94.6%) swap_accept_rate=26.2%
+final replica scores: [454, 454, 454, 440, 347, 240, 187, 153]
+3 of 8 replicas independently reached 454.
+```
+
+**Diff vs the 453**:
+```
+border identical: YES (0/60 diffs)
+interior cell diffs: 17/196 (8.7% of interior changed)
+```
+
+**Reconciliation with EvalMaxSAT optimality proof**:
+
+The EvalMaxSAT proof was: "for the 453's interior, any individual
+k×k sub-region (k∈{3,4,5}) is locally optimal — no rearrangement
+of THOSE k² cells alone beats the current configuration."
+
+But improving 453 → 454 requires changing **17 cells scattered across
+multiple k=5 windows simultaneously**. No single k=5 EvalMaxSAT
+instance covers all 17 cells, so the per-window optimality proof
+is preserved even as the global solution improves. (We could ask:
+is there an EvalMaxSAT instance with a bigger k or with non-square
+window that proves 454 is the new optimum? Future work.)
+
+**Method significance**:
+- Three earlier algorithms (NE-iter, GA-XL, NE-GA-CASCADE-453)
+  cascaded from 453 boards and didn't break 453 in dozens of runs.
+- This breakthrough came from `pt_e2 --pin-perimeter` — pinning the
+  border explicitly and letting the interior float. The previous
+  algorithms IMPLICITLY held the border because they used local
+  swap moves that rarely touch border cells, but they ALSO let the
+  border move and the resulting "PT freedom on border + on interior"
+  apparently was not as effective as "border PINNED + maximum
+  interior freedom."
+- This suggests the corpus's stickiness wasn't just that PT couldn't
+  find 454 — it's that letting the border be even loosely mobile
+  prevented the interior from being properly explored. **Pinning
+  helps PT.**
+
+**Implications**:
+1. The 454 board is now the new ceiling, **and** it's reproducible
+   from the SAME border as the 453 — meaning EVERY corpus board
+   with this border was leaving ≥1 edge on the table.
+2. Re-run all corpus 449/450/451/452/453 boards with `--pin-perimeter`
+   + PT to see if their interiors also improve.
+3. The original border-diversity hypothesis ("we need new borders to
+   break 453") is **partially falsified** — we broke 453 with the
+   OLD border. But the new sampler + triage may still find ≥455.
+4. **Repeat the experiment on the new 454 board**: run pt_e2 with
+   the 454's border pinned (same border) for longer. Does it reach
+   455+? If yes, the corpus PT was systematically under-converging.
+
+**Next**: BORDER-3d.6 — quick saturation experiment on the 454
+board with same border, 5min × 5 seeds, see if 455+ emerges.

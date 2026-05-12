@@ -10,7 +10,8 @@ constraints).
 import json
 from collections import Counter
 
-LIB = 'output/borders/sample_10k.jsonl'
+import sys
+LIB = sys.argv[1] if len(sys.argv) > 1 else 'output/borders/sample_100k.jsonl'
 
 def main():
     rows = []
