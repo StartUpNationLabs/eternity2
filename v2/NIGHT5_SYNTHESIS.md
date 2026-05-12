@@ -167,6 +167,14 @@ independent breakthroughs. To find a structurally distinct second
 451+ basin, future work needs more structurally-diverse parents
 or wider crossover regions.
 
+**SECOND BREAKTHROUGH (2026-05-12 05:47)**: GA-LARGE cross #37
+(canonical 449 basin B + cascade #1 451, region 4×4 at (3,2) in
+the TOP-LEFT) reached **453/480** with 27 mismatches. **Overlap
+with 452: 75.9% — STRUCTURALLY NEW BASIN.** This empirically
+falsifies the "single 451+ basin" caveat above: at least 2
+451+/452+/453+ basins exist. The total budget on 453 = 27, the
+new low-water mark.
+
 
 Any algorithm that reaches 451+ from a 450 board must move ≥ 6
 pieces simultaneously OR perform a region rebuild (cell-set ≥ 6).
