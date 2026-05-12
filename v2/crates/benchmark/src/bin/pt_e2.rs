@@ -127,6 +127,13 @@ struct Args {
     /// interior. Requires `--start-from`.
     #[arg(long, default_value_t = false)]
     pin_perimeter: bool,
+
+    /// Generalisation of --pin-perimeter: a JSON list of 1D cell indices
+    /// to pin from --start-from. PT searches only the unpinned cells.
+    /// Used by MAP-Elites mutation: pin everything except a small region.
+    /// Combinable with --pin-perimeter and --pin-hints.
+    #[arg(long)]
+    pin_cells: Option<String>,
 }
 
 /// Read a board from a pt_e2/frame_first_e2 result JSON's `placement`
@@ -278,6 +285,20 @@ fn main() {
         eprintln!(
             "pin_perimeter: added {} perimeter positions to pinned set ({} hint + {} perimeter = {} total)",
             pinned.len() - prev_len, prev_len, perim_positions.len(), pinned.len()
+        );
+    }
+    if let Some(s) = args.pin_cells.as_ref() {
+        if args.start_from.is_none() {
+            panic!("--pin-cells requires --start-from");
+        }
+        let extra: Vec<u32> = serde_json::from_str(s).expect("parse --pin-cells JSON");
+        let prev_len = pinned.len();
+        for p in &extra {
+            if !pinned.contains(p) { pinned.push(*p); }
+        }
+        eprintln!(
+            "pin_cells: added {} positions to pinned set (now {} total)",
+            pinned.len() - prev_len, pinned.len()
         );
     }
     let forbidden_edges = if let Some(p) = args.forbidden_edges.as_ref() {
