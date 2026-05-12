@@ -453,6 +453,40 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### *** SECOND BREAKTHROUGH 05:47 — 453/480 ***
+
+**Cross #37**:
+- A: canonical 449 basin B (`output/archive/pt_e2_1778526208_449of480.json`).
+- B: cascade #1 451 (`output/pt_e2_1778550597_451of480.json`).
+- Region: 4×4 at (3,2) — **TOP-LEFT quadrant, different from the 452-
+  winning (11,1) region**.
+- Child raw: TBD; polished to 453/480 with 27 mismatches.
+
+**Verified**: 0 duplicates, 256/256 cells, score recomputes to 453.
+
+**Overlap with 452**: 75.9% — substantially DIFFERENT BASIN from the
+452. This is a **STRUCTURALLY NEW 453+ basin** discovered.
+
+**Score trajectory tonight**: 449 → 450 → 452 → 453. +4 over the
+night via GA crossover only.
+
+**Backup**: `output/HISTORIC_first_453_1778557672.json`.
+
+**Significance**:
+- 27 mismatches = 1 fewer than the 452's 28.
+- The 30-mismatch budget is broken further (was 30 → 28 with first
+  crossover; now → 27 with this one).
+- Confirms the synthesis: the abundant-color-trap minimum is NOT
+  fixed, just empirically PT-unreachable. GA crossover can drill
+  further down.
+- The 453 is in a different basin from the 452, meaning the basin
+  diversity hypothesis is empirically grounded — there ARE multiple
+  453-class basins reachable.
+
+**Implication**: GA-LARGE's predicted ~10% chance of 453+ was
+correct. ~22 more crossovers remain in GA-LARGE; potentially more
+453+ hits ahead.
+
 ### GA-LARGE 5 hits at 05:40 — basin diversity emerging
 
 **5 hits at 451+ from GA-LARGE so far**:
