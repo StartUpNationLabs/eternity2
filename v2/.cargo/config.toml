@@ -1,0 +1,8 @@
+# Per-target rustflags. ONLY affects aarch64-apple-darwin host builds.
+# WASM (wasm32-unknown-unknown) builds are unaffected — see wasm/build.sh.
+#
+# target-cpu=apple-m1 tells LLVM to use the Apple-specific instruction
+# scheduler. M2/M3 hosts can keep apple-m1 (binary still runs; M2/M3-specific
+# scheduling gains are sub-percent) or change to apple-m2 / apple-m3.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "target-cpu=apple-m1"]

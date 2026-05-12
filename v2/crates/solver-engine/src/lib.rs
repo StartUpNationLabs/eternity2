@@ -524,6 +524,10 @@ pub(crate) struct SearchState<'a> {
     /// sooner). Only consulted when `variable_order ==
     /// BorderFirstChess`. Empty for other orders.
     pub(crate) chess_rank: Vec<u32>,
+    /// Static per-position priority class: 0 = corner, 1 = edge, 2 = inner.
+    /// Read on every `select_position` call (hot — once per node); cached
+    /// here so we don't redo the `border_mask` arithmetic every time.
+    pub(crate) border_priority_cache: Vec<u32>,
     /// Reusable scratch for AC-3's hot-path count cache (Exp I).
     /// Shape is fixed at construction: `(n_pos * 4 * n_colors)` u16s for
     /// `ac3_count` and `(n_pos * words_per_pos)` u64s for `ac3_present`.
@@ -622,6 +626,16 @@ impl<'a> SearchState<'a> {
             } else {
                 Vec::new()
             },
+            border_priority_cache: {
+                let mut v = vec![0u32; n_pos];
+                for pos in 0..puzzle.cell_count() {
+                    let mask = puzzle.border_mask(pos);
+                    let n = u32::from(mask[0]) + u32::from(mask[1])
+                          + u32::from(mask[2]) + u32::from(mask[3]);
+                    v[pos as usize] = match n { 2 => 0, 1 => 1, _ => 2 };
+                }
+                v
+            },
             ac3_count: if solver.config.ac3_propagator {
                 vec![0u16; n_pos * 4 * puzzle.color_count as usize]
             } else {
@@ -669,10 +683,9 @@ impl<'a> SearchState<'a> {
         sink.emit(event);
     }
 
+    #[inline(always)]
     fn border_priority(&self, pos: Position) -> u32 {
-        let mask = self.puzzle.border_mask(pos);
-        let n = u32::from(mask[0]) + u32::from(mask[1]) + u32::from(mask[2]) + u32::from(mask[3]);
-        match n { 2 => 0, 1 => 1, _ => 2 }
+        self.border_priority_cache[pos as usize]
     }
 
     fn position_score(&mut self, pos: Position) -> (u32, u32) {

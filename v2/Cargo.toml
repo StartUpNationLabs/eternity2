@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/bench-audit",
     "crates/benchmark",
     "crates/core",
     "crates/edge-solver",
@@ -44,3 +45,14 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = "symbols"
+
+# Native-only "go fast" profile. Inherits release but cranks LTO to fat
+# (cross-crate inlining of EventSink::emit and the propagator hooks) and
+# preserves line tables so `samply` / `cargo flamegraph` stay usable.
+# Use: `cargo build --profile bench-fast -p eternity2-bench-audit --bin fleet`.
+# Do NOT use this profile for the WASM bundle.
+[profile.bench-fast]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+debug = "line-tables-only"

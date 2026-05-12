@@ -39,6 +39,15 @@ pnpm build                                                  # production build
 
 # Deploy (from v2/)
 docker compose -f deploy/docker-compose.yaml up -d --build
+
+# Native "go fast" profile for perf comparisons (fat LTO, +5-15% on hot loops).
+# Do NOT use for the WASM bundle. `.cargo/config.toml` sets target-cpu=apple-m1
+# for aarch64-apple-darwin only — WASM unaffected.
+cargo build --profile bench-fast -p eternity2-bench-audit --bin fleet
+./target/bench-fast/fleet --budget-ms 60000 --label baseline --out base.json
+# (edit code, rebuild)
+./target/bench-fast/fleet --budget-ms 60000 --label after --out after.json
+./target/release/compare base.json after.json
 ```
 
 ## Architecture (the big picture)
