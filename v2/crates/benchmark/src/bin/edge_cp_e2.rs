@@ -222,6 +222,7 @@ fn main() {
             houdayer_every: 0,
             houdayer_max_component: 20,
             houdayer_min_component: 4,
+            houdayer_accept_zero_delta: false,
         forbidden_edges: Vec::new(),
         forbidden_penalty_k: 0,
         };

@@ -94,6 +94,12 @@ struct Args {
     #[arg(long, default_value_t = 4)]
     houdayer_min: usize,
 
+    /// If true, accept Houdayer swaps with joint_delta == 0 (vol-3 buggy
+    /// microcanonical behaviour — infinite toggling on plateau states).
+    /// Default false: require strict positive joint_delta improvement.
+    #[arg(long, default_value_t = false)]
+    houdayer_accept_zero: bool,
+
     /// Path to JSON file with forbidden (universal-mismatch) edges:
     /// `[["h", pos], ["v", pos], ...]`. Empty/unset = unconstrained PT.
     #[arg(long)]
@@ -270,6 +276,7 @@ fn main() {
         houdayer_every: args.houdayer_every,
         houdayer_max_component: args.houdayer_max,
         houdayer_min_component: args.houdayer_min,
+        houdayer_accept_zero_delta: args.houdayer_accept_zero,
         forbidden_edges,
         forbidden_penalty_k: args.forbidden_k,
     };

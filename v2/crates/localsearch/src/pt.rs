@@ -99,6 +99,12 @@ pub struct PtConfig {
     /// Skip Houdayer components smaller than this size. Components of size
     /// < 2 are degenerate. Defaults to 4.
     pub houdayer_min_component: usize,
+    /// If true, accept Houdayer swaps with joint_delta == 0 (microcanonical,
+    /// the vol-3 behaviour). This causes infinite toggling on plateau states
+    /// because the swap is its own inverse — the disagreement set on the
+    /// component flips but does not shrink. Default false (require strict
+    /// joint_delta > 0 for any acceptance).
+    pub houdayer_accept_zero_delta: bool,
     /// Optional list of "forbidden" interior edges — typically the
     /// top-K universal-mismatch edges identified offline by
     /// `scripts/universal_mismatches.py`. Empty = unconstrained PT.
@@ -142,6 +148,7 @@ impl Default for PtConfig {
             houdayer_every: 0,
             houdayer_max_component: 20,
             houdayer_min_component: 4,
+            houdayer_accept_zero_delta: false,
             forbidden_edges: Vec::new(),
             forbidden_penalty_k: 0,
         }
@@ -427,23 +434,30 @@ pub fn run_pt_from(
                 houdayer_applications += 1;
                 // Use the swap RNG so randomness is reproducible per seed.
                 let proposals = enumerate_proposals(puzzle, &boards[i], &boards[i + 1]);
-                // Filter to components within the size band.
-                let mut admissible: Vec<&_> = proposals
+                // Filter to components within the size band AND require a
+                // strict positive joint_delta. Vol-3 bug: accepting
+                // joint_delta=0 swaps caused infinite toggling because the
+                // swap is its own inverse on plateau states (disagreement
+                // set on the component flips but doesn't shrink). Strict
+                // improvement is the only useful Houdayer move on a moat.
+                let admissible: Vec<&_> = proposals
                     .iter()
                     .filter(|p| {
                         p.component.len() >= cfg.houdayer_min_component
                             && p.component.len() <= cfg.houdayer_max_component
+                            && (p.joint_delta > 0
+                                || (cfg.houdayer_accept_zero_delta && p.joint_delta == 0))
                     })
                     .collect();
                 houdayer_components_proposed += admissible.len() as u64;
                 if admissible.is_empty() {
                     continue;
                 }
-                // Pick one uniformly at random.
-                let idx = (swap_rng.next_u64() as usize) % admissible.len();
-                let chosen = admissible.remove(idx);
-                // Snapshot for revert if Metropolis decides against.
-                // For now (microcanonical), always apply.
+                // Prefer the highest-joint-delta swap. Proposals are
+                // already sorted by joint_delta desc, but our filter
+                // may have removed the top; pick the first surviving
+                // (= highest-delta admissible).
+                let chosen = admissible[0];
                 let prop = chosen.clone();
                 // Boards need disjoint mutable access; split via split_at_mut.
                 let (lo, hi) = boards.split_at_mut(i + 1);
