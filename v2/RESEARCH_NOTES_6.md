@@ -373,3 +373,193 @@ Each candidate gets its own subsection. Per experiment:
 - Setup (exact command, parameters, predicted outcome)
 - Result (numbers + interpretation)
 - Verdict (next step)
+
+---
+
+## VOL-6 PIVOT — BORDER-FIRST attack ("change the edges, not the center")
+
+### Context
+
+EvalMaxSAT inner-{3,4,5} bisection rigorously proved: the 453 board's
+**inner k≤5 sub-region is OPTIMAL given the current outer**. Inner k=6
+times out at 60s, k=8 times out at 739s with `s UNKNOWN`. Inner-attack
+as a path to 454+ is dead.
+
+Sister-session research conclusion: the 453 ceiling is a property of
+the CURRENT BORDER, not of the puzzle. To find 454+, we must change
+the BORDER (the 60 outer cells: 4 corners + 56 edge pieces).
+
+### BORDER-1 — DIAGNOSIS (2026-05-12 morning): CORPUS IS BORDER-MONOCULTURE
+
+**Setup**: extracted the 60-cell border signature (piece_id, rotation
+per cell) of every corpus board ≥449. Counted unique borders and
+per-cell consensus.
+
+**Result**:
+```
+corpus ≥449:                                28 boards
+unique borders:                              3
+border collisions (boards sharing border):  25 / 28
+mean per-border-cell agreement:              0.862
+border cells with 100% consensus:            5
+border cells with ≥95% consensus:            5
+border cells with ≥80% consensus:           58 / 60
+border cells with <50% consensus:            0
+```
+
+**Interpretation**: every algorithm we ran (PT, NE, frame-first, GA-XL,
+GA-CASCADE) explored ESSENTIALLY ONE BORDER. 58/60 border cells are
+the same piece-rotation in ≥80% of all boards ≥449. The corpus is
+border-monoculture.
+
+**Why this happened**: PT and frame-first both lock the border early
+(it's trivially 100% feasible per RESEARCH_NOTES_4 Phase-C); GA
+crossover preserves border because corner-and-edge pieces have
+distinct color signatures, so swapping interior blocks never disturbs
+the border. The corpus inherited the border from the FIRST converged
+PT run and propagated it via every downstream algorithm.
+
+**Implication**: the 453 ceiling is a property of THIS BORDER. Moncktons's
+hint structure constrains many borders to be near-feasible, so there
+should be many distinct valid borders — we've just never sampled them.
+
+### BORDER-2 — generative border library (in progress)
+
+**Hypothesis**: there exist many (possibly thousands) of distinct
+fully-feasible borders — sequences of corner+edge pieces along the
+perimeter where adjacent border-colors match, AND the 5 official hint
+pieces are placed at their fixed cells/rotations.
+
+**Setup (planned)**:
+1. Identify the 60 border pieces (4 corners with two BORDER edges,
+   56 edges with one BORDER edge) from the puzzle file.
+2. Enumerate / sample border placements as sequences:
+   - Top row: corner_TL → 14 edge pieces → corner_TR
+   - Right col: corner_TR → 14 edges → corner_BR
+   - Bottom row: corner_BR → 14 edges → corner_BL
+   - Left col: corner_BL → 14 edges → corner_TL
+3. Per cell, the inward-facing color is what the interior must match.
+4. The 5 official hints constrain 1 corner + ?? cells.
+5. Use a fast backtracker (no interior, just border) — should be very
+   cheap. Target: 100-1000 distinct feasible borders.
+
+**Predicted outcome**: tens to thousands of feasible borders, far more
+than 3. Confirm with score per (border, interior PT 30s) pair.
+
+### BORDER-2a — Combinatorial estimate (transfer-matrix)
+
+**Setup** (`scripts/border_count_estimate.py`): build a transfer
+matrix `T[c→c']` = # edge placements presenting (left=c, right=c')
+when oriented BORDER-out. 4 corner placements per corner × `T^14`
+along each side × cycle closure.
+
+**Result**:
+```
+Naive 4! × 56!:                    1.7e76
+Transfer-matrix (with replacement): 2.4e58
+Per-color T row sums (color → # placements): 1=12, 2=11, 3=10, 4=11, 5=12
+Border-color alphabet: ONLY {1,2,3,4,5} (the rare colors).
+Per-corner placements: TL=TR=BR=BL=4 each.
+```
+
+**Interpretation**: the border CSP has very strong color regularity:
+only 5 colors used on the inward perimeter, branching factor ~10
+after color match (vs 64 raw placements). With-replacement count
+≈ 10⁵⁸ is the "shape" — once piece-uniqueness is enforced, the true
+count is astronomically smaller but still enormously larger than 3.
+
+**Implication**: there are almost certainly 10²–10⁸+ distinct
+feasible borders. Naïve Python backtracking (60-deep tree, ~10
+branching) is too slow. Need:
+  - Rust implementation (10²-10³× speedup over Python).
+  - Cycle-closure constraint propagated UP FRONT (fix TL incoming
+    color first).
+  - Per-color piece-budget pruning (only 10-12 pieces per color
+    class, so we can prune when a class is exhausted before all
+    its slots are filled).
+
+**Side discovery**: the border uses ONLY colors 1-5 (the "rare
+colors" from RESEARCH_NOTES_5 frequency analysis). This means the
+abundant colors 6-22 NEVER appear on the perimeter — they're
+pure-interior. This was implicit but is now confirmed: it explains
+why "rare always matched" in our corpus — rare colors are
+*structurally forced* on the perimeter where colors are scarce.
+
+### BORDER-2b — Rust enumerator (corners-first decomposition)
+
+**Iteration 1 (full-perimeter DFS)**: 690M nodes/30s, 0 borders.
+Single-step forward-checking too weak; max_depth stalled at 29/60
+(top row + half right column). Pure DFS doomed for a 60-deep tree
+with branching ~10.
+
+**Iteration 2 (corners-first + per-side path enumeration + 4-way
+disjoint product)**: 60s, 0 borders, 3 corner-quads tried. Per-side
+enumeration itself is the bottleneck.
+
+**Iteration 3 — diagnostic**: enumerated TOP-side paths with the
+453's known boundary colors (start=1, end=2):
+```
+top paths start=1 end=2: 5,774,451+ (cut off at 30s, not exhausted)
+nodes: ~10M, ~330k paths/s in Python
+```
+
+**HUGE FINDING**: a **SINGLE side** has 5.77M+ paths just for a single
+(start, end) color pair. With 4 corner placements per corner and 24
+corner-permutation symmetries, the total raw border space is at least
+10²² distinct paths before piece-disjoint filtering. The 3-border
+corpus monoculture is NOT a property of the border space being small —
+it's pure algorithmic stickiness.
+
+**Implication**: SAMPLING is the right approach, not enumeration. We
+need a stratified sampler:
+  1. Sample (TL, TR, BR, BL) corner-quad uniformly from ~24 distinct.
+  2. For each side: sample one valid 14-piece path uniformly via
+     Las Vegas backtracking (random ordering at each node, restart
+     on dead end).
+  3. Reject if cross-side piece-disjoint constraint fails.
+  4. Repeat until N=10³+ distinct borders.
+
+**Iteration 4 — Las Vegas sampler (SUCCESS)**:
+- Pick a corner-quad uniformly at random from the 24 distinct.
+- Per side, randomized backtracking with shuffled candidate order
+  + node budget (50k per side).
+- Cross-side disjoint-pieces enforced via bitmask (256-bit `[u64; 4]`).
+- FNV-style hash for de-duplication.
+
+```
+target=10000 borders, 60s budget
+result: 10000 distinct borders in 5.9s, 11367 samples,
+        88% per-sample success rate, ~1900 samples/s.
+```
+
+**Implication**: the border space is enormous and easy to sample
+diversely. Our corpus monoculture is 100% an artifact of every
+algorithm latching onto the SAME border early. Now we have 10k
+borders and can ask: which borders SUPPORT a higher interior PT
+score than the corpus's 3?
+
+### BORDER-3 — score borders via interior PT (next)
+
+**Setup**: for each of the 10k borders, run pt_e2 with the border
+PINNED, ~30-60s budget per border (will need parallelism). Record
+the best interior score achieved. Anything ≥454 is the breakthrough.
+
+**Caveat**: pt_e2 currently doesn't have a `--pin-border` option;
+it has `--pin-hints` (hint pieces only). We need to either:
+  (a) Add a `--pin-perimeter` flag to pt_e2 (load 60 cells from
+      a board JSON or border JSONL, treat them as additional hints).
+  (b) Construct a synthetic puzzle JSON where the 60 border cells
+      are encoded as fake "hints" — quick hack.
+
+Option (a) is cleaner. Building it next.
+
+**Triage strategy**: 10k borders × 60s = 7 days serial. Need to
+either (1) parallelize, (2) score borders by a fast surrogate first
+and only PT the top-K, or (3) reduce per-border budget. Plan: do all
+three:
+  - Surrogate score: count of borders' inward-color HISTOGRAM
+    (does it match the abundant-color distribution well?).
+  - Fast PT: 10s per border for triage on top 1000.
+  - Full PT: 60-120s on top 100 from triage.
+
+This is publishable methodology even before we find 454+.

@@ -92,6 +92,10 @@ path = "src/bin/alns_e2.rs"
 name = "frame_first_e2"
 path = "src/bin/frame_first_e2.rs"
 
+[[bin]]
+name = "border_enumerate"
+path = "src/bin/border_enumerate.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-edge-solver = { path = "../edge-solver" }
