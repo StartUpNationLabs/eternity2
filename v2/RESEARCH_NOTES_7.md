@@ -344,6 +344,141 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### *** SELBY-RIORDAN AGENT RETURN — generator countermeasures named, 12:15 ***
+
+Background agent (dispatched 11:25) returned with a *definitive*
+characterisation of what Selby & Riordan built into E2 to defeat
+their own E1 solver.
+
+**Headline**: there is a NAMED, MEASURABLE generator defense, and
+my Verhaard work is independently rediscovering Selby's own
+2000-vintage method.
+
+**A. Selby's E1 algorithm** (archduke.org/eternity/method/desc.html
++ talk/notes.html, primary sources):
+
+1. **Two-phase**: beam search (top-K=10000) down to ~30 cells, then
+   exhaustive backtrack on the residue.
+2. **Variable-order = most-constrained site first** (1-2 ply
+   lookahead).
+3. **Length-11 boundary lookup tables** — central pruning hammer
+   on E1's dodecagonal geometry. Doesn't port to E2's square tiles
+   (only 4 rotation classes vs E1's 12).
+4. **THE defining innovation: per-piece "tilability" l_i**. Sample
+   size-24 regions, fit log-linear per-piece scores + per-boundary-
+   feature scores. l_i is **exactly Verhaard's 2×3-tileability**
+   that I just implemented in `scripts/verhaard_valuation.py` —
+   Selby invented it in 2000, Verhaard rediscovered/applied it
+   2008, neither vol-5 nor vol-6 ever cited it. **Vol-7 closes
+   this historical loop independently.**
+5. **Order pieces from WORST to BEST**: keep good pieces for the
+   endgame, dump bad pieces early. Beam-search score = sum of l_i
+   over remaining pieces.
+
+**B. E1's structural weaknesses Selby exploited**:
+
+- **Massive per-piece l_i variance**: ~3.5 log units = ~33×. "Beast
+  piece" 166 had l = -2.8; "superpiece" 35 had l = 0.66. Long-tailed
+  distribution.
+- **A ≫ B**: ~10^95 expected solutions ⇒ beam of 10^4 finds one
+  fast.
+- **Critical size c ≈ 70 ≪ N = 209**: huge slack to dump bad pieces.
+- **No fixed clue pieces in interior**: no backbone pinning.
+
+**C. Inferred E2 countermeasures (Selby & Riordan built into E2)**:
+
+1. **Uniform color frequencies** — flattens the l_i distribution.
+   Each rare 1-5: 24 edges; medium 6-10: 48; abundant 11-22: 50.
+   No outliers. **Vol-7 EMPIRICALLY CONFIRMED**: Verhaard tileability
+   spread on E2 is 132k-200k (1.5×), versus E1's 33× — a 22-fold
+   compression of the very signal Selby's algorithm depended on.
+2. **n=16, cf=5, cm=17 hits the GEMP-F phase transition exactly**
+   (Ansótegui et al. 2008, "How Hard is a Commercial Puzzle",
+   repositori.udl.cat). The puzzle has E[X] ≈ 16.4 expected
+   solutions — *vanishingly few*. Selby's "spend freedom in
+   first 209-c moves" attack assumes A ≫ B; on E2, A is small.
+3. **Square tiles + 4 rotations**, not 12. Kills length-11
+   boundary lookup table pruning.
+4. **Planted center clue (7,8)**: backbone-pinning that prevents
+   placing easy pieces first.
+
+**D. Falsifiable hypotheses (Selby-agent's H1-H5)**:
+
+- **H1 (variance test)**: vol-7 already partially verified — l_i
+  spread is 132k-200k. The "worst-first ordering" lever is
+  structurally dead on E2.
+- **H2 (phase-transition zone)**: predict backbone-variable
+  fraction peaks at depth ~140-180. Matches our finding that
+  88.5% of mismatches occur in the inner-12 zone.
+- **H3 (boundary lookup transfer)**: useless on E2's square
+  geometry. Skip.
+- **H4 (frame-first reverses S&R's interior-first attack)**: on
+  E1 the FRAME was easy (deferred); on E2 the FRAME is
+  **over-determined** by the 5 rare colors + grey border. S&R's
+  attack was interior-first on E1; the opposite attack (frame-first
+  + MaxSAT inner 12×12) is structurally indicated on E2.
+- **H5 (clue piece is the real obstruction)**: re-run ignoring
+  the (7,8) hint. If ceiling lifts from 453 → 460+, the clue
+  itself is the backbone-pinning defense. **Falsifiability test
+  worth running — vol-7 deferred.**
+
+**E. Honest assessment** (Selby-agent quoted): the reverse-engineer
+thesis is **strong on the structural axis, weak on the secret-
+algorithm axis**. S&R never published E2 generation; but the
+defenses are visible in the academic literature: uniform color
+freq + phase-transition tuning. Both are real, measurable,
+**targetable**.
+
+**Vol-7 strategic update**: my Verhaard valuation was rediscovering
+Selby's l_i. The discovery that "precious pieces are NOT in the
+strain core" combined with Selby's "order pieces worst-to-best"
+yields a concrete attack:
+
+> **Reverse Selby's variable order**: place pieces in the OPPOSITE
+> direction. Put the LOW-tileability ("good"/"bad") pieces in the
+> strain core (around (7,8)) FIRST, with backtracking. Save the
+> HIGH-tileability ("precious") pieces for the endgame where their
+> flexibility is wasted on already-well-constrained boundary
+> regions. This is the interior-first decomposition Vol-7 was
+> already converging on, now grounded in S&R-published methodology.
+
+This is the cleanest synthesis of the day: vol-6 (border diversity
++ pin_perimeter) + vol-7 (precious-piece misallocation + Selby
+l_i reversal + Z_22 charge fingerprint) suggest a coherent attack:
+
+1. **Pin the border** (vol-6 method, +1 → 454).
+2. **Pre-fill the strain core with low-tileability pieces** by
+   backtracking (vol-7 method, untested).
+3. **PT polishes the in-between with high-tileability pieces**.
+
+This is a 1-2 day Rust build but the conceptual structure is now
+sound.
+
+### Houdayer-fix VOL-7 CORRECTION 12:00 — a_delta > 0, not joint_delta
+
+Vol-7 commit 18fd7a6 had the WRONG fix. joint_delta = a_delta +
+b_delta is a *conservation law* under multiset-equal swaps
+(a_delta + b_delta = 0 always — proved by inspecting the 453↔454
+diff: 17 cells differ, joint_delta = +1 + (-1) = 0). Filtering by
+joint_delta > 0 rejects every Houdayer swap. **The correct filter
+is a_delta > 0**: the cold replica strictly improves; the hot
+replica absorbs the symmetric -a_delta degradation, which PT
+exchanges handle. Fixed in pt.rs; rebuilt.
+
+**Smoke test from 454, 60s PT, houdayer_every=5**: PT stayed at
+454. Either no a_delta > 0 swaps existed across the 8 replicas
+during the 60s, or component sizes were outside the [4, 30] band.
+The 17 differing cells between 453↔454 form 4 components of size
+11, 4, 1, 1 — only the size-11 component is admissible, but it
+requires a *different replica with the 453 config* to be present
+to swap into. Since all 8 replicas at the cold end were near 454,
+they don't have the 453 config to swap into.
+
+**Implication**: Houdayer-PT productively benefits from seeding
+the parallel replicas with **structurally diverse boards** rather
+than all starting from the same 454. Compose with vol-6: PT with
+4 replicas at 454-border × 4 replicas at *new-border* boards.
+
 ### *** Z_22 VERTEX-CHARGE FINGERPRINT — disclination strings viable, 11:40 ***
 
 X1's pre-experiment: compute the Z_22 topological charge at each

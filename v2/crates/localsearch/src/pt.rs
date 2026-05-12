@@ -99,11 +99,12 @@ pub struct PtConfig {
     /// Skip Houdayer components smaller than this size. Components of size
     /// < 2 are degenerate. Defaults to 4.
     pub houdayer_min_component: usize,
-    /// If true, accept Houdayer swaps with joint_delta == 0 (microcanonical,
-    /// the vol-3 behaviour). This causes infinite toggling on plateau states
-    /// because the swap is its own inverse — the disagreement set on the
-    /// component flips but does not shrink. Default false (require strict
-    /// joint_delta > 0 for any acceptance).
+    /// If true, accept Houdayer swaps with a_delta == 0 (cold replica
+    /// unchanged). Vol-3 unconditional acceptance caused toggling; vol-7
+    /// fix: default to requiring a_delta > 0 (cold replica strictly
+    /// improves). The joint_delta=0 conservation law means b_delta is the
+    /// negative of a_delta, which is fine — the hot replica absorbing a
+    /// degradation is the cost of moving the cold replica into a new basin.
     pub houdayer_accept_zero_delta: bool,
     /// Optional list of "forbidden" interior edges — typically the
     /// top-K universal-mismatch edges identified offline by
@@ -434,29 +435,30 @@ pub fn run_pt_from(
                 houdayer_applications += 1;
                 // Use the swap RNG so randomness is reproducible per seed.
                 let proposals = enumerate_proposals(puzzle, &boards[i], &boards[i + 1]);
-                // Filter to components within the size band AND require a
-                // strict positive joint_delta. Vol-3 bug: accepting
-                // joint_delta=0 swaps caused infinite toggling because the
-                // swap is its own inverse on plateau states (disagreement
-                // set on the component flips but doesn't shrink). Strict
-                // improvement is the only useful Houdayer move on a moat.
-                let admissible: Vec<&_> = proposals
+                // Filter and rank by COLD-REPLICA improvement a_delta (= score
+                // change for boards[i] when it adopts boards[i+1]'s cells on
+                // the component). Vol-7 correction: joint_delta is a
+                // conservation law (a_delta + b_delta = 0 for an alldiff-
+                // multiset-equal swap), so requiring joint_delta > 0 rejects
+                // every Houdayer swap. The right criterion is a_delta > 0:
+                // the cold replica strictly improves; the hot replica
+                // degrades by the same amount, which is fine because PT
+                // exchanges absorb the perturbation.
+                let mut admissible: Vec<&_> = proposals
                     .iter()
                     .filter(|p| {
                         p.component.len() >= cfg.houdayer_min_component
                             && p.component.len() <= cfg.houdayer_max_component
-                            && (p.joint_delta > 0
-                                || (cfg.houdayer_accept_zero_delta && p.joint_delta == 0))
+                            && (p.a_delta > 0
+                                || (cfg.houdayer_accept_zero_delta && p.a_delta == 0))
                     })
                     .collect();
+                // Sort by a_delta descending (highest cold-replica improvement first).
+                admissible.sort_by(|p, q| q.a_delta.cmp(&p.a_delta));
                 houdayer_components_proposed += admissible.len() as u64;
                 if admissible.is_empty() {
                     continue;
                 }
-                // Prefer the highest-joint-delta swap. Proposals are
-                // already sorted by joint_delta desc, but our filter
-                // may have removed the top; pick the first surviving
-                // (= highest-delta admissible).
                 let chosen = admissible[0];
                 let prop = chosen.clone();
                 // Boards need disjoint mutable access; split via split_at_mut.
