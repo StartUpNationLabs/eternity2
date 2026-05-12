@@ -95,3 +95,11 @@ path = "src/bin/run_e2_rectangle_path.rs"
 [[bin]]
 name = "run_12x12_rectangle_path"
 path = "src/bin/run_12x12_rectangle_path.rs"
+
+[[bin]]
+name = "run_e2_rectangle_full_pipeline"
+path = "src/bin/run_e2_rectangle_full_pipeline.rs"
+
+[[bin]]
+name = "run_e2_layered_pipeline"
+path = "src/bin/run_e2_layered_pipeline.rs"

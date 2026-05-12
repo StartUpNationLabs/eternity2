@@ -140,6 +140,19 @@ pub enum PathSkeleton {
     /// Requires `opts.hints` to have at least 4 hint positions.
     /// No-op if fewer than 4 hints.
     HintRectangle,
+    /// Vol-14 user-proposed: same as HintRectangle but then continues
+    /// the path by filling cells in layered order:
+    ///   1. Rectangle skeleton (49 cells on canonical E2).
+    ///   2. Interior of the rectangle, spiraling outward from center
+    ///      (100 cells on canonical 16×16).
+    ///   3. Annulus between rectangle and outer border, row-by-row
+    ///      (~96 cells).
+    ///   4. Outer border itself, corners → perimeter.
+    /// The full path is `cell_count` long; PathPolicy effectively
+    /// forces a specific scan order independent of MRV. Tests the
+    /// hypothesis that maximum-constraint-first ordering improves
+    /// search beyond the basic rectangle path.
+    HintRectangleLayered,
 }
 
 impl EngineConfig {
@@ -360,6 +373,31 @@ impl EngineConfig {
         ..Self::BORDER_FIRST_LCV
     };
 
+    /// Vol-14 user-proposed: joe_depth150_bp + LAYERED rectangle skeleton.
+    /// Path: rectangle perimeter → interior (centre-out) → annulus
+    /// (row-by-row) → outer border. Engine is locked into this order
+    /// for the entire search via PathPolicy::PrefixConstraint{k=256}.
+    pub const JOE_DEPTH150_BP_REC_LAYERED_PAR: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        path_skeleton: Some(PathSkeleton::HintRectangleLayered),
+        ..Self::BORDER_FIRST_LCV
+    };
+
+    pub const JOE_DEPTH150_BP_REC_LAYERED: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        gacolor_propagator: true,
+        ac3_propagator: true,
+        multiset_equality_propagator: true,
+        depth_threshold_for_propagators: Some(150),
+        path_skeleton: Some(PathSkeleton::HintRectangleLayered),
+        ..Self::BORDER_FIRST_LCV
+    };
+
     // Step 8 profiles: baseline + extra propagators.
     pub const BORDER_FIRST_PARITY: Self = Self {
         parity_propagator: true,
@@ -551,6 +589,18 @@ impl EngineSolver {
     #[must_use]
     pub fn joe_depth150_bp_rec() -> Self {
         Self::new(EngineConfig::JOE_DEPTH150_BP_REC, "engine", "joe_depth150_bp_rec")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_bp_rec_layered_par() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_REC_LAYERED_PAR,
+                  "engine", "joe_depth150_bp_rec_layered_par")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_bp_rec_layered() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_REC_LAYERED,
+                  "engine", "joe_depth150_bp_rec_layered")
     }
 
     /// Verhaard-style value ordering: prefer the pieces listed in
@@ -796,6 +846,102 @@ pub fn build_hint_rectangle_path(
             for x in (hx..=tlx).rev() { push(pos_of(x, hy), &mut path, &mut seen); }
         }
     }
+    path
+}
+
+/// Vol-14 user-proposed: extend `build_hint_rectangle_path` to cover
+/// all 256 cells in three subsequent phases:
+///   Phase 1: hint-rectangle path (as built above).
+///   Phase 2: interior of the rectangle (cells strictly inside the
+///            tlx..trx × tly..bry box, not yet in phase 1), ordered
+///            by ascending Chebyshev distance from board centre
+///            (innermost first — closest to most hints).
+///   Phase 3: annulus between the rectangle and the outer board border,
+///            ordered row-by-row.
+///   Phase 4: the 60 outer-border cells (corners + non-corner perimeter),
+///            corners first.
+/// Returns an empty Vec if hints.hints.len() < 4.
+pub fn build_hint_rectangle_layered_path(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Vec<Position> {
+    let phase1 = build_hint_rectangle_path(puzzle, hints);
+    if phase1.is_empty() { return Vec::new(); }
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let n = puzzle.cell_count() as usize;
+    let xy = |p: Position| (p % w, p / w);
+    let pos_of = |x: u32, y: u32| -> Position { y * w + x };
+
+    // Recover rectangle bounds from phase1's first cell (TL) and the
+    // max x/y in phase1 (TR-x, BR-y).
+    let (tlx, tly) = xy(phase1[0]);
+    let mut max_x = tlx; let mut max_y = tly;
+    let mut min_x = tlx; let mut min_y = tly;
+    for &p in &phase1 {
+        let (x, y) = xy(p);
+        if x > max_x { max_x = x; }
+        if y > max_y { max_y = y; }
+        if x < min_x { min_x = x; }
+        if y < min_y { min_y = y; }
+    }
+    let (trx, bry) = (max_x, max_y);
+
+    let mut seen: std::collections::HashSet<Position> = phase1.iter().copied().collect();
+    let mut path = phase1;
+
+    // Phase 2: interior of rectangle (strictly inside min_x+1..=trx-1,
+    // min_y+1..=bry-1), ordered by Chebyshev distance from board centre.
+    let cx = (w as i32 - 1) / 2;
+    let cy = (h as i32 - 1) / 2;
+    let mut interior_rect: Vec<(Position, i32, u32)> = Vec::new();
+    for y in (min_y + 1)..bry {
+        for x in (min_x + 1)..trx {
+            let p = pos_of(x, y);
+            if seen.contains(&p) { continue; }
+            let d = std::cmp::max((x as i32 - cx).abs(), (y as i32 - cy).abs());
+            interior_rect.push((p, d, p));
+        }
+    }
+    interior_rect.sort_by(|a, b| a.1.cmp(&b.1).then(a.2.cmp(&b.2)));
+    for (p, _, _) in &interior_rect {
+        if seen.insert(*p) { path.push(*p); }
+    }
+
+    // Phase 3: annulus between the rectangle and outer border, row-by-row.
+    // For each cell (x, y) with min_x..trx range respected for rows OUTSIDE
+    // the rectangle bounds, or cells outside the rectangle x-range:
+    for y in 0..h {
+        for x in 0..w {
+            let p = pos_of(x, y);
+            if seen.contains(&p) { continue; }
+            // Skip if it's on the outer border (covered in phase 4).
+            if x == 0 || x == w - 1 || y == 0 || y == h - 1 { continue; }
+            path.push(p);
+            seen.insert(p);
+        }
+    }
+
+    // Phase 4: outer border. Corners first, then perimeter row by row.
+    let corners = [
+        pos_of(0, 0),
+        pos_of(w - 1, 0),
+        pos_of(0, h - 1),
+        pos_of(w - 1, h - 1),
+    ];
+    for &c in &corners {
+        if seen.insert(c) { path.push(c); }
+    }
+    // Top row
+    for x in 0..w { let p = pos_of(x, 0); if seen.insert(p) { path.push(p); } }
+    // Right col
+    for y in 0..h { let p = pos_of(w - 1, y); if seen.insert(p) { path.push(p); } }
+    // Bottom row
+    for x in 0..w { let p = pos_of(x, h - 1); if seen.insert(p) { path.push(p); } }
+    // Left col
+    for y in 0..h { let p = pos_of(0, y); if seen.insert(p) { path.push(p); } }
+
+    debug_assert_eq!(path.len(), n, "layered path should cover all cells, got {}/{}", path.len(), n);
     path
 }
 
@@ -1059,6 +1205,11 @@ impl<'a> SearchState<'a> {
             match skel {
                 PathSkeleton::HintRectangle => {
                     let p = build_hint_rectangle_path(puzzle, &opts.hints);
+                    let k = p.len() as u32;
+                    (p, k)
+                }
+                PathSkeleton::HintRectangleLayered => {
+                    let p = build_hint_rectangle_layered_path(puzzle, &opts.hints);
                     let k = p.len() as u32;
                     (p, k)
                 }
@@ -2572,6 +2723,30 @@ mod tests {
         // No duplicates.
         let set: std::collections::HashSet<_> = path.iter().collect();
         assert_eq!(set.len(), path.len(), "path has duplicates");
+    }
+
+    #[test]
+    fn build_hint_rectangle_layered_path_covers_all_cells() {
+        use eternity2_generator::{generate, GeneratorConfig};
+        use eternity2_core::{Hint, Hints, Rotation};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        let r = Rotation::from_u8(0).unwrap();
+        let pid = eternity2_core::PieceId::try_from(0u32).unwrap();
+        let hints = Hints { hints: vec![
+            Hint { position: 2 + 2*16, piece_id: pid, rotation: r },
+            Hint { position: 13 + 2*16, piece_id: pid, rotation: r },
+            Hint { position: 2 + 13*16, piece_id: pid, rotation: r },
+            Hint { position: 13 + 13*16, piece_id: pid, rotation: r },
+            Hint { position: 7 + 8*16, piece_id: pid, rotation: r },
+        ]};
+        let path = build_hint_rectangle_layered_path(&puzzle, &hints);
+        assert_eq!(path.len(), 256, "expected 256 cells, got {}", path.len());
+        // No duplicates
+        let set: std::collections::HashSet<_> = path.iter().collect();
+        assert_eq!(set.len(), 256, "duplicates in path");
+        // First 49 must match the basic rectangle path
+        let rect = build_hint_rectangle_path(&puzzle, &hints);
+        assert_eq!(&path[..49], &rect[..]);
     }
 
     #[test]
