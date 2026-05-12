@@ -121,11 +121,14 @@ fn run_arm(
         segment_iters: 50,
         seed,
         verbose: false,
-        // Vol-17 — flip primary repair to CP. With cp_fallback_to_sa,
-        // CP is tried first (gacolor_ac3_par finds optimal fills on
-        // small/medium destroy regions); SA is the fallback on AC-3
-        // wipe-outs. Stronger on big ops like ComponentDestroy.
-        repair: RepairKind::Cp,
+        // Vol-17 — CP-primary was tested in Block 1 of overnight queue
+        // and REGRESSED (447 vs 455 with SA-primary). CP-repair finds
+        // the optimal fill for each free region, but the trajectory
+        // through those local optima is worse than SA's noisier walk.
+        // Reverted to SA-primary; CP is still available via fallback
+        // path inside run_alns (sa_fallback_to_cp NOT exposed because
+        // it would be the inverse — irrelevant given this finding).
+        repair: RepairKind::Sa,
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
     };

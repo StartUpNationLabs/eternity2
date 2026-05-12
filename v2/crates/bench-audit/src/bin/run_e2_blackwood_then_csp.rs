@@ -264,10 +264,9 @@ fn main() {
         segment_iters: 50,
         seed,
         verbose: false,
-        // Vol-17 — flip primary repair to CP. Sound here too since the
-        // K-pipeline already pinned Blackwood's partial via Hints; the
-        // remaining free set is what CP can search-fill.
-        repair: RepairKind::Cp,
+        // Vol-17 — Block 1 measurement showed CP-primary REGRESSES
+        // vs SA-primary on canonical E2 (-8 matches on seed 1). Revert.
+        repair: RepairKind::Sa,
         cp_fallback_to_sa: true,
         pinned_positions: pinned_positions.clone(),
     };

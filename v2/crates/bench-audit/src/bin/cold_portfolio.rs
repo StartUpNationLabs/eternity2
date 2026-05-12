@@ -118,8 +118,8 @@ fn run_one_arm(
         segment_iters: 50,
         seed,
         verbose: false,
-        // Vol-17 — CP primary, SA fallback (see run_e2_blackwood note).
-        repair: RepairKind::Cp,
+        // Vol-17 — Block 1 found CP-primary regresses vs SA-primary.
+        repair: RepairKind::Sa,
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
     };
