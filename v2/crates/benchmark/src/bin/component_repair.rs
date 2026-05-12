@@ -72,7 +72,7 @@ struct Args {
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 fn decode_from_bucas(puzzle: &Puzzle, bucas_url: &str) -> Vec<Option<(PieceId, Rotation)>> {

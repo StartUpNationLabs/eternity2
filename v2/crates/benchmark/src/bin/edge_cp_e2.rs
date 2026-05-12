@@ -62,7 +62,7 @@ fn translate_hint(
 ) -> EdgeHint {
     // For the piece at (cell, rotation), compute the 4 edge colors in
     // cell-frame [top, right, bot, left].
-    let piece = puzzle.pieces().iter().find(|p| p.id == piece_id).expect("piece");
+    let piece = puzzle.piece(piece_id).expect("piece");
     let edges = piece.edges.rotated(rotation).as_array();
     let sides = topology.cell_sides[cell as usize];
     let mut side_edges: [Option<(u32, u8)>; 4] = [None; 4];
@@ -75,7 +75,7 @@ fn translate_hint(
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {

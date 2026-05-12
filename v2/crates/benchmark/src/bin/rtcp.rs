@@ -72,7 +72,7 @@ struct Args {
 // ---------- scoring ----------
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 // Count matched non-border edges on the board. Also return the set of

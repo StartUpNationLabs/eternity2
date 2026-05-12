@@ -50,7 +50,7 @@ struct Args {
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 // Re-derive cell→(piece, rotation) from the bucas board_edges blob.

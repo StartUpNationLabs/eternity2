@@ -105,7 +105,7 @@ fn kind_at(idx: usize) -> Result<(Option<RingSide>, Option<CornerKind>), String>
 }
 
 fn lookup_piece(puzzle: &Puzzle, pid: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == pid)
+    puzzle.piece(pid)
 }
 
 fn ring_edge_at(puzzle: &Puzzle, idx: usize, pid: PieceId) -> Result<RingEdge, String> {

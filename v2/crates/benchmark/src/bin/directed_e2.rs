@@ -45,7 +45,7 @@ struct Args {
 }
 
 fn lookup_piece(p: &Puzzle, id: PieceId) -> Option<&Piece> {
-    p.pieces().iter().find(|q| q.id == id)
+    p.piece(id)
 }
 fn score(p: &Puzzle, b: &Board) -> (u32, u32) {
     let w = p.width; let h = p.height;

@@ -165,7 +165,7 @@ fn read_board_from_json(puzzle: &Puzzle, path: &std::path::Path) -> Result<Board
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {

@@ -38,7 +38,7 @@ struct Args {
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

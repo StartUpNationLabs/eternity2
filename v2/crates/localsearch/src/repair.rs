@@ -61,8 +61,8 @@ pub fn worst_region(puzzle: &Puzzle, board: &Board, k: u32) -> Option<(u32, u32)
 fn edges_match_right(puzzle: &Puzzle, board: &Board, a: Position, b: Position) -> bool {
     let Some((pid_a, rot_a)) = board.get(a) else { return false; };
     let Some((pid_b, rot_b)) = board.get(b) else { return false; };
-    let pa = puzzle.pieces().iter().find(|p| p.id == pid_a);
-    let pb = puzzle.pieces().iter().find(|p| p.id == pid_b);
+    let pa = puzzle.piece(pid_a);
+    let pb = puzzle.piece(pid_b);
     if let (Some(pa), Some(pb)) = (pa, pb) {
         let ea = pa.edges.rotated(rot_a).as_array();
         let eb = pb.edges.rotated(rot_b).as_array();
@@ -73,8 +73,8 @@ fn edges_match_right(puzzle: &Puzzle, board: &Board, a: Position, b: Position) -
 fn edges_match_down(puzzle: &Puzzle, board: &Board, a: Position, b: Position) -> bool {
     let Some((pid_a, rot_a)) = board.get(a) else { return false; };
     let Some((pid_b, rot_b)) = board.get(b) else { return false; };
-    let pa = puzzle.pieces().iter().find(|p| p.id == pid_a);
-    let pb = puzzle.pieces().iter().find(|p| p.id == pid_b);
+    let pa = puzzle.piece(pid_a);
+    let pb = puzzle.piece(pid_b);
     if let (Some(pa), Some(pb)) = (pa, pb) {
         let ea = pa.edges.rotated(rot_a).as_array();
         let eb = pb.edges.rotated(rot_b).as_array();

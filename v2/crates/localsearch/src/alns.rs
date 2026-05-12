@@ -59,8 +59,11 @@ impl AlnsRng {
 
 // ----- Scoring helpers --------------------------------------------------
 
+/// Vol-16 — was `iter().find` (O(n)). Now delegates to the O(1) lookup
+/// on Puzzle. Inlined so score_board's hot loop sees a single load.
+#[inline]
 fn lookup_piece<'a>(puzzle: &'a Puzzle, id: PieceId) -> Option<&'a eternity2_core::Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 pub fn score_board(puzzle: &Puzzle, board: &Board) -> u32 {

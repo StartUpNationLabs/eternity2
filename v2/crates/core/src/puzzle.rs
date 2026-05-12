@@ -16,6 +16,15 @@ pub struct Puzzle {
     pub height: u32,
     pub color_count: u32,
     pieces: Vec<Piece>,
+    /// Vol-16 — `pieces_by_id[id as usize]` is the index into `pieces`
+    /// where piece `id` lives. Built at construction so `Puzzle::piece(id)`
+    /// is O(1) instead of O(n) linear search (the old `iter().find`).
+    ///
+    /// PieceId is a u16 in the canonical E2 instance (256 pieces).
+    /// The Vec is sized to `max_id + 1`; gaps in the id space remain
+    /// u32::MAX (sentinel).
+    #[cfg_attr(feature = "serde", serde(default))]
+    pieces_by_id: Vec<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,15 +81,29 @@ impl Puzzle {
                 }
             }
         }
-        Ok(Self { width, height, color_count, pieces })
+        // Vol-16 — build the O(1) id->index map.
+        let max_id = pieces.iter().map(|p| u32::from(p.id)).max().unwrap_or(0);
+        let mut pieces_by_id: Vec<u32> = Vec::with_capacity((max_id as usize) + 1);
+        pieces_by_id.resize((max_id as usize) + 1, u32::MAX);
+        for (idx, p) in pieces.iter().enumerate() {
+            pieces_by_id[usize::from(p.id)] = idx as u32;
+        }
+        Ok(Self { width, height, color_count, pieces, pieces_by_id })
     }
 
     #[must_use]
     pub fn pieces(&self) -> &[Piece] { &self.pieces }
 
+    /// O(1) piece lookup by id (vol-16 — was O(n) linear search via
+    /// `iter().find`; profile showed score_board's 3-call-per-cell
+    /// pattern made this O(n²) on a fully-placed board).
     #[must_use]
     pub fn piece(&self, id: PieceId) -> Option<&Piece> {
-        self.pieces.iter().find(|p| p.id == id)
+        let idx = *self.pieces_by_id.get(usize::from(id))?;
+        if idx == u32::MAX {
+            return None;
+        }
+        self.pieces.get(idx as usize)
     }
 
     #[must_use]

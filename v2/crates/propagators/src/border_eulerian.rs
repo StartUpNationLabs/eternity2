@@ -286,7 +286,7 @@ pub fn eulerian_pool_check(
 ) -> bool {
     let mut all_edges: Vec<RingEdge> = committed_edges.to_vec();
     for &(pid, side, corner) in pool_with_sides {
-        let piece = puzzle.pieces().iter().find(|p| p.id == pid);
+        let piece = puzzle.piece(pid);
         let piece = match piece { Some(p) => p, None => return false };
         let edge_opt = match (side, corner) {
             (Some(s), None) => edge_tile_ring_edge(piece, s),
@@ -337,7 +337,7 @@ pub fn eulerian_pool_check(
 pub fn eulerian_pool_or_check(puzzle: &Puzzle, unused_border_pids: &[PieceId]) -> bool {
     let pieces: Vec<&Piece> = unused_border_pids
         .iter()
-        .filter_map(|&pid| puzzle.pieces().iter().find(|p| p.id == pid))
+        .filter_map(|&pid| puzzle.piece(pid))
         .collect();
     let mut all_edges: Vec<RingEdge> = Vec::new();
     for p in &pieces {

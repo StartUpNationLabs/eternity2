@@ -99,7 +99,7 @@ fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     let mut matches = 0u32;
     let total = (w - 1) * h + w * (h - 1);
     let lookup =
-        |id: PieceId| puzzle.pieces().iter().find(|p| p.id == id);
+        |id: PieceId| puzzle.piece(id);
     for y in 0..h {
         for x in 0..w {
             let pos = y * w + x;
@@ -137,7 +137,7 @@ fn mismatched_cells(puzzle: &Puzzle, board: &Board) -> Vec<Position> {
     let h = puzzle.height;
     let mut mm: HashSet<Position> = HashSet::new();
     let lookup =
-        |id: PieceId| puzzle.pieces().iter().find(|p| p.id == id);
+        |id: PieceId| puzzle.piece(id);
     for y in 0..h {
         for x in 0..w {
             let pos = y * w + x;

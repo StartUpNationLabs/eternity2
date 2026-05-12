@@ -177,7 +177,7 @@ fn piece_edges_rotated(
     pid: eternity2_core::PieceId,
     rot: eternity2_core::Rotation,
 ) -> [Color; 4] {
-    let piece = puzzle.pieces().iter().find(|p| p.id == pid)
+    let piece = puzzle.piece(pid)
         .expect("piece id from board must exist in puzzle");
     piece.edges.rotated(rot).as_array()
 }

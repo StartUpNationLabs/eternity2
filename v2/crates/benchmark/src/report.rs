@@ -22,7 +22,7 @@ fn color_to_bucas(c: u8) -> char {
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
-    puzzle.pieces().iter().find(|p| p.id == id)
+    puzzle.piece(id)
 }
 
 pub fn board_to_bucas_edges(puzzle: &Puzzle, board: &Board) -> String {

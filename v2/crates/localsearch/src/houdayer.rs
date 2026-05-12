@@ -134,7 +134,7 @@ pub fn delta_replace_with(puzzle: &Puzzle, a: &Board, b: &Board, comp: &[u32]) -
     }
 
     let lookup = |id: PieceId| -> Option<&eternity2_core::Piece> {
-        puzzle.pieces().iter().find(|p| p.id == id)
+        puzzle.piece(id)
     };
 
     let edge_match_in = |get_cell: &dyn Fn(u32) -> Option<(PieceId, Rotation)>, lo: u32, hi: u32| -> u32 {
