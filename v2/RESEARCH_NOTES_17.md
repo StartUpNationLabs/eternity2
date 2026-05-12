@@ -498,3 +498,50 @@ polish_rotations + piece_swap_hillclimb on seed 1. Tests H7:
 3. **00:30 → 01:00** K-pipeline test on best seed from portfolio.
 4. **01:00 → 01:30** closeout writeup + memory update.
 
+## 00:09 — E1 result 447/480, polish was a no-op
+
+```
+[blackwood_raw] ALNS: iters=200 placed=256/256 matched=447/480 Δ_vs_cp=+85
+```
+
+11 ops + SA + polish-rot + polish-swap result: **447**. Same as 5-op
+basic config (v17a no-WB). Polish_rot and polish_swap added 0 each
+(measured separately on saved 447 and 455 boards). H7 REFUTED:
+polish is a fixed-point on the ALNS output.
+
+The 5-op-set "winning5" hits 455; the 11-op-set hits 447. **Op
+dilution is real.** AdaptiveWeights cannot specialize in 200 iters
+across 11 ops; the marginal ops chew time without contributing.
+
+H6 update: STRONGLY CONFIRMED REFUTED (multiple runs).
+
+## 00:10 — E2 launched: 4-chain parallel ALNS portfolio (NOVEL)
+
+`alns_portfolio` — NEW BIN. Embarrassingly parallel via rayon.
+Each chain has same `winning5` ops, different seed (1, 1+R, 1+2R,
+1+3R), temperature ladder `t ∈ {0.5, 1.0, 1.5, 2.0}`.
+
+Hypothesis H8: parallel chains escape the iso-score plateau that
+single ALNS gets stuck on. Chain diversity = seed + temperature.
+
+If E2 ≥ 460: portfolio works, T4 likely met. Continue exploring.
+If E2 = 455-459: variance-aware ceiling around 455.
+If E2 < 455: per-chain CPU contention limits each chain's iter count.
+
+CP-board pinned: `output/v17_exp/canonical_v17a_cp_362_seed1.json`
+(stable snapshot from earlier seed-1 run). All A/B experiments use
+this same starting board so we control for CP variance.
+
+## Hypothesis tracker update
+
+| ID | Hypothesis                                              | Evidence                  | Verdict       |
+|----|---------------------------------------------------------|---------------------------|---------------|
+| H1 | calibrated_v17a > vol-15 bw469 (more depth)             | depth 192 vs ~80          | CONFIRMED     |
+| H2 | CP walls at 193 are structural; ALNS recovers           | CP 362 → ALNS 447+        | CONFIRMED     |
+| H3 | Mismatch cluster rows 0-4 is structural                 | 3/3 boards                | CONFIRMED     |
+| H4 | Big-region destroy ops (WB, CD80) beat small (k≤30)    | 455 vs 447, +8            | CONFIRMED     |
+| H5 | CP-primary repair beats SA-primary                      | 447 (CP) vs 455 (SA), -8  | REFUTED       |
+| H6 | More destroy ops (11 vs 5) helps                        | 447 (11), 454 (10), 455 (5) | REFUTED   |
+| H7 | Polish (rotation + swap) lifts beyond ALNS              | rot=+0, swap=+0 on 447 + 455 | REFUTED |
+| H8 | Parallel chains with t-ladder beat single chain         | E2 running                | (pending)     |
+
