@@ -453,6 +453,36 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### GA-LARGE FINAL + CASCADE-453 PARTIAL 06:21
+
+**GA-LARGE complete (60 crossovers, ~100 min wall)**:
+- **12 hits at 451+ (20% rate)** — much better than GA-light's 8%.
+  The richer parent pool (incl. 452 + 451s) helps.
+- Distribution: 6×452, 5×451, **1×453** (from cross #37).
+- **Best: 453/480** (the night's record).
+
+**Cascade-453 in progress (cross #5.3 of 24, ~50% done)**:
+- 8 hits at 451+ already (out of ~14 results = 57% rate when 453 is
+  parent A — strong evidence that high-quality parent = higher hit
+  rate).
+- Distribution: 4×452, 3×451, **1×453**.
+- The 453 from cascade-453 (cross #?, region (?,?), B=?) has **only
+  76.2% overlap with the original 453**. Two distinct 453-class
+  basins: the original 453 + this cascade-453's 453.
+
+**Cumulative basin map at 06:21**:
+| Basin | Score | Members |
+|---|---|---|
+| 452-original basin | 452 | original 452 + cascade Phase B 451s + GA-LARGE 452-class hits (≥10 boards) |
+| 453-original basin | 453 | GA-LARGE cross #37 only |
+| 453-cascade basin | 453 | cascade-453 cross #4.1 (76% overlap with 453-original) |
+| Other 451 basins | 451 | cross #17 (74% overlap with 452), cross #32, etc. |
+
+**At least 4 distinct 451+ basins discovered tonight.**
+
+**Cumulative 451+ board count**: 12 (GA-LARGE) + 8 (cascade-453 so
+far) + 4 (GA-light + cascade Phase B) = **24 boards at 451+ tonight**.
+
 ### *** SECOND BREAKTHROUGH 05:47 — 453/480 ***
 
 **Cross #37**:
