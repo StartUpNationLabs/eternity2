@@ -1,4 +1,55 @@
-# RESEARCH_NOTES_10.md — vol-10: mathematical / geometric probes (side-quest)
+# RESEARCH_NOTES_10.md — vol-10: math probes + community corpus mining
+
+**Status**: CLOSED. Final commit `7cafdb9`. Vol-9 ran in parallel
+and shipped its own work independently (commit `33ad8b1`).
+
+## Vol-10 close-out
+
+Started as a "math probes" sidequest (PCA on piece-cloud, graph
+Laplacian, pairwise interaction). Static spectral analysis turned out
+to be defeated by the Selby-Riordan generator at every level vol-10
+checked. Pivoted to community-corpus mining after the user pointed
+out probe #4 had missed Discord posts about pieces 17/38/62.
+
+**Final shape**: 7 probes total —
+1. PCA on piece-histogram cloud — flatness confirmed
+2. Graph Laplacian spectrum — static analysis closed
+3. Pairwise interaction PCA — withdrawn after signed-spectrum audit
+4. Significant pieces (17, 38, 62) — verified, NS-1..NS-3 proposed
+5. Intent-keyword grep on community corpus — 6 missed items found
+6. Full Discord end-to-end read — 14 more items, Blackwood scaling
+   laws calibrated
+7. groups.io top-thread reading — 25+ threads, 13 structured notes
+   in `docs/community-mining/`
+
+**What vol-10 leaves vol-11**:
+- A complete map of community knowledge in `docs/community-mining/`
+  with one structured digest per major thread.
+- 13 named next-steps (NS-1..NS-13) ranked by expected value.
+- The position-color eigenbasis on disk (`output/v10_math/`) for
+  any future eigenstructure work.
+- Three new memory entries: `reference_community_e2_ceiling`,
+  `reference_verhaard_actual_method`, `reference_e2_community_corpus`.
+
+**Methodological reflection**: vol-10 made one significant mistake
+(probe #3a's "rank-17 looks like strong structure" claim that
+turned out to be algebraic identity to probe #1) and self-corrected.
+Probes #5/#6/#7 iteratively widened the corpus-mining method as the
+user pushed back; each iteration found 2-3× more substantive items
+than the prior one. **Per-thread full reading was 3-5× more
+productive than grep but at higher context cost.**
+
+**Honest meta-conclusion**: the math doesn't save us at the static
+level. Selby-Riordan engineered the puzzle so static geometric
+structural invariants are vacuous. The productive structure is
+operational (Verhaard SA, Blackwood scheduled relaxations) and
+per-piece combinatorial (pieces 17/38/62 forcing, multiset-equality
+propagator). The community knew this; vol-10 re-derived it the hard
+way through three failed probes.
+
+---
+
+
 
 **Session**: 2026-05-12, runs concurrently with vol-9 (vol-9 is doing the
 algorithmic build of Eulerian propagator + Verhaard SA; vol-10 is purely
