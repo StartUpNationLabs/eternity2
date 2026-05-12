@@ -225,3 +225,40 @@ call vs no per-entry restore loop. Worth a measurement.
 profile_blackwood_raw also widened my view of allocator surface:
 post-vol-16, only `BufferSink::drop` + a handful of macOS malloc
 calls contribute. The arena strategy is correct and complete.
+
+### 2026-05-12 ~21:30 — Cat-7 baseline data (vol-17 chores)
+
+`cargo bloat --release -n 25 -p eternity2-bench-audit --bin profile_blackwood_raw`:
+
+  binary text size: 433 KiB
+  top engine funcs (% of .text):
+    solve_parallel              3.3% (14.1 KiB)
+    SearchState::new            2.6% (11.1 KiB)
+    SearchState::recurse        2.2% (9.3 KiB)
+    place_and_propagate_opts    2.1% (9.3 KiB)
+    compute_heuristic_sides     1.0% (4.3 KiB)
+    ChannelSink::emit           0.9% (4.0 KiB)
+    run_impl                    0.8% (3.3 KiB)
+    build_hint_rectangle_path   0.7% (3.2 KiB)
+    build_hint_rectangle_layered 0.7% (3.2 KiB)
+
+No bloat issue — the hot functions are the ones we'd want to be
+hot. ~70% of .text is in 891 smaller methods (long tail).
+
+`cargo outdated --workspace --depth 1`:
+
+  | crate         | current | latest |
+  |---------------|---------|--------|
+  | tonic         | 0.12.3  | 0.14.6 |
+  | tonic-web     | 0.12.3  | 0.14.6 |
+  | tonic-build   | 0.12.3  | 0.14.6 |
+  | prost         | 0.13.5  | 0.14.3 |
+  | criterion     | 0.5.1   | 0.8.2  |  (dev-only)
+
+`cargo audit`: 0 vulnerabilities (209 deps scanned, advisory-db
+loaded 1070 advisories). Clean.
+
+Recommendation for vol-17: coordinated tonic 0.12 → 0.14 +
+prost 0.13 → 0.14 upgrade (proto codegen lands in same PR).
+Criterion upgrade is optional and dev-only. None block any
+research direction.
