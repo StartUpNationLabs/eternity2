@@ -25,7 +25,8 @@ use eternity2_localsearch::{
     RandomRegion, RepairKind, WorstWindow,
 };
 use eternity2_solver_engine::{
-    blackwood_schedule_469, load_edge_bp_marginals, EngineSolver,
+    blackwood_schedule_469, load_edge_bp_marginals, EngineConfig, EngineSolver,
+    PathSkeleton,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -227,7 +228,7 @@ fn main() {
         results.push(("baseline".into(), m, p, d));
     }
 
-    if arms == "both" || arms == "blackwood" {
+    if arms == "both" || arms == "blackwood" || arms == "all" {
         let bw = Box::new(EngineSolver::blackwood_base_par(schedule_arc.clone()));
         let (m, p, d) = run_arm(
             "blackwood",
@@ -243,15 +244,69 @@ fn main() {
         results.push(("blackwood".into(), m, p, d));
     }
 
+    // Vol-15 Priority 1.5: Blackwood × HintRectangle composition.
+    // BLACKWOOD_BASE_PAR + path_skeleton = HintRectangle. The
+    // composition rule in SearchState::new builds [rectangle prefix]
+    // ++ [scan-order tail], so the engine places the 49 rectangle
+    // cells first and Blackwood's break-indexes still index by raw
+    // scan position (handled inside is_pos_break_index).
+    if arms == "blackwood_rect" || arms == "all" {
+        let mut cfg = EngineConfig::BLACKWOOD_BASE_PAR;
+        cfg.path_skeleton = Some(PathSkeleton::HintRectangle);
+        let bw_rect = Box::new(
+            EngineSolver::new(cfg, "engine", "blackwood_rect_par")
+                .with_blackwood_schedule(schedule_arc.clone()),
+        );
+        let (m, p, d) = run_arm(
+            "blackwood_rect",
+            bw_rect,
+            &puzzle,
+            &hints,
+            edge_bp.clone(),
+            seed,
+            cp_budget,
+            alns_budget,
+            &out_dir,
+        );
+        results.push(("blackwood_rect".into(), m, p, d));
+    }
+
+    // Same, with the LAYERED rectangle (rectangle → interior →
+    // annulus → border). Vol-14's strongest skeleton.
+    if arms == "blackwood_rect_layered" || arms == "all" {
+        let mut cfg = EngineConfig::BLACKWOOD_BASE_PAR;
+        cfg.path_skeleton = Some(PathSkeleton::HintRectangleLayered);
+        let bw_rl = Box::new(
+            EngineSolver::new(cfg, "engine", "blackwood_rect_layered_par")
+                .with_blackwood_schedule(schedule_arc.clone()),
+        );
+        let (m, p, d) = run_arm(
+            "blackwood_rect_layered",
+            bw_rl,
+            &puzzle,
+            &hints,
+            edge_bp.clone(),
+            seed,
+            cp_budget,
+            alns_budget,
+            &out_dir,
+        );
+        results.push(("blackwood_rect_layered".into(), m, p, d));
+    }
+
     eprintln!();
     eprintln!("=== SUMMARY (canonical E2, seed={seed}) ===");
     for (label, m, p, d) in &results {
-        eprintln!("  {label:<10}  matched={m}/480  placed={p}/256  cp_depth={d}");
+        eprintln!("  {label:<24}  matched={m}/480  placed={p}/256  cp_depth={d}");
     }
-    if results.len() == 2 {
-        let d = results[1].1 as i32 - results[0].1 as i32;
+    // Δ vs baseline for every non-baseline arm.
+    if let Some(base) = results.iter().find(|(l, _, _, _)| l == "baseline") {
         eprintln!();
-        eprintln!("  Δ (blackwood − baseline) = {d:+}");
+        for (label, m, _, _) in &results {
+            if label == "baseline" { continue; }
+            let d = *m as i32 - base.1 as i32;
+            eprintln!("  Δ ({label:<24} − baseline) = {d:+}");
+        }
     }
     eprintln!();
     eprintln!("Boards + logs: {}", out_dir.display());
