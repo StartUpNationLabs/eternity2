@@ -344,6 +344,60 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### Quasicrystal agent return + H2 parity lower bound — NEGATIVE 13:55
+
+**Quasicrystal agent** dispatched 13:38, returned 13:50. Verdict:
+
+- Hat/Spectre/substitution literature (2023-2026) is the WRONG
+  direction for E2: those constructions force *aperiodicity by
+  geometry alone* (no decoration / matching rules). E2 has 256
+  decorated tiles on a SQUARE lattice tuned to the GEMP-F phase
+  transition. The mathematical machinery points the opposite way.
+- Labbé's metallic-mean Wang tiles (arXiv 2312.03652, 2403.03197)
+  are the closest mathematically but force FEWER tilings; E2 has
+  many.
+- Antoniadis & Lingas (2010) and Demaine et al. prove
+  inapproximability of edge-matching but don't give E2-specific
+  numeric bounds.
+- One promising sub-angle: **color-class character-theoretic
+  lower bound on min mismatches** (agent's H2).
+
+**Vol-7 implemented H2**: for each interior color c ∈ {1..22},
+compute T_c = total c-edges on the piece bag. Each cell on the
+16×16 grid has chessboard parity (white/black). Every internal
+edge connects opposite-parity cells. So matched c-edges require
+the supply of c-edges on white-cell pieces == supply on black-
+cell pieces. If `|W_c - B_c| > 0`, that many c-edges are unmatched.
+
+The piece bag is split into 3 classes (4 corners, 56 edges, 196
+interior) with chessboard quota each (2W/2B, 28W/28B, 98W/98B).
+Per color, ran subset-sum DP on each class. Got per-class min
+imbalance imb_c, imb_e, imb_i.
+
+**Initial naive bound**: 4 colors have nonzero interior imbalance
+of 1 each → claimed ≥4 unmatched edges, max possible ≤ 476/480.
+
+**Sanity-check refinement**: per-class imbalances can have
+OPPOSITE SIGNS and CANCEL across classes. Computing
+`max(0, 2*max(imbs) - sum(imbs))` gives the true min total
+imbalance per color: **0 for every color**. The cross-class
+flexibility absorbs all parity obstructions.
+
+**Verdict on H2**: simple chessboard parity gives **NO lower
+bound** on E2's mismatches. The "≥4 unmatched" naive bound was
+an overcount. H2 is empty.
+
+**Honest accounting**: my initial enthusiasm for the "476/480
+proven bound" was wrong. Negative result, properly documented.
+
+**Where does this leave us?** No structural lower bound from
+elementary parity. The puzzle is *theoretically fully matchable*
+(all per-color total counts even, no parity obstruction at
+class-cross-talk granularity). A real lower bound would need
+stronger machinery — e.g., spectral analysis of the cell-piece
+incidence graph, LP relaxations with non-trivial constraints,
+or fractional-relaxation arguments. None tested here.
+
 ### *** RIGOROUS: 454 IS OPTIMAL ON THE 45-CELL FREE REGION — 13:35 ***
 
 **EvalMaxSAT cracked the 45-cell sub-puzzle** in 82.9s of CPU time:
