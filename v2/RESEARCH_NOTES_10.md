@@ -684,7 +684,211 @@ six new entries to the community-technique catalogue:
 | C-5 | M. Field "pattern parity" | M. Field 2008-2010 | partial; unclaimed propagator |
 | C-6 | xp2 checkerboard half-placement | xp2 2026 | untested |
 
-## Next steps for vol-9 / vol-11 (from probe #4)
+## Probe #6 — full Discord end-to-end read (1198 messages, 2021-11 → 2026-05)
+
+**Method**. Read the entire Discord export start-to-finish in 4 chunks
+(350 messages each), no grep filtering. User pushed back after probe #5
+that grep misses signal; full read confirms many additional substantive
+items missed by both vol-8 grep and probe #5 intent-keyword grep.
+
+### New high-value findings
+
+**A. Joshua Blackwood is in the Discord and talked extensively** (Nov
+2024). Direct first-hand statements from the 470-holder:
+- "470 took 1 month on my home PC."
+- "Maybe 150 hours in total" of work, spread over ~3 months during COVID.
+- "No hints" for his 470.
+- **"Algorithm makes enormous improvements. Good logic makes you
+  1000000x better at solving partial solutions."** (verbatim).
+- His earlier hardware: AMD Threadripper 3970x. Now comparable to
+  desktop CPUs (9950x, 14900k).
+- **Empirical scaling laws** (Dec 2021): *"a 471 will be 10^19 times
+  harder than a 458"*, *"getting 1 fewer break is about 30-50x harder"*.
+- "I've never tried for a 471. Stopped my efforts at 470."
+- **His 470 code is on GitHub for everybody to see** —
+  `github.com/jblackwood345/EternityII_Solver`.
+
+These are direct, first-person, on-the-record. **Strongest empirical
+calibration source we have for the regime above 467.**
+
+**B. Stall-point ladder** (multiple independent observers, 2007-2026):
+
+| Stall ~depth | Observer | Year |
+|------:|----------|----:|
+| ~76-83 | onesmallstep (linear, can backtrack to 76 but stuck above last hint) | 2024 |
+| ~84 | onesmallstep (linear backtrackers get stuck around piece 84) | 2025 |
+| ~175 | onesmallstep (internal 14×14: gets to 175 then slows) | 2026 |
+| ~192 | xtal (shell 4 wall, never complete shell 4) | 2007 |
+| ~197-217 | onesmallstep (197 with all hints, 217 spiral-in slow) | 2025-2026 |
+| ~202-206 | Hopfer (stall band on naive backtracker) | 2021 |
+| ~213-221 | Hopfer (jump 5-8 pieces then die) | 2021 |
+| ~225-230 | reinout_ (4 separate 229s found, no 230) | 2025 |
+
+This is the **empirical scaling ladder of the obstruction**, attested
+across 19 years and at least 5 independent observers. The two
+phenomena to explain: (1) why does each stall band exist?
+(2) why is each one harder than the last by ~30-50x?
+
+Vol-9 / vol-11 could fit a model: if each stall is empirically
+~50x harder than the last, the geometric sequence 460 → 461 → ... 470
+predicts the 470 record took ~50^10 ≈ 10^17 nodes — consistent with
+Blackwood's 1-month home-PC run if his node rate is ~100M/s. Sanity
+check: 100M nodes/s × 86400s × 30 days ≈ 2.6×10^14, off by 10^3 —
+but he had threading and pruning; order-of-magnitude consistent.
+
+**C. Concrete inter-piece compatibility tables** (onesmallstep Jan 24,
+2026). Published in the Discord:
+
+- The **9 border pieces** that can connect directly to piece 62: {5,
+  10, 17, 19, 26, 27, 30, 49, 53}. For each, how many rotations of
+  piece 62 fit (2, 1, 1, 1, 2, 2, 1, 2, 1 respectively).
+- The **interior-piece-adjacent-to-each-corner** tables: corners 1 &
+  2 share {5, 7, 15, 22, 24, 25, 37, 42, 45, 50, 52, 57}; corner 3 has
+  {6, 11, 19, 20, 26, 31, 33, 40, 43, 49, 51}; corner 4 has {9, 16,
+  27, 28, 29, 32, 41, 44, 56, 60}.
+- **23 interior pieces are "unused"** in this enumeration — they
+  cannot sit immediately adjacent to any corner: {8, 10, 12, 13, 14,
+  17, 18, 21, 23, 30, 34, 35, 36, 38, 39, 46, 47, 48, 53, 54, 55, 58,
+  59}.
+
+**This is propagator-grade data already computed by the community**.
+We can verify and embed it directly.
+
+**D. The "complete internal 14×14" open problem** (onesmallstep,
+multiple posts 2025-2026). After the border ring is placed, the
+remaining 196 cells form a 14×14 interior sub-puzzle constrained by
+inward-facing border colors. **"Nobody has found a complete internal
+14×14"** in 19 years. onesmallstep's best is 175/196 placed.
+
+This is a **specific, well-defined sub-problem** that vol-11 could
+attack independently of the full puzzle. Either:
+1. Find a complete 14×14 interior: this would be the first ever, and
+   would directly enable extending to a full 256.
+2. Prove no complete 14×14 exists for the canonical border ring:
+   this would be an **impossibility result** comparable to the
+   Mutilated Chessboard for the inner sub-problem.
+
+Either outcome is a publishable finding.
+
+**E. The "1216 top-left 2×2s with hints on"** computation (onesmallstep,
+Jan 27, 2026). Exhaustively enumerated 1216 valid 2×2 corner
+configurations under the canonical hint placements. **Zip file shared
+as Discord attachment**. Worth verifying our solver computes the same
+number. Also worth using as a **regression test** for any propagator.
+
+**F. Border ring scarcity** (onesmallstep Jan 29, 2026): *"I've never
+managed to find five complete outer rings."* Combined with vol-6's
+~100k borders sampled, this gives a calibration: total border count
+is well above 100k but onesmallstep's specific search method finds
+≤4. Either his search method is too restrictive, or **the constraint
+that the border permits a *valid* second ring drastically reduces
+the count**. Worth resolving.
+
+**G. Disagreement on hint utility** (multiple speakers, 2025): both
+**onesmallstep** (*"I'm starting to wonder if those are the hints. I
+get better results by not using them"*) and **reinout_** confirmed
+the official top scores (Blackwood 470) **did not use the hints**.
+**The community quietly believes the 5 official hints may be a
+hindrance** for high partial scores, while still being mandatory for
+the canonical scenario. This is a methodological warning we should
+record — vol-9's Verhaard SA may want to test both with-hints and
+without-hints regimes.
+
+**H. Active research group** (dimkadimon9892, Jul 16, 2025). Claims a
+group working on **Beam Search + ML-learned state-evaluation
+functions** for combinatorial puzzles, planning to apply to E2.
+Two arxiv papers referenced:
+- `arxiv.org/abs/2502.13266`
+- `arxiv.org/abs/2502.18663`
+**This is the only research-group announcement in the entire Discord.**
+Worth fetching the papers for vol-11 to know the prior art.
+
+**I. JonkerVolgenant > Hungarian** (reinout_, Jul 16, 2025). For
+matching-based metaheuristics, JonkerVolgenant is faster than
+Hungarian and produces the same solution. Worth updating vol-7's
+ALNS+MWPM machinery if it uses Hungarian.
+
+**J. MIP / Max Clique cap at 7×7** (reinout_, Jul 27, 2025). Integer
+programming and maximum-clique formulations work well up to ~7×7 but
+do not scale to 16×16. Vol-7's MaxSAT was already empirically
+verifying this; reinout_ confirms it's the consensus.
+
+**K. Solver portfolios in active use** (onesmallstep, multiple):
+- Java solver from 2009 (Eternity Editor) — used by many.
+- SpecBAS solver (his own, 80s BASIC re-implementation).
+- `puzzlingaddiction.com/et2js/worker3.html` and `worker16.html` —
+  JavaScript browser solvers.
+- `github.com/GrafSpiel/CUBETS/tree/main` — Python solver named
+  CUBETS (described as "broken but works"; mentions ZLA phase, local
+  search, SAT subproblems).
+- `github.com/jwortmann/Eternity2Puzzles.jl` — Julia package, GUI.
+- `github.com/StartUpNationLabs/eternity2` — the user's own C++
+  solver, posted by neoteristis (= user) Apr 2025.
+
+**This is a third-party-solver catalog** vol-8 missed entirely.
+
+**L. Heuristic recommendation: "use up certain colors early on"**
+(reinout_, Jul 27, 2025). Concrete advice for backtracker heuristic:
+prioritize placing pieces with **rare colors** early. Aligns with
+vol-7's `project_e2_rare_opposite_rule.md` discovery; **confirms
+the community arrived at a related heuristic empirically**.
+
+**M. The 2007 arthur089454 SAT/CNF posting** (Nov 30, 2021). A user
+posted **explicit CNF clauses** for E2, including encoding
+piece-position variables x_{i,j} and color-position variables y_{j,c}
+with at-most-one constraints. Looks like a paper-style SAT
+formulation. Worth retrieving — could indicate vol-7's MaxSAT
+formulation was unique or partly reinvented from this.
+
+### Items still unresolved
+
+- onesmallstep's *"with neighbour checking"* custom solver: code
+  not shared explicitly. Mechanism is a strong AC-3-like adjacent
+  feasibility check.
+- The two 470 boards "are almost the same" claim: testable on the two
+  decoded 470 JSONs in `output/community_corpus/`.
+- The "e202.txt file in this server" referenced by quinnkindaexists
+  (Feb 25, 2025): community piece-data file shared via Discord
+  attachments, may have notation we should match.
+- Bastion's 2008 "KEY tile" (still uncited and undisclosed).
+- arxiv papers 2502.13266 and 2502.18663: not yet fetched.
+
+### Updated catalogue
+
+The probe #5 catalogue C-1 through C-6 expands by:
+
+| # | Technique / fact | Source | Status |
+|---|---|---|---|
+| C-7 | Blackwood scaling laws (50x per break, 10^19 total) | jblackwood3 2021 | empirical, calibration anchor |
+| C-8 | Concrete connectivity tables for piece-62 + corners | onesmallstep 2026 | directly usable; verify on our data |
+| C-9 | "Complete internal 14×14" open sub-problem | onesmallstep 2025-26 | well-defined; vol-11 candidate |
+| C-10 | 1216 top-left 2×2s with hints | onesmallstep 2026 | regression test data |
+| C-11 | Hint-utility debate: top scores didn't use hints | onesmallstep, jblackwood3 | methodological note |
+| C-12 | JonkerVolgenant > Hungarian | reinout_ 2025 | algorithm replacement |
+| C-13 | Beam Search + ML eval (active research group) | dimkadimon 2025 | unpublished work in progress |
+| C-14 | arthur089454 SAT/CNF formulation (2021) | discord | needs detailed reading |
+
+### Methodological reflection
+
+**Three passes** on this corpus produced three different catalogues:
+- Vol-8 (score- and method-name-grep): 5 community techniques.
+- Probe #5 (intent-keyword grep): 6 additional items.
+- Probe #6 (full read): 14 additional items + 1 calibration anchor.
+
+**Returns are still increasing on the full-read pass.** This means the
+intent-keyword sieve was missing roughly **2-3x the signal** that
+existed. Recommendation: **for high-value, bounded-size corpora
+(Discord = 1198 messages, groups.io threads ≤ 50 messages each), full
+read is the correct method**. Grep is only for corpora too large to
+read (e.g., the 11k groups.io messages as a single bag — but per-thread
+reading is still feasible).
+
+Next session should consider full reading of the remaining
+high-signal threads from probes #5 catalogue items C-1 to C-6 (the
+xtal shell-ladder thread, dvholten EMPI thread, Rotation Sets
+subculture threads) for full context.
+
+## Next steps for vol-9 / vol-11 (from probes #4, #5, #6)
 
 These are concrete, ready-to-build propagators. They are independent —
 each can be implemented and tested in isolation.
@@ -832,18 +1036,97 @@ Status of NS-1 through NS-8: **proposed, not assigned**. Vol-9 may
 pick these up when its Verhaard SA run completes; vol-11 may build
 them as its mission.
 
-**Priority ranking for vol-11**:
+### NS-9: verify the two 470 boards "are almost the same"
+
+**Statement** (onesmallstep, Jul 2025). The two known 470 boards
+(Blackwood's and the Jef-Bucas variant) are visually/structurally
+nearly identical. Decoded JSONs are at
+`output/community_corpus/groups_183676823_470.json` and
+`output/community_corpus/groups_197822677_470.json`. Cell-by-cell
+diff would quantify the overlap.
+
+**Cost**. 30 minutes Python. Use existing `scripts/compare_boards.py`.
+
+**Why it matters**. If two near-identical 470s exist, the 470
+attractor is **narrow** — vol-9's PT/SA may converge there
+deterministically and miss the 471 escape route entirely. Vol-7's
+finding that PT has a deterministic ceiling on a given border is
+consistent with this. Specifically: the 471 may require **leaving
+the 470 attractor**, not improving within it.
+
+### NS-10: solve the internal 14×14 sub-problem
+
+**Statement** (onesmallstep, multiple posts). Given a complete border
+ring with valid inward-facing colors, the **14×14 interior is a
+self-contained sub-puzzle** with 196 cells and 360 internal joins.
+**No-one has ever found a complete one** in 19 years.
+
+**Approaches**:
+1. Vol-7's MaxSAT machinery already optimised a 45-cell sub-puzzle.
+   Scaling to 196 cells with the 14×14 boundary as fixed external
+   constraint is technically feasible — same encoding, just bigger.
+2. Verhaard SA (vol-9's main build) restricted to the 196 interior
+   pieces is exactly the natural fit. Run vol-9 with `--only-
+   interior` after fixing a known-good 470 border.
+3. Existence-or-impossibility: if MaxSAT can prove infeasibility for
+   the specific border in the 470, that's the strongest possible
+   negative result and points to the impossibility of 480/480 with
+   that border.
+
+**Cost**. Variable. The MaxSAT impossibility attempt is bounded by
+solver runtime; the constructive attempt is open-ended.
+
+### NS-11: read the arxiv papers 2502.13266 and 2502.18663
+
+**Cost**. 1 hour each.
+**Why it matters**. The only active-research-group reference in the
+Discord. Beam Search + ML eval is genuinely novel for E2 and could
+either be a great direction for us or a dead-end someone else is
+about to confirm. Either is useful information.
+
+### NS-12: fetch and decode the Discord attachments
+
+**Specifically**:
+- `Top-left_2x2s_with_all_hints.zip` (onesmallstep, Jan 27 2026) — 1216
+  pre-enumerated 2×2 corner configs.
+- `2x2s_1_with_hints_on-1.zip` (onesmallstep, Jan 28 2026) — followup.
+- `piece_62_possibilities.png` (Jan 18, 2025) — visual annotation of
+  piece 62's connection structure.
+
+All are public Discord CDN attachments. Worth caching locally.
+
+### NS-13: try the without-hints regime for vol-9's SA
+
+**Statement**. Multiple speakers (onesmallstep, jblackwood3, reinout_)
+confirm the canonical 470 and several 469s were found **without
+using the 5 official hints**. The hints may be a hindrance for high
+partial scores even though they are mandatory for the canonical
+scenario.
+
+**Cost**. Trivial: an existing flag on vol-9's solver, if not already
+present.
+
+**Why it matters**. If vol-9's Verhaard SA performs significantly
+better without hints, we have a falsifiable test of the
+"hints-are-a-hindrance" hypothesis. Either outcome is useful.
+
+**Priority ranking for vol-11** (revised):
 1. **NS-1** (edge-piece inward multiset equality) — strongest static
-   propagator, cheapest to build, definitely not generator-defeated.
-2. **NS-7** (EMPI #2 as partial-board propagator) — moderate cost,
-   community never tried this direction, could be transformative if
-   it works.
-3. **NS-2/3** (piece 17/38/62 forcing) — cheap, deterministic, free.
-4. **NS-8** (spatial bias on plateaus) — diagnostic, not algorithmic.
-5. **NS-6** (shell-4 transition study) — research, motivates further
-   work but doesn't directly improve the solver.
-6. **NS-4** (generalize multiset chain to inner rings) — depends on
-   NS-1 working first.
+   propagator, cheapest to build.
+2. **NS-9** (verify two 470 boards are nearly identical) — 30
+   minutes, calibrates the 470-attractor structure.
+3. **NS-13** (without-hints regime) — trivial flag, tests an
+   empirical claim from the community SOTA holders.
+4. **NS-12** (fetch Discord attachments) — propagator-grade reference
+   data already computed by the community.
+5. **NS-7** (EMPI #2 as partial-board propagator).
+6. **NS-2/3** (piece 17/38/62 forcing).
+7. **NS-11** (arxiv papers).
+8. **NS-10** (internal 14×14 sub-problem) — long-running but
+   publishable result.
+9. **NS-8** (spatial bias on plateaus) — diagnostic.
+10. **NS-6** (shell-4 transition study).
+11. **NS-4** (generalize multiset chain to inner rings).
 
 ## Artifacts
 
