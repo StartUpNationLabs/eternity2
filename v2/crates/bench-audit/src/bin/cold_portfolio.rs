@@ -118,7 +118,8 @@ fn run_one_arm(
         segment_iters: 50,
         seed,
         verbose: false,
-        repair: RepairKind::Sa,
+        // Vol-17 — CP primary, SA fallback (see run_e2_blackwood note).
+        repair: RepairKind::Cp,
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
     };
