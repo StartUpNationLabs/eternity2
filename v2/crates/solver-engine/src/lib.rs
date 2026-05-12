@@ -195,39 +195,74 @@ pub enum Parallelism {
     RootSplit { split_depth: u32 },
 }
 
+/// Vol-16 Cat-2 Stage A — orthogonal sub-config for the optional
+/// propagator stack. Baseline edge-color matching + piece-uniqueness
+/// are ALWAYS on inside the engine; this struct only controls the
+/// additional propagators that may run after baseline succeeds.
+///
+/// Stays `Copy` so `EngineConfig` const profile slabs can use FRU.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PropagatorConfig {
+    /// Cheap; corner/edge/inner piece-class counting. On by default for
+    /// most profiles. Note: in `BLACKWOOD_RAW` it is OFF (vol-16 Cat-4b
+    /// dropped it because Blackwood's depth ~80 wall doesn't reach the
+    /// regime where class_balance pays its cost).
+    pub class_balance: bool,
+    /// Checkerboard color-balance pruning. Weakly pruning end-state
+    /// check today (~0% on a 6×6 sample); strong incremental version is
+    /// future work.
+    pub parity: bool,
+    /// Connectivity check: every unplaced piece has a remaining home
+    /// somewhere. ~3% node reduction on 6×6 sample.
+    pub island: bool,
+    /// Maintain arc consistency on neighbouring-cell domains after
+    /// each placement. Re-checks edges across already-pruned domains
+    /// until fixpoint. Strictly stronger than baseline forward-
+    /// checking; expensive at deep search.
+    pub ac3: bool,
+    /// GAColor — symmetric-alldiff feasibility per color. Strictly
+    /// tighter than `parity` on the same problem; intended replacement.
+    pub gacolor: bool,
+    /// NS-1 / Hopfer 2022 multiset-equality. Necessary condition for
+    /// any full solution: multiset of inward-facing colors on the 56
+    /// edge-class cells equals multiset of border-facing colors on
+    /// the 56 14×14-perimeter interior cells.
+    pub multiset_equality: bool,
+    /// Joe-Saunders 2026 depth-gate: skip the expensive Step-8
+    /// propagators below this depth. AC-3 and edge/uniqueness still
+    /// run at every depth. `None` = always run; empirical canonical-E2
+    /// sweet spot ~150.
+    pub depth_threshold: Option<u32>,
+}
+
+impl PropagatorConfig {
+    /// All optional propagators off; only baseline edge-color + piece-
+    /// uniqueness will run. Used by `BLACKWOOD_RAW`.
+    pub const OFF: Self = Self {
+        class_balance: false,
+        parity: false,
+        island: false,
+        ac3: false,
+        gacolor: false,
+        multiset_equality: false,
+        depth_threshold: None,
+    };
+
+    /// Default for most engine profiles: class_balance only.
+    pub const CLASS_BALANCE_ONLY: Self = Self {
+        class_balance: true,
+        ..Self::OFF
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EngineConfig {
     pub variable_order: VariableOrder,
     pub value_order: ValueOrder,
-    // Baseline propagation (edge-color matching + piece-uniqueness) is
-    // always on. These flags toggle additional propagators that
-    // execute after baseline succeeds. class_balance is cheap enough
-    // to be on by default for any engine profile; parity/island are
-    // opt-in per profile.
-    pub class_balance_propagator: bool,
-    pub parity_propagator: bool,
-    pub island_propagator: bool,
-    /// Maintain arc consistency on neighbouring-cell domains after each
-    /// placement. Propagates further than baseline forward-checking by
-    /// re-checking edges across already-pruned domains until a fixpoint.
-    pub ac3_propagator: bool,
-    // GAColor — symmetric-alldiff feasibility per color. Strictly tighter
-    // than parity_propagator on the same problem; intended replacement.
-    pub gacolor_propagator: bool,
-    /// NS-1 / Hopfer 2022 multiset-equality propagator. Necessary
-    /// condition for any full solution: the multiset of inward-facing
-    /// colors on the 56 edge-class cells equals the multiset of border-
-    /// facing colors on the 56 14×14-perimeter interior cells. Cheap
-    /// (O(cells + remaining_pieces·4 + color_count)); most useful late
-    /// in search (once the border ring closes), so consider gating
-    /// behind `depth_threshold_for_propagators`.
-    pub multiset_equality_propagator: bool,
-    /// Joe-Saunders 2026: skip the expensive Step-8 propagators
-    /// (class_balance / parity / island / gacolor / multiset_equality)
-    /// at depths below this threshold. AC-3 and edge/uniqueness
-    /// propagation still run at every depth. `None` = always run.
-    /// Empirical sweet spot for canonical E2 reported as ~150.
-    pub depth_threshold_for_propagators: Option<u32>,
+    /// Optional propagator stack (vol-16 Cat-2 Stage A — extracted from
+    /// 7 flat fields). Baseline edge-color + piece-uniqueness are
+    /// always on regardless.
+    pub propagators: PropagatorConfig,
     /// Break rotational symmetry by fixing the lowest-id corner piece at
     /// position (0,0) in its only valid rotation. Reduces search space
     /// by 4× on puzzles with 4 distinct corners (i.e., generated
@@ -283,17 +318,19 @@ impl EngineConfig {
     pub const BORDER_FIRST_LCV: Self = Self {
         variable_order: VariableOrder::BorderFirstMrv,
         value_order: ValueOrder::InsertionOrder,
-        class_balance_propagator: true,
-        parity_propagator: false,
-        island_propagator: false,
-        ac3_propagator: false,
-        gacolor_propagator: false,
-        multiset_equality_propagator: false,
-        depth_threshold_for_propagators: None,
         break_symmetry: false,
         parallelism: Parallelism::SingleThread,
         path_skeleton: None,
         scan_order: None,
+        propagators: PropagatorConfig {
+            class_balance: true,
+            parity: false,
+            island: false,
+            ac3: false,
+            gacolor: false,
+            multiset_equality: false,
+            depth_threshold: None,
+        },
     };
 
     /// Vol-15 — Blackwood 2020 base profile (engine knobs only; the
@@ -302,9 +339,6 @@ impl EngineConfig {
     /// Pair with gacolor + AC-3 + (optionally) NS-1 propagation.
     pub const BLACKWOOD_BASE: Self = Self {
         value_order: ValueOrder::BlackwoodHeuristic,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
         scan_order: Some(ScanOrder::RowMajorBottomUp),
         ..Self::BORDER_FIRST_LCV
     };
@@ -332,7 +366,6 @@ impl EngineConfig {
         // change under a color mismatch), but the pruning value at
         // the depths Blackwood reaches (~80) is marginal. Better to
         // pay the cost where it earns it (full-pipeline profiles).
-        class_balance_propagator: false,
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -343,20 +376,16 @@ impl EngineConfig {
 
     // Experiment A: GAColor as the strong global propagator.
     pub const BORDER_FIRST_GACOLOR: Self = Self {
-        gacolor_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const BORDER_FIRST_GACOLOR_PAR: Self = Self {
-        gacolor_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment D: GAColor + AC-3.
     pub const GACOLOR_AC3: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -364,15 +393,11 @@ impl EngineConfig {
     // propagation (gacolor + AC-3).
     pub const GACOLOR_AC3_LCV: Self = Self {
         value_order: ValueOrder::LeastConstraining,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_LCV_PAR: Self = Self {
         value_order: ValueOrder::LeastConstraining,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -380,14 +405,10 @@ impl EngineConfig {
     // Experiment B' — CHESS revisited with AC-3 propagation.
     pub const CHESS_GACOLOR_AC3: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_PAR: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -401,21 +422,17 @@ impl EngineConfig {
     // tie-breaks between equally-good piece choices are randomised.
     pub const GACOLOR_AC3_RANDOM_PAR: Self = Self {
         value_order: ValueOrder::RandomShuffle,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
 
     // Experiment C: GAColor + symmetry breaking.
     pub const GACOLOR_SYMBREAK: Self = Self {
-        gacolor_propagator: true,
         break_symmetry: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_SYMBREAK_PAR: Self = Self {
-        gacolor_propagator: true,
         break_symmetry: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
@@ -424,13 +441,11 @@ impl EngineConfig {
     // Experiment B: CHESS + GAColor.
     pub const CHESS_GACOLOR: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
-        gacolor_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const CHESS_GACOLOR_PAR: Self = Self {
         variable_order: VariableOrder::BorderFirstChess,
-        gacolor_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -441,8 +456,6 @@ impl EngineConfig {
     };
 
     pub const BORDER_FIRST_FULL_PAR: Self = Self {
-        parity_propagator: true,
-        island_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -461,16 +474,10 @@ impl EngineConfig {
 
     // Vol-12: gacolor + AC-3 + NS-1 multiset equality (Hopfer 2022).
     pub const GACOLOR_AC3_NS1: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const GACOLOR_AC3_NS1_PAR: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -479,18 +486,10 @@ impl EngineConfig {
     // at depth ≥ 150. Tries to bridge our ~2k nodes/sec to McGavin's
     // ~300M/sec by skipping per-node Step-8 work during early search.
     pub const JOE_DEPTH150: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const JOE_DEPTH150_PAR: Self = Self {
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -500,19 +499,11 @@ impl EngineConfig {
     /// see `eternity2_solver_engine::load_edge_bp_marginals`.
     pub const JOE_DEPTH150_BP: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const JOE_DEPTH150_BP_PAR: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -523,10 +514,6 @@ impl EngineConfig {
     /// strongest non-warm-started canonical-E2 single-process profile.
     pub const JOE_DEPTH150_BP_REC_PAR: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         path_skeleton: Some(PathSkeleton::HintRectangle),
         ..Self::BORDER_FIRST_LCV
@@ -535,10 +522,6 @@ impl EngineConfig {
     /// Single-thread variant of JOE_DEPTH150_BP_REC_PAR.
     pub const JOE_DEPTH150_BP_REC: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         path_skeleton: Some(PathSkeleton::HintRectangle),
         ..Self::BORDER_FIRST_LCV
     };
@@ -549,10 +532,6 @@ impl EngineConfig {
     /// for the entire search via PathPolicy::PrefixConstraint{k=256}.
     pub const JOE_DEPTH150_BP_REC_LAYERED_PAR: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         path_skeleton: Some(PathSkeleton::HintRectangleLayered),
         ..Self::BORDER_FIRST_LCV
@@ -560,23 +539,16 @@ impl EngineConfig {
 
     pub const JOE_DEPTH150_BP_REC_LAYERED: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
-        gacolor_propagator: true,
-        ac3_propagator: true,
-        multiset_equality_propagator: true,
-        depth_threshold_for_propagators: Some(150),
         path_skeleton: Some(PathSkeleton::HintRectangleLayered),
         ..Self::BORDER_FIRST_LCV
     };
 
     // Step 8 profiles: baseline + extra propagators.
     pub const BORDER_FIRST_PARITY: Self = Self {
-        parity_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const BORDER_FIRST_FULL: Self = Self {
-        parity_propagator: true,
-        island_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
@@ -585,15 +557,11 @@ impl EngineConfig {
     /// from phase-0 SA. See `solver-verhaard` crate.
     pub const VERHAARD_PREFERRED: Self = Self {
         value_order: ValueOrder::PreferredFirst,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         ..Self::BORDER_FIRST_LCV
     };
 
     pub const VERHAARD_PREFERRED_PAR: Self = Self {
         value_order: ValueOrder::PreferredFirst,
-        gacolor_propagator: true,
-        ac3_propagator: true,
         parallelism: Parallelism::RootSplit { split_depth: 0 },
         ..Self::BORDER_FIRST_LCV
     };
@@ -1762,7 +1730,7 @@ impl<'a> SearchState<'a> {
             stats: FinalStats::default(),
             best_depth: 0,
             best_partial: None,
-            gacolor: if solver.config.gacolor_propagator {
+            gacolor: if solver.config.propagators.gacolor {
                 Some(GaColorState::new(puzzle))
             } else {
                 None
@@ -1782,18 +1750,18 @@ impl<'a> SearchState<'a> {
                 }
                 v
             },
-            ac3_count: if solver.config.ac3_propagator {
+            ac3_count: if solver.config.propagators.ac3 {
                 vec![0u16; n_pos * 4 * puzzle.color_count as usize]
             } else {
                 Vec::new()
             },
-            ac3_present: if solver.config.ac3_propagator {
+            ac3_present: if solver.config.propagators.ac3 {
                 let n_rows = max_piece_index * 4;
                 vec![0u64; n_pos * n_rows.div_ceil(64)]
             } else {
                 Vec::new()
             },
-            ac3_on_queue: if solver.config.ac3_propagator {
+            ac3_on_queue: if solver.config.propagators.ac3 {
                 vec![false; n_pos]
             } else {
                 Vec::new()
@@ -2209,7 +2177,7 @@ impl<'a> SearchState<'a> {
         // domain[b] has matching color on the shared edge and r.piece !=
         // r'.piece. If support is lost we drop r from domain[a]. Updates
         // can cascade through the grid.
-        if self.config.ac3_propagator {
+        if self.config.propagators.ac3 {
             match self.propagate_ac3(sink, depth, pos) {
                 Ac3Outcome::Wipeout { removed } => {
                     undo.extend(removed);
@@ -2487,18 +2455,18 @@ impl<'a> SearchState<'a> {
     }
 
     fn run_extra_propagators(&self, depth: u32) -> PropagatorResult {
-        if !self.config.class_balance_propagator
-            && !self.config.parity_propagator
-            && !self.config.island_propagator
-            && !self.config.gacolor_propagator
-            && !self.config.multiset_equality_propagator
+        if !self.config.propagators.class_balance
+            && !self.config.propagators.parity
+            && !self.config.propagators.island
+            && !self.config.propagators.gacolor
+            && !self.config.propagators.multiset_equality
         {
             return PropagatorResult::Ok;
         }
         // Depth gate (Joe-Saunders 2026): suppress Step-8 propagators
         // below threshold so early-search throughput approaches the
         // bare-edge-equality + AC-3 inner-loop ceiling.
-        if let Some(threshold) = self.config.depth_threshold_for_propagators {
+        if let Some(threshold) = self.config.propagators.depth_threshold {
             if depth < threshold {
                 return PropagatorResult::Ok;
             }
@@ -2511,7 +2479,7 @@ impl<'a> SearchState<'a> {
             domain_bits: &self.domain_bits,
             words_per_pos: self.words_per_pos,
         };
-        if self.config.class_balance_propagator
+        if self.config.propagators.class_balance
             && class_balance_check(&ctx) == PropagatorResult::Wipeout
         {
             return PropagatorResult::Wipeout;
@@ -2520,7 +2488,7 @@ impl<'a> SearchState<'a> {
         // a fresh full recompute via `gacolor_check` is available for
         // unit testing parity vs incremental correctness, but the hot
         // path goes through GaColorState.
-        if self.config.gacolor_propagator {
+        if self.config.propagators.gacolor {
             let _ = gacolor_check; // keep symbol live for tests
             if let Some(gc) = self.gacolor.as_ref() {
                 if gc.feasible() == PropagatorResult::Wipeout {
@@ -2528,19 +2496,19 @@ impl<'a> SearchState<'a> {
                 }
             }
         }
-        if self.config.island_propagator
+        if self.config.propagators.island
             && island_check(&ctx) == PropagatorResult::Wipeout
         {
             return PropagatorResult::Wipeout;
         }
-        if self.config.parity_propagator
+        if self.config.propagators.parity
             && parity_check(&ctx) == PropagatorResult::Wipeout
         {
             return PropagatorResult::Wipeout;
         }
         // NS-1 multiset equality: cheapest after the border ring closes;
         // before that the supply terms are loose and rarely triggers.
-        if self.config.multiset_equality_propagator
+        if self.config.propagators.multiset_equality
             && multiset_equality_check(&ctx) == PropagatorResult::Wipeout
         {
             return PropagatorResult::Wipeout;

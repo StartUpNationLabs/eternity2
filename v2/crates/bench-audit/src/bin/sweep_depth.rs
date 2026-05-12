@@ -105,8 +105,8 @@ fn run_cell(
     } else {
         EngineConfig::GACOLOR_AC3
     };
-    cfg.multiset_equality_propagator = multiset_equality;
-    cfg.depth_threshold_for_propagators = if threshold < 0 { None } else { Some(threshold as u32) };
+    cfg.propagators.multiset_equality = multiset_equality;
+    cfg.propagators.depth_threshold = if threshold < 0 { None } else { Some(threshold as u32) };
     let mut solver = EngineSolver::new(cfg, "engine", "sweep_depth");
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = budget_ms;
