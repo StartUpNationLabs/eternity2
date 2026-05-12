@@ -436,6 +436,169 @@ leaves a coherent state.
 
 ---
 
+## Strategy composition (vol-16)
+
+### Why this section exists
+
+After vol-15 the unified engine grew from 7 named profiles to 30+
+combinations across five dimensions (variable order, value order,
+propagator stack, scan order, Blackwood schedule). `EngineConfig`
+became a 14-field struct with 25+ `EngineSolver::*` constructors,
+each a thin wrapper around a `pub const` profile slab. Adding a
+new dimension (vol-15 added scan_order + path_skeleton +
+blackwood_schedule) now requires changes in ~6 files: the struct
+definition, each named profile, each constructor, the proto
+comment, `instantiate()`, `list_solvers()`, plus any harness that
+wants the new dimension. The user flagged this in vol-15:
+*"re-engineer the way we manage all those possibilities."*
+
+The architectural decision below is **scoped to vol-16**. It does
+not change the proto, the wire format, or the `Solver` trait
+surface. It changes only the internal composition of
+`EngineConfig` and how new strategies are added.
+
+### Decision: trait + dyn dispatch (Option A)
+
+Each axis is a trait. Concrete strategies are zero-sized or small
+structs that implement the relevant trait. `EngineConfig` becomes
+a bag of trait objects.
+
+```rust
+trait VariableSelector: Send + Sync {
+    fn next(&self, state: &SearchState) -> Option<Position>;
+}
+
+trait ValueOrderer: Send + Sync {
+    fn order(
+        &self,
+        state: &SearchState,
+        pos: Position,
+        candidates: &mut Vec<u32>,
+    );
+}
+
+trait Propagator: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn min_depth(&self) -> u32 { 0 }
+    fn propagate(
+        &self,
+        ctx: &mut PropagatorContext<'_>,
+    ) -> PropagatorResult;
+}
+
+pub struct EngineConfig {
+    pub variable: Box<dyn VariableSelector>,
+    pub value: Box<dyn ValueOrderer>,
+    pub propagators: Vec<Box<dyn Propagator>>,
+    pub scan_order: ScanOrder,
+    pub blackwood: Option<Arc<BlackwoodSchedule>>,
+    pub path_skeleton: Option<PathSkeleton>,
+    pub parallelism: Parallelism,
+    pub break_symmetry: bool,
+}
+
+impl EngineConfig {
+    pub fn builder() -> EngineConfigBuilder { ... }
+}
+
+// Profiles become builder calls, not const slabs:
+pub mod profiles {
+    pub fn joe_depth150_bp_par(bp: Arc<EdgeBpMarginalsData>) -> EngineConfig {
+        EngineConfig::builder()
+            .variable(BorderFirstMrv)
+            .value(EdgeBpMarginals::new(bp))
+            .propagator(Ac3)
+            .propagator(GaColor)
+            .propagator(MultisetEquality)
+            .propagator(ClassBalance)
+            .depth_gate(150)
+            .parallel()
+            .build()
+    }
+    pub fn blackwood_raw(sched: Arc<BlackwoodSchedule>) -> EngineConfig {
+        EngineConfig::builder()
+            .variable(BorderFirstMrv)
+            .value(BlackwoodHeuristic)
+            .blackwood(sched.clone())
+            .scan_order(ScanOrder::RowMajorBottomUp)
+            .build()
+    }
+    // ... ~7 profiles, replacing today's 25 constructors.
+}
+```
+
+### Why this and not the alternatives
+
+Evaluated four candidates (full sketches in
+`project_e2_vol16_cleanup_anchor.md`):
+
+| option | runtime cost | adds-a-dimension cost | rejected because |
+|---|---|---|---|
+| A — trait + dyn | ~5% vtable | new trait + new field; existing strategies untouched | (picked) |
+| B — type-state generics | 0% | every profile is a new monomorphisation | compile-time explosion + brutal error messages |
+| C — plugin registry (data-driven) | < 1% | new struct + `inventory::submit!` | premature without a stable strategy set; loses compile-time safety |
+| D — builder DSL with marker types | 0% | new builder method + new field on plain `EngineConfig` | doesn't solve "adding an axis touches 6 files" — only adds compile-time validation on top of today's model |
+
+The ~5% vtable cost on Option A is the **only** unappealing
+property, and it's bounded by:
+
+1. The current profile already shows 14.6% in bounds-checking
+   and 8.6% in `Range::spec_next` — vtable cost is a small slice
+   of a pie that's mostly recoverable elsewhere (Cat-4 perf
+   cleanup).
+2. `#[inline]` on the trait methods + small enum-dispatch shims
+   (where it matters) recover most of it.
+3. The hot inner loop touches three trait methods at most:
+   variable selection (1× per descent), value ordering (1× per
+   placement), propagator chain (≤ N propagators per placement,
+   N ≤ 6 today). The number of vtable calls per node is bounded
+   and small.
+
+### Constraints introduced by this decision
+
+- **`EngineConfig` is no longer `Copy`** (Box<dyn> is not Copy).
+  All callers that copy a `const` profile must be rewritten to
+  `EngineConfig::builder()...build()` at call time. This is the
+  main migration cost in Cat-2.
+- **`Solver: Send + Sync`** — the strategy traits must themselves
+  be `Send + Sync` (the workers in `rayon::scope` share them).
+  Today's `Solver` is `Send` only; need to verify nothing leans
+  on `!Sync`.
+- **Profiles become factory functions, not constants.** The
+  proto/server registry table now indexes into a function map
+  (`HashMap<&'static str, fn(...) -> EngineConfig>`), not a
+  static constant. Schedule injection (Blackwood) becomes a
+  natural part of the factory signature, resolving the
+  vol-15 "schedule has no proto home" carve-out cleanly.
+
+### Migration path
+
+1. Vol-16 Cat-2 ships the trait surface + EngineConfigBuilder +
+   profiles module. Existing `EngineConfig::const FOO` slabs are
+   replaced one-by-one; `EngineSolver::foo()` constructors collapse
+   to one-liners that call into `profiles::foo()`.
+2. The dispatch layer in `recurse` + `place_and_propagate_opts`
+   switches from `match self.config.variable_order { ... }` to
+   `self.config.variable.next(state)`. Same for value order and
+   propagators.
+3. After the migration lands, measure nps before/after on
+   canonical E2 single-thread. If the vtable hit is < 5%, accept
+   it. If > 10%, revisit Option B (type-state) for the inner-loop
+   dispatch only — but keep the trait surface for the outer
+   composition.
+
+### Open question — deferred to vol-17
+
+Should profiles be **JSON-loadable** (Option C, plugin registry)?
+The bench-audit harnesses would benefit from being able to spec
+an experiment configuration as JSON rather than as Rust code. But
+the strategy set is not yet stable (vol-17 will add at least the
+calibrated Blackwood schedule + likely a break-tolerant
+propagator stack). Premature to commit to JSON config now; revisit
+once vol-17 lands.
+
+---
+
 ## Resolved design decisions
 
 These were the six open questions; answers below are committed unless
