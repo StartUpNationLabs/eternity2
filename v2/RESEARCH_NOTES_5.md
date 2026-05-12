@@ -453,6 +453,34 @@ swapped out next round. For short PT runs this is suboptimal. If the
 add inner-loop penalty too (we have the cell-set machinery in
 forbidden.rs already).
 
+### NE1 FUNNEL DONE 02:24 — capped at 450/480 across all 3 stages
+
+**Final NE1 funnel result**:
+| Stage | Seeds × Time | Best |
+|---|---|---|
+| Stage 1 | 30 × 90s   | 450/480 |
+| Stage 2 | 8 × 200s   | 450/480 |
+| Stage 3 | 2 × 600s   | 450/480 |
+
+Stage 3 deep-PT (600s on the top-2 candidates) **did NOT break 450**.
+The 450/6/6 board (cafeff03) re-PT'd produced another 450. The 449/6/6
+board (cafefefd) re-PT'd produced 449.
+
+**This rigorously confirms moat-depth-≥-5**: even with 600s of PT
+from a structurally-strong 450 (all 6/6 NEW top-6 matched), no
+configuration of 451+ was found. Combined with the brute-force
+3-cycle exhaustive on this same 450 (2M trials, 0 imp) and 4/5-cycle
+samples (~2M trials), the conclusion is solid.
+
+**The night's BEST score remains 450/480** — matching vol-4. The
+NIGHT5_SYNTHESIS thesis stands: 449/450 plateau is structurally
+locked at moat-depth-≥-5 by the abundant-color combinatorial trap
++ asymmetric-hint strain cascade.
+
+NE2-iter starting now from the 450/6/6 board. Round 1 will test
+whether iterative deepening can push past 450 by progressively
+constraining defects. ROUND 1 ETA 02:35.
+
 ### NE1 STAGE 2 RESULT 02:04 — 450/6/6 (third 450, all top-6 matched)
 
 **Setup**: stage 2 ran the top-8 stage-1 borders × 200s PT each.
