@@ -1664,6 +1664,83 @@ pub fn blackwood_schedule_calibrated_v17a_p25(
     blackwood_schedule_calibrated_v17a(puzzle, hints)
 }
 
+/// Vol-17 (idea A, V17B revision) — TIGHT empirical envelope of the
+/// McGavin 469 cumulative heuristic-color curve, sampled at every 16
+/// cells with a 1-edge floor margin. Designed so that
+/// `target_at(d) ≤ McGavin_actual[d]` for ALL d (verified offline);
+/// the v17A coarser version had a 7-edge over-demand around depth 32
+/// because of linear interpolation between sparse control points.
+///
+/// Concretely: the v17A piecewise-linear schedule between control
+/// points (0,0) and (60,21) reaches target=11 at depth 32, but the
+/// McGavin 469 board has only 4 heuristic edges at depth 32 — meaning
+/// the v17A schedule prunes the McGavin 469 itself between depths
+/// 20-50. The v17B schedule samples at every 16 cells so the
+/// envelope hugs the McGavin curve from below with at most 1-edge
+/// slack.
+///
+/// This is the schedule that should be used as the default once
+/// validated on canonical E2.
+pub fn blackwood_schedule_calibrated_v17b(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Option<BlackwoodSchedule> {
+    let colors = compute_heuristic_sides(puzzle, hints);
+    if colors.len() < 3 { return None; }
+    let pool_size = count_color_occurrences(puzzle, &colors);
+    let n_pos = puzzle.cell_count();
+    let last_idx = n_pos.saturating_sub(1);
+
+    // Dense sample from McGavin 469 cum-curve, minus 1-edge floor.
+    // Final point clamped to n_pos-1 to land inside the path.
+    let mut targets: Vec<(u32, u32)> = vec![
+        (0,   0),
+        (16,  0),
+        (32,  3),
+        (48,  12),
+        (64,  25),
+        (80,  31),
+        (96,  39),
+        (112, 43),
+        (128, 47),
+        (144, 60),
+        (160, 81),
+        (176, 89),
+        (192, 104),
+        (208, 118),
+        (224, 128),
+        (240, 146),
+    ];
+    // Append saturation point at the very last cell. Use the
+    // observed total minus margin if it fits, else cap at last_idx.
+    if last_idx > 240 {
+        targets.push((last_idx, pool_size.min(149)));
+    }
+
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| {
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
+            scaled.min(n_pos.saturating_sub(1))
+        })
+        .collect();
+
+    let target_max = targets.last().map(|&(d, _)| d).unwrap_or(n_pos - 1);
+    let s = BlackwoodSchedule {
+        heuristic_sides: colors,
+        exhaustion_targets: targets,
+        heuristic_pool_size: pool_size,
+        max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
+    };
+    if let Err(e) = s.validate() {
+        eprintln!("WARNING: blackwood_schedule_calibrated_v17b produced invalid schedule: {e}");
+        return None;
+    }
+    Some(s)
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Row {
     pub(crate) piece_id: PieceId,
