@@ -31,7 +31,6 @@ use eternity2_solver_engine::{load_edge_bp_marginals, EngineSolver};
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
 const W: u32 = 16;
-const H: u32 = 16;
 
 fn pos(x: u32, y: u32) -> Position { y * W + x }
 
@@ -41,7 +40,7 @@ fn pos(x: u32, y: u32) -> Position { y * W + x }
 fn build_rectangle_path(close_loop: bool) -> Vec<Position> {
     let mut path = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    let mut push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
+    let push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
         if seen.insert(p) {
             path.push(p);
         }

@@ -38,6 +38,7 @@ struct V2Puzzle {
 struct V2PuzzleSpec { file: String, size: u32, colors: u32 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct V2ProfileResult {
     solver_id: String,
     heuristic_profile: String,

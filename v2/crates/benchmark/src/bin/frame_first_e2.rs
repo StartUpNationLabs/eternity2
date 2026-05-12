@@ -37,7 +37,7 @@ fn flush_err() {
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::{puzzle_name_from_path, write_report};
-use eternity2_core::{Board, Hint, Hints, Piece, PieceId, Position, Puzzle, Rotation, BORDER};
+use eternity2_core::{Board, Hint, Hints, Piece, PieceId, Position, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_localsearch::{run_pt_from, PtConfig};
 use eternity2_solver_engine::EngineSolver;

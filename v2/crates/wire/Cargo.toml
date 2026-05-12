@@ -14,7 +14,6 @@ eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
 eternity2-solver-trait = { path = "../solver-trait" }
 prost = "0.13"
-prost-types = "0.13"
 tonic = { version = "0.12", default-features = false, features = ["codegen", "prost"] }
 
 [build-dependencies]

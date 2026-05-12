@@ -20,7 +20,7 @@
 
 use crate::{
     local_match_count, match_count_with, best_rotation,
-    State, StateRef, RngHandle, Rng, SaOutcome,
+    State, StateRef, Rng, SaOutcome,
 };
 use eternity2_core::{Board, Position, Puzzle, Rotation};
 

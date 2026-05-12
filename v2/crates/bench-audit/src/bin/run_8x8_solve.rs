@@ -16,7 +16,6 @@
 //                                  border_first_lcv_par, border_first_lcv (single-thread)
 //   --all-profiles        run all configured profiles sequentially
 
-use std::path::PathBuf;
 use std::time::Instant;
 
 use eternity2_bench_audit as _;

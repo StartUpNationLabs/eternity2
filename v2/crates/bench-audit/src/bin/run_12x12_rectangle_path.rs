@@ -18,18 +18,16 @@
 //
 // CLI: --seed --solve-budget-ms (for initial solve) --bench-budget-ms (A/B)
 
-use std::path::PathBuf;
 use std::time::Instant;
 
 use eternity2_bench_audit as _;
-use eternity2_core::{Board, Hint, Hints, PathPolicy, PieceId, Position, Rotation};
+use eternity2_core::{Board, Hint, Hints, PathPolicy, Position};
 use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
 const W: u32 = 12;
-const H: u32 = 12;
 
 fn pos(x: u32, y: u32) -> Position { y * W + x }
 
@@ -41,7 +39,7 @@ fn build_rectangle_path(corner_hints: &[(u32, u32)], center: (u32, u32)) -> Vec<
     let (_brx, bry) = corner_hints[2];
     let mut path = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    let mut push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
+    let push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
         if seen.insert(p) { path.push(p); }
     };
     // Top row

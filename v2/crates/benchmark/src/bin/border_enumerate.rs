@@ -102,6 +102,7 @@ fn corner_placements(pieces: &[Piece], kind: CornerKind) -> Vec<CornerPlacement>
 }
 
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 struct EdgePlacement {
     pid: PieceId,
     rot: u8,
@@ -238,6 +239,7 @@ impl SimpleRng {
         self.state = x;
         x.wrapping_mul(0x2545F4914F6CDD1D)
     }
+    #[allow(dead_code)]
     fn shuffle<T>(&mut self, v: &mut [T]) {
         for i in (1..v.len()).rev() {
             let j = self.next_u64() as usize % (i + 1);

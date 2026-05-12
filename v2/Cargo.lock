@@ -480,8 +480,6 @@ dependencies = [
  "eternity2-solver-naive",
  "eternity2-solver-portfolio",
  "eternity2-solver-trait",
- "http",
- "prost",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -546,12 +544,7 @@ name = "eternity2-solver-verhaard"
 version = "0.1.0"
 dependencies = [
  "eternity2-core",
- "eternity2-events",
- "eternity2-propagators",
- "eternity2-solver-engine",
- "eternity2-solver-trait",
  "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1939,7 +1932,6 @@ dependencies = [
  "eternity2-events",
  "eternity2-solver-trait",
  "prost",
- "prost-types",
  "tonic",
  "tonic-build",
 ]

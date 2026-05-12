@@ -90,6 +90,7 @@ fn placed_count(b: &Board, puzzle: &Puzzle) -> u32 {
     (0..puzzle.cell_count()).filter(|&p| b.get(p).is_some()).count() as u32
 }
 
+#[allow(dead_code)]
 struct StageScore {
     elapsed_s: f64,
     placed: u32,

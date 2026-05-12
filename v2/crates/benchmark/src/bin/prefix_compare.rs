@@ -13,7 +13,7 @@ use std::time::Instant;
 use clap::Parser;
 use eternity2_benchmark::board_io::read_dump;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
-use eternity2_core::{Board, Hint, Hints, Piece, PieceId, Puzzle, Rotation, BORDER};
+use eternity2_core::{Board, Hints, Piece, PieceId, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};

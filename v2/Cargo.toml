@@ -34,9 +34,36 @@ unused_must_use = "deny"
 pedantic = { level = "warn", priority = -1 }
 nursery  = { level = "warn", priority = -1 }
 # Allow lints that are noisy without paying for themselves in this codebase.
+# Vol-16 audit: these categories produced 150+ warnings on bitfield /
+# index / score / telemetry code where the existing form is the clearest
+# expression of intent. Bounded cleanup work elsewhere is more valuable.
 module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+doc_markdown = "allow"                      # 53 false positives on identifier-like prose
+cast_possible_truncation = "allow"          # u32 depths/indices, all bounded
+cast_possible_wrap = "allow"                # i32/u32 event timestamps
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"               # score-as-f64 telemetry
+missing_const_for_fn = "allow"              # functions deliberately non-const
+must_use_candidate = "allow"                # const-getter ceremony
+needless_pass_by_value = "allow"            # Arc<Schedule> ergonomics
+similar_names = "allow"                     # x/y, i/j, pid/pid_i geometric pairs
+items_after_statements = "allow"            # closure + helper-fn idiom
+redundant_pub_crate = "allow"               # deliberately pub(crate)
+option_if_let_else = "allow"                # let-else preferred but not always clearer
+inline_always = "allow"                     # EventSink::emit relies on it
+single_char_lifetime_names = "allow"        # 'a is standard
+unreadable_literal = "allow"                # hint puzzles use raw piece ids
+needless_for_each = "allow"                 # iterator-style for_each is fine here
+cast_lossless = "allow"                     # u32 -> i64/u64/f64 widening is intentional
+needless_borrow = "allow"                   # explicit refs on &Self::method ergonomics
+many_single_char_names = "allow"            # x/y/w/h/i/j geometry, tx/ty deltas
+too_long_first_doc_paragraph = "allow"      # research notes intentionally dense
+doc_lazy_continuation = "allow"             # markdown ambiguity in identifier prose
+single_match_else = "allow"                 # explicit match for option/result intentful
+unnecessary_wraps = "allow"                 # trait shapes constrain signatures
+suboptimal_flops = "allow"                  # exponent inputs short, mul_add not measurable
 
 # Build profile tuned for the WASM bundle (V2_DESIGN.md "WASM scope" —
 # classroom Wi-Fi, kid-friendly load time). Server crates also benefit.

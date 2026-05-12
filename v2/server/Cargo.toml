@@ -22,7 +22,6 @@ eternity2-solver-naive = { path = "../crates/solver-naive" }
 eternity2-solver-portfolio = { path = "../crates/solver-portfolio" }
 eternity2-solver-trait = { path = "../crates/solver-trait" }
 wire = { path = "../crates/wire" }
-prost = "0.13"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
 tokio-stream = "0.1"
 tonic = "0.12"
@@ -30,7 +29,6 @@ tonic-web = "0.12"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-http = "1"
 
 [dev-dependencies]
 tokio-stream = { version = "0.1", features = ["net"] }

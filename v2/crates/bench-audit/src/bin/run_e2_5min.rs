@@ -12,6 +12,7 @@ use std::time::Instant;
 
 use eternity2_bench_audit as _;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
+use eternity2_benchmark::report::bucas_url;
 use eternity2_core::Board;
 use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
 use eternity2_solver_engine::EngineSolver;
@@ -220,6 +221,8 @@ fn main() {
             "max_depth_seen": s.max_depth_seen,
             "solutions_found": s.solutions_found,
         }));
+        let bucas = bucas_url(&puzzle, b, "vol12_5min");
+        summary.push_str(&format!("\nbucas: {bucas}\n"));
         let json = serde_json::json!({
             "schema_version": 1,
             "verdict": verdict,
@@ -228,6 +231,7 @@ fn main() {
             "edge_matches": matched,
             "edge_total": total,
             "internal_total_edges": internal_total,
+            "bucas_url": bucas,
             "placement": (0..puzzle.cell_count()).map(|pos| {
                 b.get(pos).map(|(pid, rot)| serde_json::json!({
                     "pos": pos,

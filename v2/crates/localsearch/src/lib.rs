@@ -140,14 +140,6 @@ fn classify_piece(piece_edges: [Color; 4]) -> PieceClass {
     }
 }
 
-fn cell_class_matches(c: CellClass, p: PieceClass) -> bool {
-    matches!(
-        (c, p),
-        (CellClass::Corner, PieceClass::Corner)
-            | (CellClass::Edge, PieceClass::Edge)
-            | (CellClass::Interior, PieceClass::Interior)
-    )
-}
 
 // ============================================================
 // SplitMix64 PRNG (same family as the generator crate uses).
@@ -307,7 +299,7 @@ impl<'a> State<'a> {
             }
         };
         // Shuffle each piece pool then drop one-by-one into matching cells.
-        let mut do_class = |pieces: &mut Vec<PieceId>, cells: &[Position], rng: &mut Rng, board: &mut Board| {
+        let do_class = |pieces: &mut Vec<PieceId>, cells: &[Position], rng: &mut Rng, board: &mut Board| {
             // Fisher-Yates over piece pool.
             for i in (1..pieces.len()).rev() {
                 let j = rng.gen_range((i + 1) as u32) as usize;
@@ -1414,9 +1406,6 @@ fn run_sa_loop(
     let mut temp = cfg.temperature_start;
     let mut iters: u64 = 0;
     let mut since_cool: u64 = 0;
-    let mut accepts: u64 = 0;
-    let mut rejects: u64 = 0;
-    let _ = (accepts, rejects); // placeholder for future telemetry
 
     let timed_out = |start: &std::time::Instant| -> bool {
         cfg.time_budget_ms != 0
@@ -1474,9 +1463,6 @@ fn run_sa_loop(
                     best_score = score;
                     best_board = board.clone();
                 }
-                accepts += 1;
-            } else {
-                rejects += 1;
             }
         } else {
             // SWAP+BEST-ROT: pick two same-class cells, swap, then
@@ -1538,12 +1524,10 @@ fn run_sa_loop(
                     best_score = score;
                     best_board = board.clone();
                 }
-                accepts += 1;
             } else {
                 // Revert.
                 board.place(p_i, pid_i, rot_i);
                 board.place(p_j, pid_j, rot_j);
-                rejects += 1;
             }
         }
 

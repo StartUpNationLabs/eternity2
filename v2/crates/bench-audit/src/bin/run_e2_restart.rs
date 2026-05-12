@@ -17,7 +17,7 @@
 // CLI: --budget-ms (total, default 300_000) --round-ms (default 30_000).
 
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 

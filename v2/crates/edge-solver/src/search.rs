@@ -15,7 +15,7 @@
 use eternity2_core::{Color, PieceId, Puzzle, BORDER};
 
 use crate::tables::{
-    mask_and_into, mask_copy, mask_for_each, mask_popcount, Tables,
+    mask_and_into, mask_copy, mask_for_each, Tables,
 };
 use crate::topology::Topology;
 

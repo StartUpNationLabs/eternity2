@@ -42,7 +42,7 @@
 
 #![forbid(unsafe_code)]
 
-use eternity2_core::{Hints, Piece, PieceId, Position, Puzzle, Rotation, BORDER};
+use eternity2_core::{Hints, Piece, Position, Puzzle, Rotation, BORDER};
 use std::collections::HashMap;
 use std::fmt::Write;
 

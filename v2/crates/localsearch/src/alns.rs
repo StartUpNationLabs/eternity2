@@ -26,7 +26,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use eternity2_core::{Board, Hint, Hints, Position, Puzzle, Rotation, PieceId, BORDER};
+use eternity2_core::{Board, Hint, Hints, PieceId, Position, Puzzle, BORDER};
 use eternity2_events::BufferSink;
 use eternity2_solver_engine::EngineSolver;
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};

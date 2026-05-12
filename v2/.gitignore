@@ -6,3 +6,11 @@ Cargo.lock.bak
 # TS verification output
 /proto/_gen-ts
 node_modules
+
+# Frontend build artifacts (cf. vol-16 cleanup anchor)
+frontend/dist/assets/index-*.js
+frontend/tsconfig.tsbuildinfo
+
+# Profiler symbol bundles (dsymutil) and run artifacts
+output/**/*.dSYM
+*.dSYM

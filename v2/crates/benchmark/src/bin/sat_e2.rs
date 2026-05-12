@@ -96,7 +96,7 @@ fn main() {
     eprintln!("=== sat_e2 ===");
     eprintln!("puzzle: {}", args.puzzle.display());
 
-    let (puzzle, mut hints) = if let Some(n) = args.generate_n {
+    let (puzzle, hints) = if let Some(n) = args.generate_n {
         let p = generate(GeneratorConfig {
             size: n, interior_colors: n + 2, seed: args.generate_seed,
         }).expect("generate");

@@ -1034,7 +1034,7 @@ pub fn build_hint_rectangle_path(
     // Trace the rectangle.
     let mut path = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    let mut push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
+    let push = |p: Position, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
         if seen.insert(p) { path.push(p); }
     };
     // Top row at y=tly from x=tlx..=trx
@@ -2096,9 +2096,9 @@ impl<'a> SearchState<'a> {
                 this.stats.propagations += popcount as u64;
                 let entry = UndoEntry { pos: neighbor, words: diff };
                 if this.domain_is_empty(neighbor as usize) {
-                    PruneResult::Wipeout { entry, popcount }
+                    PruneResult::Wipeout { entry }
                 } else {
-                    PruneResult::Removed(entry, popcount)
+                    PruneResult::Removed(entry)
                 }
             } else {
                 PruneResult::Ok
@@ -2120,13 +2120,13 @@ impl<'a> SearchState<'a> {
             if Some(our_side) == skip_side { continue; }
             let Some(np) = maybe_np else { continue; };
             match prune(self, np, edge_idx, required) {
-                PruneResult::Wipeout { entry, .. } => {
+                PruneResult::Wipeout { entry } => {
                     undo.push(entry);
                     self.stats.domain_wipeouts += 1;
                     self.emit(sink, depth, EventBody::DomainWipeout { position: np });
                     return PropagationOutcome::Wipeout { undo };
                 }
-                PruneResult::Removed(entry, _) => undo.push(entry),
+                PruneResult::Removed(entry) => undo.push(entry),
                 PruneResult::Ok => {}
             }
         }
@@ -3200,8 +3200,8 @@ pub(crate) enum Ac3Outcome {
 
 enum PruneResult {
     Ok,
-    Removed(UndoEntry, u32), // entry + popcount (for propagation counter)
-    Wipeout { entry: UndoEntry, popcount: u32 },
+    Removed(UndoEntry),
+    Wipeout { entry: UndoEntry },
 }
 
 #[cfg(test)]

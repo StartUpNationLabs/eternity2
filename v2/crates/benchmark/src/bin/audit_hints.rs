@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use clap::Parser;
 use eternity2_benchmark::board_io::read_dump;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
-use eternity2_core::Rotation;
 
 #[derive(Parser, Debug)]
 #[command(name = "audit_hints", about = "Check hint preservation in harvested boards")]
