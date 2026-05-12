@@ -148,3 +148,109 @@ This is the minimal feature surface for B.1–B.6. B.7 (parameter
 search harness) is a separate bin in `crates/bench-audit/`.
 B.8 (PT integration) is deferred.
 
+### 2026-05-12 ~19:00 — user-flagged vol-16 anchor: code cleanup
+
+User: *"I think session 16 will be focused on code clean up,
+refactoring, deduplication etc.... our code is becoming quite a
+mess"*
+
+Endorsed. Capturing the specific debt that motivated the call,
+so vol-16 has a concrete punch list rather than a vibes-based
+"clean things up":
+
+**Engine-config surface bloat (the most visible smell)**
+- `EngineConfig` has 14 fields. Many are orthogonal in principle
+  (variable_order × value_order × 5 propagator flags × depth gate ×
+  parallelism × path_skeleton × scan_order × blackwood_schedule via
+  EngineSolver builder).
+- The const-profile table has 28+ named profiles built via FRU
+  spreads; adding the Blackwood profiles required adding two more.
+  The naming convention (`JOE_DEPTH150_BP_REC_LAYERED_PAR`) is a
+  symptom of "feature flags multiplied together"; the profile
+  table is approaching a combinatorial explosion.
+- The proto registry comment + server::service::instantiate +
+  list_solvers are three places that have to stay in sync.
+  Already drifted (vol-15's `BLACKWOOD_BASE*` profiles aren't in
+  the proto comment yet — TODO for vol-16's first commit).
+- **Refactor target**: split `EngineConfig` into orthogonal
+  sub-configs (`VarOrderConfig`, `ValueOrderConfig`, `PropConfig`,
+  `PathConfig`, `BlackwoodConfig`), each with its own default,
+  composed via a builder. Profile constants become builder
+  combinations, named only when actually published.
+
+**Bench-audit / benchmark crate sprawl**
+- `crates/bench-audit/src/bin/` has 20+ harness binaries, many
+  near-duplicates (`run_e2_5min`, `run_e2_5min_bp_ab`,
+  `run_e2_rectangle_full_pipeline`, `run_e2_rectangle_path`,
+  `run_e2_layered_pipeline`, vol-15's `run_e2_blackwood`,
+  vol-15's `run_blackwood_12x12`...). Each duplicates ~80 lines
+  of `score_board` + `placed_count` + `write_board_json` + CLI
+  parsing.
+- **Refactor target**: shared library module `bench_audit::pipeline`
+  with `Pipeline::cp(...).alns(...).run(out_dir)`; thin bins call
+  it. Aim: each new harness < 60 lines.
+
+**Memory + research-notes accretion**
+- `~/.claude/.../memory/MEMORY.md` is at 34 entries. Several
+  pairs are duplicates with different framings
+  (`project_e2_vol14_443_mismatch_geometry` +
+  `project_e2_vol14_mismatch_geometry_universal`;
+  `project_e2_vol14_scan_order_analysis` +
+  `project_e2_vol14_hint_centric_null`). Some entries are stale
+  (e.g., the rare-color geography numbers measured on canonical
+  E2 are correct but the project_e2_vol14_framefirst_null entry
+  references a lower-bound that's been corrected elsewhere —
+  cross-references will rot fast).
+- **Refactor target**: merge near-duplicates; promote a
+  `project_e2_calibration` entry that's the single source of
+  truth for "what score does what stack reach"; collapse vol-14
+  five-finding entries into one rollup pointer.
+
+**Dead code in solver-engine**
+- `PruneResult::Removed(UndoEntry, u32)` and `PruneResult::Wipeout
+  { entry, popcount: u32 }` — the popcount field is unused
+  (compiler warned both times). Either remove or wire to a
+  counter.
+- `cell_class_matches` in `localsearch/src/lib.rs:143` flagged
+  dead.
+- Vol-14's `pos_backtracks` instrumentation was added for one
+  measurement and is still in the hot path; if it has paid back
+  the cost, document it; if not, gate behind a feature flag.
+- **Refactor target**: one `cargo +nightly clippy --workspace
+  -- -W clippy::all` pass; fix or `#[allow]` with reason.
+
+**Backward-compat shims that are no longer needed**
+- `EngineConfig` is `Copy + Clone + PartialEq + Eq`. The Eq isn't
+  actually used anywhere — derive it removed.
+- The `place_and_propagate` thin wrapper now calls
+  `place_and_propagate_opts(None)`. Once vol-16 audits callers,
+  either inline the wrapper or rename to make the relationship
+  obvious.
+
+**Tests that should be folded together**
+- 5 `solves_*` integration-style tests in solver-engine that all
+  exercise generator + solve roundtrip. Could be one parameterised
+  test.
+- `blackwood_solve_tiny_puzzle_still_finds_solution` and
+  `blackwood_break_index_allows_one_mismatch_on_small_puzzle` test
+  the same 2×2 puzzle with different schedules; could be a single
+  table-driven test.
+
+**Vol-15-specific cleanup vol-16 should do**
+- Add the new Blackwood profiles to `proto/solver/v2/solver.proto`
+  comment block + `server::service::instantiate` +
+  `server::service::list_solvers`.
+- Document `compute_heuristic_sides` + `blackwood_schedule_469`
+  in `V2_DESIGN.md` (currently only in `V15_BLACKWOOD_SPEC.md`,
+  which is a living spec, not a stable contract).
+- If vol-15's canonical-E2 run lands Blackwood as a winner,
+  promote to `joe_depth150_bp_blackwood_par` and retire the
+  experimental name.
+
+**Out of scope for vol-16 (but worth flagging)**
+- The localsearch crate has its own register of duplicated score-
+  computation logic across alns_e2 / pt_e2 / the bench-audit
+  bins. Worth a parallel cleanup pass.
+- `frontend/dist/assets/index-*.js` — generated artifacts
+  showing up in git status. Should be .gitignored.
+
