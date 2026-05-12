@@ -42,7 +42,8 @@
 
 #![forbid(unsafe_code)]
 
-use eternity2_core::{Hints, Piece, Position, Puzzle, Rotation, BORDER};
+use eternity2_core::{Hints, Piece, PieceId, Position, Puzzle, Rotation, BORDER};
+use std::collections::HashMap;
 use std::fmt::Write;
 
 pub type Lit = i32;
@@ -126,8 +127,24 @@ pub struct EdgeId {
     pub side_b: u8,
 }
 
+/// Pre-built map of pinned-cell placements: position → (piece_index, rotation).
+/// piece_index is the position in `puzzle.pieces()`.
+pub type PinnedMap = HashMap<Position, (u32, Rotation)>;
+
 impl VarMap {
     pub fn build(puzzle: &Puzzle) -> Self {
+        Self::build_with_pinned(puzzle, &PinnedMap::new())
+    }
+
+    /// Like `build()` but skips emitting variables for cells in `pinned`
+    /// (each pinned cell contributes ZERO piece-vars; its placement is
+    /// treated as a constant for edge-match constraint generation).
+    /// Also skips emitting variables for pieces that are pinned (= used
+    /// in the pinned set), at all non-pinned cells.
+    ///
+    /// This dramatically shrinks the SAT instance for "free a sub-region"
+    /// problems: only free cells × non-pinned pieces × valid rotations.
+    pub fn build_with_pinned(puzzle: &Puzzle, pinned: &PinnedMap) -> Self {
         let n_cells = puzzle.cell_count();
         let pieces = puzzle.pieces();
         let mut cell_to_pr: Vec<Vec<(u32, Rotation, Var)>> = vec![Vec::new(); n_cells as usize];
@@ -135,14 +152,22 @@ impl VarMap {
         let mut var_to_cpr: Vec<(Position, u32, Rotation)> = Vec::new();
         // var_to_cpr is indexed from 0; var-id = index + 1.
 
+        // Compute set of piece-indices that are pinned (used by some
+        // pinned cell). These pieces are unavailable to free cells.
+        let mut pinned_piece_indices: std::collections::HashSet<u32> =
+            std::collections::HashSet::new();
+        for (_, (pidx, _)) in pinned.iter() {
+            pinned_piece_indices.insert(*pidx);
+        }
+
         for pos in 0..n_cells {
+            // If pinned, emit ZERO vars for this cell.
+            if pinned.contains_key(&pos) { continue; }
             for (piece_idx, piece) in pieces.iter().enumerate() {
+                // If this piece is pinned at some other cell, skip.
+                if pinned_piece_indices.contains(&(piece_idx as u32)) { continue; }
                 for rot in Rotation::ALL {
                     if !cell_admits(puzzle, pos, piece, rot) { continue; }
-                    // Inner / edge pieces with palindromic rotations would otherwise
-                    // double-count. We don't dedup here; the SAT solver handles AMO
-                    // and the encoding remains sound. Future opt: detect symmetric
-                    // pieces and emit only one rotation.
                     let var = (var_to_cpr.len() as u32) + 1;
                     var_to_cpr.push((pos, piece_idx as u32, rot));
                     cell_to_pr[pos as usize].push((piece_idx as u32, rot, var));
@@ -306,15 +331,32 @@ pub struct EncodeOptions {
 }
 
 pub fn encode(puzzle: &Puzzle, hints: &Hints, vmap: &VarMap, opts: &EncodeOptions) -> CnfBuilder {
+    encode_with_pinned(puzzle, hints, vmap, opts, &PinnedMap::new())
+}
+
+/// Like `encode()` but takes a `pinned` map: cells with a fixed
+/// (piece_index, rotation) treated as constants. Skips cell-EO for
+/// pinned cells, skips piece-EO for pieces used in `pinned`, and
+/// for edge-match constraints involving a pinned endpoint, replaces
+/// the per-piece-rotation disjunction with the constant color the
+/// pinned piece presents on the relevant side.
+pub fn encode_with_pinned(
+    puzzle: &Puzzle, hints: &Hints, vmap: &VarMap, opts: &EncodeOptions,
+    pinned: &PinnedMap,
+) -> CnfBuilder {
     let mut cnf = CnfBuilder::new(vmap.n_vars);
     let pieces = puzzle.pieces();
 
-    // --- 1. Cell exactly-one ---
+    // Compute set of pinned piece-indices.
+    let pinned_piece_indices: std::collections::HashSet<u32> =
+        pinned.values().map(|(pi, _)| *pi).collect();
+
+    // --- 1. Cell exactly-one (skip pinned cells) ---
     for pos in 0..puzzle.cell_count() {
+        if pinned.contains_key(&pos) { continue; }
         let vars: Vec<Var> = vmap.cell_to_pr[pos as usize].iter().map(|(_, _, v)| *v).collect();
         if vars.is_empty() {
-            // Unsatisfiable: a cell has no admissible (piece, rotation).
-            // Emit an empty clause to make this explicit.
+            // Unsatisfiable: a free cell has no admissible (piece, rotation).
             cnf.add_hard(vec![]);
             continue;
         }
@@ -322,12 +364,13 @@ pub fn encode(puzzle: &Puzzle, hints: &Hints, vmap: &VarMap, opts: &EncodeOption
         add_amo(&mut cnf, &vars);
     }
 
-    // --- 2. Piece exactly-one ---
+    // --- 2. Piece exactly-one (skip pinned pieces) ---
     for (piece_idx, piece) in pieces.iter().enumerate() {
         let _ = piece;
+        if pinned_piece_indices.contains(&(piece_idx as u32)) { continue; }
         let vars: Vec<Var> = vmap.piece_to_cr[piece_idx].iter().map(|(_, _, v)| *v).collect();
         if vars.is_empty() {
-            // A piece can't be placed anywhere → infeasible.
+            // A free piece can't be placed anywhere → infeasible.
             cnf.add_hard(vec![]);
             continue;
         }
@@ -338,26 +381,92 @@ pub fn encode(puzzle: &Puzzle, hints: &Hints, vmap: &VarMap, opts: &EncodeOption
     // --- 3. Edge-match aux vars + clauses ---
     let max_color = (puzzle.color_count - 1) as usize;
     for (e_idx, edge) in vmap.edges.iter().enumerate() {
-        // For each color k, m_{e,k} → ∨_{(p,r): emit(p,r,s_a)=k} x_{c_a,p,r}.
+        // Determine the colors emitted on each side IF the cell is pinned.
+        let pinned_a_color: Option<u8> = pinned.get(&edge.cell_a).map(|&(pi, rot)| {
+            emit_color(&pieces[pi as usize], rot, edge.side_a)
+        });
+        let pinned_b_color: Option<u8> = pinned.get(&edge.cell_b).map(|&(pi, rot)| {
+            emit_color(&pieces[pi as usize], rot, edge.side_b)
+        });
+
+        // Case 1: both pinned. Edge is a constant. Skip all match-vars.
+        // (We could still emit a soft clause as a fixed +1 if matched,
+        // but the match-vars are useless. Just record nothing — score
+        // delta is reflected in the score computation post-hoc.)
+        if pinned_a_color.is_some() && pinned_b_color.is_some() {
+            // Optionally still emit a soft clause as `m_{e, fixed_color}`
+            // if matched, so the MaxSAT objective counts it. We do this
+            // by: if the two pinned colors agree and aren't BORDER, add
+            // a soft clause that's trivially satisfied (e.g., `1 0`).
+            // BUT: an empty/trivial soft clause has score 0 either way.
+            // To make the MaxSAT objective REFLECT the pinned-pinned
+            // matched edges, add a soft "TRUE" tautology (always-satisfied)
+            // — this is just a +1 bonus.
+            let ca = pinned_a_color.unwrap();
+            let cb = pinned_b_color.unwrap();
+            if ca == cb && ca != BORDER && opts.soft_edge_match {
+                // Emit soft tautology: a clause [x ∨ ¬x] using a placeholder
+                // var. The simplest is to use match_vars[e_idx][ca as usize]
+                // as a satisfied unit (we hard-fix it true, then make it
+                // a soft +1 in the objective).
+                let m_var = vmap.match_vars[e_idx][ca as usize];
+                cnf.add_hard(vec![m_var as Lit]);  // force true
+                cnf.add_soft(vec![m_var as Lit]);  // contributes +1 to objective
+            }
+            continue;
+        }
+
+        // Case 2: one side pinned (say A). The pinned color is
+        // determined; we just need the other side's piece to emit
+        // the same color. Encode: m_{e,k_pinned} → ∨_{(p,r): emit(p,r,s_b)=k_pinned} x_{c_b,p,r}
+        // Other m_{e,k} for k ≠ k_pinned must be false (because A only
+        // emits the one color).
+        // Case 3: neither pinned — original encoding.
         for k in 1..=max_color {
             let m_var = vmap.match_vars[e_idx][k];
-            // Side A: collect x_{c_a, p, r} for piece-rotations emitting k on side_a.
-            let mut clause_a: Vec<Lit> = vec![-(m_var as Lit)];
-            let mut clause_b: Vec<Lit> = vec![-(m_var as Lit)];
-            for &(piece_idx, rot, var) in &vmap.cell_to_pr[edge.cell_a as usize] {
-                let p = &pieces[piece_idx as usize];
-                if emit_color(p, rot, edge.side_a) == k as u8 {
-                    clause_a.push(var as Lit);
-                }
+
+            // Determine if this k can possibly be matched given pinning.
+            let k_u8 = k as u8;
+            let a_can_emit_k: Option<bool> = pinned_a_color.map(|c| c == k_u8);
+            let b_can_emit_k: Option<bool> = pinned_b_color.map(|c| c == k_u8);
+
+            // If A is pinned to a different color → m_{e,k} must be false.
+            if a_can_emit_k == Some(false) || b_can_emit_k == Some(false) {
+                cnf.add_hard(vec![-(m_var as Lit)]);
+                continue;
             }
-            for &(piece_idx, rot, var) in &vmap.cell_to_pr[edge.cell_b as usize] {
-                let p = &pieces[piece_idx as usize];
-                if emit_color(p, rot, edge.side_b) == k as u8 {
-                    clause_b.push(var as Lit);
+            // Side A clause: m → ∨ x_{c_a, p, r} for p,r emitting k on side_a.
+            // If A is pinned to k, A "automatically" emits k → clause trivially satisfied.
+            if a_can_emit_k != Some(true) {
+                let mut clause_a: Vec<Lit> = vec![-(m_var as Lit)];
+                for &(piece_idx, rot, var) in &vmap.cell_to_pr[edge.cell_a as usize] {
+                    let p = &pieces[piece_idx as usize];
+                    if emit_color(p, rot, edge.side_a) == k_u8 {
+                        clause_a.push(var as Lit);
+                    }
                 }
+                if clause_a.len() == 1 {
+                    // No piece can emit color k at A → m must be false.
+                    cnf.add_hard(vec![-(m_var as Lit)]);
+                    continue;
+                }
+                cnf.add_hard(clause_a);
             }
-            cnf.add_hard(clause_a);
-            cnf.add_hard(clause_b);
+            // Side B clause: similarly.
+            if b_can_emit_k != Some(true) {
+                let mut clause_b: Vec<Lit> = vec![-(m_var as Lit)];
+                for &(piece_idx, rot, var) in &vmap.cell_to_pr[edge.cell_b as usize] {
+                    let p = &pieces[piece_idx as usize];
+                    if emit_color(p, rot, edge.side_b) == k_u8 {
+                        clause_b.push(var as Lit);
+                    }
+                }
+                if clause_b.len() == 1 {
+                    cnf.add_hard(vec![-(m_var as Lit)]);
+                    continue;
+                }
+                cnf.add_hard(clause_b);
+            }
         }
         // AMO over match colors per edge: m_{e,k} ∧ m_{e,k'} infeasible.
         let m_vars: Vec<Var> = (1..=max_color).map(|k| vmap.match_vars[e_idx][k]).collect();
@@ -372,7 +481,10 @@ pub fn encode(puzzle: &Puzzle, hints: &Hints, vmap: &VarMap, opts: &EncodeOption
     }
 
     // --- 4. Hints (unit clauses) ---
+    // Skip hints for cells already in `pinned` — they're enforced
+    // implicitly by the constant-color edge clauses above.
     for h in &hints.hints {
+        if pinned.contains_key(&h.position) { continue; }
         // Find var for (pos=h.position, piece_id=h.piece_id, rot=h.rotation).
         let piece_idx = pieces.iter().position(|p| p.id == h.piece_id);
         let Some(piece_idx) = piece_idx else {

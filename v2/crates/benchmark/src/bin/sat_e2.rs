@@ -26,7 +26,7 @@ use std::time::SystemTime;
 use clap::Parser;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_generator::{generate, GeneratorConfig};
-use eternity2_sat_encoder::{encode, write_dimacs_cnf, write_wcnf_new, write_wcnf_old, EncodeOptions, VarMap};
+use eternity2_sat_encoder::{encode_with_pinned, write_dimacs_cnf, write_wcnf_new, write_wcnf_old, EncodeOptions, PinnedMap, VarMap};
 
 #[derive(Parser, Debug)]
 #[command(name = "sat_e2", about = "Emit SAT/MaxSAT encoding of an E2 puzzle")]
@@ -103,6 +103,10 @@ fn main() {
         (p, h)
     };
 
+    // Pinned-cells map for the new MINIMAL encoder (cells whose
+    // (piece_idx, rotation) are constants — no SAT vars emitted).
+    let mut pinned_map: PinnedMap = PinnedMap::new();
+
     // Optional: pin all cells outside the center k×k region from a
     // plateau JSON. Asks SAT/MaxSAT to optimize over only the center.
     if let Some(plateau_path) = &args.pin_outside_from {
@@ -141,29 +145,42 @@ fn main() {
         eprintln!("free region: rows {}..{}, cols {}..{} ({}×{} = {} cells)",
             y0, y1, x0, x1, k, k, k * k);
 
-        // Pin every cell OUTSIDE the center box (using its placement from the plateau).
-        let mut anchor_hints = Vec::new();
-        let mut existing: std::collections::BTreeSet<u32> = hints.hints.iter().map(|h| h.position).collect();
+        // Pin every cell OUTSIDE the center box. Use the new MINIMAL
+        // encoder path: build a `pinned_map` of (cell -> piece_idx, rot)
+        // so the encoder OMITS variables for these cells.
+        // Also pin official hints (so they don't get vars either).
+        let pieces_arr = puzzle.pieces();
+        let mut n_pinned = 0;
         for pos in 0..puzzle.cell_count() {
             let x = pos % puzzle.width;
             let y = pos / puzzle.width;
             let in_center = x >= x0 && x < x1 && y >= y0 && y < y1;
             if in_center { continue; }
-            if existing.contains(&pos) { continue; }
             if let Some((pid, rot)) = placement[pos as usize] {
-                anchor_hints.push(eternity2_core::Hint { position: pos, piece_id: pid, rotation: rot });
-                existing.insert(pos);
+                if let Some(pi) = pieces_arr.iter().position(|p| p.id == pid) {
+                    pinned_map.insert(pos, (pi as u32, rot));
+                    n_pinned += 1;
+                }
             }
         }
-        eprintln!("adding {} anchor hints (pinning cells outside the {}×{} center)",
-            anchor_hints.len(), k, k);
-        for h in anchor_hints { hints.hints.push(h); }
-        eprintln!("total hints (existing + anchor): {}", hints.hints.len());
+        eprintln!("PINNED-MAP: {} cells outside the {}×{} center are constants (no SAT vars emitted)",
+            n_pinned, k, k);
+        // Also pin the official hints into the map (they're inside the
+        // center but they're still constants).
+        for h in &hints.hints {
+            if !pinned_map.contains_key(&h.position) {
+                if let Some(pi) = pieces_arr.iter().position(|p| p.id == h.piece_id) {
+                    pinned_map.insert(h.position, (pi as u32, h.rotation));
+                }
+            }
+        }
+        eprintln!("PINNED-MAP total: {} cells (incl. {} official hints)",
+            pinned_map.len(), hints.hints.len());
     }
 
-    eprintln!("\nBuilding variable map...");
+    eprintln!("\nBuilding variable map (with {} pinned cells)...", pinned_map.len());
     let t0 = std::time::Instant::now();
-    let vmap = VarMap::build(&puzzle);
+    let vmap = VarMap::build_with_pinned(&puzzle, &pinned_map);
     eprintln!("  built in {:.2}s", t0.elapsed().as_secs_f64());
     eprintln!("  piece-vars: {}", vmap.var_to_cpr.len());
     eprintln!("  interior edges: {}", vmap.edges.len());
@@ -176,7 +193,7 @@ fn main() {
     if !args.skip_cnf {
         eprintln!("\nEncoding decision SAT...");
         let t1 = std::time::Instant::now();
-        let cnf = encode(&puzzle, &hints, &vmap, &EncodeOptions { soft_edge_match: false });
+        let cnf = encode_with_pinned(&puzzle, &hints, &vmap, &EncodeOptions { soft_edge_match: false }, &pinned_map);
         eprintln!("  encoded in {:.2}s", t1.elapsed().as_secs_f64());
         eprintln!("  total vars: {}", cnf.n_vars());
         eprintln!("  hard clauses: {}", cnf.clauses.len());
@@ -197,7 +214,7 @@ fn main() {
     if !args.skip_wcnf {
         eprintln!("\nEncoding MaxSAT (soft edge-match)...");
         let t1 = std::time::Instant::now();
-        let wcnf = encode(&puzzle, &hints, &vmap, &EncodeOptions { soft_edge_match: true });
+        let wcnf = encode_with_pinned(&puzzle, &hints, &vmap, &EncodeOptions { soft_edge_match: true }, &pinned_map);
         eprintln!("  encoded in {:.2}s", t1.elapsed().as_secs_f64());
         eprintln!("  total vars: {}", wcnf.n_vars());
         eprintln!("  hard clauses: {}", wcnf.clauses.len());
