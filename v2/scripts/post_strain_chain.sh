@@ -23,7 +23,6 @@ echo "Running PT from random fill..." | tee -a "$LOG"
 ./target/release/pt_e2 \
     --pt-seconds 600 \
     --skip-sa-compare \
-    --pin-hints true \
     --start-from /tmp/random_fill_for_pt.json \
     --seed 3806637746 \
     2>&1 | tee -a "$LOG" | grep -E "(SUMMARY|^PT:|PT done|^loaded board|new best)" || true
