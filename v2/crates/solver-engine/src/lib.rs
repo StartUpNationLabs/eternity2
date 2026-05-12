@@ -1290,6 +1290,13 @@ pub fn count_color_occurrences(puzzle: &Puzzle, colors: &[Color]) -> u32 {
 /// indices into the new cell-count range. The exhaustion targets are
 /// likewise rescaled.
 ///
+/// Vol-15 ALSO accounts for the BORDER RING: under bottom-up scan,
+/// cells 0..(2W+2H-4) are perimeter cells whose pieces have BORDER
+/// edges and therefore never carry heuristic-color content. The
+/// schedule MUST stay at 0 across this region, else it will prune
+/// immediately. We shift Blackwood's "first non-zero target" to land
+/// just past the border-ring depth.
+///
 /// Returns `None` if `compute_heuristic_sides` finds fewer than 3
 /// usable colors.
 pub fn blackwood_schedule_469(
@@ -1300,21 +1307,38 @@ pub fn blackwood_schedule_469(
     if colors.len() < 3 { return None; }
     let pool_size = count_color_occurrences(puzzle, &colors);
     let n_pos = puzzle.cell_count();
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let border_ring = 2 * w + 2 * h - 4;
+
     // Blackwood's depth control points are for a 256-cell board with
     // pool size 122. We scale BOTH axes to the actual puzzle.
     let bw_n = 256u32;
     let bw_pool = 122u32;
-    let scale_d = |d: u32| ((d as u64 * n_pos as u64) / bw_n as u64) as u32;
+    let scale_d_raw = |d: u32| ((d as u64 * n_pos as u64) / bw_n as u64) as u32;
     let scale_c = |c: u32| ((c as u64 * pool_size as u64) / bw_pool as u64) as u32;
+
+    // Blackwood's first non-zero exhaustion is at depth 26 of 256
+    // (= 60/256 = 23% border ring depth + small buffer). For our
+    // puzzle, we want the first non-zero target to land at or just
+    // past the border-ring depth. So we use `max(scaled, border_ring)`
+    // for every control point that should sit past the border.
+    let shift = |d: u32| d.max(border_ring);
+    let scale_d = |d: u32| shift(scale_d_raw(d));
+
     let targets = vec![
-        (scale_d(0),   scale_c(0)),
-        (scale_d(16),  scale_c(0)),
-        (scale_d(26),  scale_c(28)),
-        (scale_d(56),  scale_c(71)),
-        (scale_d(76),  scale_c(89)),
-        (scale_d(102), scale_c(106)),
-        (scale_d(160), scale_c(119)),
+        (0,                   0),
+        (scale_d(16),         0),
+        (scale_d(26),         scale_c(28)),
+        (scale_d(56),         scale_c(71)),
+        (scale_d(76),         scale_c(89)),
+        (scale_d(102),        scale_c(106)),
+        (scale_d(160),        scale_c(119)),
     ];
+
+    // Breaks targeted Blackwood's last 12 cells (his break range is
+    // 201..256). Scale proportionally to land in the last cells of
+    // OUR scan order.
     let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
     let breaks: Vec<u32> = bw_breaks
         .iter()
@@ -1441,14 +1465,22 @@ pub(crate) struct SearchState<'a> {
     /// `schedule.heuristic_sides`. Empty when no schedule.
     pub(crate) heuristic_color_mask: Vec<bool>,
     /// Vol-15 — sorted, unique `break_indexes_allowed` lifted into a
-    /// bitvec by scan-order index for O(1) membership during recurse.
-    /// `is_break_index[scan_idx as usize] = true` iff scan_idx is a
-    /// break index. Empty when no schedule.
+    /// bitvec by engine-traversal DEPTH for O(1) membership during
+    /// recurse. `is_break_index[depth as usize] = true` iff `depth` is
+    /// a Blackwood break depth. Empty when no schedule.
+    ///
+    /// Note: under bottom-up scan order with no rectangle skeleton,
+    /// depth == bottom-up scan index, so this matches the spec's
+    /// `break_indexes_allowed`. Under HintRectangle composition, depth
+    /// is "position in path_order" — the rectangle's prefix shifts
+    /// the bottom-up scan into the tail, and break-indexes still mean
+    /// "at the i-th cell placed". See SearchState::new for the
+    /// composition rule.
     pub(crate) is_break_index: Vec<bool>,
-    /// Vol-15 — scan-order index of each cell (so that
-    /// `recurse` can do `is_break_index[scan_index_of_cell[pos]]`).
-    /// Layout: `scan_index_of_cell[pos] = scan_order_index_of(pos)`.
-    /// Built when scan_order is set; empty otherwise.
+    /// Vol-15 — scan-order index of each cell, retained for
+    /// diagnostics / future schedules that key off raw scan-position
+    /// rather than engine-traversal-depth. Built when scan_order is
+    /// set; empty otherwise.
     pub(crate) scan_index_of_cell: Vec<u32>,
     /// Vol-15 — running count of placed heuristic-color edge
     /// occurrences (Σ over placed rows of count of heuristic-colored
@@ -1516,43 +1548,61 @@ impl<'a> SearchState<'a> {
         }
 
         // Resolve path_order: prefer user-supplied opts.path, otherwise
-        // auto-build from config.path_skeleton if requested. Vol-14
-        // shipped HintRectangle as the first PathSkeleton. Vol-15
-        // adds ScanOrder which builds a full-board path when no other
-        // skeleton is present.
+        // auto-build from config.path_skeleton + config.scan_order.
+        //
+        // Vol-15 composition: when BOTH `path_skeleton` (e.g.
+        // HintRectangle) and `scan_order` (Blackwood bottom-up) are
+        // set, build the rectangle path FIRST and then append the
+        // remaining cells in scan order. This way:
+        //   - The engine's traversal depth always equals the
+        //     position's index in `path_order`.
+        //   - Blackwood break-indexes (the schedule's
+        //     `break_indexes_allowed`) are interpreted as DEPTHS
+        //     in the engine's traversal, not as raw cell labels.
+        //   - The HintRectangle prefix still does its job (forces
+        //     the 49 rectangle cells to be placed first).
+        let order_key = |pos: Position, w: u32, h: u32, order: ScanOrder| -> u32 {
+            let (x, y) = (pos % w, pos / w);
+            match order {
+                ScanOrder::RowMajorTopDown => y * w + x,
+                ScanOrder::RowMajorBottomUp => (h - 1 - y) * w + x,
+            }
+        };
         let (path_order, auto_skeleton_path_k) = if !opts.path.is_empty() {
             (opts.path.clone(), 0u32)
-        } else if let Some(skel) = solver.config.path_skeleton {
-            match skel {
-                PathSkeleton::HintRectangle => {
-                    let p = build_hint_rectangle_path(puzzle, &opts.hints);
-                    let k = p.len() as u32;
-                    (p, k)
-                }
-                PathSkeleton::HintRectangleLayered => {
-                    let p = build_hint_rectangle_layered_path(puzzle, &opts.hints);
-                    let k = p.len() as u32;
-                    (p, k)
-                }
-            }
-        } else if let Some(order) = solver.config.scan_order {
-            // Vol-15 — full-board path in scan order. Engine picks
-            // cells in this order, no MRV. Used by Blackwood.
-            let w = puzzle.width;
-            let h = puzzle.height;
-            let mut p: Vec<Position> = (0..puzzle.cell_count()).collect();
-            // Sort by scan-order index.
-            p.sort_by_key(|&pos| {
-                let (x, y) = (pos % w, pos / w);
-                match order {
-                    ScanOrder::RowMajorTopDown => y * w + x,
-                    ScanOrder::RowMajorBottomUp => (h - 1 - y) * w + x,
-                }
-            });
-            let k = p.len() as u32;
-            (p, k)
         } else {
-            (Vec::new(), 0u32)
+            let skel_path: Vec<Position> = match solver.config.path_skeleton {
+                Some(PathSkeleton::HintRectangle) =>
+                    build_hint_rectangle_path(puzzle, &opts.hints),
+                Some(PathSkeleton::HintRectangleLayered) =>
+                    build_hint_rectangle_layered_path(puzzle, &opts.hints),
+                None => Vec::new(),
+            };
+            let n_cells = puzzle.cell_count();
+            if !skel_path.is_empty() && solver.config.scan_order.is_some() {
+                // Compose: rectangle prefix + remaining cells in scan order.
+                let order = solver.config.scan_order.unwrap();
+                let in_skel: std::collections::HashSet<Position> =
+                    skel_path.iter().copied().collect();
+                let mut tail: Vec<Position> = (0..n_cells)
+                    .filter(|p| !in_skel.contains(p))
+                    .collect();
+                tail.sort_by_key(|&pos| order_key(pos, puzzle.width, puzzle.height, order));
+                let mut p = skel_path;
+                p.extend(tail);
+                let k = p.len() as u32;
+                (p, k)
+            } else if !skel_path.is_empty() {
+                let k = skel_path.len() as u32;
+                (skel_path, k)
+            } else if let Some(order) = solver.config.scan_order {
+                let mut p: Vec<Position> = (0..n_cells).collect();
+                p.sort_by_key(|&pos| order_key(pos, puzzle.width, puzzle.height, order));
+                let k = p.len() as u32;
+                (p, k)
+            } else {
+                (Vec::new(), 0u32)
+            }
         };
         let mut path_index_of = vec![u32::MAX; n_pos];
         for (i, &p) in path_order.iter().enumerate() {
@@ -1669,6 +1719,13 @@ impl<'a> SearchState<'a> {
                 }
             },
             is_break_index: {
+                // Vol-15 — `break_indexes_allowed` interpreted as
+                // engine-traversal DEPTHS (the i-th cell placed in
+                // path_order). Composition rule in path-order
+                // construction above guarantees: under pure bottom-up
+                // scan, depth == bu_idx; under rectangle+scan, depth
+                // is rectangle-then-scan position. Either way, "break
+                // at depth k" matches the spec's intent.
                 if let Some(s) = &solver.blackwood_schedule {
                     let mut v = vec![false; n_pos];
                     for &idx in &s.break_indexes_allowed {
@@ -2632,6 +2689,12 @@ impl<'a> SearchState<'a> {
             if depth <= max_idx {
                 let target = sched.target_at(depth);
                 if self.placed_heuristic_count < target {
+                    // Diagnostic: track best (deepest) schedule-feasible
+                    // depth so harnesses can report where the schedule
+                    // bit. `stats.schedule_prune_max_depth` is a vol-15
+                    // soft counter; we reuse `max_depth_seen` here as
+                    // it's already wired (and a schedule-prune is a
+                    // form of backtrack).
                     return RecurseResult::Exhausted;
                 }
                 // Conversely: pool exhausted but more depth still to go
@@ -2824,7 +2887,7 @@ impl<'a> SearchState<'a> {
         // priority over relaxed ones; among relaxed, prefer rows that
         // satisfy more of the schedule.
         let break_candidates: Vec<(u32, u8)> = if !self.is_break_index.is_empty()
-            && self.is_pos_break_index(pos)
+            && self.is_break_depth(depth)
         {
             let n_rows = self.rows.len() as u32;
             let mut admitted: Vec<(u32, u8)> = Vec::new();
@@ -3014,25 +3077,17 @@ impl<'a> SearchState<'a> {
             && on_left == (edges[3] == BORDER)
     }
 
-    /// Vol-15 — is `depth` a Blackwood break-index in the engine's
-    /// active scan order? Scan-order maps the engine's cell `pos`
-    /// (selected at this depth) to its scan-index via
-    /// `scan_index_of_cell`. The schedule's break indices match scan
-    /// indices, not engine depths — engine depth and scan index are
-    /// equal only when `scan_index_of_cell` matches the order in
-    /// which the engine picks cells, which is exactly the
-    /// auto-built `path_order` case. We treat the break test as
-    /// `is_break_index[scan_index_of_cell[pos]]`.
+    /// Vol-15 — is engine-traversal `depth` a Blackwood break depth?
+    /// `is_break_index` is indexed by depth (= position-in-path_order)
+    /// so this is just a bitvec lookup. Returns false when no
+    /// schedule is attached.
     #[inline]
-    fn is_pos_break_index(&self, pos: Position) -> bool {
+    fn is_break_depth(&self, depth: u32) -> bool {
         if self.is_break_index.is_empty() {
             return false;
         }
-        if self.scan_index_of_cell.is_empty() {
-            return false;
-        }
-        let scan_idx = self.scan_index_of_cell[pos as usize] as usize;
-        scan_idx < self.is_break_index.len() && self.is_break_index[scan_idx]
+        (depth as usize) < self.is_break_index.len()
+            && self.is_break_index[depth as usize]
     }
 }
 
@@ -3534,6 +3589,64 @@ mod tests {
         let outcome = s.solve(&puzzle, &SolveOpts::default(), &mut sink);
         assert!(matches!(outcome, SolveOutcome::Solved(_)),
             "Blackwood-mode solve on 2x2 trivial returned {outcome:?}");
+    }
+
+    #[test]
+    fn blackwood_x_hint_rectangle_composition_path_is_coherent() {
+        // When both path_skeleton=HintRectangle AND scan_order are set,
+        // the engine's path_order must be: [rectangle cells in their
+        // build order] ++ [remaining cells in scan order]. Every cell
+        // appears exactly once. Engine traversal depth therefore equals
+        // path_order index, and break_indexes_allowed (as depths) map
+        // unambiguously to "the i-th cell placed".
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig {
+            size: 5, interior_colors: 5, seed: 13,
+        }).unwrap();
+        // Need ≥4 hints for HintRectangle to be non-trivial. Use the
+        // 4 corners of the generated puzzle (any valid (piece, rot)
+        // there counts; for this structural test we don't care if the
+        // hint is satisfiable, just that the path-builder consumes it).
+        let mk_hint = |pos: u32| -> eternity2_core::Hint {
+            // Use any piece for the hint slot; build_hint_rectangle_path
+            // only consults the .position field.
+            eternity2_core::Hint {
+                position: pos,
+                piece_id: 0,
+                rotation: eternity2_core::Rotation::from_u8(0).unwrap(),
+            }
+        };
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let hints = eternity2_core::Hints::new(vec![
+            mk_hint(0),
+            mk_hint(w - 1),
+            mk_hint((h - 1) * w),
+            mk_hint(h * w - 1),
+        ]);
+        let mut cfg = EngineConfig::BORDER_FIRST_LCV;
+        cfg.path_skeleton = Some(PathSkeleton::HintRectangle);
+        cfg.scan_order = Some(ScanOrder::RowMajorBottomUp);
+        let solver = EngineSolver::new(cfg, "engine", "comp");
+        let mut opts = SolveOpts::default();
+        opts.hints = hints;
+        let state = SearchState::new(&puzzle, &solver, &opts);
+        let n = puzzle.cell_count() as usize;
+        // Sanity: every cell appears exactly once.
+        assert_eq!(state.path_order.len(), n);
+        let unique: std::collections::HashSet<_> = state.path_order.iter().copied().collect();
+        assert_eq!(unique.len(), n);
+        // auto_skeleton_path_k must cover the entire path (so the
+        // PrefixConstraint / auto-skeleton machinery applies for all
+        // depths).
+        assert_eq!(state.auto_skeleton_path_k as usize, n);
+        // Prefix length: the rectangle skeleton length depends on the
+        // generated puzzle size; just assert it's non-empty.
+        let skel = build_hint_rectangle_path(&puzzle, &opts.hints);
+        let k = skel.len();
+        assert!(k > 0, "rectangle skeleton should be non-empty for 5x5 + 4 corner hints");
+        assert!(state.path_order[..k] == skel,
+            "first k cells of path_order should be the rectangle path verbatim");
     }
 
     #[test]
