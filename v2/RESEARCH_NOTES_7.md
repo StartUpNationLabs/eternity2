@@ -344,6 +344,40 @@ vol-6's output, not duplicate it. The candidates:
 4. PT-with-Houdayer rerun once vol-6 returns multi-basin boards.
    The Houdayer fix from 18fd7a6 composes here. Queued.
 
+### *** PT-454 IS DETERMINISTIC: ALL 4 BOARDS BYTE-IDENTICAL — 13:00 ***
+
+Vol-6 ran 3 saturation experiments + 1 sanity test, producing 4
+boards all scoring 454/480. Vol-7 checked: **all 4 are byte-identical**
+(same 256 piece_ids + rotations).
+
+- Per-cell agreement across 4 runs: 256 / 256 cells = 100% agree
+- Different PT seeds (42 vs 9018, 18019, 27020) → same output
+- Different rounds counts → same convergence point
+
+**Implication**: PT-with-pin-perimeter on this border has a
+*deterministic* ceiling, not a stochastic one. The 454 is a hard
+structural local optimum that PT always finds and never leaves
+regardless of seed.
+
+**Frozen-mismatched cells** (mismatched in all 4 runs AND same piece
+across all 4 runs): **45 cells, ALL of them**. They form a tight
+zone in rows 4-14, cols 1-12, with structural emphasis around the
+(7,8) hint.
+
+**Strategic consequence**: to break 454, PT alone is insufficient.
+We need either:
+1. A different border (vol-7's BORDER-3e Stage 1, running now).
+2. A non-local move primitive (Houdayer/cluster — but offline
+   post-mortem confirmed NO improving swaps exist among our
+   current corpus of 454/453/452/451 boards).
+3. **A structurally different inner ordering** (reverse-Selby:
+   place low-tileability pieces in strain core first).
+4. Forced perturbation: kick the 45 frozen cells, force backtracking.
+
+**This validates that vol-7's reverse-Selby Rust prototype IS the
+right next attack** after Stage 1 completes. The 45 frozen cells
+are the explicit target.
+
 ### Vol-6 handoff received 12:30 — vol-7 owns BORDER-3e
 
 Vol-6 closed their session at 454 PT saturation. Handoff message:
