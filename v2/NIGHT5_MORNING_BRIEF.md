@@ -85,6 +85,12 @@
 
 ## What's running when you read this
 
+**NOTHING.** All chain phases completed at 04:14 CEST. CPU idle.
+
+## Final chain summary
+
+
+
 The full night chain (5 phases) runs:
 1. (DONE) NE2.1 K=5 stage. Result: 442 (over-constrained).
 2. (DONE 02:24) NE1 frame-first top-6 funnel. **Result: 450 across
