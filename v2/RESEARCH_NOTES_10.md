@@ -706,6 +706,10 @@ have ≥25 messages):
 | 32 | Two-stage solution process | 32 | 2025-05 | [07_Two_stage_solution_thread.md](docs/community-mining/07_Two_stage_solution_thread.md) |
 | 20 | Highest points (of 480) with 5 hints | 38 | 2023-03 | [08_Highest_5hints_thread.md](docs/community-mining/08_Highest_5hints_thread.md) |
 | 28 | EternityII Solver (Blackwood release) | 34 | 2020-09+ | [09_Blackwood_solver_thread.md](docs/community-mining/09_Blackwood_solver_thread.md) |
+| 58 | While solving for a 14x14 - 196 solution | 26 | 2022-05+ | [11_Inner_14x14_thread.md](docs/community-mining/11_Inner_14x14_thread.md) |
+| 14 | Eternity2 information - Disclosure | 43 | 2011-02 | [12_Solution_secrecy_thread.md](docs/community-mining/12_Solution_secrecy_thread.md) |
+| miscellaneous | (7 medium threads) | — | various | [10_misc_threads.md](docs/community-mining/10_misc_threads.md) |
+| — | thread index + reading plan | — | — | [00_index.md](docs/community-mining/00_index.md) |
 
 **Most session-defining single findings (cross-thread)**:
 
