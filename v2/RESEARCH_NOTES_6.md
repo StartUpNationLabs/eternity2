@@ -154,6 +154,40 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### USER QUESTION (07:30): "allow mistakes only in outer 2 layers"
+
+**Empirical check across 86 corpus boards (score ≥449)**:
+- Mismatches in outer-2 zone (rows/cols 0-1, 14-15): 291 (11.5%)
+- Mismatches in inner-12 zone (rows/cols 2-13): 2,239 (**88.5%**)
+- Average defects per board: 29.4
+
+**Conclusion**: defects naturally occur INTERIOR. The "allow only
+outer mistakes" constraint would FORCE the optimizer to move
+defects from where physics wants them (interior strain front) to
+where physics doesn't want them (boundary).
+
+**Two ways this could go**:
+1. (Optimistic) Constraint reveals a NEW basin where strain
+   dissipates to boundary instead of clustering at (7,8) cascade.
+   If 30 mismatches can be pushed to outer-2 zone: ≤ 264 inner +
+   29.4 outer ≈ 264 + ~10 unmatched outer = 274+ → potentially
+   higher score IF inner perfect-fill is achievable.
+2. (Pessimistic) Constraint is unsatisfiable or produces much
+   worse boards because it fights against natural strain dynamics.
+
+**Testing strategy**: NE2-style soft penalty on a large set of
+inner-zone edges. forbidden.rs's u64 bitset caps at 64 edges
+(264 won't fit). Either extend the bitset (Rust patch ~30 min)
+or use a SUBSET of inner-zone edges as forbidden.
+
+Better: **inner-perfect frame-LAST experiment**:
+- Take inner 12×12 region.
+- Solve it EXACTLY via CP (12² = 144 cells, ~270 internal edges).
+- Then place the outer 2 layers around it.
+- Total ≥ 264 inner + outer matches.
+
+This is the inverse of frame-first. Has not been tried.
+
 ### Anti-consensus exploration (07:25) — wrong target
 
 **Setup**: build forbidden-edge list from edges that have ≥95%
