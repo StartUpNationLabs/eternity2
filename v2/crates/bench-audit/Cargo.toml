@@ -19,6 +19,7 @@ eternity2-events = { path = "../events" }
 eternity2-generator = { path = "../generator" }
 eternity2-localsearch = { path = "../localsearch" }
 eternity2-propagators = { path = "../propagators" }
+eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-solver-engine = { path = "../solver-engine" }
 eternity2-solver-trait = { path = "../solver-trait" }
 

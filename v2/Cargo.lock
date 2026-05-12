@@ -381,6 +381,7 @@ dependencies = [
  "eternity2-generator",
  "eternity2-localsearch",
  "eternity2-propagators",
+ "eternity2-sat-encoder",
  "eternity2-solver-engine",
  "eternity2-solver-trait",
  "serde",
