@@ -154,6 +154,30 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### A continued — Free-zone solver TRIED but BACKTRACKING approach yields 357 (07:22)
+
+**Setup**: backtracking solver on 0.95-threshold sub-puzzle (82 free
+cells, 1 zero-cand cell skipped, 287 skeleton-internal edges baseline).
+
+**Result**: 120s search, 216k nodes visited, best free-zone partial
+contribution = 70 edges. Total full-board score = 357/480.
+
+**Diagnosis**: the skeleton baseline of 287 internal edges is FAR
+LOWER than the 451-453 boards' total scores. The free zone in the
+existing 453 boards contributes ~166 edges (skeleton-free + free-
+free), of which my solver only achieves ~70 in 2 minutes.
+
+**Why this didn't work**: my decomposition is too "rigid":
+- Skeleton placements are FIXED.
+- Skeleton individual pieces aren't EDGE-optimal in isolation; they're
+  optimized as a network with the free pieces.
+- Holding the skeleton fixed while searching free zone alone loses the
+  cross-pollination that produces 453.
+
+**Implication**: pure skeleton+free decomposition with hard skeleton
+is NOT the right algorithm. The skeleton is informative as a
+DESCRIPTION (where solutions agree) but not as a HARD CONSTRAINT.
+
 ### C — CONSENSUS SEEDING (07:20): NEGATIVE — polishes back to 452
 
 **Setup**: built a consensus board from the top family (38 boards).
