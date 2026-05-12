@@ -420,6 +420,50 @@ Status: see `bash scripts/v17_night_summary.sh`.
 5. Does baseline cold portfolio still hit ~439 median? (Block 8)
 6. Does very-long 30-min ALNS hit a ceiling or keep climbing? (Block 12)
 
+## 23:56 — Block 1 result (CP-primary repair regressed)
+
+```
+[blackwood_raw] ALNS: iters=199 placed=256/256 matched=447/480 Δ_vs_cp=+85
+Per-op stats: 100% accept rate on all 11 ops.
+```
+
+**447 vs 455 (WB+SA-primary)** = -8 matches. CP-primary regresses.
+
+Per-op accept rate of 100% across all ops means CP-repair always
+returned a board ≥ current (which is what greedy CP does), but the
+trajectory through those greedy local-optimal fills was worse than
+SA's noisier walk. CP is too myopic.
+
+**Reverted in commit ef55d36.** Block 2+ use SA-primary.
+
+Block 2 launched at 23:57 with CP-primary binary (it had loaded
+before the revert). So Block 2 measures cold portfolio under
+CP-primary; Block 3+ will measure under SA-primary. Useful A/B.
+
+## Additional novel innovations shipped post-redirect
+
+7. **polish_rotations**: deterministic post-ALNS rotation hill-climb.
+   For each non-pinned cell, try all 4 rotations and keep the best.
+   Never decreases; bounded gain.
+
+8. **piece_swap_hillclimb**: deterministic post-ALNS piece-swap
+   hill-climb. For each mismatch-touching cell, try swapping with
+   each other non-pinned cell × all 4×4 rotation combinations. Pick
+   the best-improving swap; iterate.
+
+Both run in milliseconds; provide a clean monotone tail to ALNS.
+
+Total novel innovations vol-17:
+1. calibrate_blackwood + v17a/v17b/v17c schedules
+2. WorstBand + WorstRow
+3. ComponentDestroy + ComponentPlusHaloDestroy
+4. HingeDestroy (Tarjan articulation points)
+5. polish_rotations
+6. piece_swap_hillclimb
+7. Restart-on-stagnation in ALNS
+8. Per-op stats logging
+9. BoardZobrist module (unintegrated)
+
 ### Planned next steps
 
 1. **23:26** v17b seed-1 result. If ≥454, T1 is met. If still
