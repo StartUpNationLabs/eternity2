@@ -40,7 +40,7 @@ pub use alns::{run_alns, AlnsConfig, AlnsStats, AdaptiveWeights, Acceptance, Des
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
                     build_edges_by_cell, fmm_full, fmm_touched};
 pub use pt::{run_pt, run_pt_from, PtConfig, PtStats};
-pub use repair::{repair_region, worst_region};
+pub use repair::{repair_region, repair_cells, worst_region};
 pub use directed::{run_directed, DirectedConfig};
 
 /// Configuration for the simulated-annealing local search.

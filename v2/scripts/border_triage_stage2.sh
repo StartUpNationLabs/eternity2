@@ -28,9 +28,10 @@ echo "top-$TOP_K candidates:"
 cat /tmp/stage2_top.txt
 echo
 
-while read -r idx best; do
+function run_stage2_one() {
+    local idx=$1 best=$2
     echo "[stage2] border $idx (stage1=$best): running ${PT_SECONDS}s PT × 4 replicas..."
-    out_log="$STAGE2_DIR/border_$(printf '%03d' $idx).log"
+    local out_log="$STAGE2_DIR/border_$(printf '%03d' $idx).log"
     ./target/release/pt_e2 \
         --start-from "$SEED_DIR/border_top$((idx+1)).json" \
         --pin-perimeter \
@@ -39,9 +40,13 @@ while read -r idx best; do
         --seed "$((200000 + idx))" \
         --n-replicas 4 \
         > "$out_log" 2>&1
-    new_best=$(grep -oE "best=[0-9]+/480" "$out_log" | tail -1 | grep -oE "[0-9]+" | head -1)
+    local new_best=$(grep -oE "best=[0-9]+/480" "$out_log" | tail -1 | grep -oE "[0-9]+" | head -1)
     echo "[stage2] border $idx: ${best} -> ${new_best}/480"
-done < /tmp/stage2_top.txt
+}
+export -f run_stage2_one
+export PT_SECONDS STAGE2_DIR SEED_DIR
+# Run 2 borders in parallel (4 replicas × 2 ≈ 6 effective cores; we have 8)
+awk '{print $1" "$2}' /tmp/stage2_top.txt | xargs -n 2 -P 2 bash -c 'run_stage2_one "$@"' _
 
 echo
 echo "=== STAGE 2 SUMMARY ==="

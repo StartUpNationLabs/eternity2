@@ -96,6 +96,10 @@ path = "src/bin/frame_first_e2.rs"
 name = "border_enumerate"
 path = "src/bin/border_enumerate.rs"
 
+[[bin]]
+name = "reverse_selby_e2"
+path = "src/bin/reverse_selby_e2.rs"
+
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-edge-solver = { path = "../edge-solver" }

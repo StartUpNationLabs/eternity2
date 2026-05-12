@@ -82,6 +82,53 @@ fn edges_match_down(puzzle: &Puzzle, board: &Board, a: Position, b: Position) ->
     } else { false }
 }
 
+/// Repair an arbitrary set of cells: pin everything except `free_cells`
+/// from `board`, then run CP on the rest. Returns the new board if CP
+/// found a complete fill, else None.
+///
+/// Cells in `free_cells` are emptied (and to be re-found by CP).
+/// All other cells (and the hints, transitively) become hints to the CP.
+/// `budget_ms` bounds CP time.
+pub fn repair_cells(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_cells: &[Position],
+    budget_ms: u64,
+) -> Option<Board> {
+    use std::collections::HashSet;
+    let free_set: HashSet<Position> = free_cells.iter().copied().collect();
+    let mut hs = Vec::with_capacity(puzzle.cell_count() as usize);
+    for pos in 0..puzzle.cell_count() {
+        if free_set.contains(&pos) { continue; }
+        if let Some((pid, rot)) = board.get(pos) {
+            hs.push(Hint { position: pos, piece_id: pid, rotation: rot });
+        }
+    }
+    let hints = Hints::new(hs);
+
+    let mut solver = EngineSolver::gacolor_ac3_par();
+    let mut sink = BufferSink::new();
+    let mut opts = SolveOpts::default();
+    opts.time_budget_ms = budget_ms;
+    opts.hints = hints;
+    let outcome = solver.solve(puzzle, &opts, &mut sink);
+    let new_board = match outcome {
+        SolveOutcome::Solved(b) => b,
+        SolveOutcome::TimedOut { best_partial, .. }
+        | SolveOutcome::Cancelled { best_partial, .. } => best_partial,
+        SolveOutcome::Exhausted | SolveOutcome::Error(_) => return None,
+        SolveOutcome::AllSolutions(bs) => bs.into_iter().next()?,
+    };
+
+    // Only return if CP filled every freed cell.
+    for &pos in free_cells {
+        if new_board.get(pos).is_none() {
+            return None;
+        }
+    }
+    Some(new_board)
+}
+
 /// Attempt to repair a region by re-solving it with CP. Returns the new
 /// board if CP found an improvement, else None.
 ///
