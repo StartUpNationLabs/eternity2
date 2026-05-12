@@ -483,6 +483,74 @@ Vol-16 path to Tier 1:
    bench-audit duplication, registry drift must all be
    resolved before vol-16 picks up new research directions.
 
+### 2026-05-12 ~21:54 — 2h Blackwood run final result
+
+User-requested 1h CP + 1h ALNS on `blackwood_raw_rect_layered`
+to test "more wall-clock might break past the schedule wall."
+
+| metric        | 5min run    | 2h run         |
+|---------------|------------:|---------------:|
+| CP elapsed    | 300s        | 3600s (12×)    |
+| CP nodes      | 349M        | **3.4B** (10×) |
+| CP best_depth | 80          | **80** (=)     |
+| CP placed     | 85          | **85** (=)     |
+| CP matched    | 113         | **113** (=)    |
+| ALNS iters    | 600         | 7197 (12×)     |
+| ALNS Δ vs CP  | +269        | **+269** (=)   |
+| ALNS final    | 382/480     | **382/480** (=)|
+
+Identical end-state. 12× wall-clock, 10× nodes, **zero
+improvement**. Cleanest possible confirmation that the
+schedule wall is structural (parameter-bound), not
+search-time-bound. The schedule's `target_at(82)` is
+unsatisfiable from canonical E2's piece set at the cells
+reachable by depth 81; throwing nodes at the problem produces
+nothing.
+
+ALNS Δ of exactly +269 in both runs is also notable: ALNS
+converged to the same basin in 5 min as in 1 h. The 5-min
+ALNS budget was already saturated on this partial.
+
+**This is a publishable null on "more time alone fixes
+Blackwood"** — it doesn't. The vol-17 schedule-calibration
+work is the binding next step.
+
+## Vol-15 closeout
+
+Done. Eight engineering deliverables shipped:
+
+1. Blackwood algorithm in solver-engine (scan_order,
+   schedule, value-order, break-index allowance,
+   composition with HintRectangle).
+2. `BlackwoodSchedule::validate()` and the affine-remap
+   schedule constructor (after the cliff bug your friend
+   spotted).
+3. `BLACKWOOD_RAW` profile: drops AC-3/gacolor/NS-1 because
+   they're unsound under break allowance. 47× throughput
+   speedup (650k nps multi-core).
+4. `run_e2_blackwood` + `run_blackwood_12x12` harnesses
+   with JSON+bucas output.
+5. `profile_blackwood_raw` single-thread profiling target
+   + Cargo.toml strip="none" override.
+6. samply profile of `BLACKWOOD_RAW` showing 42% allocator
+   cost, 14.6% bounds-checking, 7.6% class_balance overhead.
+7. 25 engine tests passing (7 Blackwood-specific +
+   composition test).
+8. Two memory anchors for vol-16 (cleanup, 8 categories)
+   and vol-17 (Blackwood-then-CSP pipeline).
+
+Research findings: schedule cliff bug, propagator unsoundness
+under break, Blackwood ALNS lift +260-270 (vs baseline +147)
+hints at quality-over-coverage tradeoff, structural wall
+confirmed via 2h pilot.
+
+Tier 1 (≥454) NOT MET. Best cold-start = 416/480
+(blackwood_raw) vs baseline 439/480. Direction is correct:
+cliff fix + propagator drop moved us from −44 to −23 in one
+debugging iteration. Next unblock is empirical schedule
+calibration (vol-17), which requires vol-16 cleanup first.
+
+
 ### 2026-05-12 ~20:10 — engine profile (samply, BLACKWOOD_RAW, 60s single-core)
 
 User-requested profiling pass. Profile artifact:
