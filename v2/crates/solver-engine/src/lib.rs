@@ -1664,6 +1664,30 @@ pub fn blackwood_schedule_calibrated_v17a_p25(
     blackwood_schedule_calibrated_v17a(puzzle, hints)
 }
 
+/// Vol-17 (idea A, V17C revision) — like v17b but with break indexes
+/// shifted EARLIER. Vol-17 measured the depth wall at ~193, which is
+/// BELOW v17b's first break at 201. The engine never uses any break
+/// in practice because it can't even reach depth 201 cleanly under
+/// the strict no-break placement rule. Moving breaks earlier (180,
+/// 188, 195, ...) lets the engine accept partial mismatches starting
+/// at the empirical wall depth.
+///
+/// This is a hypothesis — by allowing 1 break at depth 180, the
+/// engine can spread mismatch tolerance over a wider range, and may
+/// reach higher matched scores at the end.
+pub fn blackwood_schedule_calibrated_v17c(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Option<BlackwoodSchedule> {
+    let mut s = blackwood_schedule_calibrated_v17b(puzzle, hints)?;
+    let n_pos = puzzle.cell_count();
+    let last_idx = n_pos.saturating_sub(1);
+    // Shift breaks earlier. New: starting at 180, every ~5 cells.
+    let new_breaks: [u32; 14] = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 250];
+    s.break_indexes_allowed = new_breaks.iter().map(|&b| b.min(last_idx)).collect();
+    Some(s)
+}
+
 /// Vol-17 (idea A, V17B revision) — TIGHT empirical envelope of the
 /// McGavin 469 cumulative heuristic-color curve, sampled at every 16
 /// cells with a 1-edge floor margin. Designed so that

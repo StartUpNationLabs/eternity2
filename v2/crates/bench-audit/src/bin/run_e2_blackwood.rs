@@ -26,8 +26,8 @@ use eternity2_localsearch::{
 };
 use eternity2_solver_engine::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
-    blackwood_schedule_calibrated_v17b, load_edge_bp_marginals, EngineConfig, EngineSolver,
-    PathSkeleton,
+    blackwood_schedule_calibrated_v17b, blackwood_schedule_calibrated_v17c,
+    load_edge_bp_marginals, EngineConfig, EngineSolver, PathSkeleton,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
@@ -188,7 +188,9 @@ fn main() {
             .expect("calibrated_v17a schedule construction failed"),
         "calibrated_v17b" | "calibrated" => blackwood_schedule_calibrated_v17b(&puzzle, &hints)
             .expect("calibrated_v17b schedule construction failed"),
-        other => panic!("unknown --schedule {other:?}; want bw469|calibrated_v17a|calibrated_v17b"),
+        "calibrated_v17c" => blackwood_schedule_calibrated_v17c(&puzzle, &hints)
+            .expect("calibrated_v17c schedule construction failed"),
+        other => panic!("unknown --schedule {other:?}; want bw469|calibrated_v17a|calibrated_v17b|calibrated_v17c"),
     };
     eprintln!(
         "Blackwood schedule [{schedule_kind}]: heuristic_sides={:?}  pool_size={}  max_idx={}  breaks={:?}",
