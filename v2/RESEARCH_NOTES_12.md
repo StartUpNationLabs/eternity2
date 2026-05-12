@@ -179,6 +179,73 @@ a value-order heuristic? Vol-11's measurement was that BP marginals
 threshold where it actually helps. A backtracker A/B with edge-BP
 marginals vs random is the natural next experiment (vol-13).
 
+### 2026-05-12 13:42 — Engineering 3: bitset rep + AC-3 collapse (+48–101% nps)
+
+Added `domain_bits: Vec<u64>` to `SearchState` mirroring `domains:
+Vec<Vec<u32>>`. Maintained at every mutation site (place_and_propagate
+prunes, AC-3 swap_remove, mem::take/restore in enumerate_units +
+recurse, hint/symmetry pins, `restore()`). The biggest hot-path win:
+`propagate_ac3`'s entry-time rebuild of `ac3_present` is now a single
+`copy_from_slice(&self.domain_bits)` instead of a fresh O(sum
+domain_sizes) re-scan over `self.domains`.
+
+2 new unit tests:
+- `domain_bits_match_domains_on_construction` — bit-set ↔ row-id set
+  invariant on a 5×5 generated puzzle.
+- `domain_bits_match_after_full_solve_2x2` — popcount = domain length.
+
+All 9 engine tests pass; full workspace builds.
+
+**60s/cell measured on canonical E2 with hints**:
+
+| config                | nodes_pre | nodes_post | nps_pre | nps_post | speedup |
+|-----------------------|----------:|-----------:|--------:|---------:|--------:|
+| t=-1  me=false        |    80,520 |    119,260 |    1342 |     1988 |   +48% |
+| t=-1  me=true (NS-1)  |    72,671 |    109,890 |    1211 |     1831 |   +51% |
+| t=150 me=false        |    75,140 |    112,147 |    1250 |     1869 |   +50% |
+| t=150 me=true (NS-1)  |    57,563 |    115,950 |     959 |     1932 |  +101% |
+
+The +101% gain on the **previously-slowest config** (depth-gate + NS-1)
+shows the bitset specifically helps when propagators fire. AC-3's
+entry-rebuild cost was a per-AC-3-call O(domain) loop; collapsing it
+to memcpy is one of the AUDIT_REPORT 7-step gains realized.
+
+`commit 85b791b`. Max depth still 164 across all configs (same as
+pre-bitset) — the depth plateau on canonical E2 with hints + 60s
+budget is not throughput-bound but **algorithmic-bound**. Vol-13/v14
+will need either:
+- a stronger value-order (edge-BP marginals?), or
+- depth-gate triggering an *actual restart* (Joe-Saunders policy with
+  the prune-back step), not just a propagation gate.
+
+### 2026-05-12 13:32 — Innovation C: 14×14 interior MaxSAT (negative)
+
+Encoded the 14×14 interior with the corpus 469 (JBlackwood+Jef_469_c)
+border pinned (`sat_e2 --pin-outside-from --center-k 14`), 162,977 vars,
+5.47M hard clauses, 480 soft clauses. Also encoded with the Blackwood
+470 border (162,974 vars). Ran kissat with `--time=300` on both:
+
+- **469-border CNF**: 4m8s, no verdict (timeout).
+- **470-border CNF**: 4m10s, no verdict (timeout).
+
+This **empirically confirms** vol-10's project_e2_state.md finding
+("SAT / SMT / MIP / max-clique formulations cap universally at 10×10").
+Even with a known-feasible 469/470 border *pinned in advance*, the
+14×14 interior sub-puzzle is still beyond kissat in 5 minutes. The
+hint-count interior of 5 hints is what makes the canonical-E2 14×14
+MaxSAT viable in concept but infeasible in practice without a stronger
+encoding (e.g. specific cardinality SAT, or MaxSAT with a tighter
+upper bound).
+
+Per Carlos Fernandez (2022) — "13×13 interior + 4 border columns in 4
+minutes" — that solver was a *custom backtracker*, not a SAT solver.
+This is consistent with our finding: SAT solvers (DPLL/CDCL family)
+specifically struggle here; custom CP backtrackers are what work.
+
+Honest negative result, **not session-defining but Tier-3** because
+it gives a concrete data point bounding what kissat-class solvers can
+do on the canonical 14×14 sub-problem.
+
 ### 2026-05-12 13:28 — Innovation D: Hamilton-cycle frame enumeration
 
 Built `scripts/v12_hamilton_frame.py` — DFS frame enumerator: pin the

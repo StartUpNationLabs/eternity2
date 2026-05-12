@@ -1,0 +1,1 @@
+{"mode": "random", "seed": 1, "time_budget": 90.0, "stats": {"nodes": 777, "backtracks": 716, "max_depth": 66, "max_score": 62}, "elapsed": 90.20117211341858, "outcome": "timeout"}

@@ -1,0 +1,63 @@
+{
+  "label": "vol12_post_bitset",
+  "puzzle": "../data/puzzles/size_16_official_eternity.csv",
+  "budget_ms": 60000,
+  "cells": [
+    {
+      "threshold": -1,
+      "multiset_equality": false,
+      "seed": 1,
+      "elapsed_ms": 60004,
+      "nodes": 119260,
+      "propagations": 116043754,
+      "backtracks": 19287,
+      "max_depth_seen": 164,
+      "best_depth": 164,
+      "nodes_per_sec": 1987.5341643890408,
+      "propagations_per_node": 973.0316451450612,
+      "solved": false
+    },
+    {
+      "threshold": -1,
+      "multiset_equality": true,
+      "seed": 1,
+      "elapsed_ms": 60003,
+      "nodes": 109890,
+      "propagations": 107162615,
+      "backtracks": 17755,
+      "max_depth_seen": 164,
+      "best_depth": 164,
+      "nodes_per_sec": 1831.408429578521,
+      "propagations_per_node": 975.1807716807717,
+      "solved": false
+    },
+    {
+      "threshold": 150,
+      "multiset_equality": false,
+      "seed": 1,
+      "elapsed_ms": 60003,
+      "nodes": 112147,
+      "propagations": 109335968,
+      "backtracks": 18121,
+      "max_depth_seen": 164,
+      "best_depth": 164,
+      "nodes_per_sec": 1869.0232155058914,
+      "propagations_per_node": 974.9343986018351,
+      "solved": false
+    },
+    {
+      "threshold": 150,
+      "multiset_equality": true,
+      "seed": 1,
+      "elapsed_ms": 60004,
+      "nodes": 115950,
+      "propagations": 112986792,
+      "backtracks": 18739,
+      "max_depth_seen": 164,
+      "best_depth": 164,
+      "nodes_per_sec": 1932.371175254983,
+      "propagations_per_node": 974.4440879689521,
+      "solved": false
+    }
+  ]
+}

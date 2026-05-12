@@ -1,0 +1,1 @@
+{"mode": "edge_bp", "seed": 1, "time_budget": 90.0, "stats": {"nodes": 669, "backtracks": 607, "max_depth": 67, "max_score": 65}, "elapsed": 90.02528285980225, "outcome": "timeout"}
