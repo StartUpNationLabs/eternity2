@@ -971,7 +971,7 @@ impl<'a> SearchState<'a> {
         if let Some(gc) = self.gacolor.as_mut() {
             gc.apply_place(&row.edges, &n_info);
         }
-        let mut undo: Vec<(Position, Vec<u32>)> = Vec::new();
+        let mut undo: Vec<UndoEntry> = Vec::new();
 
         let (x, y) = self.puzzle.xy(pos);
         let w = self.puzzle.width;
@@ -994,8 +994,9 @@ impl<'a> SearchState<'a> {
             //   rows belonging to the just-placed piece.
             let sc_base = (neighbor_edge_idx * n_colors + req_idx) * wpp;
             let pm_base = usize::from(row.piece_id) * wpp;
-            // Compute set bits of (domain & !keep_mask) = removed.
-            let mut removed = Vec::new();
+            // Bit-diff form: build a wpp-word diff and update bits in-place.
+            let mut diff = vec![0u64; wpp];
+            let mut popcount: u32 = 0;
             for w in 0..wpp {
                 let cur = this.domain_bits[bit_base + w];
                 if cur == 0 { continue; }
@@ -1006,23 +1007,21 @@ impl<'a> SearchState<'a> {
                 };
                 let drop = cur & !keep;
                 if drop != 0 {
-                    let mut x = drop;
-                    while x != 0 {
-                        let bit = x.trailing_zeros();
-                        let r_id = (w as u32) * 64 + bit;
-                        removed.push(r_id);
-                        x &= x - 1;
-                    }
+                    diff[w] = drop;
+                    popcount += drop.count_ones();
                     this.domain_bits[bit_base + w] = cur & keep;
                 }
             }
-            if !removed.is_empty() {
-                this.stats.propagations += removed.len() as u64;
-            }
-            if this.domain_is_empty(neighbor as usize) {
-                PruneResult::Wipeout { removed }
+            if popcount > 0 {
+                this.stats.propagations += popcount as u64;
+                let entry = UndoEntry { pos: neighbor, words: diff };
+                if this.domain_is_empty(neighbor as usize) {
+                    PruneResult::Wipeout { entry, popcount }
+                } else {
+                    PruneResult::Removed(entry, popcount)
+                }
             } else {
-                PruneResult::Removed(removed)
+                PruneResult::Ok
             }
         };
 
@@ -1036,52 +1035,49 @@ impl<'a> SearchState<'a> {
         for (maybe_np, edge_idx, required) in neighbors {
             let Some(np) = maybe_np else { continue; };
             match prune(self, np, edge_idx, required) {
-                PruneResult::Wipeout { removed } => {
-                    undo.push((np, removed));
+                PruneResult::Wipeout { entry, .. } => {
+                    undo.push(entry);
                     self.stats.domain_wipeouts += 1;
                     self.emit(sink, depth, EventBody::DomainWipeout { position: np });
                     return PropagationOutcome::Wipeout { undo };
                 }
-                PruneResult::Removed(r) if !r.is_empty() => undo.push((np, r)),
-                _ => {}
+                PruneResult::Removed(entry, _) => undo.push(entry),
+                PruneResult::Ok => {}
             }
         }
 
         // Piece-uniqueness propagation (the "column" of classic DLX).
         // Bitset form: for every unplaced cell p, AND off any row in
-        // piece_mask[just_placed_piece]. Iterate set-bits of the
-        // dropped mask to produce the undo list.
-        let mut other_undo: Vec<(Position, Vec<u32>)> = Vec::new();
+        // piece_mask[just_placed_piece]. Save the dropped bits as a
+        // bit-diff for the undo log — no per-row iteration.
+        let mut other_undo: Vec<UndoEntry> = Vec::new();
         let words_per_pos = self.words_per_pos;
         let pm_base = piece_idx * words_per_pos;
         for p in 0..self.puzzle.cell_count() {
             if p == pos || self.placed[p as usize].is_some() { continue; }
             let bit_base = (p as usize) * words_per_pos;
-            let mut removed = Vec::new();
+            let mut diff = vec![0u64; words_per_pos];
+            let mut popcount: u32 = 0;
             for w in 0..words_per_pos {
                 let cur = self.domain_bits[bit_base + w];
                 let drop = cur & self.piece_mask[pm_base + w];
                 if drop != 0 {
-                    let mut x = drop;
-                    while x != 0 {
-                        let bit = x.trailing_zeros();
-                        let r_id = (w as u32) * 64 + bit;
-                        removed.push(r_id);
-                        x &= x - 1;
-                    }
+                    diff[w] = drop;
+                    popcount += drop.count_ones();
                     self.domain_bits[bit_base + w] = cur & !self.piece_mask[pm_base + w];
                 }
             }
-            if !removed.is_empty() {
-                self.stats.propagations += removed.len() as u64;
+            if popcount > 0 {
+                self.stats.propagations += popcount as u64;
+                let entry = UndoEntry { pos: p, words: diff };
                 if self.domain_is_empty(p as usize) {
-                    other_undo.push((p, removed));
+                    other_undo.push(entry);
                     self.stats.domain_wipeouts += 1;
                     undo.extend(other_undo);
                     self.emit(sink, depth, EventBody::DomainWipeout { position: p });
                     return PropagationOutcome::Wipeout { undo };
                 }
-                other_undo.push((p, removed));
+                other_undo.push(entry);
             }
         }
         undo.extend(other_undo);
@@ -1095,11 +1091,11 @@ impl<'a> SearchState<'a> {
         if self.config.ac3_propagator {
             match self.propagate_ac3(sink, depth, pos) {
                 Ac3Outcome::Wipeout { removed } => {
-                    for (p, rs) in removed { undo.push((p, rs)); }
+                    undo.extend(removed);
                     return PropagationOutcome::Wipeout { undo };
                 }
                 Ac3Outcome::Ok { removed } => {
-                    for (p, rs) in removed { undo.push((p, rs)); }
+                    undo.extend(removed);
                 }
             }
         }
@@ -1210,7 +1206,7 @@ impl<'a> SearchState<'a> {
                 on_queue[*np as usize] = true;
             }
         }
-        let mut all_removed: Vec<(Position, Vec<u32>)> = Vec::new();
+        let mut all_removed: Vec<UndoEntry> = Vec::new();
 
         let mut ac3_tick: u32 = 0;
         while let Some(a) = queue.pop() {
@@ -1244,7 +1240,11 @@ impl<'a> SearchState<'a> {
                 (if ax > 0 { Some(ay * w + (ax - 1)) } else { None }, 3, 1),
             ];
 
-            let mut removed_here: Vec<u32> = Vec::new();
+            // Accumulate the bit-diff for position `a` as words_per_pos
+            // u64s — cheaper to OR back on restore than to iterate
+            // individual row-ids.
+            let mut removed_diff = vec![0u64; words_per_pos];
+            let mut removed_popcount: u32 = 0;
             let a_u = a as usize;
             // Iterate set bits of domain_bits[a_u]. Mutate the bitset
             // in-place when a row is unsupported (the iteration takes a
@@ -1290,23 +1290,26 @@ impl<'a> SearchState<'a> {
                     }
                 }
                 if !supported {
-                    removed_here.push(r_id);
                     let r_idx = r_id as usize;
-                    present[a_u * words_per_pos + r_idx / 64] &= !(1u64 << (r_idx % 64));
-                    self.domain_bits[a_u * words_per_pos + r_idx / 64] &= !(1u64 << (r_idx % 64));
+                    let word_idx = r_idx / 64;
+                    let bit_mask = 1u64 << (r_idx % 64);
+                    removed_diff[word_idx] |= bit_mask;
+                    removed_popcount += 1;
+                    present[a_u * words_per_pos + word_idx] &= !bit_mask;
+                    self.domain_bits[a_u * words_per_pos + word_idx] &= !bit_mask;
                     for s in 0..4 {
                         let c = r.edges[s] as usize;
                         count[a_u * stride_pos + s * n_colors + c] -= 1;
                     }
                 }
             }
-            if !removed_here.is_empty() {
-                self.stats.propagations += removed_here.len() as u64;
+            if removed_popcount > 0 {
+                self.stats.propagations += removed_popcount as u64;
                 let empty = {
                     let base = a_u * words_per_pos;
                     self.domain_bits[base..base + words_per_pos].iter().all(|&w| w == 0)
                 };
-                all_removed.push((a, removed_here));
+                all_removed.push(UndoEntry { pos: a, words: removed_diff });
                 if empty {
                     self.stats.domain_wipeouts += 1;
                     self.emit(sink, depth, EventBody::DomainWipeout { position: a });
@@ -1417,14 +1420,13 @@ impl<'a> SearchState<'a> {
         PropagatorResult::Ok
     }
 
-    pub(crate) fn restore(&mut self, undo: Vec<(Position, Vec<u32>)>) {
+    pub(crate) fn restore(&mut self, undo: Vec<UndoEntry>) {
         let words_per_pos = self.words_per_pos;
-        for (pos, removed) in undo {
-            let pos_u = pos as usize;
+        for entry in undo {
+            let pos_u = entry.pos as usize;
             let bit_base = pos_u * words_per_pos;
-            for &r_id in &removed {
-                let r = r_id as usize;
-                self.domain_bits[bit_base + (r >> 6)] |= 1u64 << (r & 63);
+            for w in 0..words_per_pos {
+                self.domain_bits[bit_base + w] |= entry.words[w];
             }
         }
     }
@@ -1825,20 +1827,29 @@ impl<'a> SearchState<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RecurseResult { Found, Exhausted, TimedOut, Cancelled }
 
+/// Single undo entry: a bit-diff to OR back into `domain_bits[pos]` on
+/// restore. `words` has length `words_per_pos`. Built by the prune in
+/// O(wpp) and restored in O(wpp) — no per-removed-row iteration.
+#[derive(Clone)]
+pub(crate) struct UndoEntry {
+    pub pos: Position,
+    pub words: Vec<u64>,
+}
+
 pub(crate) enum PropagationOutcome {
-    Ok { undo: Vec<(Position, Vec<u32>)> },
-    Wipeout { undo: Vec<(Position, Vec<u32>)> },
+    Ok { undo: Vec<UndoEntry> },
+    Wipeout { undo: Vec<UndoEntry> },
 }
 
 pub(crate) enum Ac3Outcome {
-    Ok { removed: Vec<(Position, Vec<u32>)> },
-    Wipeout { removed: Vec<(Position, Vec<u32>)> },
+    Ok { removed: Vec<UndoEntry> },
+    Wipeout { removed: Vec<UndoEntry> },
 }
 
 enum PruneResult {
     Ok,
-    Removed(Vec<u32>),
-    Wipeout { removed: Vec<u32> },
+    Removed(UndoEntry, u32), // entry + popcount (for propagation counter)
+    Wipeout { entry: UndoEntry, popcount: u32 },
 }
 
 #[cfg(test)]
