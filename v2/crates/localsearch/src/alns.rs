@@ -1542,6 +1542,7 @@ pub fn run_alns_pt_multi_init(
     let mut best_score = scores[0];
     let mut best_chain = 0;
     let mut best_round = 0u64;
+    let _ = best_round; // suppress unused-init warning; assigned below.
     for i in 1..n {
         if scores[i] > best_score {
             best_score = scores[i];
