@@ -107,6 +107,278 @@ Score is 453/480; any move that yields 454+ is the headline.
 
 ## Vol-7 dispatch log
 
+### MAJOR DISCOVERY 08:25 — Houdayer-in-PT IS ALREADY BUILT
+
+While preparing the X1-suggested Houdayer prototype I found:
+
+- `crates/localsearch/src/houdayer.rs` (278 lines, vol-3 commit `683d76d`):
+  `disagreement_components`, `component_is_swappable`,
+  `delta_replace_with`, `HoudayerProposal` types — exactly the X1
+  recipe.
+- `crates/benchmark/src/bin/houdayer_offline.rs` — offline post-mortem
+  across pairs of harvested plateau states.
+- `crates/localsearch/src/pt.rs` lines 414-461: Houdayer **wired into
+  the PT main loop** (`houdayer_every`, `houdayer_max_component`,
+  `houdayer_min_component`, accepted-applications counters).
+- Vol-3 megarun observation (commit `312c44b`, **never fixed**):
+  *Houdayer keeps proposing the same swap every round. Energy-
+  preserving swaps `joint_delta=0` confirmed offline; subsequent
+  replica-exchange undoes the swap.* Three fix proposals were noted
+  for "vol. 3 next session" but never executed:
+
+  > 1. Apply Houdayer ONLY between paired replicas at the SAME
+  >    temperature (microcanonical), not adjacent-T pairs.
+  > 2. Track recently-swapped components and forbid re-swapping the
+  >    same component within K rounds.
+  > 3. Skip replica-exchange for the pair we just Houdayered.
+
+**So X1's "novel" recommendation is actually a vol-3 bug fix that was
+punted because of [[project-e2-dead-ends]] = "Inversion 2 might make
+PT obsolete"** (it didn't). The Houdayer move IS the structurally
+correct mechanism for moat-depth-≥5; we just never made it stick.
+
+**Estimated effort to land the fix**: ~30-60 min Rust (fix #3 is the
+smallest — skip replica-exchange for one round after a Houdayer
+acceptance — single conditional in the PT main loop) + rerun PT
+from 453 with `houdayer_every` enabled. **If any of the three fixes
+lets Houdayer accept a strict positive joint-delta swap, that's the
+crack in the wall.**
+
+### X1 — 22-color Potts on 2D lattice — RETURN (08:14 CEST)
+
+**Best two cross-domain bets (per agent):**
+
+1. **Houdayer-style cluster moves adapted to the alldiff-constrained
+   Potts ferromagnet.** Maintain two near-453 replicas A, B; define
+   overlap field q_i = δ(σ_i^A, σ_i^B); identify connected components
+   of the disagreement set D on the 16×16 grid; for each component
+   apply the piece-permutation cycle that swaps A↔B labels on D
+   while preserving alldiff (automatic because both replicas are
+   permutations of the same bag). Energy inside D is *exchanged*;
+   only boundary energy of D pays a cost.
+
+   **Why it's the right tool for our moat**: documented mechanism for
+   exactly the moat-depth-≥k pathology we observe (Zhu/Ochoa/
+   Katzgraber arXiv:1501.05630; Fang/Wang 2023 on 10-state Potts;
+   Mohseni et al. arXiv:2204.04897 "isoenergetic cluster" revival;
+   Fang/Wang on disordered Potts arXiv:2310.02216). The alldiff that
+   killed BP/SP is *automatically respected* because D has identical
+   multiset content in both replicas.
+
+   **Implementation**: ~400 LOC Rust on top of solver-engine. Replica
+   pair maintenance, union-find for D-components, cycle extractor
+   (just the bijection induced by position-matching two replicas
+   restricted to D). 2 CPU-days for ~10^7 cluster-move pairs from
+   ~50 diverse 449-453 replicas.
+
+   **Falsification test**: histogram D-component sizes on a known
+   (453, 451) replica pair. If bimodal with heavy tail above 10
+   sites, abort. If median 3-8 sites, proceed.
+
+   **Agent P(454+ in 7 days)**: 20-30%. Per [[feedback-no-self-time-
+   estimates]] this is the AGENT'S estimate; verify by running.
+
+2. **Lattice-gauge disclination strings (Z_22 plaquette charges).**
+   Treat each interior vertex of the 16×16 board as a Z_22 plaquette;
+   the 4 colors meeting at the vertex sum mod 22 to a topological
+   charge c_v ∈ Z_22. Perfect solution has c_v = 0 everywhere; the
+   453 state has 27 nonzero charges. Find pairs of opposite-charge
+   vertices and apply min-cost-flow on a piece-swap graph to "transport"
+   the charge to annihilate with its partner — fixing O(path-length)
+   mismatches at cost of O(1) boundary mismatches.
+
+   **Why it's genuinely new**: mismatched edges are not independent —
+   they are bound in vertex-charge pairs. A standard local move tries
+   to fix one edge and breaks 1-3 others (Peierls-barrier ≈ moat-
+   depth-5). A string transports the charge, escaping the barrier.
+   Reference: Kogut lattice gauge; Zohar et al. arXiv:2312.14640 on
+   Z_N gauge ground states.
+
+   **Implementation**: ~700 LOC, includes a min-cost-flow over a
+   piece-rotation graph. 3-5 CPU-days.
+
+   **Falsification test**: histogram c_v over 100 known 453 states.
+   If charges are randomly distributed (no spatial clustering of
+   opposite pairs), abort. If ≥30% of opposite-charge pairs are
+   within Manhattan distance ≤6, proceed.
+
+   **Agent P(454+ in 7 days)**: 10-15%.
+
+**Things X1 explicitly ruled out** (as morally equivalent to already-
+tried methods):
+- Population annealing, Wang-Landau, simulated bifurcation — reduce
+  to PT-equivalents on the alldiff manifold.
+- Quantum-inspired Coherent Ising Machines — alldiff destroys the
+  continuous relaxation.
+
+**Vol-7 reading of X1**: Houdayer-cluster on the alldiff-Potts
+manifold is the strongest candidate. The mechanism matches the
+exact pathology (moat-depth-≥5 + alldiff rigidity) and it has not
+been published on edge-matching. The disclination-strings idea is
+*also* striking because it gives us a new, computable structural
+invariant: the 27 c_v charges of the 453 board are a fingerprint
+nobody has computed.
+
+**Immediate cheap pre-experiment** (vol-7 candidate): compute the
+Z_22 vertex-charge distribution on the 453 board. ~30 min Python
+work. If charges cluster spatially (which they should, per the
+strain-cascade hypothesis), the disclination move is viable. If
+they're uniform, abort that branch. Either way, the *charge
+fingerprint* is a publishable structural signature.
+
+### M1 — Monckton design philosophy — RETURN (08:24 CEST)
+
+**Headline**: *Monckton himself contributed nothing structural.*
+Classics graduate, journalist, no mathematics. The Eternity II
+piece set was *generated by Alex Selby and Oliver Riordan* (hired
+by Monckton in 2005), the *same pair* who solved Eternity I in 2000.
+Their generator was built specifically to defeat their own E1
+solver. The lever is in their generator's bias choices, **not** in
+Monckton's quotes.
+
+Cited (agent-quoted):
+
+- Wikipedia: *"Eternity II was designed by Monckton in 2005, in
+  collaboration with Selby and Riordan, who designed a computer
+  program that generated the final Eternity II design."*
+- Riordan on Monckton: *"He wasn't looking at it in a mathematical
+  way at all"* — plus.maths.org "Forever rich".
+- £1M Eternity I "I had to sell my mansion" was a deliberate PR
+  stunt, admitted by Monckton in 2006. *Public-facing claims are
+  marketing artifacts, not technical statements.*
+
+**Structural information M1 did surface from third parties**:
+
+- 22 colors + gray. **5 colors used only on border/corner inward-
+  facing edges; 17 colors used only on inner edges.** This bipartite
+  color split is what our rare-vs-abundant inversion (vol-5) already
+  exploits — *but it's a published fact, not our discovery*. Update
+  [[project-e2-state]] to credit the community.
+- 1 fixed starter piece (piece 139 at I8 ≈ row 8 col 7) + 4
+  retrievable via "Clue Puzzles 1-4" (two 6×6 and two 12×6 sub-
+  puzzles). The rule book says **the puzzle can be solved without
+  using the hints**. This is the canonical 5-clue, but the "1-clue"
+  community variant is just "use only piece 139" — community-defined.
+- **No Monckton patent on E2 construction was found.** Defensive IP
+  is trademark/copyright. No public construction recipe.
+
+**Falsifiable Selby-Riordan-generator hypotheses (M1's H1-H4)**:
+
+1. **H1 (Generator signature in color statistics).** Compute color-
+   imbalance N/S vs E/W per color; compute chi-square fit of color
+   counts. A uniform random generator gives random variance; a
+   Selby-Riordan adversarial generator likely *maximized minimum
+   local entropy* → variance below random expectation. **Cheap test
+   (~30 min Python).**
+2. **H2 (Hint positions forbid all 8 dihedral symmetries).** Test
+   if the 5 hint set is fixed by no nontrivial element of D4. If
+   yes, no symmetry reduction. We already know the (7,8) hint
+   breaks 180; need to check the other 6 dihedral elements.
+3. **H3 (Generator anti-Wang-tile).** Selby/Riordan exploited 2×3
+   plateau structure in E1; for E2 they likely maximized min-cut on
+   every 6×6 sub-window. Test: enumerate 11×11 sub-windows × 6×6,
+   check min-cut-color-flow distribution flatness.
+4. **H4 (Frame uniqueness count).** Count distinct frame solutions
+   for E2. If O(10^5) vs random O(10^8) → generator bias toward
+   frame-uniqueness → frame-first is either the right angle or
+   exactly the wrong one.
+
+**Algorithmic implication**: search *generator space*, not *board
+space*. Train a classifier to distinguish official E2 piece-sets
+from uniform random 256-tile sets on statistical features (color-
+pair co-occurrence, frame-color budget, parity); >80% accuracy
+features ARE the bias and can be added as propagators. This is
+genuinely orthogonal to every solver in the academic record.
+
+**Most actionable next step from M1**: read Selby & Riordan's
+published E1 method (archduke.org/eternity/), because *whatever
+they built to defeat in E1 is, by negation, what they made E2
+resistant to*. Inversion is testable code.
+
+### F1 — community / forum SOTA — RETURN (08:25 CEST)
+
+**Headline**: *The hobbyist record on the canonical 5-clue is
+**Louis Verhaard's 467/480 (Dec 2008)**, not 470.* The 470 number
+that has been floating around (libblackwood / Blackwood) is on the
+**1-clue / clueless variant** (default puzzle in libblackwood's
+`data/__init__.py` is `E2ncud` = "E2 no clue, upside-down"). This
+**confirms** [[reference-blackwood-decoded]] and resolves any
+ambiguity.
+
+| Score | Variant | Claimant | Date | Algorithm |
+|---|---|---|---|---|
+| **467/480** | **5-clue (canonical)** | Louis Verhaard | 2008-12 | "eii" distributed backtracker + useless/precious piece tiering |
+| 466/480 | 5-clue | "eii" users | 2008 | same; ~100 found before 1st 467 |
+| 463/480 | 5-clue | Verhaard pre-tiering | 2008 | early eii |
+| 470/471 | 1-clue clueless | Joshua Blackwood / jfbucas | 2020-24 | scheduled "conflicts allowed" relaxations + motif demand |
+| 459/480 | 5-clue | Wauters TS / Salassa | 2012/2017 | published |
+
+**No verified hobbyist claim above 467 on 5-clue.**
+
+**Two techniques NOT in academic literature** (high confidence):
+
+1. **Verhaard's 2×3-tileability piece valuation.** For each piece,
+   count how many distinct 2×3 sub-arrangements it appears in
+   across all enumerations. Bucket pieces into
+   `{useless, bad, good, precious}`. Then apply **depth-banded
+   admission**: forbid `good` pieces before depth 63; cap `good`
+   at 6 by depth 79; place all `useless` by depth 96. This is a
+   *temporal* variable-order rule, not a static one. Source:
+   shortestpath.se/eii/eii_details.html.
+
+2. **Blackwood's "scheduled conflicts_allowed".** Specific backtrack
+   depths (e.g. `[206, 211, 216, 221, 225, 229, 233, 237, 239]` in
+   `jb471.py`) where the solver is *permitted to leave one mismatch
+   and continue*. Combined with **Blackwood's "heuristic_patterns_count"
+   demand curve** (piecewise-linear depth → minimum required count
+   of a motif-triple). This is the formal version of "10 scheduled
+   relaxations". Source: github.com/jfbucas/libblackwood/scenarios/.
+
+**Empirical: Verhaard 467 occurred 2× more rarely than predicted by
+his statistical model from 466 frequency** — he hypothesised a
+structural barrier (possibly color parity) at 467→468 on 5-clue.
+This matches our vol-5/6 finding of "30-mismatch budget", just
+shifted: at the 466/467 plateau there is *another* barrier above.
+
+**Verhaard's "X method"** thread on groups.io (link in agent output)
+is paywalled — would need email subscription to access.
+
+**Implication for vol-7**: H1+H2 are concrete builds. **Replace
+MRV variable-ordering with 2×3-tileability ranking + depth-banded
+admission + scheduled motif-count demand propagator.** This goes
+into `propagators` crate. Estimated 1-2 days Rust. Predicted gain:
+**reach 460+ regime, plausibly 463-467 (matching Verhaard)**.
+
+The negative-result F1 surfaced: **groups.io is paywalled to
+scrapers; r/Eternity2 is empty of verified > 467 claims**. The
+community ceiling has held >10 years at 467 on 5-clue. That
+congruence with the academic 458 ceiling is itself evidence of a
+real structural barrier.
+
+### Three-agent triangulation (08:26 CEST)
+
+- **M1** (negative on Monckton, positive on Selby-Riordan): the
+  generator bias is the unstudied lever.
+- **F1** (Verhaard 467 ceiling, 2×3 tileability + depth-banded
+  admission folklore): an unported piece-valuation algorithm
+  exists and stops at 467.
+- **X1** (Houdayer cluster move on alldiff-Potts): the move class
+  matches the moat-depth-≥5 pathology — *and we already wrote it,
+  just never fixed the replica-exchange revert bug*.
+
+All three converge on **one missing observation: structural
+information about the PIECE SET that none of our solvers consume.**
+
+- Selby-Riordan generator → piece statistics are non-uniform.
+- Verhaard 2×3 tileability → some pieces are intrinsically harder
+  to place than others.
+- Houdayer disagreement → the structural component of the moat is
+  *which pieces are interchangeable across basins*.
+
+This is the synthesis: **piece-level structure is the unmodelled
+axis**. All our methods treat the 256 pieces as a uniform bag with
+hard alldiff. None of them weight pieces by their structural role.
+
 ### 08:00 CEST — session start, parallel agents queued
 
 Three research agents dispatched in parallel (M1 = Monckton, F1 =
