@@ -107,6 +107,63 @@ Score is 453/480; any move that yields 454+ is the headline.
 
 ## Vol-7 dispatch log
 
+### Selby-Riordan generator-bias DIAGNOSTIC 09:00 — NEGATIVE
+
+**Hypothesis (M1 H1)**: the Selby-Riordan generator imposed a
+detectable statistical bias on the official E2 piece set (since
+they engineered E2 to defeat their own E1 solver). Test: chi-square
+on per-color edge counts and Monte-Carlo on color-pair co-
+occurrence within pieces.
+
+**Setup**: `scripts/sr_generator_bias.py`. Counted per-color edge
+totals on all 256 pieces; per-color NS/EW direction split (in
+the canonical-rotation CSV labeling); color-pair co-occurrence
+within pieces; MC shuffle of the same edge bag into random pieces.
+
+**Result**:
+
+- **Color counts**: 5 rare (1-5: 24 edges each), 5 medium (6-10:
+  48 each), 12 abundant (11-22: 50 each). **All counts even**, so
+  the puzzle is theoretically fully matchable.
+- **Per-color NS vs EW split**: heavy directional imbalance in
+  canonical rotation (e.g. colors 4,5 are 100% on E/W; color 6 is
+  46/48 N/S). **Not a generator signature** — pieces can rotate,
+  so the per-color NS/EW split in the *canonical* labeling just
+  reflects the generator's arbitrary canonicalization choice.
+- **Multi-occurrence within a piece**: 75 pieces have a color
+  appearing twice (palindromic-ish); only 3 pieces have a color
+  appearing 3×; **zero pieces have any color appearing 4×**.
+  Suggests a generator soft-constraint against extreme repetition.
+- **Color-pair co-occurrence missing**: 23 out of 231 possible
+  color-pairs never appear together on any single piece.
+- **MONTE-CARLO TEST** (most rigorous): shuffle the 784 interior
+  edge labels into random pieces; recompute missing-pair count.
+  500 runs: mean **95.03** missing pairs, stdev 0.16, range [95, 96].
+  **Official puzzle: 95 missing pairs.** P(MC ≤ obs) = 0.972.
+
+**Verdict**: **The "missing pairs" finding is NOT a generator
+signature** — it's the expected result of any random piece set
+drawn from the same color frequencies. The Selby-Riordan generator,
+at the level of color-frequency-conditional piece statistics,
+**looks statistically random**. M1's H1 is falsified at this level.
+
+**What this means for the algorithm**: there is no exploitable
+color-statistics propagator from generator-bias analysis. The
+22-color frequencies + alldiff structure of E2 is essentially the
+generic random-pieces-with-these-frequencies setup. The hardness
+is in the global combinatorics, not in hidden generator biases.
+
+**Falsifying observation that DID survive**: 5 piece-signature
+duplicates exist (multisets shared by 2 pieces each), of which 2
+are pure-interior: (7,10,15,17) and (9,12,14,21). On a 16×16 these
+"twin" pieces are interchangeable in any matching — a small but
+real symmetry. **Could be used for symmetry breaking in
+backtracking** but probably worth <1% gain.
+
+**Conclusion**: M1's directionally-promising hypothesis turns out
+to be empirically empty. Focus shifts to the *active* user pivot:
+border diversification.
+
 ### USER PIVOT 08:35 — BORDER DIVERSITY IS A MASSIVE OVERSIGHT
 
 **User observation**: *"I think it also might be interesting to try
