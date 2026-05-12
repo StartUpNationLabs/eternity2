@@ -1,0 +1,38 @@
+=== ALNS ON ETERNITY II ===
+puzzle: ../data/puzzles/size_16_official_eternity.csv
+budget=300s repair_ms=500 t=1 seed=0x1 ops=rr,ww,cd,mwpm
+loaded 16×16, 256 pieces, 22 colors, 5 hints
+loaded seed board: 303/480 (63.1%)
+
+Initial board score: 303/480 (63.1%)
+
+--- ALNS (300s) ---
+operators: random_region, worst_window, conflict_driven, mwpm_defect_pair
+[ALNS iter 50] t=25.0s best=443 current=443 op_weights=["2.20", "2.91", "2.63", "3.37"]
+[ALNS iter 100] t=50.0s best=443 current=443 op_weights=["3.28", "3.92", "3.67", "4.33"]
+[ALNS iter 150] t=75.0s best=443 current=443 op_weights=["4.25", "4.83", "4.60", "5.20"]
+[ALNS iter 200] t=100.0s best=443 current=443 op_weights=["5.13", "5.65", "5.44", "5.98"]
+[ALNS iter 250] t=125.0s best=443 current=443 op_weights=["5.91", "6.38", "6.20", "6.68"]
+[ALNS iter 300] t=150.0s best=443 current=443 op_weights=["6.62", "7.04", "6.88", "7.31"]
+[ALNS iter 350] t=175.0s best=443 current=443 op_weights=["7.26", "7.64", "7.49", "7.88"]
+[ALNS iter 400] t=200.0s best=443 current=443 op_weights=["7.83", "8.18", "8.04", "8.39"]
+[ALNS iter 450] t=225.0s best=443 current=443 op_weights=["8.35", "8.66", "8.54", "8.85"]
+[ALNS iter 500] t=250.1s best=443 current=443 op_weights=["8.82", "9.09", "8.98", "9.27"]
+[ALNS iter 550] t=275.1s best=443 current=443 op_weights=["9.23", "9.48", "9.38", "9.64"]
+[ALNS iter 600] t=300.1s best=443 current=443 op_weights=["9.61", "9.83", "9.75", "9.98"]
+
+=== ALNS RESULT ===
+elapsed: 300.1s   iters: 600
+initial: 303/480 (63.1%)
+best:    443/480 (92.3%)   Δ = +140
+repair_failures: 0
+accepted: improving=0 worse=585 rejected=0
+per-operator:
+       random_region: invocations=144 accepts=144 (100.0%)
+        worst_window: invocations=166 accepts=166 (100.0%)
+     conflict_driven: invocations=142 accepts=142 (100.0%)
+    mwpm_defect_pair: invocations=148 accepts=148 (100.0%)
+best-score history (first 30): [(0, 303), (1, 314), (2, 351), (3, 379), (4, 397), (5, 404), (6, 415), (7, 423), (9, 431), (15, 434), (16, 435), (17, 437), (19, 439), (25, 440), (29, 441), (30, 443)]
+
+Report: output/alns_e2_1778589396_443of480.json
+Bucas:  https://e2.bucas.name/#puzzle=size_16_official_eternity&board_w=16&board_h=16&board_edges=abdaabgbabjbacsbabhcaepbaboeaeqbabveafhbafgfacnfaepcafoeaelfaabedsdagvgsjgwvsjwghhwjptwhopstqgmpvvlghunvgolunpmopskpoqwslvmqbacvdpcagnkpwlmnwvvlwvkvwkrvsiukmhgilsnhnnnslktnmttkkuvtwswumtrscadtcidakkgimnrkvijnklqirqwluiwqgmkiniomngritnpgtovnvmjowuhmrhoudadhdgcagkogrphkjijpqoriwuiowovukqmoovjqrkhvprhkmhmrjqphhwmqoiqwdadickfaounkhlsujmllrgtmiwtgvwlwgiiwjvvihnlvrqunmqgqphiqmorhqnqodaenfjbanmpjsommjjmitjkqtrujijjristjvpnsllkpulplmkrvillkmtplqqwteacqbjfaprsjmorrmjvoklqjnkoljhuktqvnnouqkuwophssruhhvpsupropwhtrcafhfubasgrurtrgvphtqrqpoknvuhwkvjshurijwvlrsthuhlghslrloglltrkgfacrbtfarqrtrluqhwqlqngwnkvrwhqkujuoiggjlorgoiqogqiirpnqloupkvkocafvftdarvmtulkvqttltpjtvwppksmwuvusgwwvrtkvgigtinqwnqgtugsqkqjsfafqdweamsowknhstkknjppppwnsmmrwulwmwollklwogoslqtjoksntsutmjosufadoeibaommihjumkgrjpnignvjnrtuswtwvlgmtwstgssksjgisnnpgtmqnspgmdaepbpcammupujvmronjiisojjliuhsjwushqlhuthjlhrphilirprilqvprgtqveabtcocauvgovitvnjmisiujliwisouisnqohhunjnthplsnomnliwpmpkrwqhmkbachcdaagdadteadmfaeufafwdafufadqeafueaeteaeseaencaepcacrbacmdabcaad
