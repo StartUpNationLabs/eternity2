@@ -298,6 +298,7 @@ fn main() {
         // for the wrong puzzle.
         pinned_positions: file_hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
+            lex_break_isoscore: false,
     };
     let t_alns = Instant::now();
     let (best, stats) = run_alns(&puzzle, &initial, ops.as_mut_slice(), &cfg);

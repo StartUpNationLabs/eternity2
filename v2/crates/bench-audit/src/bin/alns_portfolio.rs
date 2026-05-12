@@ -128,6 +128,7 @@ fn main() {
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
+            lex_break_isoscore: false,
     };
     let preset = ops_preset.clone();
     let ops_factory = move |_chain_idx: usize| build_ops(&preset);

@@ -912,6 +912,12 @@ pub struct AlnsConfig {
     /// Vol-17 — optional hard cap on iters (0 = no cap). Used by PT-on-ALNS
     /// to do bounded inner loops between exchanges.
     pub iter_budget: u32,
+    /// Vol-17 — when true, iso-score moves use largest-mismatch-component
+    /// size as a tie-breaker. Smaller largest-component is preferred
+    /// (easier to repair in future iters). Useful when matched count
+    /// plateaus on iso-score landscapes (vol-17 empirical observation).
+    /// Adds O(W*H) cluster computation per iter; cheap on 16×16.
+    pub lex_break_isoscore: bool,
 }
 
 impl Default for AlnsConfig {
@@ -927,8 +933,50 @@ impl Default for AlnsConfig {
             cp_fallback_to_sa: true,
             pinned_positions: Vec::new(),
             iter_budget: 0,
+            lex_break_isoscore: false,
         }
     }
+}
+
+/// Vol-17 — compute largest-connected-mismatch-component size on `board`.
+/// Cheap: O(W×H) BFS. Used as iso-score tie-breaker.
+fn largest_mismatch_component_size(puzzle: &Puzzle, board: &Board) -> u32 {
+    let mismatches = find_mismatches(puzzle, board);
+    if mismatches.is_empty() { return 0; }
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut mismatch_cells: BTreeSet<Position> = BTreeSet::new();
+    for m in &mismatches {
+        mismatch_cells.insert(m.cell_a);
+        mismatch_cells.insert(m.cell_b);
+    }
+    let mut visited: BTreeSet<Position> = BTreeSet::new();
+    let mut largest = 0u32;
+    for &start in &mismatch_cells {
+        if visited.contains(&start) { continue; }
+        let mut size = 0u32;
+        let mut queue: VecDeque<Position> = VecDeque::new();
+        queue.push_back(start);
+        visited.insert(start);
+        while let Some(p) = queue.pop_front() {
+            size += 1;
+            let x = p % w; let y = p / w;
+            if x + 1 < w && mismatch_cells.contains(&(p + 1)) && !visited.contains(&(p + 1)) {
+                visited.insert(p + 1); queue.push_back(p + 1);
+            }
+            if x > 0 && mismatch_cells.contains(&(p - 1)) && !visited.contains(&(p - 1)) {
+                visited.insert(p - 1); queue.push_back(p - 1);
+            }
+            if y + 1 < h && mismatch_cells.contains(&(p + w)) && !visited.contains(&(p + w)) {
+                visited.insert(p + w); queue.push_back(p + w);
+            }
+            if y > 0 && mismatch_cells.contains(&(p - w)) && !visited.contains(&(p - w)) {
+                visited.insert(p - w); queue.push_back(p - w);
+            }
+        }
+        if size > largest { largest = size; }
+    }
+    largest
 }
 
 #[derive(Debug, Clone)]
@@ -1012,7 +1060,25 @@ pub fn run_alns(
         let new_score = score_board(puzzle, &new_board);
         let delta = new_score as i32 - current_score as i32;
 
-        let accepted = cfg.acceptance.accept(delta, &mut rng, best_score, new_score);
+        // Vol-17 — lexicographic accept with mismatch-component tiebreak.
+        // When deltaaa == 0, prefer boards with SMALLER largest mismatch
+        // component (easier to repair downstream). When delta > 0, accept
+        // unconditionally as before.
+        let accepted = if cfg.lex_break_isoscore && delta == 0 {
+            let cur_lcc = largest_mismatch_component_size(puzzle, &current);
+            let new_lcc = largest_mismatch_component_size(puzzle, &new_board);
+            // Accept if new lcc is smaller (better cluster geometry).
+            // Iso-lcc moves: 50/50 via existing acceptance.
+            if new_lcc < cur_lcc {
+                true
+            } else if new_lcc > cur_lcc {
+                false
+            } else {
+                cfg.acceptance.accept(delta, &mut rng, best_score, new_score)
+            }
+        } else {
+            cfg.acceptance.accept(delta, &mut rng, best_score, new_score)
+        };
         let mut sigma = weights.sigma_reject;
         if accepted {
             stats.per_op_accepts[op_idx] += 1;
@@ -1323,6 +1389,7 @@ where
                 cp_fallback_to_sa: base_cfg.cp_fallback_to_sa,
                 pinned_positions: base_cfg.pinned_positions.clone(),
                 iter_budget: base_cfg.iter_budget,
+                lex_break_isoscore: base_cfg.lex_break_isoscore,
             };
             cfg.seed = seed;
             let mut ops = ops_factory(i);
@@ -1497,6 +1564,7 @@ pub fn run_alns_pt_multi_init(
                     cp_fallback_to_sa: cfg.cp_fallback_to_sa,
                     pinned_positions: pinned_positions.clone(),
                     iter_budget: cfg.inner_iters_per_round,
+                    lex_break_isoscore: false,
                 };
                 let (new_board, new_stats) = run_alns(puzzle, &boards[i], ops.as_mut_slice(), &cfg_chain);
                 let new_score = score_board(puzzle, &new_board);
