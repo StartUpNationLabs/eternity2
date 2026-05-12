@@ -654,6 +654,34 @@ starting boards.
 | H17 | Cross-graft of DIFFERENT-schedule boards (v17a + v17b) | chimera 284 → ALNS 397/480, -58 vs A | REFUTED — too much chaos |
 | H18 | Smarter chimera-building (preserve matches)            | not yet attempted                    | PENDING       |
 | H19 | Pin-and-resume CP from a 455 board                     | not yet attempted                    | PENDING       |
+| H20 | Re-CP with extra hints from 455 board (rows 8-15)      | CP walls at depth=85 (vs normal 192); ALNS recovers to 421 only (-34) | REFUTED |
+| H21 | Noise-injected schedule (v17e) produces diverse basins | E15 sequenced                        | PENDING       |
+
+## 01:30 — E14 result: pinned-Blackwood REFUTED (-34 vs 455)
+
+Pin 30 cells from rows 8-15 of our 455 board as extra hints + run
+Blackwood CP (calibrated_v17a) + ALNS:
+- CP walled at depth=85 (vs 192 normal) → only 120 cells placed.
+- ALNS from this 203-matched start recovered to 421 in 3 min.
+
+The schedule (calibrated for McGavin-trajectory) and the extra hints
+(from our 455 board's piece-region assignment) are INCOMPATIBLE.
+The schedule wants specific heuristic-color edges placed by certain
+depths; the pinned cells force pieces that don't satisfy those
+demands → CP backtracks heavily → low depth.
+
+User feedback after this: "don't use existing board to seed; rather
+restart and try to get better options."
+
+## 01:35 — Pivoting to noise-injected schedule (v17e)
+
+H21 (NEW): perturb the v17b schedule with seed-derived jitter.
+Different seeds → different perturbed schedules → different CP
+partials. Uses no existing-board info; pure fresh-start diversity.
+
+CLI: `run_e2_blackwood --schedule calibrated_v17e --noise-amplitude 0.15 --schedule-seed N`
+
+Plan: 4 schedule seeds × 3+3min sequential ~24min total.
 
 ## 01:21 — E13 result: chimera 284 → 397 (3min ALNS), -58 vs A
 
