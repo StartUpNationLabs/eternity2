@@ -1705,6 +1705,17 @@ pub(crate) struct SearchState<'a> {
     /// edges in that row). Maintained incrementally by
     /// place_and_propagate / undo_place. 0 when no schedule.
     pub(crate) placed_heuristic_count: u32,
+    /// Vol-16 Cat-4f — precomputed table for the AC-3 inner support
+    /// loop. `same_piece_rots[row_id * 16 + side_a * 4 + side_b]` is a
+    /// 4-bit mask (low nibble of a u8) where bit `r` is set iff
+    /// rotation `r` of `row.piece_id` has the SAME color on side_b as
+    /// `row.edges[side_a]`. AC-3's `same_piece` count becomes a single
+    /// `(mask & present_4).count_ones()` instead of a 4-iteration loop
+    /// with bounds-checked array reads on every rotation.
+    ///
+    /// Built once at SearchState::new from the static row table.
+    /// Size: rows.len() * 16 bytes = ~16 KB on canonical E2.
+    pub(crate) same_piece_rots: Vec<u8>,
     /// Vol-16 Cat-4 — single arena for all UndoEntry bit-diff buffers.
     /// `UndoEntry { pos, words_start }` references a contiguous slice
     /// `[words_start..words_start + words_per_pos]`. The arena grows
@@ -1748,6 +1759,37 @@ impl<'a> SearchState<'a> {
                     rotation: r,
                     valid: !dup && !is_excluded,
                 };
+            }
+        }
+
+        // Vol-16 Cat-4f — precomputed same-piece rotation table for AC-3.
+        // For each row r and (side_a, side_b) pair: which rotations of
+        // r's piece have edges[side_b] == r.edges[side_a]? Stored as a
+        // 4-bit mask in the low nibble of a u8. Reads turn AC-3's
+        // 4-iteration support loop into a single mask + popcount.
+        let mut same_piece_rots: Vec<u8> = vec![0; rows.len() * 16];
+        for r_id in 0..rows.len() {
+            let r = &rows[r_id];
+            if !r.valid {
+                continue;
+            }
+            let pid_base = usize::from(r.piece_id) * 4;
+            for side_a in 0..4 {
+                let required = r.edges[side_a];
+                for side_b in 0..4 {
+                    let mut mask: u8 = 0;
+                    for rot in 0..4 {
+                        let cand = pid_base + rot;
+                        if cand >= rows.len() {
+                            break;
+                        }
+                        let rc = &rows[cand];
+                        if rc.valid && rc.edges[side_b] == required {
+                            mask |= 1 << rot;
+                        }
+                    }
+                    same_piece_rots[r_id * 16 + side_a * 4 + side_b] = mask;
+                }
             }
         }
 
@@ -1983,6 +2025,7 @@ impl<'a> SearchState<'a> {
                 }
             },
             placed_heuristic_count: 0,
+            same_piece_rots,
             // Vol-16 Cat-4 — pre-reserve the arena for the worst-case
             // undo log: 4 prunes + n_pos piece-uniqueness entries per
             // place_and_propagate_opts call, * wpp words per entry,
@@ -2539,25 +2582,28 @@ impl<'a> SearchState<'a> {
             for r_id in to_check {
                 let r = self.rows[r_id as usize];
                 let mut supported = true;
+                let pid_base = usize::from(r.piece_id) * 4;
+                // Vol-16 Cat-4f — precomputed 4-bit rotation mask per
+                // (row, side_a, side_b). Replaces the inner 4-iteration
+                // loop with a single AND + popcount over `present`.
+                let r_lut_base = (r_id as usize) * 16;
+                let present_word_idx = pid_base / 64;
+                let present_shift = pid_base % 64;
                 for (nb_opt, side_a, side_b) in nb_info.iter() {
                     let Some(nb) = nb_opt else { continue; };
                     if self.placed[*nb as usize].is_some() { continue; }
                     let required = r.edges[*side_a] as usize;
                     let nb_u = *nb as usize;
                     let total = count[nb_u * stride_pos + side_b * n_colors + required];
-                    let pid_base = usize::from(r.piece_id) * 4;
-                    let mut same_piece = 0u16;
-                    for rot in 0..4usize {
-                        let cand = pid_base + rot;
-                        if cand >= n_rows { break; }
-                        let row_cand = self.rows[cand];
-                        if !row_cand.valid { continue; }
-                        if row_cand.edges[*side_b] as usize != required { continue; }
-                        let word = present[nb_u * words_per_pos + cand / 64];
-                        if (word >> (cand % 64)) & 1 == 1 {
-                            same_piece += 1;
-                        }
-                    }
+                    // Precomputed: which rotations of r's piece satisfy
+                    // edges[side_b] == r.edges[side_a]?
+                    let rot_mask = self.same_piece_rots[r_lut_base + side_a * 4 + side_b];
+                    // The 4 rotation bits are at pid_base..pid_base+4
+                    // in `present`. Since 4 ≤ 64 they always sit inside
+                    // a single u64 word.
+                    let present_word = present[nb_u * words_per_pos + present_word_idx];
+                    let present_4 = ((present_word >> present_shift) & 0xF) as u8;
+                    let same_piece = (rot_mask & present_4).count_ones() as u16;
                     if total <= same_piece {
                         supported = false;
                         break;
