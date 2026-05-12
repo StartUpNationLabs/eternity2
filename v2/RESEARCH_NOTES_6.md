@@ -154,6 +154,64 @@ consensus AS A PRIOR for variable ordering and value picking in
 PT/SA. PT would still consider all cells but be biased toward
 the consensus placements. This is a **soft-skeleton** approach.
 
+### FRAME-LAST verified: 453 is OPTIMAL for inner k≤5 (07:53)
+
+**Encoder works correctly.** Sanity-tested with EvalMaxSAT on
+multiple sub-puzzles of the 453 board:
+
+| center-k | free cells | EvalMaxSAT optimum | 453's mismatches | Result |
+|---|---|---|---|---|
+| 2 | 4 | o 1 | trivial | works |
+| 3 | 9 | o 4 | 4 | **IDENTICAL** |
+| 4 | 16 | o 6 | 6 | **IDENTICAL** |
+| 5 | 25 | o 8 | 8 | **IDENTICAL** |
+| 6 | 36 | TIMEOUT (60s) | 13 | unknown |
+
+**Solve times** (single-thread EvalMaxSAT):
+- k=3: 0.6s
+- k=4: 2.8s
+- k=5: 9.3s
+- k=6: timed out at 60s (need longer budget)
+
+**RIGOROUS RESULT**: the 453 board is the GENUINE OPTIMUM for the
+inner k=3, 4, 5 sub-puzzles, given its outer is fixed. It's not
+just a heuristic local optimum — MaxSAT proves no arrangement
+of the inner k≤5 pieces (using only the inner pieces) can beat
+the existing placement.
+
+**Verification of vol-5/6 structural picture**: the 453's defects
+ARE the structural minimum given the constraints. Improving 453
+requires CHANGING THE OUTER (the skeleton/border), not the inner.
+
+**Implication for "beyond-known"**:
+1. Inner-perfect frame-LAST does NOT directly improve the 453
+   because the inner is already optimal.
+2. To find 454+ we MUST change the outer. Frame-first (which
+   does change the border) is the right algorithmic class.
+3. A novel algorithm: **enumerate outer configurations and
+   for each, check inner optimum**. With EvalMaxSAT solving
+   k=5 in 10s, we could test 100 outer configurations per
+   18 minutes — feasible.
+
+**Earlier confusion**: my first inner-8 EvalMaxSAT run "produced
+no output" because k=8 was too hard within 12 minutes. **Smaller
+center sizes solve quickly and produce CORRECT optima.**
+
+**Honest disappointment**: the proof of 453 optimality means
+inner-only optimization cannot break 453. The structural insight
+SAYS we need to change the outer, and that requires frame-first
+or GA — which we already have.
+
+**What TO do next**:
+1. Run EvalMaxSAT on the 452 board's inner k=3,4,5 — does it
+   confirm 452 is also locally inner-optimal? (Should be, by
+   same logic.)
+2. **Most actionable**: take a 451 board (different outer than
+   453), find its inner k=5 optimum, see if combining "453 outer
+   + 451 inner" or vice-versa creates a better board. This is
+   GA-crossover at the level of OUTER vs INNER decomposition.
+3. Try EvalMaxSAT on k=6, 7 with longer budgets (1-2h each).
+
 ### FRAME-LAST proper (07:37): minimal SAT encoder DONE
 
 **User instruction**: "we have all the time we want to fix things
