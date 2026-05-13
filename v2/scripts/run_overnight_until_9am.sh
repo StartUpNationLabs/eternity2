@@ -41,39 +41,47 @@ echo "[$(date '+%H:%M:%S')] Overnight portfolio — will run ~${DURATION_HRS}h u
 # Format: schedule,noise_amp,sched_seed,alns_seed,h22(0|1),cp_ms_override,alns_ms_override
 # If cp_ms_override or alns_ms_override is "-", uses default CP_MS/ALNS_MS.
 CONFIGS=(
-    # === Standard 10+10 min mix (diverse schedules and seeds) ===
-    "calibrated_v17a,0,0,1,0,-,-"      # baseline
+    # === Schedule-diversity rotation (NEW: round-robin to escape v17a trap) ===
+    # Each row visited at most twice before auto-switch fires.
+    "calibrated_v17a,0,0,1,0,-,-"      # baseline anchor (455 prior best)
+    "calibrated_v17b,0,0,1,0,-,-"      # tight envelope (453 in overnight)
+    "calibrated_v17c,0,0,1,0,-,-"      # empirical breaks
+    "calibrated_v17e,0.15,1,1,0,-,-"   # noise seed 1
+    "calibrated_v17e,0.15,2,1,0,-,-"   # noise seed 2
+    "calibrated_v17e,0.15,3,1,0,-,-"   # noise seed 3
+    "calibrated_v17a,0,0,1,1,-,-"      # v17a + H22 tie-shuffle
+    "calibrated_v17b,0,0,1,1,-,-"      # v17b + H22
+    "calibrated_v17c,0,0,1,1,-,-"      # v17c + H22
+    "calibrated_v17e,0.10,1,1,1,-,-"   # noise + H22
+    "calibrated_v17e,0.20,1,1,1,-,-"   # bigger noise + H22
+    # === ALNS-seed sweeps on best schedules ===
     "calibrated_v17a,0,0,2,0,-,-"
     "calibrated_v17a,0,0,3,0,-,-"
-    "calibrated_v17a,0,0,1,1,-,-"      # + H22 tie-shuffle
-    "calibrated_v17a,0,0,11,1,-,-"
-    "calibrated_v17a,0,0,21,1,-,-"
-    "calibrated_v17b,0,0,1,0,-,-"
-    "calibrated_v17b,0,0,1,1,-,-"
-    "calibrated_v17c,0,0,1,0,-,-"
-    "calibrated_v17c,0,0,1,1,-,-"
+    "calibrated_v17b,0,0,2,0,-,-"
+    "calibrated_v17b,0,0,3,0,-,-"
+    "calibrated_v17e,0.15,1,2,0,-,-"
+    "calibrated_v17e,0.15,1,3,0,-,-"
+    # === Edge noise levels ===
     "calibrated_v17e,0.05,1,1,0,-,-"
-    "calibrated_v17e,0.10,1,1,0,-,-"
-    "calibrated_v17e,0.15,3,1,0,-,-"
-    "calibrated_v17e,0.15,4,1,1,-,-"
-    "calibrated_v17e,0.20,1,1,0,-,-"
-    "calibrated_v17e,0.20,2,2,1,-,-"
     "calibrated_v17e,0.25,1,1,0,-,-"
-    "calibrated_v17e,0.30,1,1,1,-,-"
-    "calibrated_v17e,0.40,1,1,1,-,-"
+    "calibrated_v17e,0.40,1,1,1,-,-"   # extreme noise
     # === Long-CP variants — tests "does extended CP find a different basin?" ===
     "calibrated_v17a,0,0,1,0,1800000,300000"   # 30min CP + 5min ALNS
-    "calibrated_v17a,0,0,2,1,1800000,300000"   # 30min CP + H22 + 5min ALNS
-    "calibrated_v17e,0.15,1,1,0,1800000,300000"   # noise + long CP
+    "calibrated_v17b,0,0,1,1,1800000,300000"
     # === Extended-ALNS variants — tests "can deep ALNS push past 456?" ===
     "calibrated_v17a,0,0,1,0,300000,1800000"   # 5min CP + 30min ALNS
-    "calibrated_v17a,0,0,7,1,300000,1800000"   # H22 + 30min ALNS
-    "calibrated_v17e,0.15,2,2,0,300000,1800000"
+    "calibrated_v17b,0,0,1,0,300000,1800000"   # 5min CP + 30min ALNS (v17b)
 )
+# Vol-17 — default ALNS op set. "winning5" proven best (455). Override
+# per-config later if we want ablations.
+OPS_PRESET="winning5"
 
 CP_MS=600000        # 10 min CP default
 ALNS_MS=600000      # 10 min ALNS default
-CONFIG_FAIL_LIMIT=2 # If 2 consecutive chunks at a config give same-or-worse score, switch.
+# Vol-17 — lowered from 2 to 1 after overnight burned 5+h on v17a retries.
+# Each config now gets ONE chance; if no improvement vs prior best,
+# auto-switch immediately.
+CONFIG_FAIL_LIMIT=1
 
 # Initialize state from existing scoreboard if present (resume support).
 CHUNK_IDX=0
@@ -215,6 +223,7 @@ while true; do
         --seed "$ASEED" --arms blackwood_raw \
         --schedule "$SCHED" \
         --noise-amplitude "$NOISE" --schedule-seed "$SSEED" \
+        --ops "$OPS_PRESET" \
         $SHUFFLE_FLAG \
         --alns-checkpoint "$CHECKPOINT" \
         --alns-checkpoint-every-ms 30000 \

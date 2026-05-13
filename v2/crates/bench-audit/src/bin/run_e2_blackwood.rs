@@ -33,6 +33,49 @@ use eternity2_solver_engine::{
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
 
+/// Build the ALNS destroy-op set by preset name.
+///
+/// Vol-17 LESSON LEARNED: more ops != better. The "winning5" set hit
+/// 455 reliably; adding ComponentDestroy/WorstRow/HingeDestroy dropped
+/// to 447 (H6 REFUTED). Default is "winning5".
+fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
+    match preset {
+        "minimal" => vec![
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+        ],
+        "winning5" => vec![
+            // Vol-17 EMPIRICAL BEST set on canonical E2. Hit 455 (cold-start
+            // record) with v17a schedule + SA-primary + repair_budget 1500ms.
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+        ],
+        "full11" => vec![
+            // Vol-17 11-op set. Tested overnight: peaked at 453, below
+            // the winning5's 455 ceiling — op-dilution confirmed.
+            // Kept for ablation comparison only.
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(WorstBand { k_rows: 6 }),
+            Box::new(ComponentDestroy { max_size: 100, min_size: 6 }),
+            Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),
+            Box::new(WorstRow),
+            Box::new(HingeDestroy { halo: 1 }),
+        ],
+        other => panic!("unknown --ops {other:?}; want minimal|winning5|full11"),
+    }
+}
+
 fn run_arm(
     label: &str,
     mut solver: Box<EngineSolver>,
@@ -45,6 +88,7 @@ fn run_arm(
     out_dir: &std::path::Path,
     alns_checkpoint: Option<std::path::PathBuf>,
     alns_checkpoint_every_ms: u64,
+    ops_preset: &str,
 ) -> (u32, u32, u32) {
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = cp_budget_ms;
@@ -98,23 +142,8 @@ fn run_arm(
         return (cp_m, cp_p, cp_depth);
     }
 
-    eprintln!("[{label}] Stage 2: ALNS-fill ({}s, hints pinned)", alns_budget_ms / 1000);
-    // Vol-17 — add WorstBand for top-row cluster (calibrated_v17a's
-    // 447 board had all 33 mismatches in rows 0-3, ONE 51-cell
-    // component too big for k≤30 ops).
-    let mut ops: Vec<Box<dyn DestroyOp>> = vec![
-        Box::new(RandomRegion { k: 4 }),
-        Box::new(WorstWindow { k: 5 }),
-        Box::new(ConflictDriven { max_size: 30 }),
-        Box::new(ConflictDriven { max_size: 80 }),  // vol-17 — big cluster
-        Box::new(MwpmDefectPair { max_pairs: 12 }),
-        Box::new(WorstBand { k_rows: 4 }),
-        Box::new(WorstBand { k_rows: 6 }),  // vol-17 — wider band
-        Box::new(ComponentDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
-        Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),  // vol-17 novel
-        Box::new(WorstRow),  // vol-17 novel — 16-cell scalpel
-        Box::new(HingeDestroy { halo: 1 }),  // vol-17 novel — Tarjan articulation points
-    ];
+    eprintln!("[{label}] Stage 2: ALNS-fill ({}s, hints pinned, ops={ops_preset})", alns_budget_ms / 1000);
+    let mut ops: Vec<Box<dyn DestroyOp>> = build_ops(ops_preset);
     let cfg = AlnsConfig {
         time_budget_ms: alns_budget_ms,
         // Vol-17 — bumped from 500ms to give WorstBand/ConflictDriven{80}
@@ -205,6 +234,10 @@ fn main() {
     let mut shuffle_blackwood_ties: bool = false;
     let mut alns_checkpoint_path: Option<std::path::PathBuf> = None;
     let mut alns_checkpoint_every_ms: u64 = 60_000;
+    // Vol-17 — default to the empirically-best 5-op set ("winning5") that
+    // hit 455. Earlier overnight (commits 8e28c57 + 0b4305b + 3727257)
+    // wired in 11 ops which was proven to DILUTE performance (H6 REFUTED).
+    let mut ops_preset = "winning5".to_string();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -218,6 +251,7 @@ fn main() {
             "--shuffle-blackwood-ties" => shuffle_blackwood_ties = true,
             "--alns-checkpoint" => alns_checkpoint_path = Some(std::path::PathBuf::from(args.next().unwrap())),
             "--alns-checkpoint-every-ms" => alns_checkpoint_every_ms = args.next().unwrap().parse().unwrap(),
+            "--ops" => ops_preset = args.next().unwrap(),
             _ => {}
         }
     }
@@ -275,6 +309,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("baseline".into(), m, p, d));
     }
@@ -293,6 +328,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood".into(), m, p, d));
     }
@@ -322,6 +358,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood_rect".into(), m, p, d));
     }
@@ -347,6 +384,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood_rect_layered".into(), m, p, d));
     }
@@ -376,6 +414,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood_raw".into(), m, p, d));
     }
@@ -403,6 +442,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood_raw_rect_layered".into(), m, p, d));
     }
@@ -427,6 +467,7 @@ fn main() {
                         &out_dir,
             alns_checkpoint_path.clone(),
             alns_checkpoint_every_ms,
+            &ops_preset,
         );
         results.push(("blackwood_raw_rect".into(), m, p, d));
     }
