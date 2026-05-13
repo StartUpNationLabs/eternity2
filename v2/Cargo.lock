@@ -578,6 +578,7 @@ dependencies = [
  "eternity2-generator",
  "eternity2-solver-engine",
  "eternity2-solver-trait",
+ "rayon",
  "serde",
  "serde_json",
 ]

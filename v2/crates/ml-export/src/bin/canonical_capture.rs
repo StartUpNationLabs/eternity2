@@ -15,7 +15,10 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::Instant;
+
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_events::{EventBody, EventSink, SolverEvent};
@@ -90,6 +93,7 @@ fn main() {
     let mut seed_start: u64 = 1;
     let mut seed_end: u64 = 21;  // exclusive
     let mut budget_ms: u64 = 30_000;
+    let mut parallel: usize = 1;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -105,6 +109,7 @@ fn main() {
                 i += 2;
             }
             "--budget-ms" => { budget_ms = raw[i + 1].parse().expect("budget"); i += 2; }
+            "--parallel" => { parallel = raw[i + 1].parse().expect("parallel"); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -127,22 +132,12 @@ fn main() {
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).expect("mkdir");
     }
-    let f = File::create(&out).expect("open out");
-    let mut w = BufWriter::new(f);
+    let writer = Mutex::new(BufWriter::new(File::create(&out).expect("open out")));
 
-    for seed in seed_start..seed_end {
+    let run_seed = |seed: u64| -> SeedRecord {
         let mut cfg = EngineConfig::JOE_DEPTH150_BP;
         cfg.parallelism = Parallelism::SingleThread;
         cfg.value_order = ValueOrder::EdgeBpMarginals;
-        // Vol-29 — keep BorderFirstMrv (deep partials reach depth 165 in
-        // 60s). Seeds give nearly-identical trajectories so the training
-        // data has limited diversity, but each seed contributes ~165
-        // distinct partial-board states. Diversity from MRV tie-breaks
-        // + small AC-3 nondeterminism is enough for ~3300 unique
-        // samples per capture. If overfitting is observed, switch to
-        // BorderFirstRandom for diversity at the cost of trajectory
-        // depth (50 vs 165).
-
         let mut solver = EngineSolver::new(cfg, "engine", "canonical_capture");
         let opts = SolveOpts {
             mode: SolveMode::FirstSolution,
@@ -162,10 +157,6 @@ fn main() {
         let _ = solver.solve(&puzzle, &opts, &mut sink);
         let elapsed = t0.elapsed().as_millis() as u64;
 
-        // Extract the winning prefix: the stack indexed 0..max_depth (the
-        // last commit at each depth before the time budget expired). On
-        // backtrack the engine overwrites stack[d]; the final values are
-        // the deepest committed lineage.
         let mut placements = Vec::with_capacity(sink.max_depth as usize);
         for (d, slot) in sink.stack.iter().enumerate() {
             if (d as u32) >= sink.max_depth { break; }
@@ -175,23 +166,48 @@ fn main() {
                 });
             }
         }
-
-        let rec = SeedRecord {
+        eprintln!(
+            "[capture] seed={seed} elapsed_ms={elapsed} max_depth={} nodes={} backtracks={}",
+            sink.max_depth, sink.nodes, sink.backtracks,
+        );
+        SeedRecord {
             seed,
             max_depth: sink.max_depth,
             nodes: sink.nodes,
             backtracks: sink.backtracks,
             solved: sink.solved,
             placements,
-        };
-        serde_json::to_writer(&mut w, &rec).expect("write");
-        w.write_all(b"\n").expect("nl");
-        w.flush().expect("flush per-seed");
-        eprintln!(
-            "[capture] seed={seed} elapsed_ms={elapsed} max_depth={} nodes={} backtracks={}",
-            sink.max_depth, sink.nodes, sink.backtracks,
-        );
+        }
+    };
+
+    let seeds: Vec<u64> = (seed_start..seed_end).collect();
+    if parallel <= 1 {
+        for seed in seeds {
+            let rec = run_seed(seed);
+            let mut w = writer.lock().unwrap();
+            serde_json::to_writer(&mut *w, &rec).expect("write");
+            w.write_all(b"\n").expect("nl");
+            w.flush().expect("flush per-seed");
+        }
+    } else {
+        // Rayon pool sized to `parallel`. Engines are single-thread, so
+        // each worker pegs one core; expect near-linear speedup until
+        // we hit the M1's 4 performance cores. Beyond that, gains
+        // taper (efficiency cores are slower).
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(parallel)
+            .build()
+            .expect("rayon pool")
+            .install(|| {
+                seeds.into_par_iter().for_each(|seed| {
+                    let rec = run_seed(seed);
+                    let mut w = writer.lock().unwrap();
+                    serde_json::to_writer(&mut *w, &rec).expect("write");
+                    w.write_all(b"\n").expect("nl");
+                    w.flush().expect("flush per-seed");
+                });
+            });
     }
-    w.flush().expect("flush");
+    writer.lock().unwrap().flush().expect("flush");
     eprintln!("[capture] done -> {}", out.display());
 }
