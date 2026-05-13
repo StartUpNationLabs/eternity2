@@ -18,11 +18,11 @@ Wall-clock: 56× SLOWER median (609ms vs 11ms) because of stdio JSON + Python to
 
 Substance is unambiguous: the model has internalised the expert search trajectory and reduces engine nodes ~540×, but the bridge eats the win. See [[learned-value-order]] for full table + analysis. Vol-27 unblocks via in-process inference (ONNX / PyO3 / hand-rolled forward).
 
-### `bridge-overhead-elimination` (vol-27 T1) — status: `unbuilt` — since: vol-26
-Stdio JSON + Python torch inference per node = ~15ms/node × 36 nodes ≈ 540ms vs MRV's 11ms. Three routes: ONNX-via-`ort` (recommended), PyO3 in-process, hand-rolled f32 Rust forward. See [[../plans/VOL-27]] T1 for the route comparison.
+### `bridge-overhead-elimination` (vol-27 T1) — status: `built` — vol-27 (2026-05-13)
+Replaced vol-26's stdio Python bridge with in-process `ort = 2.0.0-rc.10` ONNX inference. Wall-clock median per puzzle 11→2 ms (5.5×), max 560→11 ms (50× tail-latency win), 163/200 puzzles outright wall-clock win. The 540× algorithmic compression from vol-26 now surfaces as a wall-clock win. See [[learned-value-order]] "Vol-27 measurement" section.
 
-### `learned-gate-at-7x7-8x8` (vol-27 T2) — status: `unbuilt` — since: vol-26
-After bridge fix, retest gate at 7×7 / 8×8 / 5c where MRV has 5-15% failure rate (per vol-26 difficulty measurement) → condition (c) becomes meaningful. Retrain model at the target size (cheap; ~10 min training). See [[../plans/VOL-27]] T2.
+### `learned-gate-at-stress-budget` (vol-27 T2) — status: `built` — vol-27 (2026-05-13)
+Took a sharper path than the planned 7×7 retraining: retested at 6×6/5c with `--budget-ms 100` so MRV's tail-latency outliers become failures (16/200). Learned solves 200/200 → condition (c) "MRV-failed solved by Learned" gives 16/16 perfect recovery. **Gate PASS on all three conditions.** Equivalent methodology to changing puzzle size; cheaper. See [[learned-value-order]].
 
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.

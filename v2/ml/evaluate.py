@@ -25,21 +25,18 @@ import sys
 from pathlib import Path
 
 
-def run_bench(jsonl_path: Path, mode: str, model_path: str | None) -> list[dict]:
+def run_bench(jsonl_path: Path, mode: str, model_path: str | None, budget_ms: int) -> list[dict]:
     """Invoke ../target/release/bench-eval with the requested mode."""
     env = os.environ.copy()
     if model_path is not None:
         env["E2_LEARNED_MODEL"] = str(model_path)
-    # Tell the bridge to start the Python subprocess in this dir so it
-    # finds infer_bridge.py + model files.
-    env["E2_BRIDGE_CWD"] = str(Path(__file__).parent.resolve())
-    env["E2_BRIDGE_CMD"] = "uv run python infer_bridge.py"
     cmd = [
         "../target/release/bench-eval",
         "--mode", mode,
         "--in", str(jsonl_path),
+        "--budget-ms", str(budget_ms),
     ]
-    print(f"+ {' '.join(cmd)}  (mode={mode})", flush=True)
+    print(f"+ {' '.join(cmd)}  (mode={mode}, budget={budget_ms}ms)", flush=True)
     result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)
@@ -51,8 +48,9 @@ def run_bench(jsonl_path: Path, mode: str, model_path: str | None) -> list[dict]
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--test", default="data/test_6x6_5c.jsonl")
-    ap.add_argument("--model", default="runs/v1/model.pt")
+    ap.add_argument("--model", default="runs/v1/model.onnx")
     ap.add_argument("--out", default="runs/v1/gate.json")
+    ap.add_argument("--budget-ms", type=int, default=5000)
     args = ap.parse_args()
 
     test_path = Path(args.test)
@@ -61,11 +59,11 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"baseline run -> {test_path}")
-    baseline = run_bench(test_path, mode="mrv", model_path=None)
+    baseline = run_bench(test_path, mode="mrv", model_path=None, budget_ms=args.budget_ms)
     print(f"  {len(baseline)} puzzles, solved={sum(r['solved'] for r in baseline)}")
 
     print(f"learned run -> {test_path}")
-    learned = run_bench(test_path, mode="learned", model_path=model_path)
+    learned = run_bench(test_path, mode="learned", model_path=model_path, budget_ms=args.budget_ms)
     print(f"  {len(learned)} puzzles, solved={sum(r['solved'] for r in learned)}")
 
     by_seed_b = {r["seed"]: r for r in baseline}
@@ -98,13 +96,21 @@ def main():
 
     passed = cond_a and cond_b and cond_c
 
+    # Wall-clock comparison too, since vol-27 T1 should have made
+    # learned faster than MRV in wall-clock for the median puzzle.
+    elapsed_mrv = [by_seed_b[s]["elapsed_ms"] for s in common]
+    elapsed_lrn = [by_seed_l[s]["elapsed_ms"] for s in common]
+    ms_ratios = [l / m for m, l in zip(elapsed_mrv, elapsed_lrn) if m > 0]
+    med_ms_ratio = statistics.median(ms_ratios) if ms_ratios else float("inf")
     summary = {
+        "budget_ms": args.budget_ms,
         "n_test": len(seeds),
         "mrv_solved": len(mrv_solved),
         "learned_solved": len(lrn_solved),
         "common_solved": len(common),
         "coverage_ratio": cov,
         "median_nodes_ratio": med_ratio,
+        "median_wallclock_ratio": med_ms_ratio,
         "mrv_failed_learned_solved": sorted(mrv_failed_lrn_solved),
         "cond_a_coverage_ge_95": cond_a,
         "cond_b_median_ratio_le_80": cond_b,

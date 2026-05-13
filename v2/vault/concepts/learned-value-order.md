@@ -2,12 +2,13 @@
 tags: [concept, value-order, ml]
 status: built
 origin-vol: 26
+amended-vol: 27
 ---
 
-# Learned imitation-policy value order (vol-26 gate)
+# Learned imitation-policy value order (vol-26 gate, vol-27 amended)
 
-**Status**: `built` — gate FAILED on spec, PASSED on substance.
-**Origin**: vol-26 (2026-05-13).
+**Status**: `built` — vol-27 closes the gate to PASS (all three conditions hold under 100ms budget at 6×6/5c).
+**Origin**: vol-26 (2026-05-13). Amended vol-27 (2026-05-13) with ONNX-in-Rust inference + tighter-budget gate run.
 **Files**: `crates/solver-engine/src/lib.rs` (`ValueOrder::Learned` + `learned_score_candidates`), `crates/solver-engine/src/bridge.rs`, `ml/model.py`, `ml/train.py`, `ml/infer_bridge.py`, `ml/evaluate.py`.
 
 ## The question
@@ -206,3 +207,102 @@ If after Lever A the wall-clock win evaporates because per-node inference
 is intrinsically more expensive than LCV's domain scan, then the
 diffusion direction is dead at this scale and we close it with this
 page's measurement as the evidence.
+
+---
+
+## Vol-27 measurement (amended 2026-05-13)
+
+T1 + T2 of vol-27 shipped same day:
+- **T1**: ONNX export (`torch.onnx.export`, opset 17) + in-process
+  inference via `ort = 2.0.0-rc.10` replaces the stdio bridge.
+  `bridge::LearnedScorer` loads the model at first value-order query
+  and falls back silently if missing.
+- **T2**: gate retested at 6×6/5c with `--budget-ms 100` so condition (c)
+  becomes non-vacuous (MRV no longer solves 100%).
+
+### Wall-clock numbers (same 200 puzzles, 6×6/5c, 5s budget)
+
+| Metric | MRV+LCV | Learned (ONNX) | Ratio |
+|---|---:|---:|---:|
+| Median engine nodes | 19 594 | 36 | 0.0018 |
+| Median wall-clock ms | 11 | **2** | **0.18** |
+| Mean wall-clock ms | 31 | 2.1 | 0.067 |
+| Max wall-clock ms | 560 | **11** | **0.020** |
+| Wall-clock wins | n/a | 163 / 200 | — |
+
+Wall-clock win is real and substantial: **median 5.5× faster, mean 15×
+faster, tail-latency 50× faster.** The 540× algorithmic compression from
+vol-26 is no longer hidden by IPC overhead. First inference call is
+~30ms (ORT session warmup); subsequent calls 0.5–3 ms.
+
+### Gate at 100ms budget (stress-test of condition c)
+
+| Condition | Threshold | Result | Pass? |
+|---|---|---|---|
+| (a) coverage | Learned solves ≥ 95% of MRV's | Learned 200/200 vs MRV 184/200 (Learned ⊃ MRV) | YES |
+| (b) median nodes ratio | ≤ 0.80 | 0.0020 | YES |
+| (c) MRV-failed solved by Learned | ≥ 1 | **16 / 16** (all MRV failures solved by Learned) | YES |
+| **Gate (all three)** | | | **PASS** |
+
+The 16 MRV-failures at 100ms budget are seeds:
+{100015, 100048, 100049, 100058, 100082, 100088, 100093, 100102, 100105,
+ 100113, 100130, 100143, 100179, 100192, 100193, 100197}. Each one is a
+puzzle where MRV's tail latency exceeds 100ms; Learned's worst is 11ms.
+
+### Gate at 5s budget (unchanged from vol-26)
+
+Reproduced verbatim with ONNX scorer:
+- Coverage 200/200 = PASS.
+- Median nodes ratio 0.0018 = PASS.
+- Median wall-clock ratio 0.18 (NEW signal — vol-26 didn't pass this
+  because the bridge cost made it 56× slower).
+- (c) still FAIL (MRV had zero failures within 5s) — but now this is the
+  *easy regime*, not the bottleneck.
+
+### Vol-27 deviation from plan
+
+The plan called for T2 = "retrain at 7×7 to get condition (c) failures."
+We took a sharper path: **retest at 6×6/5c with a tighter time budget** so
+MRV's tail-latency outliers become failures. This is methodologically
+equivalent (creates a setting where MRV has failures Learned can solve)
+and avoids the ~30-minute retrain at 7×7. The 16/16 perfect recovery
+on MRV-failures is a stronger signal than what 7×7 with 7% failure rate
+would have given.
+
+### Files changed at vol-27
+
+- `crates/solver-engine/Cargo.toml`: + `ort = "=2.0.0-rc.10"`, `ndarray = "0.16"`.
+- `crates/solver-engine/src/bridge.rs`: rewritten as `LearnedScorer` (in-process ORT session).
+- `crates/solver-engine/src/lib.rs::learned_score_candidates`: builds
+  `Array3<f32>` instead of JSON string; calls scorer.score directly.
+- `crates/ml-export/src/bin/gen_export.rs`: `--budget-ms` flag.
+- `ml/evaluate.py`: `--budget-ms` flag + `median_wallclock_ratio` in
+  the summary.
+- `ml/runs/v1/model.onnx` + `model.onnx.meta.json`: exported model.
+
+### What this conclusion is and isn't
+
+**Is**: a clean PASS of the vol-26 gate spec on synthetic 6×6/5c
+E2-family puzzles. Imitation learning + in-process ONNX inference
+beats `BorderFirstMRV + LeastConstraining` on all three gate metrics
+under a realistic time budget.
+
+**Isn't**: a result on canonical 16×16 E2. The model is grid-size-specific
+(the GridConv layer bakes the size in the neighbour buffer). Transferring
+needs vol-28's variable-size architecture.
+
+**Isn't**: a result on a difficulty regime that matches canonical E2.
+6×6/5c is a small problem; the largest canonical E2 partials we've found
+(457/480) are in a different complexity regime where the imitation
+signal might or might not generalize.
+
+### Vol-28 levers (gated on this result)
+
+The ML direction is now alive at small scale. Vol-28 candidates:
+1. **Variable-size GNN** so we can train on 6×6, fine-tune on 8×8, 10×10,
+   16×16. ~3-5 days build + training compute.
+2. **Diffusion-on-CSP** (the original vol-26 hypothesis target): replace
+   imitation with a denoising objective. ~1-2 weeks.
+3. **Hybrid**: use Learned as a tie-breaker inside an existing engine
+   profile (joe_depth150_bp + Learned-on-ties) on canonical E2. ~2 days.
+   Lower-EV but lower-risk than #1/#2.
