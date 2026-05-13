@@ -289,6 +289,46 @@ That would BE a solution (or arbitrarily close). Hypothetically,
 if E2 has a solution, there exists a starting board whose
 relaxed-iterate reaches 480. Finding it = solving E2.
 
+### 15:00 — **BOUND-ASCENT (radical innovation)**
+
+Built `edge_bound_ascent.rs`. Objective: maximize the RELAXED BOUND,
+not the score. Mutation = random 2-piece swap. Acceptance = SA or
+greedy on bound delta.
+
+**Results from our 457 (bound 461)**:
+- SA acceptance, 1000 iters: bound climbed 461 → 462 → 463 → ... → 468 (+7)
+- score collapsed: 457 → 128 (lost 329 score points)
+
+**Then ALNS recovery from b462/s436 (60s)**: recovered to exactly
+the same 457 byte-identical board. The bound-462 perturbation IS
+in our 457 basin's neighborhood; ALNS optimizes score and re-enters
+the lock.
+
+**Theoretical signature**: bound CAN go up by single-swap mutations,
+but score collapses faster than ALNS can recover. The bound-ascent
+proves there exist neighbor-basins with bound ≥ 468 (~ +7 above
+our 457's 461 ceiling), but their structural geometry is too distant
+from any score we can recover into.
+
+This is consistent with the operator-lock observation: small
+perturbations always return to 457. The "ceiling" 461 is the
+*nearest* bound, but it doesn't represent the *only* bound — there
+ARE higher-bound basins, just disconnected from our search trajectory.
+
+### 15:10 — What this tells us about E2 solvability
+
+If a 480-bound basin exists in the bound-landscape (i.e. if E2
+has a solution), bound-ascent could find it. But the ALNS-recovery
+step would need to be MUCH stronger to land in a 480-score
+configuration. Possibly: use **CP solver** instead of ALNS for the
+recovery step. CP can enumerate all consistent extensions in a
+neighborhood, finding the *true* score-fixed-point at the new bound.
+
+This composes with the vol-15 BLACKWOOD_RAW: 
+1. From a board, bound-ascent N swaps to a higher-bound state.
+2. Use BLACKWOOD_RAW + AC-3 to enumerate within-K cell extensions.
+3. If a high-score extension exists at the new bound, we win.
+
 
 
 
