@@ -767,6 +767,184 @@ impl DestroyOp for BottomBandDestroy {
     }
 }
 
+/// Vol-18 NOVEL — destroy a LARGE band (k_rows wide) centered on the
+/// densest mismatch row. Unlike WorstBand{4} which destroys 64 cells,
+/// MegaBand{k=8-10} destroys 128-160 cells. Generates fundamentally
+/// different proposals: the destroyed region overlaps both the
+/// mismatch cluster AND surrounding "perfect" rows, allowing piece
+/// migration ACROSS the cluster boundary that small-band ops cannot
+/// achieve.
+///
+/// Motivation: vol-18 found 457 is operator-locked under winning5
+/// ops at any temperature. The proposal distribution from k=4 bands
+/// is exhausted. Bigger bands sample a different proposal regime.
+pub struct MegaBand {
+    /// Width of the band in rows. Recommended 8-12 for 16-row board.
+    pub k_rows: u32,
+}
+impl DestroyOp for MegaBand {
+    fn name(&self) -> &str { "mega_band" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let k = self.k_rows.min(h).max(1);
+        let mismatches = find_mismatches(puzzle, board);
+        let mut per_row = vec![0u32; h as usize];
+        for m in &mismatches {
+            let ya = m.cell_a / w;
+            let yb = m.cell_b / w;
+            per_row[ya as usize] += 1;
+            if yb != ya { per_row[yb as usize] += 1; }
+        }
+        let mut best = (0u32, 0u32);
+        for y0 in 0..=(h.saturating_sub(k)) {
+            let mut s = 0u32;
+            for dy in 0..k { s += per_row[(y0 + dy) as usize]; }
+            if s > best.0 { best = (s, y0); }
+        }
+        let y_start = if best.0 == 0 { 0 } else { best.1 };
+        let mut out = BTreeSet::new();
+        for dy in 0..k {
+            let y = y_start + dy;
+            for x in 0..w {
+                out.insert(y * w + x);
+            }
+        }
+        out
+    }
+}
+
+/// Vol-18 NOVEL — destroy a single COLUMN strip (1 × H) whose mismatch
+/// density is highest. Orthogonal to row-band ops. Useful when the
+/// cluster has vertical structure that row-band ops can't see.
+pub struct WorstColumn;
+impl DestroyOp for WorstColumn {
+    fn name(&self) -> &str { "worst_column" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        let mut per_col = vec![0u32; w as usize];
+        for m in &mismatches {
+            per_col[(m.cell_a % w) as usize] += 1;
+            let xb = m.cell_b % w;
+            if xb != m.cell_a % w { per_col[xb as usize] += 1; }
+        }
+        let mut best_col = 0u32;
+        let mut best_score = 0u32;
+        for x in 0..w {
+            if per_col[x as usize] > best_score {
+                best_score = per_col[x as usize];
+                best_col = x;
+            }
+        }
+        let mut out = BTreeSet::new();
+        for y in 0..h {
+            out.insert(y * w + best_col);
+        }
+        out
+    }
+}
+
+/// Vol-18 NOVEL — destroy a column BAND of k_cols centered on the
+/// densest mismatch column.
+pub struct WorstColumnBand {
+    pub k_cols: u32,
+}
+impl DestroyOp for WorstColumnBand {
+    fn name(&self) -> &str { "worst_column_band" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let k = self.k_cols.min(w).max(1);
+        let mismatches = find_mismatches(puzzle, board);
+        let mut per_col = vec![0u32; w as usize];
+        for m in &mismatches {
+            per_col[(m.cell_a % w) as usize] += 1;
+            let xb = m.cell_b % w;
+            if xb != m.cell_a % w { per_col[xb as usize] += 1; }
+        }
+        let mut best = (0u32, 0u32);
+        for x0 in 0..=(w.saturating_sub(k)) {
+            let mut s = 0u32;
+            for dx in 0..k { s += per_col[(x0 + dx) as usize]; }
+            if s > best.0 { best = (s, x0); }
+        }
+        let x_start = if best.0 == 0 { 0 } else { best.1 };
+        let mut out = BTreeSet::new();
+        for y in 0..h {
+            for dx in 0..k {
+                out.insert(y * w + x_start + dx);
+            }
+        }
+        out
+    }
+}
+
+/// Vol-18 NOVEL — destroy half the board (top or bottom). 128 cells
+/// deterministic. Brutal but guaranteed to perturb basin structure
+/// beyond any local op. The SA repair on 128 cells is heavy
+/// (~1500ms budget gives ~few hundred SA moves which may not fully
+/// optimize), but the proposal IS fundamentally different from
+/// any winning5 op.
+pub struct HalfBoardDestroy {
+    /// 0 = top half (rows 0..h/2), 1 = bottom half, 2 = left half, 3 = right half.
+    pub which: u32,
+}
+impl DestroyOp for HalfBoardDestroy {
+    fn name(&self) -> &str { "half_board" }
+    fn destroy(&mut self, puzzle: &Puzzle, _board: &Board, _rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mut out = BTreeSet::new();
+        match self.which {
+            0 => {
+                for y in 0..(h/2) {
+                    for x in 0..w { out.insert(y * w + x); }
+                }
+            }
+            1 => {
+                for y in (h/2)..h {
+                    for x in 0..w { out.insert(y * w + x); }
+                }
+            }
+            2 => {
+                for y in 0..h {
+                    for x in 0..(w/2) { out.insert(y * w + x); }
+                }
+            }
+            3 => {
+                for y in 0..h {
+                    for x in (w/2)..w { out.insert(y * w + x); }
+                }
+            }
+            _ => panic!("HalfBoardDestroy.which must be 0..=3"),
+        }
+        out
+    }
+}
+
+/// Vol-18 NOVEL — destroy K random cells scattered across the WHOLE board
+/// (not a connected window). Different topology than RandomRegion (which
+/// picks a kxk square). Useful for proposing piece-set redistributions
+/// across the entire board.
+pub struct RandomScatter {
+    pub k: u32,
+}
+impl DestroyOp for RandomScatter {
+    fn name(&self) -> &str { "random_scatter" }
+    fn destroy(&mut self, puzzle: &Puzzle, _board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let n = puzzle.cell_count();
+        let target = self.k.min(n) as usize;
+        let mut out = BTreeSet::new();
+        while out.len() < target {
+            let pos = rng.range(n);
+            out.insert(pos);
+        }
+        out
+    }
+}
+
 /// Vol-17 NOVEL — destroy the "hinge cells" of the mismatch component:
 /// the articulation points (cut vertices) of the cell graph induced by
 /// the mismatch component. Removing an articulation point disconnects

@@ -28,7 +28,8 @@ use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
     BottomBandDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
-    HingeDestroy, MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
+    HalfBoardDestroy, HingeDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
+    RepairKind, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
 
 fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
@@ -86,7 +87,42 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
         "cdonly" => vec![Box::new(ConflictDriven { max_size: 80 })],
         "componentonly" => vec![Box::new(ComponentDestroy { max_size: 100, min_size: 4 })],
         "hingeonly" => vec![Box::new(HingeDestroy { halo: 1 })],
-        other => panic!("unknown --ops preset {other}; want minimal|basic|winning5|full|wbonly|cdonly|componentonly|hingeonly"),
+        // Vol-18 — escape 457 operator-lock with fundamentally different
+        // proposals. MegaBand{8,10,12} destroys 128-192 cells; WorstColumn
+        // and column-band sample orthogonal to row-bands; HalfBoardDestroy
+        // is brutal; RandomScatter explores non-contiguous patterns.
+        "mega" => vec![
+            Box::new(MegaBand { k_rows: 8 }),
+            Box::new(MegaBand { k_rows: 10 }),
+            Box::new(MegaBand { k_rows: 12 }),
+            Box::new(WorstColumn),
+            Box::new(WorstColumnBand { k_cols: 4 }),
+            Box::new(RandomScatter { k: 60 }),
+        ],
+        "mega_mix" => vec![
+            // Vol-18 — combine winning5's reliable ops with mega-escape ops.
+            // Gives ALNS adaptive weights the choice: small ops for
+            // refinement, big ops for basin-escape.
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(MegaBand { k_rows: 8 }),
+            Box::new(MegaBand { k_rows: 12 }),
+            Box::new(WorstColumn),
+            Box::new(WorstColumnBand { k_cols: 4 }),
+            Box::new(RandomScatter { k: 60 }),
+            Box::new(HalfBoardDestroy { which: 0 }),
+        ],
+        "halfboard" => vec![
+            Box::new(HalfBoardDestroy { which: 0 }),
+            Box::new(HalfBoardDestroy { which: 1 }),
+            Box::new(HalfBoardDestroy { which: 2 }),
+            Box::new(HalfBoardDestroy { which: 3 }),
+        ],
+        other => panic!("unknown --ops preset {other}; want minimal|basic|winning5|full|mega|mega_mix|halfboard|wbonly|cdonly|componentonly|hingeonly"),
     }
 }
 

@@ -22,8 +22,9 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns_pt_multi_init, ComponentDestroy,
-    ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HingeDestroy, MwpmDefectPair,
-    PtAlnsConfig, RandomRegion, RepairKind, WorstBand, WorstRow, WorstWindow,
+    ComponentPlusHaloDestroy, ConflictDriven, DestroyOp, HalfBoardDestroy, HingeDestroy,
+    MegaBand, MwpmDefectPair, PtAlnsConfig, RandomRegion, RandomScatter, RepairKind, WorstBand,
+    WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
 
 fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
@@ -54,6 +55,22 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
             Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 6 }),
             Box::new(WorstRow),
             Box::new(HingeDestroy { halo: 1 }),
+        ],
+        // Vol-18 — combine winning5 reliable ops with mega-escape ops to
+        // bust through operator-locked basins (e.g., 457).
+        "mega_mix" => vec![
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(MegaBand { k_rows: 8 }),
+            Box::new(MegaBand { k_rows: 12 }),
+            Box::new(WorstColumn),
+            Box::new(WorstColumnBand { k_cols: 4 }),
+            Box::new(RandomScatter { k: 60 }),
+            Box::new(HalfBoardDestroy { which: 0 }),
         ],
         other => panic!("unknown --ops {other}"),
     }
