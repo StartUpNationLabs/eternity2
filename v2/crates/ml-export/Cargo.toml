@@ -49,3 +49,7 @@ path = "src/bin/canonical_capture.rs"
 [[bin]]
 name = "unsat-clauses-load"
 path = "src/bin/unsat_clauses_load.rs"
+
+[[bin]]
+name = "unsat-clauses-bench"
+path = "src/bin/unsat_clauses_bench.rs"
