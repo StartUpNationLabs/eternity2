@@ -16,6 +16,7 @@ eternity2-solver-engine = { path = "../solver-engine" }
 eternity2-solver-trait = { path = "../solver-trait" }
 rayon = "1.10"
 serde_json = "1"
+pathfinding = "4.9.2"
 
 [dev-dependencies]
 eternity2-generator = { path = "../generator" }

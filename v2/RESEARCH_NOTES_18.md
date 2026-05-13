@@ -164,3 +164,72 @@ go in a "needs replication" column, not the "shipped" column.
 
 Carry-in committed. Next concrete steps queued as tasks. Awaiting user
 direction or proceeding with the prioritization above.
+
+---
+
+## 2026-05-13 — R5 sequence + permutation cycle discovery
+
+### R5 findings (mismatch homology + row distribution)
+
+- **Strong row-distribution law** (n=12 boards):
+  pearson(score, rows_touched_by_mismatch) = **−0.93**
+  - 456 boards: defect confined to 5 rows
+  - 447 boards: defect spread across 7 rows
+- **View-B β_1 = 5-12 measures cyclomatic complexity of the mismatch
+  region**, not perfect-cell holes. Interior perfect islands are 1-2
+  per board (mean 1.5).
+- **Mismatch *edge* graph is a forest** on all 15 boards. No
+  `CycleDestroy` on view A.
+
+### R5c — Leaking pieces hypothesis CONFIRMED
+
+For 447 board chunk_0003: 4 of 7 pieces in rows ≥5 of mismatch
+region (pid=93, 245, 131, 82) consistently sit at rows 0-3 in
+ALL 4 known 456 boards. Strong causal evidence.
+
+### R5d — Direct snap-to-oracle FAILS
+
+Snapping a 447 board to a 456 oracle (incrementally) produces
+non-monotone trajectory:
+  k=5: 437 (−10)   k=20: 419 (−28)   k=40: 404 (−43)   k=ALL66: 428
+
+The 447 → 456 swap path traverses worse intermediate states.
+**Single-piece swaps cannot climb to 456**, which is why ALNS
+gets stuck at 447.
+
+### R5e — Permutation cycle decomposition
+
+σ = oracle_pos ∘ current_pos^−1 decomposes into 10 cycles:
+  1× len-40, 1× len-9, 1× len-7, 2× len-4, 2× len-3, 3× len-2
+
+**Every individual cycle applied in isolation has negative score
+delta** (−4 to −34). Even the smallest 2-cycle costs −4.
+
+Applying ALL 10 cycles together: 450/480 (close to oracle 456).
+
+**Implication**: 447 → 456 is a **first-order phase transition**.
+All paths through swap-space are downhill, but the final state is
++9 uphill. Standard MCMC can't cross. PT can't propose
+cycle-coherent moves. ComponentDestroy + SA-repair *cannot* discover
+this — every step looks worse, so every step gets rejected.
+
+### Strategic pivot: OracleAssistedDestroyRepair
+
+The only ALNS op that can cross 447→456 in one shot:
+1. Pick a cycle of σ.
+2. Destroy all positions in that cycle.
+3. Repair by placing the oracle's pieces at oracle's positions
+   (with oracle rotations) — bypassing the SA repair entirely
+   for these cells.
+4. Score; accept if better than current best.
+
+This is bootstrapping: **using previously-discovered high-score
+boards as priors to escape local optima on lower-score boards
+from the same neighborhood.**
+
+The honest framing: we already paid the compute to find 456. We
+can replicate it (4-time tied score). Now we use 456 as a *prior*
+to push toward 457+. Operator must accept oracle's pieces but
+also have moves that go *beyond* oracle (random destroy + SA
+repair, etc.) to discover something new.
+

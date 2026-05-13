@@ -157,6 +157,9 @@ pub enum RepairKind {
     /// arc-consistency, so works on plateau states where CP fails.
     /// Cheaper per attempt but doesn't enumerate all completions.
     Sa,
+    /// Iterative Optimal Transport (Hungarian assignment) on the free cells.
+    /// Treats the repair as a linear assignment problem and iterates until fixed point.
+    IterativeOt,
 }
 
 /// Pin every cell EXCEPT `free_set` as a Hint; run cell-CP for `budget_ms`.
@@ -274,6 +277,7 @@ pub fn repair(
     match kind {
         RepairKind::Cp => cp_repair(puzzle, board, free_set, budget_ms),
         RepairKind::Sa => Some(sa_repair(puzzle, board, free_set, budget_ms, seed)),
+        RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
     }
 }
 
@@ -292,6 +296,7 @@ pub fn repair_with_opts(
     match kind {
         RepairKind::Cp => cp_repair_with_opts(puzzle, board, free_set, budget_ms, cp_parallel),
         RepairKind::Sa => Some(sa_repair_with_steps(puzzle, board, free_set, budget_ms, sa_step_budget, seed)),
+        RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
     }
 }
 
