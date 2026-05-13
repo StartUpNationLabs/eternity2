@@ -1,96 +1,222 @@
-# VOL-32 — does ML-derived seed unlock vol-22's basin-escape recipe?
+# VOL-32 — overnight ML engineering: sweeps, sizes, learning rates
 
-**Opened**: 2026-05-13 (vol-31 close).
-**Status**: drafted; awaits open.
-**Gated on**: vol-31 PASS (+10 weak / +8 strong score lift from
-LearnedOnTies-174 partial). Now we test whether the *better starting
-basin* enables vol-22's basin-escape recipe to find a >457 basin.
+**Opened**: 2026-05-13 (vol-31 close + community research night).
+**Status**: drafted; ready to launch as overnight work.
+**Theme**: machine-learning *engineering*. The 4-volume ML arc (vol-26..31)
+proved the algorithm — the LearnedOnTies hybrid produces +9 cold-start
+depth and +8/+10 score lift at canonical 16×16. We have **not** done
+the engineering work that follows a proof-of-concept: hyperparameter
+sweeps, model-size scaling, learning-rate schedules, candidate-count
+ablations. Tonight is that work.
 
 ## Why this volume exists
 
-Vol-31 closed at 445/480 from LearnedOnTies-174 via 15-min strong PT —
-above the 437 baseline at iso-budget, well below the 457 record. The
-457 record came from vol-18's hot-PT *finding a specific lucky basin*
-that vol-22's basin-escape recipe confirmed is locked under all moves
-we've tried. **The +8 from vol-31 might or might not survive when we
-scale the recovery pipeline to vol-22's full machinery.**
+Three concrete observations:
 
-Two distinct hypotheses:
-1. **Ceiling preserved**: 445 is a real plateau for the
-   LearnedOnTies-174 basin. Vol-22's basin-escape recipe from this
-   starting basin reaches ≤ 457 (matches or below our record).
-2. **Ceiling broken**: the LearnedOnTies-174 partial seeds a
-   *different* basin family than vol-18's discovery, with a higher
-   ceiling. Vol-22's recipe from this basin finds > 457.
-
-Hypothesis 2 is the record-break case. Cost: ~1 day to wire, then
-overnight compute.
+1. **The +9 depth lift is invariant across v3 / v3b / v4** (vol-30 T2).
+   Train data size and model width were both varied; result didn't
+   move. That's evidence the bottleneck is the hybrid *policy*
+   (EPS=0.05, MAX_K=8) not the model. **EPS / MAX_K have never been
+   swept.**
+2. **The community-research detour** (vol-32 open) surfaced concrete
+   high-value engineering items (vanilla fast backtracker;
+   capiman/e2 70M unsat-clause database; Joe's iteration-budgeted
+   pruning). These are NOT ML, but tonight we'll be running long ML
+   experiments and the spare CPU cycles can also drive ALNS post-fill
+   batches.
+3. **User directive (2026-05-13)**: "I want the night spent on ML
+   optimization, models, hyperparameters, sizes, learning rates etc...
+   like ML engineering. BUT only if that could bring potential value."
+   The +9/+10 result IS the prima facie value. We sweep.
 
 ## Audit-at-open
 
-Items aged ≥ 3 vols by vol-32 open:
+Items aged ≥ 3 vols (vol-32 open, items ≤ vol-29 = old).
+Vol-31 deferred ALNS-axis items; carrying that.
 
-- `multi-cell-bound-ascent` (9 vols, ALNS-axis). Deferred 5+ times.
-  Mark `wont-do` per the "5 deferrals = wont-do" rule.
-- `bound-floor-alns-with-per-step-check` (9 vols, ALNS-axis). Same.
-- `diverse-457-search` (10 vols). Same.
-- Vol-31 BACKLOG additions (`learned-on-ties-long-pt`,
-  `learned-on-ties-hyperparam-sweep`).
+- `multi-cell-bound-ascent` (10 vols, ALNS): defer; tonight is ML.
+- `bound-floor-alns-with-per-step-check` (10 vols, ALNS): defer.
+- `diverse-457-search` (11 vols): defer.
+- `learned-on-ties-hyperparam-sweep` (1 vol since vol-30): **PICKED, becomes T1**.
+- `learned-on-ties-long-pt` (1 vol since vol-31): **PICKED, becomes T2's recovery layer**.
 
 ## Binding items
 
-ONE only — pick the highest-EV record-break attempt.
+**Three tracks, runnable in parallel (CPU contention is the budget gate, not human time).**
 
-### T1 — LearnedOnTies-174 + basin-escape recipe
+### T1 — LearnedOnTies hyperparameter sweep (ML)
 
-1. Run vol-22's basin-escape pipeline on LearnedOnTies-174:
-   - Start from `output/pt_e2_1778700960_445of480.json` (the
-     LearnedOnTies-174 → PT-15min result, score 445).
-   - Apply bound-ascent + Hungarian repair + ALNS in the basin-escape
-     loop (see `concepts/basin-escape-recipe.md`).
-   - Run for 2-4 hours overnight.
-2. Compare final score to:
-   - Vol-22 baseline (basin-escape from cold-start = 457).
-   - The 457 record (vol-18 hot-PT discovery).
+Sweep over the two tunables exposed in `crates/solver-engine/src/lib.rs`
+via env vars `E2_LOT_EPS` and `E2_LOT_MAX_K`:
 
-**Gate condition** (set before running):
-- **PASS (record break)**: final score ≥ 458.
-- **MATCH**: final score = 457. Suggests LearnedOnTies seeds the SAME
-  basin family as vol-18's discovery. No new lever, but cheaper path
-  to the record.
-- **FAIL**: final score 446-456. The basin-escape lift from
-  LearnedOnTies-174 is smaller than vol-22's lift from cold-start.
-  ML seeds a worse basin family.
+| EPS | MAX_K |
+|---|---|
+| 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 0.40 | 2, 4, 8, 12, 16, 24, 32 |
 
-Honest cost: ~1 day to wire the pipeline + 4 hr overnight compute.
+7 × 7 = 49 configs. Each at 60s budget (the headline measurement) =
+49 minutes sequential, ~15 minutes 4-way parallel. **Output**: depth +
+node-count + backtracks per config. Heatmap shows whether +9 is the
+real ceiling or the default config is sub-optimal.
+
+**Gate**: at least one config reaches depth ≥ 175 (one beyond
+current +9). If yes, headline lifts. If no, the +9 plateau is the
+genuine canonical-E2 ceiling under the current model.
+
+Cost: ~15 min wall-clock parallel. Driver: `ml/sweep_lot.sh`.
+
+### T2 — Model-size / training-data / learning-rate sweep (ML)
+
+Train multiple models varying:
+
+- **hidden_dim**: 32, 64, 128, 256
+- **color_emb**: 8, 16, 24, 32
+- **lr**: 1e-4, 5e-4, 1e-3, 3e-3
+- **epochs**: 30, 60, 120
+- **data scale**: 20 traj, 100 traj, **300 traj** (NEW capture
+  required for 300)
+- **candidate count C**: 8, 12, 24
+
+We don't run the full Cartesian — that's 4×4×4×3×3×3 = 1728 configs.
+Instead do an **ablation pattern**:
+
+1. **Baseline** (v3 = hidden 64, emb 16, lr 1e-3, 30 ep, 20 traj, C 12) — already done.
+2. **Size sweep** (hold all else): hidden ∈ {32, 64, 128, 256}, fixed
+   emb=16, lr=1e-3, 30 ep, 100 traj. 4 models.
+3. **LR sweep**: hidden=128 (best from #2), lr ∈ {1e-4, 5e-4, 1e-3, 3e-3}, 30 ep. 4 models.
+4. **Data scale**: capture 300 traj overnight (parallel=4 ≈ 75 min);
+   train hidden=128 + best LR + 60 epochs. 1 model.
+5. **Candidate count**: hidden=128, best LR, 30 ep, C ∈ {8, 12, 24}. 3 models.
+
+Total: 4 + 4 + 1 + 3 = 12 trained models. Each is ~5 min training (we
+measured this) — 60 min compute. Plus the 75-min data capture if
+needed. Plus 12 × 60s gate measurement = 12 min.
+
+**Each trained model evaluated on three modes**: `learned`,
+`learned_on_ties` (default EPS/MAX_K), `learned_on_ties` (best from T1).
+
+**Gate**: at least one (model, EPS, MAX_K) combo reaches depth ≥ 176.
+If yes, headline lifts. If no, the +9 plateau is genuinely structural.
+
+Cost: ~3-4 hr wall-clock parallel with T1 (they don't contend much —
+T1 uses canonical-eval which is single-thread; T2 trains use 8 cores
+sequentially).
+
+### T3 — Multi-seed PT/ALNS lottery from LearnedOnTies-174 (score axis)
+
+While T1 + T2 run, the remaining CPU bandwidth runs the **score-axis
+lottery** from the user-suggested original VOL-32:
+
+- Capture 30+ depth-174 partials by running `joe_depth150_bp +
+  LearnedOnTies` with 30 different seeds × 60s each.
+  - Note: engine value-order is deterministic given seed. Seeds come
+    from varying `VariableOrder::BorderFirstMrv` tie-breaks (we
+    already do this for canonical-capture).
+- For each partial, run `pt_e2` at 30 min (strong config: 8 replicas,
+  Houdayer, kicks).
+- Histogram of final scores. The vol-31 result was 445 from one seed;
+  the lottery hunts for a 450+ outlier.
+
+Cost: 30 × 30 min × pt_e2 (which is 8-replica) but pt_e2 saturates 8
+cores. So 30 sequential = 15 hours, OR 30 × pt_e2 with fewer replicas
+(e.g., 4 replicas, 30 min) = ~7.5 hours sequential = ~2 hr 4-way.
+
+**Gate**: at least one seed lands at score ≥ 450 (above vol-31's 445).
+If yes: depth-174 starting basin admits exploration deeper than the
+single-seed measurement suggested. If no: 445 is structural for
+LearnedOnTies-174.
+
+### T4 (light, non-blocking) — ML training-curve diagnostics
+
+While the long runs are running, write small Python tooling to
+*understand* what the models learned:
+
+- Distribution of `LearnedOnTies` fire-rate per depth (how often does
+  the tie-rerank actually trigger?). Already-existing engine has the
+  data via instrumentation env var; needs a small bin.
+- Per-cell error rate: what fraction of expert placements is the model
+  top-1, top-3, top-12?
+- Histogram of EdgeBpMarginals tie-cluster sizes at each canonical-E2
+  depth. Tells us whether vol-30's +9 lift is coming from "many small
+  ties broken better" or "a few critical ties at specific depths".
+
+Cost: 1-2 hr Python work, no CPU contention.
 
 ## What this vol explicitly does NOT do
 
-- ❌ Hyperparameter sweep (cheap BACKLOG item; ~5 min compute).
-- ❌ RL self-play (different paradigm; defer to vol-33+).
-- ❌ More model training. Vol-30 already showed model size / data
-  don't push the depth lift past +9; basin-escape is the right lever.
+- ❌ Vanilla fast backtracker (BACKLOG `vanilla-fast-backtracker` — vol-33+).
+- ❌ Unsat-clause propagator (BACKLOG `unsat-clause-propagator` — vol-33+).
+- ❌ Joe's iteration-budgeted prune (BACKLOG — vol-33).
+- ❌ RL self-play (vol-34+).
+- ❌ The vol-32 T1 (basin-escape) that I drafted before today's
+  research — replaced by T3 score-axis lottery which is the lighter
+  version of that question.
+
+The community-research items are *engineering* (Rust speed, propagator
+plumbing, parameter policy) and don't belong in an *ML engineering*
+night. They become vol-33 once we know whether ML hyperparam
+optimization moves the +9 plateau.
 
 ## Vol-close protocol
 
-Standard:
-1. Update T1 status in BACKLOG.
-2. Amend [[../concepts/learned-value-order]] with basin-escape result.
-3. If T1 PASS (≥ 458): update score-history; this is the first ML
-   contribution to a record. Memory entry mandatory.
-4. If T1 MATCH (= 457): the LearnedOnTies path is a cheaper way to
-   reach our existing record. Useful methodology note; no record bump.
-5. If T1 FAIL: LearnedOnTies basins don't help vol-22's recipe.
-   Closes the ML-via-basin direction; vol-33 candidates become
-   hyperparam sweep, long PT, or RL self-play.
+At vol-32 close:
+
+1. Update BACKLOG status of each tracked sweep + lottery.
+2. Write `sessions/vol-32.md` with the heatmap + best config.
+3. If new ML-driven canonical record (depth >174 OR score >445):
+   amend `concepts/learned-value-order.md` and write memory entry.
+4. Draft `plans/VOL-33.md` — likely **vanilla fast backtracker +
+   unsat-clause propagator** depending on whether vol-32 lifted ML.
+5. INDEX score-history row.
+
+## Files / drivers needed
+
+```
+ml/sweep_lot.sh                NEW   T1 hyperparam sweep driver
+ml/sweep_train.sh              NEW   T2 model-size/LR sweep driver
+ml/eval_all_models.sh          NEW   T2 eval-12-models driver
+ml/diagnose_model.py           NEW   T4 fire-rate / top-k analyser
+crates/ml-export/canonical_capture: existing — re-use with --parallel 4
+crates/ml-export/canonical_eval:    existing — already supports --dump-partial
+crates/benchmark/pt_e2:              existing — score-axis A/B
+```
+
+Nothing new in Rust. All tonight's work is in `ml/` (Python / shell)
+and in calling existing bins.
+
+## Honest cost estimate
+
+- T1: 30 min (build script + 15 min compute).
+- T2: 3-4 hr (build + 300-traj capture + 12 trains + 12 evals).
+- T3: 2-3 hr (depending on parallelism choices).
+- T4: 1-2 hr (Python diagnostic + writeup).
+- Vault close: 30 min.
+
+**Total**: 7-10 hr of mixed wall-clock. Fits an overnight window
+comfortably. The user-stated time-estimate rule applies (estimates are
+typically 1.5-3× too large; actual will likely be 5-7 hr).
+
+## Why this is the right shape for the night
+
+- **It does what the user asked** (ML engineering on a promising
+  signal).
+- **It's parallelizable**: T1 + T2 + T3 don't fully contend, and T4 is
+  human-time-only.
+- **Each track has a clean gate**: PASS or FAIL is a single number.
+- **Every output is informative**: even FAIL on all three teaches us
+  the +9 plateau is structural and vol-33+ should pivot to the
+  engineering items from community research.
+- **Negative results count**: if no sweep produces a lift, that's a
+  clean closure on the ML-imitation-only direction for canonical
+  E2 — and the engineering items in BACKLOG (vanilla speed,
+  unsat-propagator, Joe-prune) become THE high-EV path.
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — vol-26..31 history.
-- [[../concepts/basin-escape-recipe]] — vol-22 pipeline.
-- [[../basins/basin-457-pt]] — current record basin.
+- [[../concepts/learned-value-order]] — Vol-26..31 history; tonight
+  amends with Vol-32 measurement.
+- [[../sessions/vol-31]] — direct predecessor.
 
 ## Linked sessions
 
-- [[../sessions/vol-31]] — the +10/+8 score-axis result.
-- [[../sessions/vol-22]] — basin-escape recipe origin.
+- [[../sessions/vol-31]] — score lift result.
+- [[../sessions/vol-30]] — +9 depth invariance across models.
