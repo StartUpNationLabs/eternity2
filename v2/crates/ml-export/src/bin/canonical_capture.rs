@@ -19,7 +19,7 @@ use std::time::Instant;
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_events::{EventBody, EventSink, SolverEvent};
-use eternity2_solver_engine::{load_edge_bp_marginals, EngineConfig, EngineSolver, Parallelism, ValueOrder};
+use eternity2_solver_engine::{load_edge_bp_marginals, EngineConfig, EngineSolver, Parallelism, ValueOrder, VariableOrder};
 use eternity2_solver_trait::{SolveMode, SolveOpts, Solver};
 use serde::Serialize;
 
@@ -133,9 +133,16 @@ fn main() {
     for seed in seed_start..seed_end {
         let mut cfg = EngineConfig::JOE_DEPTH150_BP;
         cfg.parallelism = Parallelism::SingleThread;
-        // Make sure value_order is EdgeBpMarginals (it should be by default
-        // but explicit is safer).
         cfg.value_order = ValueOrder::EdgeBpMarginals;
+        // Vol-29 — keep BorderFirstMrv (deep partials reach depth 165 in
+        // 60s). Seeds give nearly-identical trajectories so the training
+        // data has limited diversity, but each seed contributes ~165
+        // distinct partial-board states. Diversity from MRV tie-breaks
+        // + small AC-3 nondeterminism is enough for ~3300 unique
+        // samples per capture. If overfitting is observed, switch to
+        // BorderFirstRandom for diversity at the cost of trajectory
+        // depth (50 vs 165).
+
         let mut solver = EngineSolver::new(cfg, "engine", "canonical_capture");
         let opts = SolveOpts {
             mode: SolveMode::FirstSolution,
@@ -179,6 +186,7 @@ fn main() {
         };
         serde_json::to_writer(&mut w, &rec).expect("write");
         w.write_all(b"\n").expect("nl");
+        w.flush().expect("flush per-seed");
         eprintln!(
             "[capture] seed={seed} elapsed_ms={elapsed} max_depth={} nodes={} backtracks={}",
             sink.max_depth, sink.nodes, sink.backtracks,

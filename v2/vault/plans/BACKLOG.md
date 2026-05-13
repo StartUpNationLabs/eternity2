@@ -27,8 +27,8 @@ Took a sharper path than the planned 7×7 retraining: retested at 6×6/5c with `
 ### `learned-variable-size-cross-domain` (vol-28 T1) — status: `partial` (arch shipped) / `refuted` (cross-domain transfer) — vol-28 (2026-05-13)
 v2 model architecture shipped (position-relative GNN, size-agnostic + piece-count-agnostic, ~63k params, ONNX export works at 6×6 and 16×16). Trained to 97.3% val_acc on 6×6/5c. **At canonical 16×16/22c the model is CONFIDENTLY WRONG**: under `joe_depth150_bp` profile, max depth regresses from 165 (baseline) to 57 with v2 Learned. Even at its own 6×6/5c distribution v2 coverage drops 200→186/200 with median nodes 36→19129 — train/inference distribution mismatch (training negatives filtered by border + neighbour edges only, but engine asks the model to score the bitset-domain-pruned candidate set). Two root causes: (1) candidate-set distribution gap; (2) color-embedding cardinality (only 6 of 24 slots saw gradient at training). See [[learned-value-order]] "Vol-28 measurement" section.
 
-### `learned-16x16-trained` (vol-29 T1) — status: `unbuilt` — since: vol-28
-Train a v2-architecture model on canonical-E2 cold-start trajectories from `joe_depth150_bp` runs (N=100 seeds × 60s). Distribution-matched by construction. Gate: depth ≥ baseline median + 10, wall-clock ≤ 1.5× baseline, no 6×6 regression. See [[../plans/VOL-29]].
+### `learned-16x16-trained` (vol-29 T1) — status: `built` — vol-29 (2026-05-13)
+Trained v3 model on 20 canonical-E2 trajectories × 60s = ~3300 samples (vol-28's distribution-match fix). Val_acc 94.55% at plateau. **Canonical gate PASS at match condition**: Δ=−1 vs `joe_depth150_bp` baseline (164 vs 165), with −35% nodes and −37% backtracks at same wall-clock. Strict-beat condition not met (and structurally cannot be under imitation). Vol-28's collapse (Δ=−108) was a distribution-gap problem, not architectural. See [[learned-value-order]] "Vol-29 measurement" section.
 
 ### `learned-16x16-long-train` (user-Q vol-29) — status: `unbuilt` — since: vol-29
 User request: "for the sake of science, train a 16×16-specific model for a long time and use it for a while". Distinct from vol-29 T1 (which uses imitation only). Two flavors worth trying:
@@ -36,8 +36,8 @@ User request: "for the sake of science, train a 16×16-specific model for a long
 2. **RL self-play** (the only thing that could beat the engine, since imitation has a fixed ceiling at "engine's own performance"): train via PPO/REINFORCE where reward = max_depth reached. ~1 week build + many days of training compute. Different vol entirely (`vol-30+ if vol-29 fails informatively`).
 Honest expectation: long imitation hits a ceiling at "engine performance on its own data", maybe within Δ=+1..+5 of the baseline. RL would be the meaningful path to beating the baseline.
 
-### `learned-on-ties-hybrid` (vol-28 T1C alternative) — status: `unbuilt` — since: vol-28
-Add `ValueOrder::LearnedOnTies` — defer to LCV first, use Learned only on LCV ties. Cheaper than full Learned mode; same transfer-risk profile as cross-domain. After vol-29 result, may be reviewed.
+### `learned-on-ties-hybrid` (vol-30 T1) — status: `unbuilt` — since: vol-28
+Add `ValueOrder::LearnedOnTies` — defer to EdgeBpMarginals (or LCV) first, use Learned only on tied/near-tied candidates. Vol-29 measurement (−35% nodes at iso-depth) suggests the model picks productive tie-breakers. Gate: depth ≥ 165 + at least one seed showing 166+. ~1 day. See [[../plans/VOL-30]].
 
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.

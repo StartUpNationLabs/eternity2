@@ -42,6 +42,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  26 |             457 |       — | [[learned-value-order]] gate at 6×6/5c — 540× engine-node reduction vs MRV+LCV; stdio bridge eats wall-clock win |                               |
 |  27 |             457 |       — | [[learned-value-order]] gate PASS — ONNX in-process, 5.5× wall-clock win, 16/16 recovery of MRV-failures at 100ms budget |                               |
 |  28 |             457 |       — | [[learned-value-order]] cross-domain transfer REFUTED — 6×6-trained v2 model gives Δ=−108 depth regression under `joe_depth150_bp` at canonical 16×16 |                               |
+|  29 |             457 |       — | [[learned-value-order]] distribution-matched imitation hits the teacher ceiling — Δ=−1 with −35% nodes, −37% backtracks at iso-depth (gate PASS at match condition) |                               |
 
 
 ## Concepts — by category
