@@ -2922,32 +2922,44 @@ impl<'a> SearchState<'a> {
         let mut other_undo: Vec<UndoEntry> = Vec::with_capacity(self.puzzle.cell_count() as usize);
         let words_per_pos = self.words_per_pos;
         let pm_base = piece_idx * words_per_pos;
+        // Vol-23 — stack scratch buffer for the per-cell drop bits, sized
+        // large enough for any realistic puzzle (16 words = 1024 rows =
+        // canonical E2; 32 words = 2048 rows ⇒ 32×32). Avoids the
+        // `resize(+wpp, 0)` zero-fill (bzero call site visible in
+        // flamegraph) that previously dominated the arena push path.
+        const MAX_WPP: usize = 32;
+        debug_assert!(words_per_pos <= MAX_WPP, "words_per_pos {} exceeds MAX_WPP {}", words_per_pos, MAX_WPP);
+        let mut drop_scratch = [0u64; MAX_WPP];
         for p in 0..self.puzzle.cell_count() {
             if p == pos || self.placed[p as usize].is_some() { continue; }
             let bit_base = (p as usize) * words_per_pos;
-            let arena_start = self.undo_words_arena.len();
-            self.undo_words_arena.resize(arena_start + words_per_pos, 0);
             let mut popcount: u32 = 0;
-            // Vol-16 — slice-based inner loop. Split borrows so dom +
-            // pmask + arena can all be sliced for bounds-elision. The
-            // `piece_mask` slab is borrowed immutably twice (used here
-            // and at the read site), so we can hold a reference.
+            // OR of post-mask domain words — equivalent to
+            // `domain_is_empty(p)` after the loop without a second pass.
+            let mut survived: u64 = 0;
+            // Slice-based inner loop. Split borrows so dom + pmask + the
+            // scratch buffer can all be sliced for bounds-elision.
             let dom = &mut self.domain_bits[bit_base..bit_base + words_per_pos];
             let pmask = &self.piece_mask[pm_base..pm_base + words_per_pos];
-            let arena_slot = &mut self.undo_words_arena[arena_start..arena_start + words_per_pos];
+            let scratch = &mut drop_scratch[..words_per_pos];
             for w in 0..words_per_pos {
                 let cur = dom[w];
                 let drop = cur & pmask[w];
-                if drop != 0 {
-                    arena_slot[w] = drop;
-                    popcount += drop.count_ones();
-                    dom[w] = cur & !pmask[w];
-                }
+                let new = cur & !pmask[w];
+                scratch[w] = drop;
+                survived |= new;
+                popcount += drop.count_ones();
+                dom[w] = new;
             }
             if popcount > 0 {
                 self.stats.propagations += popcount as u64;
+                let arena_start = self.undo_words_arena.len();
+                // Push the full slot in one shot — no zero-fill, no
+                // conditional inner writes. extend_from_slice over a
+                // statically-sized chunk lets the compiler vectorize.
+                self.undo_words_arena.extend_from_slice(scratch);
                 let entry = UndoEntry { pos: p, words_start: arena_start as u32 };
-                if self.domain_is_empty(p as usize) {
+                if survived == 0 {
                     other_undo.push(entry);
                     self.stats.domain_wipeouts += 1;
                     undo.extend(other_undo);
@@ -2955,9 +2967,6 @@ impl<'a> SearchState<'a> {
                     return PropagationOutcome::Wipeout { undo };
                 }
                 other_undo.push(entry);
-            } else {
-                // No diff — return the arena reservation.
-                self.undo_words_arena.truncate(arena_start);
             }
         }
         undo.extend(other_undo);
