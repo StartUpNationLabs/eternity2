@@ -56,6 +56,25 @@ Next steps:
 - Run from a high-bound basin start (e.g. [[basin-440-469]]).
 - Round-3 wipeout handling: drop gacolor for round 3+, use bare propagation.
 
+## Vol-23 cold-start full result (5min/round, 6 rounds, seed=1)
+
+| Round | Pinned | Depth | Score | Time |
+|---|---|---|---|---|
+| 1 | 5 (canonical) | 27 | 23/480 | 5 min |
+| 2 | 32 | **152** | **297/480** | 5 min |
+| 3 | 184 | 72 | **412/480** (full board!) | 0.2s |
+| 4 | 256 (stagnates) | 6 | 412 | stop |
+
+The cold-start CP-only chain reaches a **full 412/480 board** in ~10 min. Bound of the final board is 441 (gap +29), Hamming distance 247 from our 457 — a completely new basin, but with a LOWER ceiling than our 457 basin (441 vs 461).
+
+Caveats:
+1. Round 3 fills 72 cells in 0.2s via `FirstSolution` mode — first valid completion, not best. Cold-start CP doesn't optimize score; it satisfies constraints.
+2. The 412 score is below our 457 because the random valid completion isn't optimal.
+
+Future use:
+- Round 2 produces a deep partial (depth 152, score 297) suitable for ALNS-fill.
+- ALNS-from-prune-restart-round-2 should be tested vs vanilla cold-start ALNS.
+
 ## Linked sessions
 
 - vol-14: deferred (chased frame-first which was null).
