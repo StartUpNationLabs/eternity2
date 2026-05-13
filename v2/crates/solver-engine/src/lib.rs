@@ -2149,11 +2149,23 @@ pub(crate) struct SearchState<'a> {
     /// Reusable scratch for AC-3's hot-path count cache (Exp I).
     /// Shape is fixed at construction: `(n_pos * 4 * n_colors)` u16s for
     /// `ac3_count` and `(n_pos * words_per_pos)` u64s for `ac3_present`.
-    /// `propagate_ac3` zeroes-then-rebuilds the slices at entry. Holding
-    /// them on SearchState avoids per-call allocator round-trips.
+    /// Holding them on SearchState avoids per-call allocator round-trips.
+    ///
+    /// Vol-23 — `ac3_count` is now maintained *across* AC-3 invocations
+    /// via a dirty list. Mutation sites mark cells dirty via
+    /// `mark_ac3_dirty(p)`; `propagate_ac3` rebuilds only dirty cells at
+    /// entry. Replaces the 21% per-node full-rebuild loop.
     pub(crate) ac3_count: Vec<u16>,
     pub(crate) ac3_present: Vec<u64>,
     pub(crate) ac3_on_queue: Vec<bool>,
+    /// Vol-23 — positions whose `ac3_count` row is stale and must be
+    /// rebuilt at the next `propagate_ac3` entry. Push-only during
+    /// domain mutations; drained + cleared at AC-3 entry.
+    pub(crate) ac3_dirty_list: Vec<u32>,
+    /// Vol-23 — per-position dirty flag, gating pushes into
+    /// `ac3_dirty_list` to avoid duplicates. `true` iff position is in
+    /// the dirty list pending rebuild.
+    pub(crate) ac3_dirty_flag: Vec<bool>,
     /// Vol-14 — `cell_side_edge[pos * 4 + side]` = edge_id in the BP
     /// marginals file. Empty unless value-order is
     /// `EdgeBpMarginals` *and* `opts.edge_bp_marginals` is set.
@@ -2493,6 +2505,20 @@ impl<'a> SearchState<'a> {
             } else {
                 Vec::new()
             },
+            // Vol-23 — initially every position is dirty (count is all
+            // zeros at construction). First AC-3 entry rebuilds all
+            // non-placed cells; subsequent entries only touch cells
+            // that mutated since last rebuild.
+            ac3_dirty_list: if solver.config.propagators.ac3 {
+                (0..n_pos as u32).collect()
+            } else {
+                Vec::new()
+            },
+            ac3_dirty_flag: if solver.config.propagators.ac3 {
+                vec![true; n_pos]
+            } else {
+                Vec::new()
+            },
             cell_side_edge: if matches!(solver.config.value_order, ValueOrder::EdgeBpMarginals)
                 && opts.edge_bp_marginals.is_some()
             {
@@ -2626,6 +2652,8 @@ impl<'a> SearchState<'a> {
     fn restore_bits(&mut self, pos: usize, snap: &[u64]) {
         let base = pos * self.words_per_pos;
         self.domain_bits[base..base + self.words_per_pos].copy_from_slice(snap);
+        // Vol-23 — domain[pos] changed; ac3_count[pos] is stale.
+        self.mark_ac3_dirty(pos);
     }
 
     /// True iff domain[pos] is empty.
@@ -2633,6 +2661,20 @@ impl<'a> SearchState<'a> {
     fn domain_is_empty(&self, pos: usize) -> bool {
         let base = pos * self.words_per_pos;
         self.domain_bits[base..base + self.words_per_pos].iter().all(|&w| w == 0)
+    }
+
+    /// Mark a position's AC-3 row-count cache as stale. Called from
+    /// every site that mutates `domain_bits[p]` outside the AC-3 inner
+    /// loop. No-op when AC-3 isn't enabled (flag vec is empty).
+    /// Vol-23.
+    #[inline]
+    fn mark_ac3_dirty(&mut self, p: usize) {
+        if let Some(flag) = self.ac3_dirty_flag.get_mut(p) {
+            if !*flag {
+                *flag = true;
+                self.ac3_dirty_list.push(p as u32);
+            }
+        }
     }
 
     /// True iff row_id is in domain[pos].
@@ -2650,6 +2692,9 @@ impl<'a> SearchState<'a> {
         for w in &mut self.domain_bits[base..base + self.words_per_pos] { *w = 0; }
         let r = row_id as usize;
         self.domain_bits[base + (r >> 6)] = 1u64 << (r & 63);
+        // Vol-23 — domain[pos] changed (almost everything dropped);
+        // ac3_count[pos] is stale.
+        self.mark_ac3_dirty(pos);
     }
 
     fn next_random(&mut self) -> u64 {
@@ -2879,6 +2924,9 @@ impl<'a> SearchState<'a> {
                 let arena_start = this.undo_words_arena.len();
                 this.undo_words_arena.extend_from_slice(scratch);
                 let entry = UndoEntry { pos: neighbor, words_start: arena_start as u32 };
+                // Vol-23 — domain[neighbor] changed; ac3_count[neighbor]
+                // is stale until next AC-3 rebuild.
+                this.mark_ac3_dirty(neighbor as usize);
                 if survived == 0 {
                     PruneResult::Wipeout { entry }
                 } else {
@@ -2960,6 +3008,8 @@ impl<'a> SearchState<'a> {
                 // statically-sized chunk lets the compiler vectorize.
                 self.undo_words_arena.extend_from_slice(scratch);
                 let entry = UndoEntry { pos: p, words_start: arena_start as u32 };
+                // Vol-23 — domain[p] changed; ac3_count[p] is stale.
+                self.mark_ac3_dirty(p as usize);
                 if survived == 0 {
                     other_undo.push(entry);
                     self.stats.domain_wipeouts += 1;
@@ -3031,16 +3081,18 @@ impl<'a> SearchState<'a> {
         //     domains[pos] whose edges[side]==color.
         //   present[pos] is a row-id bitset.
         // Buffers live on SearchState so we pay the alloc only once.
-        // We zero the relevant slices then rebuild for unplaced positions
-        // — no fresh allocation per AC-3 entry.
+        //
+        // Vol-23 — `ac3_count` is now maintained *incrementally* via the
+        // dirty list (see `mark_ac3_dirty`). At entry we rebuild only the
+        // cells whose domain mutated since the last AC-3 call. Replaces
+        // the full per-node rebuild (21% of joe runtime in the vol-23
+        // pre-fix flamegraph).
         let stride_pos = 4 * n_colors;
         let words_per_pos = n_rows.div_ceil(64);
         let count_len = (n_pos as usize) * stride_pos;
         let present_len = (n_pos as usize) * words_per_pos;
         debug_assert!(self.ac3_count.len() == count_len);
         debug_assert!(self.ac3_present.len() == present_len);
-        for v in &mut self.ac3_count[..count_len] { *v = 0; }
-        // ac3_present is overwritten by copy_from_slice below — no need to zero.
         for v in &mut self.ac3_on_queue[..n_pos as usize] { *v = false; }
         // Pin a non-borrow timeout snapshot before we take mut-borrows
         // on the cache fields. self.started doesn't implement Copy so
@@ -3057,36 +3109,47 @@ impl<'a> SearchState<'a> {
         debug_assert!(self.domain_bits.len() == present_len,
             "domain_bits ({}) != present_len ({})", self.domain_bits.len(), present_len);
         self.ac3_present[..present_len].copy_from_slice(&self.domain_bits[..present_len]);
+        // Vol-23 — drain the dirty list. For each dirty position, zero
+        // its count row, then rebuild from current domain bits. Clear
+        // the dirty flag as we go. Placed cells are skipped (their
+        // count row is never read).
+        let dirty_len = self.ac3_dirty_list.len();
+        if dirty_len > 0 {
+            let rows = self.rows.as_slice();
+            let dom_bits = self.domain_bits.as_slice();
+            // Borrow-split: take refs to count / dirty_list / dirty_flag
+            // separately so the inner loop can mutate count while we
+            // iterate the (consumed) list.
+            for i in 0..dirty_len {
+                let p = self.ac3_dirty_list[i] as usize;
+                self.ac3_dirty_flag[p] = false;
+                if self.placed[p].is_some() { continue; }
+                let base = p * words_per_pos;
+                let pos_count_base = p * stride_pos;
+                let dom_slice = &dom_bits[base..base + words_per_pos];
+                let count_slice = &mut self.ac3_count[pos_count_base..pos_count_base + stride_pos];
+                for v in count_slice.iter_mut() { *v = 0; }
+                for (w, &word_init) in dom_slice.iter().enumerate() {
+                    let mut word = word_init;
+                    let bit_base = (w as u32) * 64;
+                    while word != 0 {
+                        let bit = word.trailing_zeros();
+                        word &= word - 1;
+                        let r_id = bit_base + bit;
+                        let r = &rows[r_id as usize];
+                        // Unrolled 4-side accumulator.
+                        count_slice[r.edges[0] as usize] += 1;
+                        count_slice[n_colors + r.edges[1] as usize] += 1;
+                        count_slice[2 * n_colors + r.edges[2] as usize] += 1;
+                        count_slice[3 * n_colors + r.edges[3] as usize] += 1;
+                    }
+                }
+            }
+            self.ac3_dirty_list.clear();
+        }
         let count = &mut self.ac3_count;
         let present = &mut self.ac3_present;
         let on_queue = &mut self.ac3_on_queue;
-        // Build `count` by iterating set bits of self.domain_bits per pos.
-        // Vol-16 — slice the per-position views to elide bounds checks
-        // on the inner increment, and bind the rows slice once.
-        let rows = self.rows.as_slice();
-        let dom_bits = self.domain_bits.as_slice();
-        for p in 0..n_pos as usize {
-            if self.placed[p].is_some() { continue; }
-            let base = p * words_per_pos;
-            let pos_count_base = p * stride_pos;
-            let dom_slice = &dom_bits[base..base + words_per_pos];
-            let count_slice = &mut count[pos_count_base..pos_count_base + stride_pos];
-            for (w, &word_init) in dom_slice.iter().enumerate() {
-                let mut word = word_init;
-                let bit_base = (w as u32) * 64;
-                while word != 0 {
-                    let bit = word.trailing_zeros();
-                    word &= word - 1;
-                    let r_id = bit_base + bit;
-                    let r = &rows[r_id as usize];
-                    // Unrolled 4-side accumulator.
-                    count_slice[r.edges[0] as usize] += 1;
-                    count_slice[n_colors + r.edges[1] as usize] += 1;
-                    count_slice[2 * n_colors + r.edges[2] as usize] += 1;
-                    count_slice[3 * n_colors + r.edges[3] as usize] += 1;
-                }
-            }
-        }
         // Vol-16 Cat-4g — reuse the queue scratch across AC-3 calls.
         self.ac3_queue.clear();
         let queue = &mut self.ac3_queue;
@@ -3374,6 +3437,12 @@ impl<'a> SearchState<'a> {
             for (d, s) in dst.iter_mut().zip(src.iter()) {
                 *d |= *s;
             }
+        }
+        // Vol-23 — mark every restored position's ac3_count stale. Done
+        // after the OR loop so we drop the dom_slice/arena_slice borrows
+        // before calling the (&mut self) mark helper.
+        for entry in &undo {
+            self.mark_ac3_dirty(entry.pos as usize);
         }
         drop(undo);
         if let Some(keep) = arena_keep {
@@ -3722,6 +3791,8 @@ impl<'a> SearchState<'a> {
             // alternatives to the chosen row_id.
             let base = (pos as usize) * self.words_per_pos;
             for w in &mut self.domain_bits[base..base + self.words_per_pos] { *w = 0; }
+            // Vol-23 — domain[pos] changed; ac3_count[pos] is stale.
+            self.mark_ac3_dirty(pos as usize);
             let mut null = eternity2_events::NullSink;
             match self.place_and_propagate(&mut null, depth, pos, row_id) {
                 PropagationOutcome::Ok { undo } => {
@@ -4107,6 +4178,8 @@ impl<'a> SearchState<'a> {
             // from the placed row's edges.
             let base = (pos as usize) * self.words_per_pos;
             for w in &mut self.domain_bits[base..base + self.words_per_pos] { *w = 0; }
+            // Vol-23 — domain[pos] changed; ac3_count[pos] is stale.
+            self.mark_ac3_dirty(pos as usize);
             let skip_side = if mismatch_side == u8::MAX { None } else { Some(mismatch_side as usize) };
             let outcome = self.place_and_propagate_opts(sink, depth, pos, row_id, skip_side);
             match outcome {
