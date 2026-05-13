@@ -389,3 +389,43 @@ multi-init PT from several distinct 457 boards if we can generate them.
 
 If 1/3 find 458: 458 IS accessible, push further with same recipe.
 
+
+---
+
+## 2026-05-13 — 457 ceiling characterised as operator-locked
+
+T_max=30 from 457 (seeds 1-5): all 4-6 chains stagnated at 457.
+T_max=50 from 457 (seeds 1, 2; 4 and 6 chains): same.
+T_max=100 from 457 (seeds 1, 7; 4 and 8 chains): same.
+
+In every case "Global best at chain 0, round 0" — chains literally
+never find ANY new best, not even a transient improvement.
+
+**This is NOT a temperature problem**. At T=100, Δ=-21 is accepted
+at p≈0.81. If 458 were *anywhere* reachable by destroy/repair,
+chains would find it. The fact that even hot chains never propose
+a single +1 move means **the operator portfolio is exhausted on 457**.
+
+457 is a hard local maximum under {RandomRegion, WorstWindow,
+ConflictDriven, MwpmDefectPair, WorstBand} regardless of temperature.
+
+## 2026-05-13 — Strategic pivot: drop 457, explore other families
+
+Per the trajectory-families finding, we've been working in Family A
+the whole session. Family B (chunk_0019 CP partial) has its own
+{449, 454} attractor that we never thoroughly explored. Per F1,
+**schedule diversity produces new families** — and we never tested
+beyond v17a/v17b.
+
+Vol-18 strategic pivot:
+1. **Drop the 457 chase**. Stop hot-PT on Family A.
+2. **Enumerate trajectory families** by varying CP-partial-generating
+   conditions: v17a, v17b, v17c, v17e, multiple seeds each.
+3. **For each family**, run ALNS + OracleCycleSwap + hot-PT pipeline
+   to find that family's ceiling.
+4. **Compare ceilings across families**. Choose the family with
+   the highest ceiling as the target for further work.
+
+This is exactly the "stop over-fitting one basin" lever the user
+called for.
+
