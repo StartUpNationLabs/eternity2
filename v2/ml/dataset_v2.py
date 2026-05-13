@@ -39,6 +39,40 @@ def fits_border(rotated_edges: List[int], border_mask: List[bool]) -> bool:
     return True
 
 
+def fits_placed_neighbours(
+    rotated_edges: List[int],
+    placed_edges: np.ndarray,
+    target_pos: int,
+    width: int,
+    height: int,
+) -> bool:
+    """A candidate placement fits iff every side that touches a *placed*
+    neighbour matches that neighbour's facing-side color. Mirrors what
+    the engine's edge propagator does."""
+    y, x = divmod(target_pos, width)
+    # top neighbour
+    if y > 0:
+        nb = placed_edges[(y - 1) * width + x]
+        if nb.sum() > 0 and rotated_edges[0] != int(nb[2]):
+            return False
+    # right
+    if x < width - 1:
+        nb = placed_edges[y * width + (x + 1)]
+        if nb.sum() > 0 and rotated_edges[1] != int(nb[3]):
+            return False
+    # bottom
+    if y < height - 1:
+        nb = placed_edges[(y + 1) * width + x]
+        if nb.sum() > 0 and rotated_edges[2] != int(nb[0]):
+            return False
+    # left
+    if x > 0:
+        nb = placed_edges[y * width + x - 1]
+        if nb.sum() > 0 and rotated_edges[3] != int(nb[1]):
+            return False
+    return True
+
+
 def border_mask_for(pos: int, width: int, height: int) -> List[bool]:
     y, x = divmod(pos, width)
     return [y == 0, x == width - 1, y == height - 1, x == 0]
@@ -127,21 +161,47 @@ class TrajectoryDatasetV2(Dataset):
         expert_edges = rotations[target_pid][target_rot]
         bm = border_mask_for(target_pos, size, size)
         candidates: List[List[int]] = [expert_edges]
-        seen = {(target_pid, target_rot)}
+        seen_edges = {tuple(expert_edges)}
+        # Negatives are pieces+rotations whose edges (a) match the border
+        # mask AND (b) match every placed-neighbour's facing side — i.e.,
+        # the engine's local-edge-feasible candidate set at this cell.
+        # This is the hardest discrimination task: the model has to learn
+        # *which feasible placement leads to a globally-completable
+        # board*, not just which placement is locally legal.
         attempts = 0
-        while len(candidates) < self.n_candidates and attempts < 200:
+        max_attempts = 800
+        while len(candidates) < self.n_candidates and attempts < max_attempts:
             attempts += 1
             pid = self.rng.randrange(len(rec.pieces))
             rot = self.rng.randrange(4)
-            if (pid, rot) in seen or pid in used:
+            if pid == target_pid and rot == target_rot:
                 continue
             ce = rotations[pid][rot]
             if not fits_border(ce, bm):
                 continue
-            seen.add((pid, rot))
+            if not fits_placed_neighbours(ce, placed_edges, target_pos, size, size):
+                continue
+            t = tuple(ce)
+            if t in seen_edges:
+                continue
+            seen_edges.add(t)
             candidates.append(ce)
+        # If we can't find enough hard negatives, the cell may have a
+        # tiny remaining domain — pad with synthetic edges that ONLY
+        # match the border (not the placed-neighbour constraint), still
+        # distinguishable from the expert via the model's GNN encoding.
         while len(candidates) < self.n_candidates:
-            candidates.append(expert_edges)
+            ce = [
+                0 if bm[0] else self.rng.randint(1, 22),
+                0 if bm[1] else self.rng.randint(1, 22),
+                0 if bm[2] else self.rng.randint(1, 22),
+                0 if bm[3] else self.rng.randint(1, 22),
+            ]
+            t = tuple(ce)
+            if t in seen_edges:
+                continue
+            seen_edges.add(t)
+            candidates.append(ce)
 
         order = list(range(self.n_candidates))
         self.rng.shuffle(order)
