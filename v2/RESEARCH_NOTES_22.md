@@ -151,7 +151,31 @@ New basins have HUGE gaps (-27 to -32) that ALNS cannot close.
 
 cluster_maxsat_repair on the 442/463 basin:
 - halo=2: 62 cluster cells + 210 free = too big, z3 UNKNOWN in 60s
-- halo=0 (just 38 mismatch cells): in progress, 180s timeout
+- halo=0: 62 cluster cells + 60 free (only mismatch cells in basin's
+  cluster), 200k clauses, 3.6 MB, z3 still UNKNOWN in 180s.
+
+**z3 cannot solve even small MaxSAT instances** for this problem.
+Need kissat or a dedicated MaxSAT solver (e.g., RC2). For vol-22 this
+is parked; the joint bound at exact cluster level is open.
+
+## 15:00 — Scope clarification (user-Q)
+
+ALL findings in vols 17-22 are SPECIFIC to the canonical Eternity II
+puzzle (16×16, 256 pieces, 5-clue variant, file
+`data/puzzles/size_16_official_eternity.csv`).
+
+- `edge_relax` and `edge_bound_ascent` algorithms are GENERAL —
+  they work on any edge-matching puzzle.
+- The metrics (per-board bound, basin ceiling) are puzzle-specific
+  AND board-specific.
+- Numerical results (457, 461, 469, etc.) are specific to canonical E2.
+
+For a different puzzle (different piece set or size):
+- The recipes apply.
+- The numerical caps would differ.
+- A simpler puzzle: gap=0 might equal a true solution.
+- A harder puzzle: basin ceilings might be well below the
+  information-theoretic max.
 
 
 
