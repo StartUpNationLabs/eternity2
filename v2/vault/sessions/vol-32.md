@@ -106,6 +106,26 @@ Analysis of 20 seed logs:
 
 Data: `output/vol-32/t3_intra_run.json`.
 
+### T6b — Mini-PT A/B at 30s × 8 seeds × 3 partials (vol-32 close)
+
+Re-ran the A/B with proper budget (30s, since PT saturates in <1s) on all
+three partials. 24 PT runs in ~3 min wall-clock (vs T3's 1.9 hour).
+
+| Partial | N | mean | median | max | min | stdev |
+|---|---:|---:|---:|---:|---:|---:|
+| edge_bp_165 (baseline) | 8 | 433.9 | 433.5 | 438 | 429 | 3.31 |
+| **insertion_174** (vol-31's "ML partial") | 8 | **439.4** | **440** | **442** | 436 | 1.77 |
+| lot_fixed_v4 (TRUE post-fix LOT) | 8 | 432.6 | 432.5 | 438 | 430 | 2.62 |
+
+**insertion_174 → PT: +5.5 mean** vs baseline. This is the real "vol-31 lift"
+attributed correctly. **lot_fixed_v4 → PT: −1.3 mean** vs baseline — TRUE
+ML has NO score lift.
+
+Combined with T6's earlier ALNS A/B (edge_bp_165→424, insertion_174→432,
+lot_fixed_v4→422), the verdict is unambiguous:
+- vol-31's "+10/+8 score lift" was +5-8 from InsertionOrder, 0 from ML.
+- The ML direction at canonical is closed at vol-32 (imitation ceiling holds).
+
 ### T6+ — Cross-profile InsertionOrder check (added at vol-close)
 
 While T3 ran, I also tested value-order modes under `border_first_lcv`
