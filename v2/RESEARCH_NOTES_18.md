@@ -281,3 +281,36 @@ as a *post-SA polish step* on borderline-improvable boards, but
 empirically not on 453/447 boards. Mark as null result. Memory entry
 to follow.
 
+
+---
+
+## 2026-05-13 — hold pattern: replication test + hot-PT design
+
+Launched 5-seed replication of winning5 + SA repair starting from
+chunk_0019/cp_board (197 placed, 362 matched). 300s each, 25 min total.
+
+Per-seed results (live): seed 1 in progress.
+
+While waiting, designed the next experiment:
+
+### Hot-PT-from-456 (queued)
+
+Per R5e: 447 → 456 transition is a first-order phase change with the
+biggest swap-cycle costing −34. To accept Δ=−34 at p≈1/2 we need
+T ≈ 49. Standard PT runs T_max ≈ 2-5. **Hot-PT at T_max=50 has not
+been tested.**
+
+Plan: take a known 456 board, run `alns_pt --t-min 1 --t-max 50
+--n-chains 4 --time-budget-ms 300000 --ops winning5`. If replica
+exchange between the cold (T=1) chain (which stays at 456) and the
+hot (T=50) chain (which jiggles broadly) gives the cold chain a new
+basin, we'd see 457+.
+
+This is still inside our algorithm family (PT exists) but in an
+unused regime (T=50 not T=2). Outside-the-stack would be R6
+swap-walk-on-S_256 (a permutation-space SA we don't have).
+
+If replication shows 456 is rare (e.g., 1/5), do hot-PT from the
+most stable basin reached (likely 451-453). If replication is good
+(3+/5), do hot-PT from a 456 directly.
+
