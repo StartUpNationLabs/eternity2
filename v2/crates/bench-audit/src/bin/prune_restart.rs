@@ -82,31 +82,76 @@ fn cell_local_score(puzzle: &Puzzle, board: &Board, pos: u32) -> u32 {
     s
 }
 
+/// Maximum possible local score for a cell (= number of interior-facing sides).
+fn cell_max_score(puzzle: &Puzzle, pos: u32) -> u32 {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let x = pos % w;
+    let y = pos / w;
+    let mut s = 0u32;
+    if y > 0 { s += 1; }
+    if x + 1 < w { s += 1; }
+    if y + 1 < h { s += 1; }
+    if x > 0 { s += 1; }
+    s
+}
+
 /// Build hints from a board's placed cells, EXCLUDING canonical hint
-/// positions (which are already pinned) AND the `n_drop` lowest-scoring
-/// cells (which are unpinned to let CP re-search them).
-///
-/// When `n_drop == 0`, just pin all non-canonical cells.
-/// When `n_drop > 0`, drop the lowest-local-score `n_drop` cells.
+/// positions AND mismatch cells (cells whose current local score is
+/// below their max possible). The mismatch cells are dropped so CP
+/// can re-search them. Optionally further drop `n_drop_extra` cells
+/// adjacent to mismatch cells (halo expansion).
 fn hints_from_board_with_drops(
     board: &Board,
     puzzle: &Puzzle,
     canonical: &Hints,
-    n_drop: usize,
+    n_drop_extra: usize,
 ) -> Hints {
     let canonical_positions: std::collections::BTreeSet<u32> =
         canonical.hints.iter().map(|h| h.position).collect();
-    let mut placed: Vec<(u32, u32)> = (0..puzzle.cell_count())
+    let w = puzzle.width;
+    // First pass: identify the mismatch cells (local < max).
+    let mismatch: std::collections::BTreeSet<u32> = (0..puzzle.cell_count())
+        .filter(|p| !canonical_positions.contains(p))
+        .filter(|&p| {
+            let cur = cell_local_score(puzzle, board, p);
+            let max = cell_max_score(puzzle, p);
+            cur < max
+        })
+        .collect();
+    // Optionally extend by 1-hop neighbors of mismatch cells.
+    let mut to_drop = mismatch.clone();
+    if n_drop_extra > 0 {
+        // Score each non-mismatch cell by how many mismatch neighbors it has.
+        let mut neighbor_count: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+        for &m in &mismatch {
+            let x = m % w;
+            let y = m / w;
+            for (dx, dy) in [(0i32, -1), (1, 0), (0, 1), (-1, 0)] {
+                let nx = x as i32 + dx;
+                let ny = y as i32 + dy;
+                if nx < 0 || ny < 0 || nx >= w as i32 || ny >= puzzle.height as i32 { continue; }
+                let np = ny as u32 * w + nx as u32;
+                if !to_drop.contains(&np) && !canonical_positions.contains(&np) {
+                    *neighbor_count.entry(np).or_insert(0) += 1;
+                }
+            }
+        }
+        let mut by_neighbors: Vec<(u32, u32)> = neighbor_count.into_iter().collect();
+        by_neighbors.sort_by_key(|(p, c)| (std::cmp::Reverse(*c), *p));
+        for (p, _) in by_neighbors.into_iter().take(n_drop_extra) {
+            to_drop.insert(p);
+        }
+    }
+    eprintln!("  dropping {} cells ({} mismatch + {} halo)",
+        to_drop.len(), mismatch.len(), to_drop.len() - mismatch.len());
+
+    let placed: Vec<u32> = (0..puzzle.cell_count())
         .filter(|p| !canonical_positions.contains(p))
         .filter(|p| board.get(*p).is_some())
-        .map(|p| (p, cell_local_score(puzzle, board, p)))
+        .filter(|p| !to_drop.contains(p))
         .collect();
-    // Drop the n_drop lowest-scoring cells.
-    if n_drop > 0 && n_drop < placed.len() {
-        placed.sort_by_key(|(p, s)| (*s, *p));
-        placed.drain(0..n_drop);
-    }
-    let kept: std::collections::BTreeSet<u32> = placed.iter().map(|(p, _)| *p).collect();
+    let kept: std::collections::BTreeSet<u32> = placed.into_iter().collect();
 
     let mut hs: Vec<Hint> = canonical.hints.clone();
     let mut corners: Vec<Hint> = Vec::new();
