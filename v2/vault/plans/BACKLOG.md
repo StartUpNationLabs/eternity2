@@ -30,6 +30,12 @@ v2 model architecture shipped (position-relative GNN, size-agnostic + piece-coun
 ### `learned-16x16-trained` (vol-29 T1) — status: `unbuilt` — since: vol-28
 Train a v2-architecture model on canonical-E2 cold-start trajectories from `joe_depth150_bp` runs (N=100 seeds × 60s). Distribution-matched by construction. Gate: depth ≥ baseline median + 10, wall-clock ≤ 1.5× baseline, no 6×6 regression. See [[../plans/VOL-29]].
 
+### `learned-16x16-long-train` (user-Q vol-29) — status: `unbuilt` — since: vol-29
+User request: "for the sake of science, train a 16×16-specific model for a long time and use it for a while". Distinct from vol-29 T1 (which uses imitation only). Two flavors worth trying:
+1. **Long imitation**: 1000+ seeds × 60s capture (~16 hours wall-clock with parallelism), 100+ training epochs, beefier architecture (hidden=128-256). Tests whether the vol-29 ceiling is data/compute-bound or fundamentally limited by the imitation framing.
+2. **RL self-play** (the only thing that could beat the engine, since imitation has a fixed ceiling at "engine's own performance"): train via PPO/REINFORCE where reward = max_depth reached. ~1 week build + many days of training compute. Different vol entirely (`vol-30+ if vol-29 fails informatively`).
+Honest expectation: long imitation hits a ceiling at "engine performance on its own data", maybe within Δ=+1..+5 of the baseline. RL would be the meaningful path to beating the baseline.
+
 ### `learned-on-ties-hybrid` (vol-28 T1C alternative) — status: `unbuilt` — since: vol-28
 Add `ValueOrder::LearnedOnTies` — defer to LCV first, use Learned only on LCV ties. Cheaper than full Learned mode; same transfer-risk profile as cross-domain. After vol-29 result, may be reviewed.
 
@@ -97,11 +103,13 @@ Aged 3 vols. Vol-20 `basin_hop` at k=1,4 went nowhere; vol-22 basin-escape recip
 "Lottery" for finding non-byte-identical 457s. Vol-22 didn't run it; instead the basin-escape recipe found different >457-ceiling basins. Still valuable as separate axis. **Vol-27 scope is ML-axis; cheap overnight job, can run any time but not blocking.**
 - Est. 0 build, overnight compute
 
-### `bound-ascent-then-blackwood-cp` (vol-22 T2) — status: `unbuilt` — since: vol-22
+### `bound-ascent-then-blackwood-cp` (vol-22 T2) — status: `wont-do` — since: vol-22, resolved: vol-29 open
+**Aged 7 volumes.** Composes vol-22's bound-ascent (which collapses on ALNS recovery — vol-21/22 measurements) with vol-15's Blackwood (which has structural depth-wall, see [[blackwood-layered-depth-wall]]). Both components have known refuted modes; composition unlikely to escape either. Mark `wont-do`.
 Use bound-ascent's high-bound edge structure as VALUE-ORDER for Blackwood CP starting from canonical hints. Most novel composition.
 - Est. 1 day
 
-### `gap-recording-instrumentation` (vol-22 T4) — status: `unbuilt` — since: vol-22
+### `gap-recording-instrumentation` (vol-22 T4) — status: `unbuilt` — since: vol-22, deferred at vol-29 open
+Cheap (1-2 hrs) but diagnostic-only — adds telemetry for "what gap (basin_ceiling − current_score) does ALNS bridge". Not a record lever; deferred again, would be a 1-vol-evening side project.
 Add gap-recording to every ALNS/PT save. Cheap. Long-term diagnostic.
 - Est. 1-2 hrs
 

@@ -39,3 +39,7 @@ path = "src/bin/bench_eval.rs"
 [[bin]]
 name = "canonical-eval"
 path = "src/bin/canonical_eval.rs"
+
+[[bin]]
+name = "canonical-capture"
+path = "src/bin/canonical_capture.rs"
