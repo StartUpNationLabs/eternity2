@@ -49,6 +49,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[ns1-deficit]] — multiset-equality invariant (necessary, loose)
 - [[bitset-domain-rep]] — vol-12 engine rewrite
 - [[engine-profile-registry]] — registry of profiles (2 solver_ids × 7 heuristics)
+- [[engine-perf-hot-paths]] — vol-25 flamegraph audit + 7 fixes (+22% joe, +27% BR)
 - [[scan-order]] — variable-order axis (BorderFirstMRV, RowMajorBottomUp, …)
 - [[mcgavin-engine]] — community throughput target (295M nps)
 
@@ -98,6 +99,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[cold-portfolio]] — vol-17 parallel-chunk runner
 - [[blackwood-then-csp]] — vol-17 Variant K
 
+### Code quality
+- [[code-debt]] — vol-25 restructure proposal (5 dup utils, solver-engine 5-module split, bin harness)
+
 ### Community / external
 - [[community-corpus]] — 12k messages decoded, 123 boards
 - [[mcgavin-engine]] — 295M nps target
@@ -133,7 +137,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 
 ## Sessions
 
-- [[sessions/vol-01]] through [[sessions/vol-22]] — per-volume journals
+- [[sessions/vol-01]] through [[sessions/vol-25]] — per-volume journals
 - [[sessions/night-05]], [[sessions/night-07]] — preprint + closeout distillations
 - `sessions/archive/raw/` — original RESEARCH_NOTES_*.md, NIGHT*.md, V15_BLACKWOOD_SPEC.md
 

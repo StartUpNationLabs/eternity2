@@ -113,6 +113,55 @@ Superseded by the gap-as-dead-end-detector finding (vol-21 concrete signal, this
 
 ---
 
+## Code quality / refactoring
+
+Audit performed vol-25 (2026-05-13). Durable detail: see [[code-debt]] for the full restructure plan + line counts. Items listed in priority order.
+
+### `extract-eternity2-time-crate` — status: `unbuilt` — since: vol-25
+Move identical `Clock` impls (solver-engine, solver-naive) to a single `eternity2-time` crate. 1 h. Trivial dedup. Should ship first because every other extraction can land on it later.
+
+### `extract-eternity2-export-crate` — status: `unbuilt` — since: vol-25
+Consolidate **5 duplicated utilities** into one crate: board scoring (`bench-audit::score_board` + `benchmark::report::score_matched_edges`), Bucas URL encoding (currently buried unexported in `benchmark::report`), `DumpedBoard` JSON serialization, ASCII board rendering, report writing. 4–6 h. Highest-leverage extraction — unblocks most other refactors and shrinks every bin.
+
+### `split-solver-engine-lib-into-5-modules` — status: `unbuilt` — since: vol-25
+`crates/solver-engine/src/lib.rs` is 5 011 lines. Verified 5-way split:
+- `paths.rs` (~330 lines, pure geometry, zero backlinks) — ship first
+- `config.rs` (~200 lines, enums + struct)
+- `schedule_builders.rs` (~410 lines, pure factories)
+- `profiles.rs` (~350 lines, EngineSolver + 40 factories)
+- `lib.rs` keeps SearchState + recurse + propagate_ac3 (~3 200 lines, untouched)
+
+Internal module split only — multi-crate split rejected as overkill until a downstream consumer wants schedules/paths independently. 4 h total, each step independently shippable.
+
+### `extract-eternity2-puzzle-io-crate` — status: `unbuilt` — since: vol-25
+Hint loading (`benchmark::loader::load_puzzle_with_hints`) and CSV parsing belong with the puzzle types, not in the benchmark crate. Currently invisible to solvers from naming. 3–4 h. Blocked on `extract-eternity2-export-crate`.
+
+### `consolidate-bin-harness` — status: `unbuilt` — since: vol-25
+76 bins across `bench-audit` and `benchmark` share ~250 lines of boilerplate each (CLI parsing, puzzle load, ProgressSink, solver instantiation, report writing). Extract into `bin-common` (or `benchmark::bin_harness`). ~7K lines of copy-paste eliminated. 8–10 h. Blocked on `extract-eternity2-export-crate`.
+
+---
+
+## Engine perf — remaining wins
+
+Vol-25 perf push shipped 7 fixes ([[engine-perf-hot-paths]]): joe +22.4%, BLACKWOOD_RAW +27%. These remaining items profiled but not yet shipped.
+
+### `incremental-ac3-count-maintenance` — status: `partial` — since: vol-25
+Vol-25 shipped dirty-list scoping (fix-4, commit `fd5b615`) which captured only ~3% of the headline ~22% rebuild cost — because piece-uniqueness drops mark nearly every unplaced cell dirty. Full incremental version decrements `count` at every drop site and increments at every restore. EV: ~10–15% on joe. Effort: 1–2 h with real bug risk. The dirty-list infrastructure already in place can serve as safety net for any missed mutation site.
+
+### `restore-or-simd` — status: `unbuilt` — since: vol-25
+`restore()` (lib.rs:3408–3422) ORs `wpp = 16` u64s back into a domain. `chunks_exact(2)` over u64 pairs might trigger NEON autovectorization on apple-m1. EV: 2–4%. Effort: 30 min.
+
+### `profile-bin-use-null-sink` — status: `unbuilt` — since: vol-25
+`crates/bench-audit/src/bin/profile_{joe,blackwood_raw}.rs` use `BufferSink`, accumulating 60 s of events into a Vec. `drop_in_place<BufferSink>` was 2.98% of pre-fix BLACKWOOD_RAW samples. Swap to `NullSink` for cleaner attribution in future profiling work. Profile-tooling-only; not a production win. Effort: 5 min.
+
+### `precompute-cell-nb-info` — status: `unbuilt` — since: vol-25
+`nb_info: [(Option<Position>, usize, usize); 4]` is reconstructed at every queue-pop inside `propagate_ac3` (lib.rs:3205–3210). Could be precomputed at SearchState::new. Reconstruction itself isn't a flamegraph hotspot (the time is inside the inner loop reading nb_info, not building it), so this might not move the needle. EV: 1–2%, speculative. Effort: 1 h.
+
+### `vault-validation-of-perf-wins` — status: `unbuilt` — since: vol-25
+The vol-25 fixes were validated against raw nps on synthetic 60 s probes. The meaningful metric for the research project is matched-edge score on real solves (multi-thread joe_depth150_bp_par for 5–30 min on canonical E2). Per the [[../../../../.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/project_e2_vol14_bp_null|Vol-14 BP-as-value-order REVERSAL]] memory, raw-nps wins don't always translate to score wins (CP-partial metric mid-pipeline can be misleading). Worth a one-shot validation before declaring victory. Effort: 30 min runtime + 5 min analysis.
+
+---
+
 ## Concepts catalog (status pages)
 
 See `concepts/` for the durable knowledge:

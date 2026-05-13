@@ -86,6 +86,7 @@ The memory layer is the **persistent agent memory** (loaded in every conversatio
 | Memory | Vault |
 |---|---|
 | `project_todo_engine_bitset` | [[bitset-domain-rep]] (DONE marker) |
+| `project_e2_vol25_perf_push` | [[engine-perf-hot-paths]], [[code-debt]], [[sessions/vol-25]] |
 
 ## reference/
 
