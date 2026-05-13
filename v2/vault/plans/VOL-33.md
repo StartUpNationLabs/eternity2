@@ -55,24 +55,30 @@ NEW vol-32 items pickable for vol-33:
 
 ### T1 — Unsat-clause-propagator Rust integration
 
-Port the vol-32 Python prototype to Rust:
-1. **Build phase**: parse `e2_info.c` (130k literals) + all CNF files
-   under `output/capiman_e2/` (~70M clauses) once at engine init.
-   Build a CSR `row_starts[L+1] + col[K]` table indexed by literal.
-   Estimated 430 MB memory; if too high, start with just round_1
-   (53M clauses, ~210 MB).
-2. **Engine integration**: in `place_and_propagate` (after gacolor +
-   AC-3), compute the placed literal X, iterate
+**Vol-32 bootstrap shipped** the loader + bench bins:
+- `target/release/unsat-clauses-load --info ... --cnf ... --out forbidden.bin`
+  parses 67.4M pairs from 68 files in <60s, writes 540 MB CSR binary.
+- `target/release/unsat-clauses-bench forbidden_all.bin` measures
+  lookup: **238 ns per placement** (4.2M placements/sec).
+- `output/vol-33/forbidden_all.bin` (540 MB) and `forbidden_round1.bin`
+  (425 MB) ready for vol-33 engine consumption.
+- At ~500K nodes per canonical run, overhead ≈ 120 ms — negligible.
+
+Vol-33 remaining work:
+1. **Engine integration**: in `place_and_propagate` (after gacolor +
+   AC-3), compute the placed literal X via the encoder, iterate
    `forbidden_partners[X]`, decode each Y to `(piece, field, rot)`,
    and call `remove_from_domain` on that cell's row matching that
    piece+rotation.
+2. **Lazy load**: OnceCell-protected; only load when a profile that
+   uses it is instantiated.
 3. **Profile registration**: new `joe_depth150_bp_unsat` profile in
-   `EngineConfig`. Falls back gracefully if data missing.
+   `EngineConfig`. Falls back to no-op if `forbidden.bin` missing.
 4. **Gate**: depth lift ≥ +5 on canonical 5-clue at 60s; clear
    measurement that adds to gacolor + AC-3 rather than subsumed by it.
 
-Cost: 1-2 days build + measurement. Likely largest pruning gain
-since gacolor + AC-3.
+Cost: 1 day (loader + bench already done). Likely largest pruning
+gain since gacolor + AC-3.
 
 ### T2 — Joe iteration-budgeted prune
 
