@@ -154,6 +154,7 @@ pub fn solve_naive(input: JsValue) -> Result<JsValue, JsValue> {
         preferred_pieces: Vec::new(),
         edge_bp_marginals: None,
         batch_hint_application: false,
+        objective: None,
     };
 
     let mut sink = BufferSink::new();

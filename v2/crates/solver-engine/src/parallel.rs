@@ -17,13 +17,13 @@
 // which writes them to the caller-supplied sink. The sink stays
 // single-threaded; workers stay event-pure relative to each other.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use crossbeam_channel::Sender;
 use eternity2_core::{Board, Puzzle};
 use eternity2_events::{EventBody, EventSink, FinalStats, SolverEvent};
-use eternity2_solver_trait::{SolveMode, SolveOpts, SolveOutcome};
+use eternity2_solver_trait::{Objective, SolveMode, SolveOpts, SolveOutcome};
 
 use crate::{EngineSolver, Parallelism, PropagationOutcome, RecurseResult, SearchState};
 
@@ -92,6 +92,15 @@ pub fn solve_parallel(
     let solutions_found = Arc::new(AtomicU64::new(0));
     let (tx, rx) = crossbeam_channel::unbounded::<WorkerMsg>();
     let stop_on_first = matches!(opts.mode, SolveMode::FirstSolution);
+    // Vol-24 — shared best-score cutoff for cross-worker BnB prune.
+    // Only allocated when MaxScore is set; workers without it use
+    // their local `best_score` (`None` arm of `attach_shared_best_score`).
+    let shared_best_score: Option<Arc<AtomicU32>> =
+        if matches!(opts.objective, Some(Objective::MaxScore)) {
+            Some(Arc::new(AtomicU32::new(0)))
+        } else {
+            None
+        };
 
     let mut all: Vec<WorkerOutcome> = Vec::with_capacity(units.len());
 
@@ -120,11 +129,12 @@ pub fn solve_parallel(
                     let cancel = cancel_for_workers.clone();
                     let solutions_found = solutions_found_for_workers.clone();
                     let outcomes = &outcomes;
+                    let shared_bs = shared_best_score.clone();
                     scope.spawn(move |_| {
                         let outcome = run_unit(
                             puzzle, solver, opts, &unit,
                             target_depth, cancel.clone(), solutions_found.clone(),
-                            stop_on_first, &tx,
+                            stop_on_first, &tx, shared_bs,
                         );
                         let found = matches!(outcome.result, RecurseResult::Found);
                         outcomes.lock().unwrap().push(outcome);
@@ -187,6 +197,12 @@ pub fn solve_parallel(
     let mut all_solutions: Vec<Board> = Vec::new();
     let mut any_timeout = false;
     let mut any_cancel = false;
+    // Vol-24 — cross-worker max-by-score aggregation. The shared atom
+    // already bounded the per-worker prune, but each worker only saved
+    // its OWN best leaf; we still have to pick the winner here.
+    let mut best_score: u32 = 0;
+    let mut best_score_partial: Option<Board> = None;
+    let max_score_objective = matches!(opts.objective, Some(Objective::MaxScore));
     for o in all.drain(..) {
         final_stats.nodes += o.stats.nodes;
         final_stats.backtracks += o.stats.backtracks;
@@ -199,6 +215,10 @@ pub fn solve_parallel(
         if o.best_depth > best_depth {
             best_depth = o.best_depth;
             best_partial = o.best_partial.clone();
+        }
+        if max_score_objective && o.best_score > best_score {
+            best_score = o.best_score;
+            best_score_partial = o.best_score_partial.clone();
         }
         match o.result {
             RecurseResult::Found => {
@@ -213,6 +233,24 @@ pub fn solve_parallel(
         }
     }
     final_stats.time_ms = (now_micros().saturating_sub(wall_started_us)) / 1000;
+
+    // Vol-24 — under MaxScore, the best leaf observed across workers is
+    // the canonical answer; surface it as Solved before checking
+    // FirstSolution / TimedOut / Cancelled paths. Falls through if no
+    // worker reached a leaf.
+    if max_score_objective {
+        if let Some(board) = best_score_partial.clone() {
+            sink.emit(SolverEvent {
+                schema_version: 1, solver_run_id: opts.solver_run_id,
+                node_id: 0, depth: 0, timestamp_us: final_stats.time_ms * 1000,
+                body: EventBody::Solved { board: board.clone(), final_stats },
+            });
+            return SolveOutcome::Solved(board);
+        }
+        // No leaf reached. Fall through to the depth-based paths below
+        // (TimedOut/Cancelled/Exhausted) so the caller still gets a
+        // usable partial.
+    }
 
     // Decide outcome event + return.
     if let Some(board) = solved_board {
@@ -273,6 +311,12 @@ struct WorkerOutcome {
     best_partial: Option<Board>,
     best_depth: u32,
     stats: FinalStats,
+    /// Vol-24 — highest matched-edge count this worker saw on a leaf.
+    /// 0 when no leaf was reached or MaxScore is off.
+    best_score: u32,
+    /// Vol-24 — board snapshot at the moment the worker observed its
+    /// `best_score`. None when no leaf reached.
+    best_score_partial: Option<Board>,
 }
 
 // Replay the prefix and run recurse() from depth=prefix.len().
@@ -286,8 +330,12 @@ fn run_unit(
     solutions_found: Arc<AtomicU64>,
     stop_on_first: bool,
     tx: &Sender<WorkerMsg>,
+    shared_best_score: Option<Arc<AtomicU32>>,
 ) -> WorkerOutcome {
     let mut state = SearchState::new(puzzle, solver, opts);
+    if let Some(atom) = shared_best_score {
+        state.attach_shared_best_score(atom);
+    }
     // Replay placements. Each placement uses place_and_propagate against
     // a sink that channels events back to the main thread.
     let mut sink = ChannelSink {
@@ -307,6 +355,8 @@ fn run_unit(
             best_partial: None,
             best_depth: 0,
             stats: state.stats,
+            best_score: 0,
+            best_score_partial: None,
         };
     }
 
@@ -319,6 +369,8 @@ fn run_unit(
                 best_partial: None,
                 best_depth: depth as u32,
                 stats: state.stats,
+                best_score: 0,
+                best_score_partial: None,
             };
         }
         // Clear domain bits at `pos` the way the main recursion does, so
@@ -334,6 +386,8 @@ fn run_unit(
                     best_partial: None,
                     best_depth: depth as u32,
                     stats: state.stats,
+                    best_score: 0,
+                    best_score_partial: None,
                 };
             }
         }
@@ -350,6 +404,8 @@ fn run_unit(
         best_partial: state.best_partial.clone(),
         best_depth: state.best_depth,
         stats: state.stats,
+        best_score: state.best_score,
+        best_score_partial: state.best_score_partial.clone(),
     }
 }
 

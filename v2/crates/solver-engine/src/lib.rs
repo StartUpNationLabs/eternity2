@@ -25,7 +25,7 @@ use eternity2_propagators::{
     PlacementInfo, PropagatorContext, PropagatorResult,
 };
 use eternity2_solver_trait::{
-    HeuristicProfile, SolveMode, SolveOpts, SolveOutcome, Solver, SolverId,
+    HeuristicProfile, Objective, SolveMode, SolveOpts, SolveOutcome, Solver, SolverId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -320,6 +320,21 @@ pub enum PathSkeleton {
     /// hypothesis that maximum-constraint-first ordering improves
     /// search beyond the basic rectangle path.
     HintRectangleLayered,
+    /// Vol-23 user-proposed: X-shape skeleton through the 5 canonical
+    /// hints. Pre-commits cells along two 3-cell-wide diagonals that
+    /// cross at the centre hint, so each subsequent diagonal cell has
+    /// two already-placed neighbours (early constraint propagation).
+    /// Order:
+    ///   1. TL hint, then the 3-cell-wide diagonal band TL → centre.
+    ///   2. Centre hint, then continue the same diagonal centre → BR.
+    ///   3. TR hint, then the 3-cell-wide anti-diagonal TR → centre.
+    ///   4. Centre → BL hint along the anti-diagonal.
+    ///   5. Remaining cells: outward from centre (Chebyshev distance
+    ///      ascending), within-tie row-major. Covers all `cell_count`
+    ///      cells. Requires `opts.hints.len() >= 5`.
+    /// Tests the hypothesis that two crossing constraint bands beat
+    /// the rectangle's perimeter band on canonical E2.
+    XSkeleton,
 }
 
 impl EngineConfig {
@@ -676,6 +691,24 @@ impl EngineConfig {
         ..Self::BORDER_FIRST_LCV
     };
 
+    /// Vol-23 user-proposed: joe_depth150_bp_par + X-skeleton path
+    /// (two 3-cell-wide diagonals through the 5 canonical hints,
+    /// then Chebyshev-outward fill from centre). Requires
+    /// `opts.hints.len() >= 5`.
+    pub const JOE_DEPTH150_BP_X_PAR: Self = Self {
+        value_order: ValueOrder::EdgeBpMarginals,
+        parallelism: Parallelism::RootSplit { split_depth: 0 },
+        path_skeleton: Some(PathSkeleton::XSkeleton),
+        propagators: PropagatorConfig {
+            gacolor: true,
+            ac3: true,
+            multiset_equality: true,
+            depth_threshold: Some(150),
+            ..Self::BORDER_FIRST_LCV.propagators
+        },
+        ..Self::BORDER_FIRST_LCV
+    };
+
     pub const JOE_DEPTH150_BP_REC_LAYERED: Self = Self {
         value_order: ValueOrder::EdgeBpMarginals,
         path_skeleton: Some(PathSkeleton::HintRectangleLayered),
@@ -949,6 +982,12 @@ impl EngineSolver {
     pub fn joe_depth150_bp_rec_layered_par() -> Self {
         Self::new(EngineConfig::JOE_DEPTH150_BP_REC_LAYERED_PAR,
                   "engine", "joe_depth150_bp_rec_layered_par")
+    }
+
+    #[must_use]
+    pub fn joe_depth150_bp_x_par() -> Self {
+        Self::new(EngineConfig::JOE_DEPTH150_BP_X_PAR,
+                  "engine", "joe_depth150_bp_x_par")
     }
 
     #[must_use]
@@ -1296,6 +1335,133 @@ pub fn build_hint_rectangle_layered_path(
     for y in 0..h { let p = pos_of(0, y); if seen.insert(p) { path.push(p); } }
 
     debug_assert_eq!(path.len(), n, "layered path should cover all cells, got {}/{}", path.len(), n);
+    path
+}
+
+/// Vol-23 — build the X-skeleton path. See `PathSkeleton::XSkeleton`
+/// for the order specification. Returns an empty Vec if fewer than 5
+/// hints are supplied (caller falls back to default variable-order).
+///
+/// 3-cell-wide diagonals: for each main-diagonal cell `(x, y)`, also
+/// emit `(x, y-1)` and `(x, y+1)` (when in-bounds) so each main cell
+/// gets two already-placed neighbours from the previous step plus the
+/// flanking cells from this step. Same idea for the anti-diagonal,
+/// flanking by `(x-1, y)` and `(x+1, y)` (horizontal flanks make more
+/// geometric sense for the anti-diagonal — the band stays a 3-wide
+/// strip orthogonal to the diagonal direction).
+pub fn build_x_skeleton_path(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+) -> Vec<Position> {
+    if hints.hints.len() < 5 { return Vec::new(); }
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let n = puzzle.cell_count() as usize;
+    let xy = |p: Position| (p % w, p / w);
+    let pos_of = |x: u32, y: u32| -> Position { y * w + x };
+
+    // Classify the 5 hints into TL/TR/BL/BR/centre by quadrant relative
+    // to the board centre. The "centre" hint is the one closest to the
+    // board centre by Chebyshev distance.
+    let cx_i = (w as i32 - 1) / 2;
+    let cy_i = (h as i32 - 1) / 2;
+    let mut entries: Vec<(u32, u32, i32)> = hints.hints.iter().map(|hh| {
+        let (x, y) = xy(hh.position);
+        let d = std::cmp::max((x as i32 - cx_i).abs(), (y as i32 - cy_i).abs());
+        (x, y, d)
+    }).collect();
+    entries.sort_by_key(|e| e.2);
+    let (ccx, ccy, _) = entries[0];
+    let outer: Vec<(u32, u32)> = entries.iter().skip(1).map(|e| (e.0, e.1)).collect();
+    let mut tl: Option<(u32, u32)> = None;
+    let mut tr: Option<(u32, u32)> = None;
+    let mut bl: Option<(u32, u32)> = None;
+    let mut br: Option<(u32, u32)> = None;
+    for &(x, y) in &outer {
+        let is_left = (x as i32) <= cx_i;
+        let is_top = (y as i32) <= cy_i;
+        let slot = match (is_top, is_left) {
+            (true, true)   => &mut tl,
+            (true, false)  => &mut tr,
+            (false, false) => &mut br,
+            (false, true)  => &mut bl,
+        };
+        if slot.is_none() { *slot = Some((x, y)); }
+    }
+    let (Some(tlp), Some(trp), Some(blp), Some(brp)) = (tl, tr, bl, br)
+        else { return Vec::new(); };
+
+    let mut path: Vec<Position> = Vec::with_capacity(n);
+    let mut seen: std::collections::HashSet<Position> = std::collections::HashSet::new();
+    let push = |x: i32, y: i32, path: &mut Vec<Position>, seen: &mut std::collections::HashSet<Position>| {
+        if x < 0 || y < 0 || (x as u32) >= w || (y as u32) >= h { return; }
+        let p = pos_of(x as u32, y as u32);
+        if seen.insert(p) { path.push(p); }
+    };
+
+    // Walk a 3-cell-wide diagonal band from `(x0, y0)` to `(x1, y1)`,
+    // stepping by `(sx, sy)`. At each step emit the main cell first,
+    // then the two vertical flanks `(x, y-1)` and `(x, y+1)`.
+    let walk_main_diag = |x0: i32, y0: i32, x1: i32, y1: i32,
+                          path: &mut Vec<Position>,
+                          seen: &mut std::collections::HashSet<Position>| {
+        let dx = (x1 - x0).signum();
+        let dy = (y1 - y0).signum();
+        let steps = std::cmp::max((x1 - x0).abs(), (y1 - y0).abs());
+        for k in 0..=steps {
+            let x = x0 + k * dx;
+            let y = y0 + k * dy;
+            push(x, y, path, seen);
+            push(x, y - 1, path, seen);
+            push(x, y + 1, path, seen);
+        }
+    };
+    // Anti-diagonal: flank horizontally instead of vertically.
+    let walk_anti_diag = |x0: i32, y0: i32, x1: i32, y1: i32,
+                          path: &mut Vec<Position>,
+                          seen: &mut std::collections::HashSet<Position>| {
+        let dx = (x1 - x0).signum();
+        let dy = (y1 - y0).signum();
+        let steps = std::cmp::max((x1 - x0).abs(), (y1 - y0).abs());
+        for k in 0..=steps {
+            let x = x0 + k * dx;
+            let y = y0 + k * dy;
+            push(x, y, path, seen);
+            push(x - 1, y, path, seen);
+            push(x + 1, y, path, seen);
+        }
+    };
+
+    // 1. TL → centre band (main diagonal direction).
+    walk_main_diag(tlp.0 as i32, tlp.1 as i32, ccx as i32, ccy as i32,
+                   &mut path, &mut seen);
+    // 2. Centre → BR (continues the same diagonal).
+    walk_main_diag(ccx as i32, ccy as i32, brp.0 as i32, brp.1 as i32,
+                   &mut path, &mut seen);
+    // 3. TR → centre (anti-diagonal direction).
+    walk_anti_diag(trp.0 as i32, trp.1 as i32, ccx as i32, ccy as i32,
+                   &mut path, &mut seen);
+    // 4. Centre → BL.
+    walk_anti_diag(ccx as i32, ccy as i32, blp.0 as i32, blp.1 as i32,
+                   &mut path, &mut seen);
+
+    // 5. Fill remaining cells outward from centre, Chebyshev ascending,
+    //    within-tie row-major.
+    let mut rest: Vec<(Position, i32, Position)> = Vec::new();
+    for y in 0..h {
+        for x in 0..w {
+            let p = pos_of(x, y);
+            if seen.contains(&p) { continue; }
+            let d = std::cmp::max((x as i32 - ccx as i32).abs(),
+                                  (y as i32 - ccy as i32).abs());
+            rest.push((p, d, p));
+        }
+    }
+    rest.sort_by(|a, b| a.1.cmp(&b.1).then(a.2.cmp(&b.2)));
+    for (p, _, _) in &rest {
+        if seen.insert(*p) { path.push(*p); }
+    }
+    debug_assert_eq!(path.len(), n, "X-skeleton path should cover all cells, got {}/{}", path.len(), n);
     path
 }
 
@@ -2058,6 +2224,33 @@ pub(crate) struct SearchState<'a> {
     /// returns (LIFO discipline). Replaces ~42% of pre-vol-16 CPU
     /// spent in System::alloc/dealloc inside the `prune` closure.
     pub(crate) undo_words_arena: Vec<u64>,
+    /// Vol-24 — total internal grid edges = (w-1)*h + w*(h-1). Cached
+    /// because the bound prune queries it on every node.
+    pub(crate) total_internal_edges: u32,
+    /// Vol-24 — running count of internal edges with BOTH endpoints
+    /// placed. Maintained incrementally: each `place_and_propagate_opts`
+    /// adds one per placed neighbour; `undo_place` subtracts the same
+    /// count (LIFO discipline guarantees correctness without snapshots).
+    pub(crate) decided_edges: u32,
+    /// Vol-24 — running count of internal edges with both endpoints
+    /// placed AND matching colors (excluding BORDER 0). The MaxScore
+    /// objective. Same incremental discipline as `decided_edges`.
+    pub(crate) matched_count: u32,
+    /// Vol-24 — best matched-edge count seen across the whole search.
+    /// Only meaningful when `opts.objective == Some(Objective::MaxScore)`.
+    pub(crate) best_score: u32,
+    /// Vol-24 — board snapshot at the moment we observed `best_score`.
+    /// Cleared at search start; set the first time a candidate beats
+    /// the running best.
+    pub(crate) best_score_partial: Option<Board>,
+    /// Vol-24 — shared best-score atom across all RootSplit workers.
+    /// Each worker reads it into the prune test (`max(local, shared)`)
+    /// and CAS-bumps it whenever its leaf beats the running shared
+    /// best. Single-threaded runs use `None` and rely on `best_score`
+    /// only. The shared atom is the only mechanism that makes parallel
+    /// branch-and-bound monotone-optimal under RootSplit; without it,
+    /// workers can return strictly suboptimal local bests.
+    pub(crate) shared_best_score: Option<Arc<std::sync::atomic::AtomicU32>>,
 }
 
 impl<'a> SearchState<'a> {
@@ -2178,6 +2371,8 @@ impl<'a> SearchState<'a> {
                     build_hint_rectangle_path(puzzle, &opts.hints),
                 Some(PathSkeleton::HintRectangleLayered) =>
                     build_hint_rectangle_layered_path(puzzle, &opts.hints),
+                Some(PathSkeleton::XSkeleton) =>
+                    build_x_skeleton_path(puzzle, &opts.hints),
                 None => Vec::new(),
             };
             let n_cells = puzzle.cell_count();
@@ -2370,7 +2565,25 @@ impl<'a> SearchState<'a> {
             undo_words_arena: Vec::with_capacity(
                 (n_pos as usize) * (n_pos as usize + 4) * words_per_pos,
             ),
+            total_internal_edges: (puzzle.width - 1) * puzzle.height
+                + puzzle.width * (puzzle.height - 1),
+            decided_edges: 0,
+            matched_count: 0,
+            best_score: 0,
+            best_score_partial: None,
+            shared_best_score: None,
         }
+    }
+
+    /// Vol-24 — inject the cross-worker shared best-score atom. Called
+    /// by `parallel::run_unit` once per worker; single-thread runs skip
+    /// this. The atom is read on every node and CAS-bumped on every
+    /// leaf in MaxScore mode.
+    pub(crate) fn attach_shared_best_score(
+        &mut self,
+        atom: Arc<std::sync::atomic::AtomicU32>,
+    ) {
+        self.shared_best_score = Some(atom);
     }
 
     fn elapsed_us(&self) -> u64 { self.started.elapsed_us() }
@@ -2574,6 +2787,33 @@ impl<'a> SearchState<'a> {
         }
         // Vol-15 — increment Blackwood heuristic-count.
         self.placed_heuristic_count += self.count_heuristic_in_row(&row.edges);
+        // Vol-24 — incremental score tracking for the MaxScore objective.
+        // For each of the 4 sides, if the neighbour cell is also placed,
+        // this edge has just become "decided". It counts as a match iff
+        // the touching colors agree AND aren't BORDER (color 0). Walked
+        // unconditionally — cost ~16 ALU ops per placement, dwarfed by
+        // propagation; cheaper than gating on `opts.objective`.
+        {
+            let (px, py) = self.puzzle.xy(pos);
+            let pw = self.puzzle.width;
+            let ph = self.puzzle.height;
+            let nbs: [(Option<Position>, usize, usize); 4] = [
+                (if py > 0 { Some((py - 1) * pw + px) } else { None }, 0, 2),
+                (if px + 1 < pw { Some(py * pw + (px + 1)) } else { None }, 1, 3),
+                (if py + 1 < ph { Some((py + 1) * pw + px) } else { None }, 2, 0),
+                (if px > 0 { Some(py * pw + (px - 1)) } else { None }, 3, 1),
+            ];
+            for (nb_opt, our_side, their_side) in nbs {
+                let Some(nb) = nb_opt else { continue; };
+                let Some(nb_row_id) = self.placed[nb as usize] else { continue; };
+                self.decided_edges += 1;
+                let nb_edges = self.rows[nb_row_id as usize].edges;
+                let our = row.edges[our_side];
+                if our != 0 && our == nb_edges[their_side] {
+                    self.matched_count += 1;
+                }
+            }
+        }
         // Vol-16 Cat-4b: pre-allocate so the `undo.push` chain doesn't
         // hit `RawVecInner::grow_amortized`. Worst case is one entry
         // per cell (piece-uniqueness over all unplaced positions) +
@@ -3363,6 +3603,19 @@ impl<'a> SearchState<'a> {
                     final_stats: self.stats,
                     solutions_found: solutions.len() as u64,
                 });
+                // Vol-24 — under MaxScore, surface the highest-score
+                // FULL completion seen as `Solved`. If no completion was
+                // reached (heavy pruning), fall back to Exhausted; the
+                // caller can inspect `best_partial` via TimedOut paths.
+                if matches!(self.opts.objective, Some(Objective::MaxScore)) {
+                    if let Some(board) = self.best_score_partial.clone() {
+                        self.emit(sink, 0, EventBody::Solved {
+                            board: board.clone(), final_stats: self.stats,
+                        });
+                        return SolveOutcome::Solved(board);
+                    }
+                    return SolveOutcome::Exhausted;
+                }
                 if matches!(self.opts.mode, SolveMode::FirstSolution) || solutions.is_empty() {
                     SolveOutcome::Exhausted
                 } else {
@@ -3370,7 +3623,17 @@ impl<'a> SearchState<'a> {
                 }
             }
             RecurseResult::TimedOut => {
-                let best = self.best_partial.clone().unwrap_or_else(|| self.board_from_state());
+                // Vol-24 — under MaxScore, prefer the highest-score full
+                // completion seen over the depth-best partial. Cold-start
+                // round-2 use case: a 412 completion is better than a
+                // depth-297 partial that ALNS would have to repair.
+                let best = if matches!(self.opts.objective, Some(Objective::MaxScore))
+                    && self.best_score_partial.is_some()
+                {
+                    self.best_score_partial.clone().unwrap()
+                } else {
+                    self.best_partial.clone().unwrap_or_else(|| self.board_from_state())
+                };
                 let best_depth = self.best_depth;
                 self.emit(sink, 0, EventBody::TimedOut {
                     final_stats: self.stats,
@@ -3380,7 +3643,14 @@ impl<'a> SearchState<'a> {
                 SolveOutcome::TimedOut { best_partial: best, best_depth }
             }
             RecurseResult::Cancelled => {
-                let best = self.best_partial.clone().unwrap_or_else(|| self.board_from_state());
+                // Vol-24 — same surfacing rule as TimedOut.
+                let best = if matches!(self.opts.objective, Some(Objective::MaxScore))
+                    && self.best_score_partial.is_some()
+                {
+                    self.best_score_partial.clone().unwrap()
+                } else {
+                    self.best_partial.clone().unwrap_or_else(|| self.board_from_state())
+                };
                 let best_depth = self.best_depth;
                 self.emit(sink, 0, EventBody::Cancelled {
                     final_stats: self.stats,
@@ -3472,6 +3742,33 @@ impl<'a> SearchState<'a> {
             self.stats.max_depth_seen = depth;
         }
 
+        // Vol-24 — MaxScore objective: branch-and-bound on the matched-
+        // edge count. `decided_edges` tracks edges with both ends placed;
+        // every other internal edge is bounded by 1 match. If even the
+        // optimistic completion can't beat the running best, prune the
+        // whole subtree. `<=` (not `<`) so we never re-explore a subtree
+        // that can only tie. O(1) test; safe to run unconditionally
+        // when objective is set (`matches!` is a cheap discriminant cmp).
+        //
+        // Under RootSplit parallelism, `shared_best_score` (Arc<AtomicU32>)
+        // makes the cutoff cross-worker: every worker reads the global
+        // running best on each node and CAS-bumps it on each leaf. This
+        // is the only way parallel BnB is monotone-optimal — without it,
+        // each worker's `best_score` is local and workers can return
+        // strictly suboptimal boards.
+        if matches!(self.opts.objective, Some(Objective::MaxScore)) {
+            let global = self.shared_best_score.as_ref()
+                .map(|a| a.load(std::sync::atomic::Ordering::Relaxed))
+                .unwrap_or(0);
+            let cutoff = self.best_score.max(global);
+            if self.matched_count + (self.total_internal_edges - self.decided_edges)
+                <= cutoff
+            {
+                self.stats.backtracks += 1;
+                return RecurseResult::Exhausted;
+            }
+        }
+
         // Vol-15 — Blackwood schedule prune: BEFORE picking a position,
         // verify the running heuristic-color count is on-schedule for
         // the total number of placed cells (= depth + hint count).
@@ -3503,6 +3800,29 @@ impl<'a> SearchState<'a> {
         let pos = match self.select_position() {
             Some(p) => p,
             None => {
+                // Vol-24 — under MaxScore, a "complete" placement (no
+                // more positions to fill) is just a candidate: capture
+                // its score if it beats the running best, then return
+                // Exhausted so the parent loop keeps trying alternatives
+                // at the deepest still-meaningful node. `Found` would
+                // unwind under FirstSolution mode, but MaxScore wants
+                // to enumerate.
+                if matches!(self.opts.objective, Some(Objective::MaxScore)) {
+                    if self.matched_count > self.best_score {
+                        self.best_score = self.matched_count;
+                        self.best_score_partial = Some(self.board_from_state());
+                    }
+                    // Bump the shared cutoff so sibling workers prune
+                    // against the new high-water mark immediately. Use
+                    // fetch_max-via-CAS-loop (no fetch_max on AtomicU32
+                    // in older toolchains, but stable since 1.45; use
+                    // fetch_max directly).
+                    if let Some(atom) = self.shared_best_score.as_ref() {
+                        atom.fetch_max(self.matched_count,
+                            std::sync::atomic::Ordering::Relaxed);
+                    }
+                    return RecurseResult::Exhausted;
+                }
                 solutions.push(self.board_from_state());
                 return RecurseResult::Found;
             }
@@ -3830,6 +4150,33 @@ impl<'a> SearchState<'a> {
                 gc.apply_unplace(&row.edges, &n_info);
             }
         }
+        // Vol-24 — symmetric decrement of decided_edges / matched_count.
+        // MUST run before `placed[pos] = None` so the neighbour scan can
+        // still see this cell's placement (won't matter; we only check
+        // the neighbour) — actually only the NEIGHBOUR's placement state
+        // matters here, so order vs the line below is irrelevant. Kept
+        // before for symmetry with place_and_propagate_opts.
+        {
+            let (px, py) = self.puzzle.xy(pos);
+            let pw = self.puzzle.width;
+            let ph = self.puzzle.height;
+            let nbs: [(Option<Position>, usize, usize); 4] = [
+                (if py > 0 { Some((py - 1) * pw + px) } else { None }, 0, 2),
+                (if px + 1 < pw { Some(py * pw + (px + 1)) } else { None }, 1, 3),
+                (if py + 1 < ph { Some((py + 1) * pw + px) } else { None }, 2, 0),
+                (if px > 0 { Some(py * pw + (px - 1)) } else { None }, 3, 1),
+            ];
+            for (nb_opt, our_side, their_side) in nbs {
+                let Some(nb) = nb_opt else { continue; };
+                let Some(nb_row_id) = self.placed[nb as usize] else { continue; };
+                self.decided_edges = self.decided_edges.saturating_sub(1);
+                let nb_edges = self.rows[nb_row_id as usize].edges;
+                let our = row.edges[our_side];
+                if our != 0 && our == nb_edges[their_side] {
+                    self.matched_count = self.matched_count.saturating_sub(1);
+                }
+            }
+        }
         self.placed[pos as usize] = None;
         let piece_idx = usize::from(row.piece_id);
         self.used[piece_idx] = false;
@@ -3999,6 +4346,53 @@ mod tests {
         let mut s = EngineSolver::border_first_lcv();
         let mut sink = eternity2_events::BufferSink::new();
         assert!(matches!(s.solve(&puzzle, &SolveOpts::default(), &mut sink), SolveOutcome::Solved(_)));
+    }
+
+    /// Vol-24 — MaxScore must still find the unique perfect solution
+    /// on a generator board where every internal edge matches by
+    /// construction. Also acts as a smoke test that incremental
+    /// `matched_count` / `decided_edges` accounting + the upper-bound
+    /// prune don't break correctness.
+    #[test]
+    fn max_score_solves_generator_5x5() {
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig { size: 5, interior_colors: 5, seed: 11 }).unwrap();
+        let mut s = EngineSolver::border_first_lcv();
+        let mut sink = eternity2_events::BufferSink::new();
+        let mut opts = SolveOpts::default();
+        opts.time_budget_ms = 60_000;
+        opts.objective = Some(Objective::MaxScore);
+        let outcome = s.solve(&puzzle, &opts, &mut sink);
+        let board = match outcome {
+            SolveOutcome::Solved(b) => b,
+            other => panic!("MaxScore got {other:?}, want Solved(_)"),
+        };
+        // Generator puzzles have a perfect solution; the returned
+        // board's score must equal the total internal edge count.
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let total = (w - 1) * h + w * (h - 1);
+        let mut matched = 0u32;
+        for y in 0..h {
+            for x in 0..w {
+                let pos = y * w + x;
+                let Some((pid, rot)) = board.get(pos) else { continue; };
+                let edges = puzzle.piece(pid).unwrap().edges.rotated(rot).as_array();
+                if x + 1 < w {
+                    if let Some((rpid, rrot)) = board.get(y * w + (x + 1)) {
+                        let re = puzzle.piece(rpid).unwrap().edges.rotated(rrot).as_array();
+                        if edges[1] != 0 && edges[1] == re[3] { matched += 1; }
+                    }
+                }
+                if y + 1 < h {
+                    if let Some((bpid, brot)) = board.get((y + 1) * w + x) {
+                        let be = puzzle.piece(bpid).unwrap().edges.rotated(brot).as_array();
+                        if edges[2] != 0 && edges[2] == be[0] { matched += 1; }
+                    }
+                }
+            }
+        }
+        assert_eq!(matched, total, "MaxScore should reach the perfect 5×5 solution");
     }
 
     #[test]
@@ -4227,6 +4621,55 @@ mod tests {
         // First 49 must match the basic rectangle path
         let rect = build_hint_rectangle_path(&puzzle, &hints);
         assert_eq!(&path[..49], &rect[..]);
+    }
+
+    #[test]
+    fn build_x_skeleton_path_covers_all_cells() {
+        use eternity2_generator::{generate, GeneratorConfig};
+        use eternity2_core::{Hint, Hints, Rotation};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        let r = Rotation::from_u8(0).unwrap();
+        let pid = eternity2_core::PieceId::try_from(0u32).unwrap();
+        let canonical = [
+            2 + 2 * 16u32,    // TL
+            13 + 2 * 16u32,   // TR
+            2 + 13 * 16u32,   // BL
+            13 + 13 * 16u32,  // BR
+            7 + 8 * 16u32,    // centre
+        ];
+        let hints = Hints { hints: canonical.iter().map(|&p| Hint {
+            position: p, piece_id: pid, rotation: r,
+        }).collect() };
+        let path = build_x_skeleton_path(&puzzle, &hints);
+        assert_eq!(path.len(), 256, "expected 256 cells, got {}", path.len());
+        let set: std::collections::HashSet<_> = path.iter().collect();
+        assert_eq!(set.len(), 256, "duplicates in path");
+        // First cell must be the TL hint.
+        assert_eq!(path[0], 2 + 2 * 16);
+        // All 5 canonical hint positions must appear within the X-skeleton
+        // prefix. Two 3-wide diagonals of length ~6 across canonical E2
+        // give ~50-60 cells in the prefix; require all hints in first 90.
+        let prefix: std::collections::HashSet<u32> = path[..90].iter().copied().collect();
+        for &hp in &canonical {
+            assert!(prefix.contains(&hp), "hint {hp} not in X-skeleton prefix");
+        }
+    }
+
+    #[test]
+    fn build_x_skeleton_path_too_few_hints() {
+        use eternity2_generator::{generate, GeneratorConfig};
+        let puzzle = generate(GeneratorConfig { size: 16, interior_colors: 22, seed: 1 }).unwrap();
+        for n in 0..=4 {
+            let hints = eternity2_core::Hints {
+                hints: (0..n).map(|i| eternity2_core::Hint {
+                    position: i,
+                    piece_id: eternity2_core::PieceId::try_from(0u32).unwrap(),
+                    rotation: eternity2_core::Rotation::from_u8(0).unwrap(),
+                }).collect()
+            };
+            assert!(build_x_skeleton_path(&puzzle, &hints).is_empty(),
+                "expected empty with {} hints", n);
+        }
     }
 
     #[test]

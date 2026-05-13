@@ -38,6 +38,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  18 |         **457** |       — | [[oracle-cycle-swap]] + hot-PT T=30 ([[basin-457-pt]])            |                               |
 |  22 |             457 |       — | [[basin-escape-recipe]] finds [[basin-440-469                     | 469-ceiling basin]]           |
 |  23 |             457 |       — | [[prune-restart]] shipped; cold-start route +266 CP-depth lift but ALNS-fill only 424 (< 451 vanilla) |                               |
+|  24 |             457 |       — | [[score-optimizing-cp]] shipped — MaxScore CP-fill 412→419 vs vol-23 round-2 partial; cold-chain 413 at 40% budget |                               |
 
 
 ## Concepts — by category
@@ -56,6 +57,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[blackwood-schedule-calibration]] — empirical schedules from corpus
 - [[blackwood-then-csp]] — pipeline composition (Variant K)
 - [[prune-restart]] — Joe's in-place restart (vol-23 shipped)
+- [[score-optimizing-cp]] — MaxScore B&B objective (vol-24 shipped)
 - [[frame-first]] — vol-4 decomposition (border + interior)
 - [[border-diversity]] — Las Vegas sampler + pin-perimeter
 

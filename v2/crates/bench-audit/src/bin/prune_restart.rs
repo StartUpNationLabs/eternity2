@@ -38,7 +38,7 @@ use eternity2_core::{Board, Hint, Hints, Puzzle, Rotation};
 use eternity2_solver_engine::{
     blackwood_schedule_calibrated_v17a, EngineSolver,
 };
-use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
+use eternity2_solver_trait::{Objective, SolveOpts, SolveOutcome, Solver};
 use eternity2_core::BORDER;
 
 fn load_board(path: &std::path::Path, puzzle: &Puzzle) -> Board {
@@ -239,6 +239,17 @@ fn main() {
     let mut out_dir = PathBuf::from("output/v23_prune_restart");
     let mut min_depth_growth: u32 = 5;
     let mut drop_k: usize = 30;
+    // Vol-24 — round 1 stays FirstSolution (a deepening pass); rounds
+    // 2+ default to MaxScore so the CP filler optimises matched-edge
+    // count instead of taking the first valid completion. Flip with
+    // `--no-max-score` to reproduce vol-23's behaviour for A/B runs.
+    let mut max_score: bool = true;
+    // Vol-24 — `--pin-all-from-start` skips the mismatch-cell drop on
+    // round 1 when `--start` is provided, so a `--drop-k 0` run truly
+    // pins everything in the start board. Lets us measure MaxScore CP
+    // fill from a fixed partial (the vol-23 round-2 board) without the
+    // confounding mismatch-drop step.
+    let mut pin_all_from_start: bool = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -249,6 +260,9 @@ fn main() {
             "--out-dir" => out_dir = PathBuf::from(args.next().unwrap()),
             "--min-depth-growth" => min_depth_growth = args.next().unwrap().parse().unwrap(),
             "--drop-k" => drop_k = args.next().unwrap().parse().unwrap(),
+            "--no-max-score" => max_score = false,
+            "--max-score" => max_score = true,
+            "--pin-all-from-start" => pin_all_from_start = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -287,8 +301,14 @@ fn main() {
     // When --start is provided AND --drop-k > 0, round 1 pins all-but-the-
     // lowest-scoring `drop_k` cells, then CP fills those unpinned cells.
     let mut current_hints = if let Some(ref b) = initial_board {
-        eprintln!("dropping {drop_k} lowest-scoring cells from start board");
-        hints_from_board_with_drops(b, &puzzle, &canonical_hints, drop_k)
+        if pin_all_from_start {
+            eprintln!("pinning ALL placed cells from start board ({} cells)",
+                placed_count(b, &puzzle));
+            hints_from_board(b, &puzzle, &canonical_hints)
+        } else {
+            eprintln!("dropping {drop_k} lowest-scoring cells from start board");
+            hints_from_board_with_drops(b, &puzzle, &canonical_hints, drop_k)
+        }
     } else {
         canonical_hints.clone()
     };
@@ -311,9 +331,19 @@ fn main() {
         // Enable whenever the hint set exceeds the canonical count
         // (i.e. any round 2+, or round 1 if started from a partial board).
         opts.batch_hint_application = n_pinned > canonical_count;
+        // Vol-24 — MaxScore objective on filler rounds (anything beyond
+        // canonical-only hints). On the cold-start round 1 we still
+        // want FirstSolution behaviour: the goal there is to dig deep,
+        // and FirstSolution lets the engine return as soon as it hits
+        // a complete consistent placement. MaxScore on round 1 would
+        // chew through the whole search space without improvement,
+        // because no completion is reachable in the budget anyway.
+        let use_max_score = max_score && n_pinned > canonical_count;
+        opts.objective = if use_max_score { Some(Objective::MaxScore) } else { None };
 
-        eprintln!("\n=== ROUND {round}: pinned={n_pinned} (canonical={canonical_count} + {} extra) ===",
-            n_pinned - canonical_count);
+        eprintln!("\n=== ROUND {round}: pinned={n_pinned} (canonical={canonical_count} + {} extra), objective={} ===",
+            n_pinned - canonical_count,
+            if use_max_score { "MaxScore" } else { "FirstSolution" });
 
         // Vol-23 — engine selection:
         // - Round 1 from canonical-only hints: joe_depth150_bp_par + v17a

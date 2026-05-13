@@ -15,13 +15,12 @@ Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool`
 
 Score lift estimate (1-2 days, +5..10) was wrong in spirit: the CP-deepener does lift CP depth dramatically, but post-ALNS the score is below baseline. See [[prune-restart]] for the empirical detail and `score-optimizing-cp` (new entry) for what would close the gap.
 
-### `pt-tabu-zobrist` — status: `unbuilt` — since: vol-17 (mentioned), vol-21 (T7)
-**Aged 5 volumes.** Vol-14 memory `e2_vol14_pt_no_tabu` flagged this. PT chains have no anti-cycle mechanism; iso-score plateaus cause drift.
-- See `concepts/pt-tabu.md`
-- Est. 4-6 hrs
+### `pt-tabu-zobrist` — status: `wont-do` — since: vol-17, resolved: vol-24
+**Aged 5 volumes; resolved at vol-24 open.** Vol-22 measured PT plateaus at 442/480 on the 440/469 basin across 60s/5min/15min/30min budgets — saturation is the binding constraint, not chain-drift / cycling. Tabu only helps if PT *could* break the saturation gap, which the budget-scan data refutes. Mark `wont-do`; revisit only if a new mechanism (e.g. stronger repair operator) raises the plateau enough that anti-cycle would matter.
+- See `concepts/pt-tabu.md` (kept; status updated)
 
-### `joe-2019-sat-postprune` — status: `unbuilt` — since: vol-14 plan
-Future: 1-week build. Park as `wont-do` for now? Decide at vol-23 open.
+### `joe-2019-sat-postprune` — status: `wont-do` — since: vol-14, resolved: vol-24
+Aged 10 vols. ~1-week build to replicate Joe's 11-hour SAT solve on a 2-weeks-of-Blackwood pre-pruned domain. No clear path from here to canonical 5-clue 480 that doesn't already require the upstream Blackwood pre-prune (which we don't have). Mark `wont-do`; the gap-closer we actually need is `score-optimizing-cp` (active vol-24 binding).
 
 ### `piece-orbit-as-atom` (N9 from vol-20) — status: `unbuilt` — since: vol-20
 Treat pieces in same edge-multiset orbit as fungible. There are only 5 such orbits in canonical E2 (10 pieces of 256). Low value. Likely `wont-do`.
@@ -41,28 +40,30 @@ z3 cannot solve our MaxSAT (UNKNOWN on 60-cell clusters in 180s). Need a real Ma
 - See `concepts/exact-joint-bound.md`
 - Est. 4-6 hrs
 
-### `score-optimizing-cp` — status: `unbuilt` — since: vol-23
-Vol-23 finding: prune-restart's CP fills cells in FirstSolution mode, taking ANY valid completion. To turn prune-restart into a record-breaker we need CP that OPTIMIZES score (matched-edge count) while satisfying constraints. Two routes:
-- (a) MaxSAT formulation (uses existing `sat-encoder` crate; blocked on `kissat-rc2-maxsat`).
-- (b) Branch-and-bound CP with edge-match objective baked into the search (modify recurse() to track upper-bound and prune when upper < best-so-far).
-- Est. 1 day for route (b); shipped sat-encoder already supports route (a).
+### `score-optimizing-cp` — status: `built` (route b) — vol-24 (2026-05-13)
+Vol-24 shipped route (b): branch-and-bound CP with edge-match objective. `SolveOpts.objective: Option<Objective>` field; engine tracks `matched_count` + `decided_edges` incrementally; prune at `matched_count + (total - decided) ≤ best_score`. RootSplit parallelism uses shared `Arc<AtomicU32>` cutoff + max-by-score aggregation.
+
+A/B on vol-23 round-2 partial (184 pinned, score 297):
+- FirstSolution CP-fill: 412/480 (0.2s, vol-23 reproduce).
+- **MaxScore B&B CP-fill: 419/480** at 300s. +7 vs FirstSolution.
+- Still < 424 (ALNS-fill from same partial) because CP-fill is a constrained sub-problem.
+
+Route (a) MaxSAT remains `unbuilt`, blocked on `kissat-rc2-maxsat`. Route (b) handles the prune-restart gap; route (a) would give exact joint bound (different use case).
+
+Concept page: [[score-optimizing-cp]] with full A/B table and open questions.
 
 ---
 
 ## Search / exploration
 
-### `cooperative-pair-swap` (vol-21 T2) — status: `unbuilt` — since: vol-21
-Compose Δ=-1 swap pairs sharing an endpoint into 3-cell moves. The vol-21 Python prototype found none, but the Rust + bigger window was never tried.
-- Note: vol-20 cycle_scan already covered K≤5 cycles. This is K=3 with cooperativity, may overlap. AUDIT before building.
+### `cooperative-pair-swap` (vol-21 T2) — status: `wont-do` — since: vol-21, resolved: vol-24
+Aged 3 vols. Vol-20 `cycle_scan` already enumerated K=3,4,5 cycles on the 457 basin and confirmed operator-lock through K=5. The K=3-with-shared-endpoint variant is a strict subset of those moves (3-cell cycles ARE the 3-cycles enumerated). Vol-21 Python prototype found zero useful pairs. Mark `wont-do`; the unblock is non-local high-K moves (basin-escape recipe), not finer K≤5 variants.
 
-### `color-relabel-search` (vol-21 T4) — status: `unbuilt` — since: vol-21
-Joint search over (placement, color-permutation π ∈ S_23). Score-preserving symmetry; might change heuristic rankings.
-- See `concepts/color-relabel.md`
-- Est. 4-8 hrs
+### `color-relabel-search` (vol-21 T4) — status: `wont-do` — since: vol-21, resolved: vol-24
+Aged 3 vols. Color relabel is score-preserving (a π ∈ S_23 permutation of colors maps a board to an isomorphic board with identical edge-match count), so it cannot raise our 457. Hypothesised benefit was reshaping heuristic rankings during search, but vol-17 calibrated_v17a already showed the BP+schedule lens dominates color-blind heuristics. Mark `wont-do`; keep `concepts/color-relabel.md` page.
 
-### `forced-perturb-meta-op` (vol-21 T6) — status: `unbuilt` — since: vol-21
-Inject Δ=-k jolts into PT chains. Vol-20 basin_hop tested k=1,4. Larger k not tried beyond manual.
-- Est. 2-3 hrs
+### `forced-perturb-meta-op` (vol-21 T6) — status: `wont-do` — since: vol-21, resolved: vol-24
+Aged 3 vols. Vol-20 `basin_hop` at k=1,4 went nowhere; vol-22 basin-escape recipe (bound→Hungarian→ALNS) is the actually-validated big-k move and is already the dominant cold-portfolio operator. Generic Δ=-k jolts into PT chains add stochasticity without the bound-guidance that made vol-22 work. Mark `wont-do`.
 
 ### `diverse-457-search` (vol-21 T5) — status: `partial` — since: vol-21
 "Lottery" for finding non-byte-identical 457s. Vol-22 didn't run it; instead the basin-escape recipe found different >457-ceiling basins. Still valuable as separate axis.

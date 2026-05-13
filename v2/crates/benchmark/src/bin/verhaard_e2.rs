@@ -180,6 +180,7 @@ fn run_search(
         preferred_pieces: preferred,
         edge_bp_marginals: None,
         batch_hint_application: false,
+        objective: None,
     };
     let mut sink = NullSink;
     let t0 = Instant::now();

@@ -71,9 +71,36 @@ Caveats:
 1. Round 3 fills 72 cells in 0.2s via `FirstSolution` mode — first valid completion, not best. Cold-start CP doesn't optimize score; it satisfies constraints.
 2. The 412 score is below our 457 because the random valid completion isn't optimal.
 
-Future use:
-- Round 2 produces a deep partial (depth 152, score 297) suitable for ALNS-fill.
-- ALNS-from-prune-restart-round-2 should be tested vs vanilla cold-start ALNS.
+## Vol-24 A/B: CP-fill with MaxScore objective ([[score-optimizing-cp]])
+
+Vol-24 closes vol-23's caveat 1 by adding a branch-and-bound MaxScore objective to the engine and using it on round 2+ of prune-restart. Measured on the *exact* vol-23 round-2 board (`output/v23_pr_cold/round_2_board.json`, 184 placed, score 297) with **all 184 cells pinned** (`--pin-all-from-start`):
+
+| Run | Objective | Budget | Result | Nodes |
+|---|---|---|---|---|
+| Vol-23 reproduce | FirstSolution | 60s / 300s | **412/480** in 0.2s (exits early) | 220 k |
+| Vol-24 MaxScore | MaxScore B&B | 60s | **418/480** | 103 M |
+| Vol-24 MaxScore | MaxScore B&B | 300s | **419/480** | 533 M |
+
+So MaxScore beats FirstSolution **+7 points** (412 → 419) under the same prune-restart prefix. Diminishing returns past 60s — the 60s→300s run added only +1 point with 5× more nodes. The 184-pin subspace's true optimum appears to be ~419-420.
+
+### What this changes
+
+- **Prune-restart-as-CP-deepener-and-fill is now competitive with FirstSolution.** Vol-23 said "CP-deepener: yes; score-maximizer: no". Vol-24 sharpens: CP-deepener-and-MaxScore-fill is a +7 sharpener over CP-deepener-and-FirstSolution-fill.
+- **Still below ALNS-fill (424).** ALNS can *unpin* cells and shuffle pieces across the whole board. CP-fill is constrained to fill the 72 holes optimally given the 184 fixed cells. The structural difference (constrained sub-optimisation vs unconstrained search) is the residual gap.
+- **419 vs 457 (our cold-start record):** prune-restart-with-MaxScore is not a record path. It's a sharper variant of an already-deprecated pipeline (cold-start CP-only chain), with the same basin ceiling (~441 here) and the same fundamental "the pinned cells are not great" issue.
+
+### Implementation
+
+- `SolveOpts.objective: Option<Objective>` (new) — `Some(Objective::MaxScore)` opts into B&B.
+- Engine carries running `matched_count`, `decided_edges`, `best_score`, `best_score_partial` on `SearchState`; bound = `matched_count + (total_internal_edges - decided_edges)`; prune when `bound ≤ best_score`.
+- RootSplit parallelism: shared `Arc<AtomicU32>` cutoff across workers + max-by-score aggregation at outcome merge. Single-thread runs use local `best_score` only.
+- Driver `prune_restart`: opt-in via `--max-score` (default on for round ≥ 2); flag `--pin-all-from-start` for A/B repeatability.
+
+## Vol-24 reframing of the deferral pattern
+
+The 8-volume deferral wasn't the only deferral; vol-23 also implicitly deferred the score-optimisation gap (logged it as a BACKLOG entry rather than closing it). Vol-24 closed THAT gap in a single sitting, so the running cost of "the prune-restart family" is now: ~1 hour vol-23 (deepener) + ~4 hours vol-24 (score-optimising fill) = ~5 hours of focused work, ~10 vols spread out.
+
+The lesson is the same as vol-23's: **the build is small; the deferrals are large; the deferrals are the problem.** Single-binding-item discipline holds.
 
 ## Linked sessions
 
@@ -87,6 +114,7 @@ Future use:
 - [[bound-ascent]] — the ALNS-saturation gap that prune-restart should close.
 - [[basin-escape-recipe]] — produces high-ceiling basins where prune-restart could realize the ceiling.
 - [[relaxed-bound]] — the metric that quantifies the gap prune-restart should close.
+- [[score-optimizing-cp]] — vol-24 MaxScore B&B; the sharpener of the CP-fill step.
 
 ## Linked memory
 

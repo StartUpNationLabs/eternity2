@@ -27,6 +27,25 @@ pub enum SolveMode {
     CountOnly,
 }
 
+/// Vol-24 — search objective. Distinct from `SolveMode` because `mode`
+/// controls how many full solutions are collected; `Objective` controls
+/// what we optimise *during* search. `None` = take whatever the search
+/// produces (the vol-23 behaviour). `Some(MaxScore)` = branch-and-bound
+/// on matched-edge count, returning the best-scored board seen.
+///
+/// Under `MaxScore`, the engine:
+///   1. never returns `Found` early on the first full board;
+///   2. tracks `best_score_partial` across the whole search;
+///   3. prunes any subtree whose `matched_count + remaining_upper_bound`
+///      cannot beat the running best;
+///   4. surfaces the best board via `SolveOutcome::Solved` on natural
+///      exhaustion, or via `TimedOut.best_partial` on the budget cap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Objective {
+    MaxScore,
+}
+
 #[derive(Debug, Clone)]
 pub struct SolveOpts {
     pub mode: SolveMode,
@@ -65,6 +84,12 @@ pub struct SolveOpts {
     /// previous DFS partial. Used by the prune-restart driver.
     /// Default false (preserves existing per-hint propagation order).
     pub batch_hint_application: bool,
+    /// Vol-24 — when set, the engine searches for the board with the
+    /// highest matched-edge count instead of returning the first valid
+    /// completion. See [`Objective`] for the contract. Default `None`
+    /// preserves vol-23 FirstSolution behaviour. Honoured only by
+    /// `EngineSolver`; legacy solvers ignore it.
+    pub objective: Option<Objective>,
 }
 
 impl Default for SolveOpts {
@@ -82,6 +107,7 @@ impl Default for SolveOpts {
             preferred_pieces: Vec::new(),
             edge_bp_marginals: None,
             batch_hint_application: false,
+            objective: None,
         }
     }
 }

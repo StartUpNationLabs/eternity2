@@ -65,6 +65,8 @@ The memory layer is the **persistent agent memory** (loaded in every conversatio
 | `project_e2_vol20_operator_lock` | [[sessions/vol-20]] | [[operator-lock]], [[basin-457-pt]] |
 | `project_e2_vol21_edge_relax_bound` | [[sessions/vol-21]] | [[relaxed-bound]] |
 | `project_e2_vol22_basin_escape` | [[sessions/vol-22]] | [[basin-escape-recipe]] |
+| `project_e2_vol23_prune_restart` | [[sessions/vol-23]] | [[prune-restart]] |
+| `project_e2_vol24_score_optimizing_cp` | [[sessions/vol-24]] | [[score-optimizing-cp]], [[prune-restart]] |
 
 ## project_e2 — structural / measurement findings
 
