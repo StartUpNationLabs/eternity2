@@ -8,11 +8,12 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ## Algorithm builds (engine-level)
 
-### `mcgavin-prune-restart` — status: `unbuilt` — since: vol-14
-**Aged 8 volumes.** The single most-deferred item. McGavin's 469 record uses this; our stack doesn't. Closes the vol-22 ALNS-saturation gap (~25-30 points per fresh basin).
-- See `concepts/prune-restart.md`
-- Build site: `crates/solver-engine/src/lib.rs`
-- Est. 1-2 days build, +5..10 score lift
+### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
+Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.
+
+**Empirical (vol-23)**: validated as CP-deepener (cold-start round 1→2 lifts depth 27→152 / score 23→297). But UNDERPERFORMS vanilla cold-start ALNS as a score-maximizer (424 vs 430-450 batch median) because CP fills in FirstSolution mode, taking the first valid completion not the best.
+
+Score lift estimate (1-2 days, +5..10) was wrong in spirit: the CP-deepener does lift CP depth dramatically, but post-ALNS the score is below baseline. See [[prune-restart]] for the empirical detail and `score-optimizing-cp` (new entry) for what would close the gap.
 
 ### `pt-tabu-zobrist` — status: `unbuilt` — since: vol-17 (mentioned), vol-21 (T7)
 **Aged 5 volumes.** Vol-14 memory `e2_vol14_pt_no_tabu` flagged this. PT chains have no anti-cycle mechanism; iso-score plateaus cause drift.
@@ -39,6 +40,12 @@ Vol-22 T1 was the per-RUN version (null). Per-STEP version requires modifying AL
 z3 cannot solve our MaxSAT (UNKNOWN on 60-cell clusters in 180s). Need a real MaxSAT solver. Gives exact joint bound.
 - See `concepts/exact-joint-bound.md`
 - Est. 4-6 hrs
+
+### `score-optimizing-cp` — status: `unbuilt` — since: vol-23
+Vol-23 finding: prune-restart's CP fills cells in FirstSolution mode, taking ANY valid completion. To turn prune-restart into a record-breaker we need CP that OPTIMIZES score (matched-edge count) while satisfying constraints. Two routes:
+- (a) MaxSAT formulation (uses existing `sat-encoder` crate; blocked on `kissat-rc2-maxsat`).
+- (b) Branch-and-bound CP with edge-match objective baked into the search (modify recurse() to track upper-bound and prune when upper < best-so-far).
+- Est. 1 day for route (b); shipped sat-encoder already supports route (a).
 
 ---
 

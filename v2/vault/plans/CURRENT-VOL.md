@@ -1,49 +1,43 @@
-# CURRENT VOL — vol-23 binding plan
+# CURRENT VOL — vol-24 binding plan
 
-**Opened**: 2026-05-13 14:20 CEST (drafted at vol-22 close before vault refactor).
-**Status**: in-progress, vault-restructured.
+**Opened**: 2026-05-13 at vol-23 close.
+**Status**: draft, awaiting audit-at-open at next session start.
 
-## Audit-at-open compliance
+## Audit-at-open required at vol-24 start
 
-Per [vault/README.md](../README.md): all items aged ≥ 3 volumes were reviewed in `BACKLOG.md`. Two items provoked the audit:
+Items aged ≥ 3 volumes per BACKLOG. Must pick or mark `wont-do`:
 
-1. **`prune-restart`** has been `unbuilt` since vol-14 (8 volumes). **Must pick or `wont-do` this vol.** → **PICKED as T1.**
-2. **`pt-tabu-zobrist`** has been `unbuilt` since vol-17 (5 volumes). **Must pick or `wont-do` this vol.** → **PICKED as T2.**
+- **[[pt-tabu]]** — 5 vols overdue (since vol-17). Strong candidate.
+- **`cooperative-pair-swap`** — 2 vols (vol-21). Borderline; vol-20 cycle_scan may have covered this — audit before building.
+- **`color-relabel-search`** — 2 vols (vol-21). Score-preserving symmetry; low expected lift.
+- **`forced-perturb-meta-op`** — 2 vols (vol-21). Larger-k basin_hop variant.
+- **`joe-2019-sat-postprune`** — was already flagged for `wont-do` decision; aged 9 vols. Mark `wont-do` unless re-motivated.
 
-Older-than-3-vol items not picked are now explicitly marked `wont-do (deferred until prune-restart shows ROI)` in BACKLOG.
+## Suggested vol-24 binding items (1 strong, 1 backup)
 
-## Vol-23 binding items (limit: 1 active)
+### T1 (primary) — `score-optimizing-cp` (NEW from vol-23)
+The vol-23 finding sharpened the prune-restart conclusion: CP fills in FirstSolution mode, so prune-restart-as-cold-start-seeder underperforms vanilla ALNS. The gap-closer is CP with score in the objective.
 
-Revised at user direction 2026-05-13 14:30: narrow to T1 only. T2 and the integration task stay in BACKLOG for vol-24+.
+Two routes:
+- (a) **MaxSAT via sat-encoder + kissat-rc2**. Blocked on `kissat-rc2-maxsat` (also unbuilt). Building the MaxSAT route means building both. 1-2 days.
+- (b) **Branch-and-bound CP**: modify `recurse()` in `crates/solver-engine/src/lib.rs` to track an upper-bound on matched-edges-achievable-from-this-partial and prune branches whose upper < best-so-far. 1 day.
 
-### T1 — `prune-restart` engine (1-2 day build) — ONLY binding item
-**Score lift estimate**: +5..+10 if it closes the saturation gap in [[basin-440-469]].
-- File: `crates/solver-engine/src/lib.rs`
-- See `concepts/prune-restart.md`
-- **Binding**: by end of vol-23 either built or this concept is marked `refuted/wont-do` with reasoning.
+**Recommended**: route (b). Self-contained, doesn't depend on external solvers, directly composes with our existing prune-restart driver.
 
-## Running in background (not binding work)
+### T2 (backup if T1 wraps fast) — `pt-tabu`
+5-vol-overdue audit item. 4-6 hrs build. Hash-cons states in PT chains; reject revisits to break the vol-22 442-plateau.
 
-- PID 66809: 8h `alns_pt` on the 440/469 basin (will finish ~22:00 CEST). Result will be logged to [[basin-440-469]] at vol-close.
-- PID 66953: batch basin recipe (100 seeds, ~5 hrs total). Result will be logged to [[basin-escape-recipe]].
+## Out-of-scope (parked, log to BACKLOG if discovered)
 
-Neither is a binding item — they're speculative compute. If their results suggest a new direction at vol-23 close, log to BACKLOG as new entries; do NOT pivot T1.
+- All N-EXOTIC ideas — already `wont-do`.
+- `cooperative-pair-swap`, `color-relabel-search`, `forced-perturb-meta-op` — staying in BACKLOG, audit-at-vol-25 if still untouched.
+- `kissat-rc2-maxsat` — keep `unbuilt`; pick if route (a) for T1.
 
-## Out-of-scope this vol (parked, not new ideas)
+## Vol-close protocol reminder
 
-- `kissat-rc2-maxsat` — keep `unbuilt` in BACKLOG, revisit after T1/T2.
-- `bound-ascent-then-blackwood-cp` — keep `unbuilt`.
-- `multi-cell-bound-ascent` — keep `unbuilt`.
-- All N-EXOTIC ideas (1, 2, 4, 5, 6, 7) — keep `wont-do`.
-
-## Discoveries policy
-
-If something interesting surfaces mid-vol: **add to BACKLOG with status `unbuilt`, do NOT pivot the vol's three items.** Only break this rule if the new finding obsoletes T1 or T2.
-
-## Vol-close protocol
-
-At vol-close:
-1. Update each T1/T2/T3 status in BACKLOG.
-2. Update any concept pages touched.
-3. Write `sessions/vol-23.md` journal entry (append-only, links to concepts/basins, no plans).
-4. Draft `CURRENT-VOL.md` for vol-24 using audit-at-open.
+At vol-24 close:
+1. Update T1/T2 status in BACKLOG.
+2. Update concept pages touched.
+3. Write `sessions/vol-24.md` journal (compact, single page, link to concepts).
+4. Update INDEX.md score-history row.
+5. Draft `CURRENT-VOL.md` for vol-25.
