@@ -3116,11 +3116,14 @@ impl<'a> SearchState<'a> {
             // Cooperative timeout check inside the AC-3 loop. On hard
             // puzzles a single AC-3 invocation can churn for seconds;
             // without this the outer per-N-nodes timeout check fires
-            // late. Check every 64 queue pops — cheap relative to the
-            // O(|D|² × neighbours) inner work. Reading self.started
+            // late. Vol-23 — flamegraph showed `elapsed_us()` cost was
+            // 12.4% of joe runtime at 1/64 rate (mach_absolute_time +
+            // Duration arithmetic on macOS is ~800% of an inner-loop
+            // iteration). Drop to 1/4096; worst-case timeout latency is
+            // still sub-millisecond on joe's 7k nps. Reading self.started
             // through an immutable borrow is fine here because count/
             // present/on_queue are disjoint fields (NLL).
-            if ac3_tick & 0x3f == 0 && self.started.elapsed_us() >= timeout_at_us {
+            if ac3_tick & 0xfff == 0 && self.started.elapsed_us() >= timeout_at_us {
                 return Ac3Outcome::Ok { removed: all_removed };
             }
             on_queue[a as usize] = false;
@@ -3144,10 +3147,14 @@ impl<'a> SearchState<'a> {
 
             // Accumulate the bit-diff for position `a` as words_per_pos
             // u64s — cheaper to OR back on restore than to iterate
-            // individual row-ids. Vol-16 Cat-4: write directly into
-            // the SearchState arena instead of allocating a Vec.
-            let arena_start = self.undo_words_arena.len();
-            self.undo_words_arena.resize(arena_start + words_per_pos, 0);
+            // individual row-ids. Vol-23 — stack scratch instead of the
+            // arena's resize-then-truncate dance. The previous version
+            // paid bzero on every queue pop (4.29% of joe runtime) and a
+            // truncate on every no-diff pop. With scratch we extend the
+            // arena exactly once at the end, only if there's a diff.
+            const MAX_WPP: usize = 32;
+            debug_assert!(words_per_pos <= MAX_WPP);
+            let mut diff_scratch = [0u64; MAX_WPP];
             let mut removed_popcount: u32 = 0;
             let a_u = a as usize;
             // Iterate set bits of domain_bits[a_u]. Mutate the bitset
@@ -3207,7 +3214,7 @@ impl<'a> SearchState<'a> {
                     let r_idx = r_id as usize;
                     let word_idx = r_idx / 64;
                     let bit_mask = 1u64 << (r_idx % 64);
-                    self.undo_words_arena[arena_start + word_idx] |= bit_mask;
+                    diff_scratch[word_idx] |= bit_mask;
                     removed_popcount += 1;
                     present[a_u * words_per_pos + word_idx] &= !bit_mask;
                     self.domain_bits[a_u * words_per_pos + word_idx] &= !bit_mask;
@@ -3223,6 +3230,8 @@ impl<'a> SearchState<'a> {
                     let base = a_u * words_per_pos;
                     self.domain_bits[base..base + words_per_pos].iter().all(|&w| w == 0)
                 };
+                let arena_start = self.undo_words_arena.len();
+                self.undo_words_arena.extend_from_slice(&diff_scratch[..words_per_pos]);
                 all_removed.push(UndoEntry { pos: a, words_start: arena_start as u32 });
                 if empty {
                     self.stats.domain_wipeouts += 1;
@@ -3238,9 +3247,6 @@ impl<'a> SearchState<'a> {
                         on_queue[*nb as usize] = true;
                     }
                 }
-            } else {
-                // No diff produced — give back the arena reservation.
-                self.undo_words_arena.truncate(arena_start);
             }
         }
         Ac3Outcome::Ok { removed: all_removed }
