@@ -24,6 +24,15 @@ Replaced vol-26's stdio Python bridge with in-process `ort = 2.0.0-rc.10` ONNX i
 ### `learned-gate-at-stress-budget` (vol-27 T2) — status: `built` — vol-27 (2026-05-13)
 Took a sharper path than the planned 7×7 retraining: retested at 6×6/5c with `--budget-ms 100` so MRV's tail-latency outliers become failures (16/200). Learned solves 200/200 → condition (c) "MRV-failed solved by Learned" gives 16/16 perfect recovery. **Gate PASS on all three conditions.** Equivalent methodology to changing puzzle size; cheaper. See [[learned-value-order]].
 
+### `learned-variable-size-cross-domain` (vol-28 T1) — status: `partial` (arch shipped) / `refuted` (cross-domain transfer) — vol-28 (2026-05-13)
+v2 model architecture shipped (position-relative GNN, size-agnostic + piece-count-agnostic, ~63k params, ONNX export works at 6×6 and 16×16). Trained to 97.3% val_acc on 6×6/5c. **At canonical 16×16/22c the model is CONFIDENTLY WRONG**: under `joe_depth150_bp` profile, max depth regresses from 165 (baseline) to 57 with v2 Learned. Even at its own 6×6/5c distribution v2 coverage drops 200→186/200 with median nodes 36→19129 — train/inference distribution mismatch (training negatives filtered by border + neighbour edges only, but engine asks the model to score the bitset-domain-pruned candidate set). Two root causes: (1) candidate-set distribution gap; (2) color-embedding cardinality (only 6 of 24 slots saw gradient at training). See [[learned-value-order]] "Vol-28 measurement" section.
+
+### `learned-16x16-trained` (vol-29 T1) — status: `unbuilt` — since: vol-28
+Train a v2-architecture model on canonical-E2 cold-start trajectories from `joe_depth150_bp` runs (N=100 seeds × 60s). Distribution-matched by construction. Gate: depth ≥ baseline median + 10, wall-clock ≤ 1.5× baseline, no 6×6 regression. See [[../plans/VOL-29]].
+
+### `learned-on-ties-hybrid` (vol-28 T1C alternative) — status: `unbuilt` — since: vol-28
+Add `ValueOrder::LearnedOnTies` — defer to LCV first, use Learned only on LCV ties. Cheaper than full Learned mode; same transfer-risk profile as cross-domain. After vol-29 result, may be reviewed.
+
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.
 

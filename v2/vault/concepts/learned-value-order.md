@@ -269,6 +269,126 @@ and avoids the ~30-minute retrain at 7×7. The 16/16 perfect recovery
 on MRV-failures is a stronger signal than what 7×7 with 7% failure rate
 would have given.
 
+---
+
+## Vol-28 measurement — cross-domain transfer REFUTED (2026-05-13)
+
+Vol-28 picked variable-size architecture (T1A from the [[../plans/VOL-28|VOL-28 plan]])
+in the hope that transfer to canonical 16×16 would be real. Three
+deliverables shipped:
+- `ml/model_v2.py` — `PositionRelativeModel`. Size-agnostic (nb_idx +
+  valid_mask passed as runtime arg, not buffer) and piece-count-agnostic
+  (no piece-id one-hot anywhere; instead a 24-color embedding shared
+  across all sizes). Per-candidate scoring head instead of fixed-action
+  logits.
+- `crates/solver-engine/src/bridge.rs` — `LearnedScorer` extended to
+  V1/V2 enum. Sidecar `.meta.json` `version` selects.
+- `crates/ml-export/src/bin/canonical_eval.rs` — canonical-E2
+  cold-start measurement bin with `--profile` (border_first_lcv /
+  joe_depth150_bp) + `--mode` (mrv / edge_bp / learned).
+
+### Result at canonical 16×16 (30s budget, single-thread, canonical 5 hints)
+
+| Profile + Value-order | Max Depth | Nodes | Backtracks |
+|---|---:|---:|---:|
+| border_first_lcv + MRV (LCV) | 65 | 5.3M | 1.5M |
+| border_first_lcv + edge_bp | 87 | 7.4M | 2.3M |
+| **joe_depth150_bp (EdgeBpMarginals + propagators)** | **165** | **254 k** | **44 k** |
+| joe_depth150_bp + Learned (v2) | **57** | 248 k | 137 k |
+| border_first_lcv + Learned (v2) | 60 | 643 k | 121 k |
+
+The v2 Learned model (trained at 6×6/5c, 97.3% val_acc) is **confidently
+wrong at canonical scale**. It produces:
+- Low backtracks (137k vs MRV's 1.5M) — the model is committing
+  confidently to its top candidate.
+- Massive depth regression (165 → 57) under the strongest profile —
+  the chosen candidates are NOT the placements that lead to deep
+  partials.
+
+### Sanity check at 6×6/5c (same v2 model, same test set)
+
+| Model | Solved | Median nodes |
+|---|---|---:|
+| Vol-27 v1 (fixed-size, 6×6 only) | 200/200 | 36 |
+| Vol-28 v2 (size-agnostic) | **186/200** | **19 129** |
+
+**The v2 architecture is also WORSE on the 6×6 task it was trained on**,
+despite reaching 97.3% top-1 validation accuracy. Cross-entropy on a
+border-filtered candidate set doesn't translate to engine performance
+when the engine asks the model to score the *actual propagator-pruned
+domain*. Train-time and inference-time candidate distributions diverged.
+
+### Root cause analysis
+
+Two interacting problems:
+
+1. **Training/inference distribution mismatch.** Training negatives were
+   sampled from pieces+rotations that match (border-mask + placed-edge
+   neighbours). The engine at inference asks the model to score the
+   bitset-domain-pruned candidate set, which includes candidates that
+   pass *additional* propagators (piece-uniqueness, gacolor, AC-3, etc.).
+   The model has never seen this distribution.
+
+2. **Color-embedding cardinality.** The model trained at 6×6/5c sees
+   only colors 0..5. At canonical 16×16/22c the model sees colors 0..22.
+   Even with a 24-dim shared embedding, only 6 of 24 embedding slots
+   ever received gradient at training. The 16 unseen color embeddings
+   carry untrained random noise, and their interaction with the score
+   head is undefined behaviour at canonical scale.
+
+Problem (1) is fixable with better training data (sample candidates from
+the engine's actual domains, not from a static filter). Problem (2)
+needs either multi-size training data covering more colors, or a
+color-blind architecture (no per-color embedding; use color *position*
+relative to the cell's edges).
+
+### Vol-28 verdict
+
+The cross-domain ML approach (train at small synthetic, transfer to
+canonical) **is refuted at this scale with this architecture**. Both
+the 6×6 regression and the canonical-E2 regression are signs of a deeper
+distribution-mismatch / under-exposure problem.
+
+**Status update**: vol-28's T1A (variable-size model + 6×6 training)
+is `partial` — architecture shipped, training works on synthetic 6×6,
+but engine integration shows the model out-of-distribution. The
+hypothesis "the imitation signal transfers cross-domain" is `refuted`.
+
+### What this does NOT close
+
+- Lever B (16×16-specific model trained on cold-start CP runs of our
+  own engine). The training data lives in expert trajectories from
+  `joe_depth150_bp` runs, where the engine's actual domains define the
+  scoring problem. This is **distribution-matched** by construction.
+  Vol-29 candidate.
+- Lever C (LearnedOnTies hybrid). Still untested; cheaper than B
+  because it only acts when LCV ties. Same risk as the cross-domain
+  approach if the underlying signal doesn't transfer.
+
+### Files changed at vol-28
+
+- `crates/solver-engine/src/bridge.rs`: rewritten as `LearnedScorer`
+  enum (V1 vs V2 dispatch).
+- `crates/solver-engine/src/lib.rs`: `learned_score_candidates`
+  dispatches v1/v2 path.
+- `crates/ml-export/src/bin/canonical_eval.rs`: new — canonical E2
+  cold-start measurement.
+- `ml/model_v2.py`, `dataset_v2.py`, `train_v2.py`,
+  `train_v2_cached.py`, `preprocess_v2.py`, `export_v2.py`: full v2
+  pipeline.
+
+### Numbers worth caching
+
+| Quantity | Value |
+|---|---|
+| v2 model params | 62 849 |
+| v2 training data | 360k samples from 10 k synthetic 6×6/5c puzzles |
+| v2 final val_acc (97.3%) | epoch 10, plateau |
+| v2 canonical-E2 depth lift over MRV+LCV | -8 (Δ=−8 vs 65) |
+| v2 canonical-E2 depth lift over joe_depth150_bp | **-108** (Δ=−108 vs 165) |
+| v2 6×6 coverage regression | 200/200 → 186/200 (−7%) |
+| v2 6×6 median-nodes regression | 36 → 19 129 (530×) |
+
 ### Files changed at vol-27
 
 - `crates/solver-engine/Cargo.toml`: + `ort = "=2.0.0-rc.10"`, `ndarray = "0.16"`.
