@@ -43,8 +43,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  27 |             457 |       — | [[learned-value-order]] gate PASS — ONNX in-process, 5.5× wall-clock win, 16/16 recovery of MRV-failures at 100ms budget |                               |
 |  28 |             457 |       — | [[learned-value-order]] cross-domain transfer REFUTED — 6×6-trained v2 model gives Δ=−108 depth regression under `joe_depth150_bp` at canonical 16×16 |                               |
 |  29 |             457 |       — | [[learned-value-order]] distribution-matched imitation hits the teacher ceiling — Δ=−1 with −35% nodes, −37% backtracks at iso-depth (gate PASS at match condition) |                               |
-|  30 |             457 |       — | [[learned-value-order]] LearnedOnTies hybrid produces first Δ > 0 from ML at canonical — depth 165 → 174 (+9 at 1 min, +8 at 5 min); invariant across 3 trained models (v3, v3b, v4) → structural to puzzle, not model |                               |
-|  31 |             457 |       — | [[learned-value-order]] depth lift propagates to score — alns_only 5min: 426 → 436 (+10); pt_e2 15min strong config: 437 → 445 (+8). First ML-driven score lift at canonical 5-clue 16×16 |                               |
+|  30 |             457 |       — | ~~[[learned-value-order]] +9 depth lift from LearnedOnTies~~ **REFUTED vol-32** — bug at lib.rs:2550 caused LOT to silently fall through to InsertionOrder; model never called |                               |
+|  31 |             457 |       — | ~~[[learned-value-order]] +10/+8 score lift~~ **MIS-ATTRIBUTED vol-32** — the "depth-174 ML partial" was actually an InsertionOrder partial; real numbers but wrong attribution |                               |
+|  32 |             457 |       — | [[learned-value-order]] **vol-30/31 BUG DISCOVERED**: cell_side_edge initializer missed LearnedOnTies. Fix `95978a5`. True LOT depth = 165 (Δ=0), edges +3. NEW: [[unsat-clause-propagator]] Python prototype (130k literals, 53M clauses parsed). Real engine axis: InsertionOrder > EdgeBpMarginals by +9 depth under joe_depth150_bp |                               |
 
 
 ## Concepts — by category

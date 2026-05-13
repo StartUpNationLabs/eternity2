@@ -37,18 +37,21 @@ User request: "for the sake of science, train a 16×16-specific model for a long
 2. **RL self-play** (the only thing that could beat the engine, since imitation has a fixed ceiling at "engine's own performance"): train via PPO/REINFORCE where reward = max_depth reached. ~1 week build + many days of training compute. Different vol entirely (`vol-30+ if vol-29 fails informatively`).
 Honest expectation: long imitation hits a ceiling at "engine performance on its own data", maybe within Δ=+1..+5 of the baseline. RL would be the meaningful path to beating the baseline.
 
-### `learned-on-ties-hybrid` (vol-30 T1) — status: `built` — vol-30 (2026-05-13)
-**First Δ > 0 from ML at canonical scale.** EdgeBpMarginals first, then rerank top-k tied candidates (within EPS=0.05 BP-score) with Learned. Depth 165 → **174** (+9) at 60s budget, 166 → 174 (+8) at 5min budget. Reproducible (engine deterministic given seed=1). EPS + MAX_K tunable via env vars. See [[learned-value-order]] "Vol-30 measurement" section.
+### `learned-on-ties-hybrid` (vol-30 T1) — status: `refuted` — vol-32 (2026-05-13)
+**Vol-30 headline was a measurement artifact.** Engine bug at lib.rs:2550: cell_side_edge was only initialised for `ValueOrder::EdgeBpMarginals`, not `LearnedOnTies`. Under buggy LearnedOnTies, the BP-sort block never ran, the LOT rerank block never ran, and the engine silently fell through to InsertionOrder. The "+9 depth lift" was actually "InsertionOrder beats EdgeBpMarginals by +9 under joe_depth150_bp" — nothing to do with the trained model. Confirmed by:
+- LOT_TRACE instrumentation: 0 fires under buggy LOT despite 18k engine nodes (5s smoke).
+- 7 partials from different (model, eps, max_k) combos all md5-identical.
+- Post-fix measurement: LearnedOnTies depth 165 = baseline EdgeBpMarginals 165. Real +3 matched edges from imitation (vs vol-30 claim of +23 = 303-280).
 
-### `learned-on-ties-alns-postfill` (vol-31 T1) — status: `built` — vol-31 (2026-05-13)
-Shipped `canonical-eval --dump-partial PATH`. Compared baseline-165 vs LearnedOnTies-174 partials through two recovery pipelines:
-- Weak (alns_only winning5 5 min): 426 → 436 (+10 score, seed=1; baseline reproducible at seed=2 → 425).
-- Strong (pt_e2 8-rep + Houdayer + kicks 15 min): 437 → 445 (+8 score).
+Bug fixed at commit `95978a5` (cell_side_edge initializer extended). See `vault/sessions/vol-32-bug-discovery.md` for full evidence. **Vol-30/31 vault entries also need amendment.**
 
-**First ML-driven score lift on canonical 5-clue 16×16 E2**, robust across pipeline strengths. The lift comes from the better starting partial (303 vs 280 initial edges); strong pipeline preserves but doesn't amplify (PT-174 hits 443 at round 5, plateaus at 445 by round 25). 445 is not the 457 record (which came from a lucky basin discovery, not iso-budget compute). See [[learned-value-order]] "Vol-31 measurement".
+### `learned-on-ties-alns-postfill` (vol-31 T1) — status: `refuted` (re-attributed) — vol-32 (2026-05-13)
+**Vol-31's +10/+8 score lifts were real measurements but mis-attributed to ML.** The depth-174 partial used as input was an InsertionOrder-under-joe_depth150_bp artifact, not an ML artifact (see `learned-on-ties-hybrid` correction above). PT-from-depth-174 reaching 445 is real; the partial just isn't ML-derived. True post-fix LearnedOnTies partial gives only +3 edges over baseline at depth 165 — much smaller potential score lift.
 
-### `learned-on-ties-basin-escape` — status: `unbuilt` — since: vol-31
-Combine vol-31's LearnedOnTies-174 partial with vol-22's basin-escape recipe (bound-ascent + Hungarian + ALNS over hours). Does the better starting basin let basin-escape find a >457 basin? Vol-22's 457 came from a specific basin found by chance; LearnedOnTies-174 might give access to a different basin family. ~1 day to wire + overnight run.
+The `--dump-partial` flag is real and useful. Vol-31's pipeline was sound; the input attribution was wrong.
+
+### `learned-on-ties-basin-escape` — status: `wont-do` — vol-32 (2026-05-13, resolved)
+Premised on vol-31's "better starting basin" being ML-derived. With the bug fix proving the partial was InsertionOrder-derived, there's no ML-specific basin to escape from. The InsertionOrder-174 partial → basin-escape recipe is still a valid experiment but it's `insertion-order-basin-escape` not `learned-on-ties-basin-escape`. Mark wont-do; promote a renamed variant if vol-33+ wants to revisit.
 
 ### `vanilla-fast-backtracker` (community-speed-parity) — status: `unbuilt` — since: vol-32 open
 Vol-32 community research turned up Yendor (97M placements/sec) and Razvan (140M placements/sec) on canonical 16×16 — our `joe_depth150_bp` is ~50,000× slower per-placement (we trade speed for propagator strength). Build a vanilla backtracker (no propagators beyond local edge-color forward-check, no ML, no AC-3) at community speed: pre-categorized position-specific lookup tables (corner TL/TR/BL/BR, edge × 23 colors, interior 23×23 W+N), cache-aligned `__attribute__((aligned(32)))`-equivalent layout, uint32 edge copies. Even without record claims, hitting community parity puts us on level ground for SAT/CNF integration (see [[unsat-clause-propagator]]) and Joe's iteration-budgeted pruning (msg #11725, prune-to-depth-150 every 2000 iters → 30-49% reduction). Honest cost: 2-3 days build + 1 day tuning. References: `github.com/MRazvan/Eternity2`, `github.com/riplatt/e2-puzzle-cpp-solver`. Vol-33+ candidate.
@@ -62,8 +65,14 @@ Joe's iteration-budgeted prune-to-depth policy: 99% of canonical-E2 cold-start t
 ### `learned-on-ties-long-pt` — status: `unbuilt` — since: vol-31
 Run pt_e2 from LearnedOnTies-174 at 1-2 hour budget (vs vol-31's 15 min). Does the 445 plateau open up with more compute, or is it a real ceiling? Cheap compute, overnight job.
 
-### `learned-on-ties-hyperparam-sweep` — status: `unbuilt` — since: vol-30
-EPS ∈ {0.01, 0.02, 0.05, 0.10, 0.20} × MAX_K ∈ {4, 8, 16, 32}. ~5 min compute total at 60s/cell. Might lift past +9. Tunable in current code.
+### `learned-on-ties-hyperparam-sweep` — status: `refuted` — vol-32 (2026-05-13)
+Ran T1 49-config sweep (7×7 EPS × MAX_K). All hit depth 174 — but this was pre-bug-fix; the model was never being called. Post-fix the sweep is uninteresting (LOT runs at ceiling 165 = baseline; hyperparams modulate only the NN tie-break within already-EdgeBp-sorted candidates, small effect). See `vault/sessions/vol-32-bug-discovery.md`.
+
+### `insertion-order-under-joe-depth150-bp` — status: `partial` — since: vol-32
+**Free +9 depth axis discovered by vol-32 bug investigation.** Under `joe_depth150_bp` profile, `--mode insertion` reaches depth 174 in 60s while `--mode edge_bp` (the profile's default) reaches 165. Vol-12 measured EdgeBpMarginals as a +18.84% interior reduction (positive); here it's a -9 depth regression. Hypothesis: under joe_depth150_bp's heavy propagator stack (gacolor + AC-3 + NS-1 + depth-150 gate), BP-sort's reordering interferes with propagator-induced cell ordering. Worth a small investigation: does the +9 propagate to score post-ALNS / post-PT? T3 measures this (PT lottery from insertion-174 partial, 30 seeds × 15min). Vol-33 candidate to characterise across profiles.
+
+### `unsat-clause-propagator-prototype` — status: `partial` — vol-32 (2026-05-13)
+Python prototype shipped (`ml/unsat_propagator_proto.py`): decoder + CNF parser for capiman/e2's 130,180-literal scheme. Round_1 (largest): 53.2M clauses, 56.6s parse, 106M directed forbidden-edges, mean 817 partners per literal. Memory estimate for full CSR ~430 MB (manageable). Rust engine integration is vol-33's binding item.
 
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.

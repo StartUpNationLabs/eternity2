@@ -1,13 +1,13 @@
 ---
 tags: [concept, value-order, ml]
-status: built
+status: built (6×6/5c) / partial (canonical 16×16, +3 edges)
 origin-vol: 26
-amended-vol: 27
+amended-vol: 27, 28, 29, 30, 31, 32
 ---
 
-# Learned imitation-policy value order (vol-26 gate, vol-27 amended)
+# Learned imitation-policy value order (vol-26 gate, vol-32 correction)
 
-**Status**: `built` — vol-27 closes the gate to PASS (all three conditions hold under 100ms budget at 6×6/5c).
+**Status**: `built` at 6×6/5c (vol-27 gate PASS), `partial` at canonical 16×16 (Δ=−1 depth, +3 edges post-fix; vol-30/31 claims of +9/+10/+8 REFUTED by vol-32 bug discovery — see "Vol-32 correction" section at bottom).
 **Origin**: vol-26 (2026-05-13). Amended vol-27 (2026-05-13) with ONNX-in-Rust inference + tighter-budget gate run.
 **Files**: `crates/solver-engine/src/lib.rs` (`ValueOrder::Learned` + `learned_score_candidates`), `crates/solver-engine/src/bridge.rs`, `ml/model.py`, `ml/train.py`, `ml/infer_bridge.py`, `ml/evaluate.py`.
 
@@ -674,3 +674,104 @@ The ML direction is now alive at small scale. Vol-28 candidates:
 3. **Hybrid**: use Learned as a tie-breaker inside an existing engine
    profile (joe_depth150_bp + Learned-on-ties) on canonical E2. ~2 days.
    Lower-EV but lower-risk than #1/#2.
+
+---
+
+## Vol-32 correction — Vol-30/31 "+9 depth lift" was a measurement artifact (2026-05-13)
+
+**Status flip**: the headline claims from vol-30 and vol-31 are
+refuted by a one-line engine bug discovered at vol-32 open.
+
+### The bug
+
+`crates/solver-engine/src/lib.rs:2550` initialised `cell_side_edge`
+only when `value_order == EdgeBpMarginals` (literal match). When
+vol-30 added `ValueOrder::LearnedOnTies` (commit `c1294ed`), it
+inserted the LOT sort/rerank blocks but never updated this initialiser.
+Result: under `LearnedOnTies`, `cell_side_edge` stayed empty, the
+BP-sort block at lib.rs:4025 short-circuited (`!self.cell_side_edge.is_empty()`
+= false), `bp_keys` stayed empty, and the LOT rerank block at
+lib.rs:4067 (`is_learned_on_ties && bp_keys.len() >= 2`) never ran.
+The engine silently fell through to InsertionOrder.
+
+### Confirmation
+
+1. **LOT_TRACE instrumentation**: added env-gated eprintln at lib.rs:4088;
+   ran `canonical-eval --mode learned_on_ties --budget-ms 5000` with
+   `E2_LOT_TRACE=1`. 18k engine nodes, **zero LOT_TRACE events**.
+2. **MD5-identical partials**: 7 captures with different (model, eps,
+   max_k) combinations (v3/v3b/v4 × default-vs-extreme-hyperparams)
+   ALL produced the exact same depth-174 board. Hyperparameters and
+   model files had zero effect because the ML code was never executed.
+   md5 = `51b12f5ebdc6a8f213b8520a7dfbcc52` for all.
+3. **Mode equivalence**: re-tested `--mode insertion` → depth 174 in
+   ~115k nodes/30s; `--mode learned_on_ties` pre-fix → same 174 in
+   similar nodes. After bug fix: LOT → depth 165 (matches baseline).
+
+### Corrected results
+
+Re-measured at canonical 16×16, 60s, single-thread:
+
+| Mode | Pre-fix | Post-fix | Notes |
+|---|---:|---:|---|
+| `edge_bp` (explicit, baseline) | 165 | 165 | Unchanged — was always correct. |
+| `default` (= joe_depth150_bp's EdgeBpMarginals) | 165 | 165 | Unchanged. |
+| `insertion` | 174 | 174 | InsertionOrder, the *real* +9 axis. |
+| `learned_on_ties` | **174** | **165** | Pre-fix: bypassed BP+NN entirely. Post-fix: NN actually invoked, lift = 0. |
+| `learned` (full NN) | 164 | 164 | Already correct pre-fix; lift = −1. |
+
+**The +9 "ML lift" was actually "InsertionOrder beats EdgeBpMarginals
+by +9 under joe_depth150_bp"** — a propagator-side observation,
+nothing to do with the trained model.
+
+### Score-axis corrections to vol-31
+
+Vol-31's pipeline numbers (445 from depth-174 partial) are real
+measurements but mis-attributed:
+
+| Partial | placed/256 | matched/480 (internal edges) | True attribution |
+|---|---:|---:|---|
+| `edge_bp_165` (baseline) | 170 | 280 | EdgeBpMarginals |
+| `insertion_174` (vol-30/31's "ML partial") | 179 | 303 | **InsertionOrder, not ML** |
+| `lot_fixed_v4` (TRUE post-fix LOT) | 170 | **283** (+3 vs baseline) | Real ML effect, much smaller than claimed +23 |
+
+### What the corrected ML signal is
+
+- LearnedOnTies post-fix: matches baseline depth (165 = 165), gives
+  **+3 matched edges** at the same depth. Real but small.
+- LOT_TRACE diagnostic (60s, post-fix): 10,502 events, 97.2% fire
+  the NN (tie_len ≥ 2 → call). 96.5% of events have dom=2 (binary
+  tie-break). Concentrated at depth 120-150.
+- The model IS doing real work after the fix, just not deeper-search work.
+
+### Implications for prior conclusions
+
+| Vol-30/31 claim | Status |
+|---|---|
+| "+9 depth from LearnedOnTies" | **REFUTED** — bug |
+| "Lift invariant across v3/v3b/v4" | **REFUTED** — model wasn't called in any case |
+| "+10 score (alns_only 5min) from depth-174 partial" | Real number, mis-attributed to ML |
+| "+8 score (pt_e2 15min) from depth-174 partial" | Real number, mis-attributed to ML |
+| Vol-29 imitation ceiling (Δ=−1) | **Unaffected** — `--mode learned` goes through a different code path that was correctly calling the NN. |
+| Vol-27 6×6/5c gate PASS | **Unaffected** — different model + smaller puzzle; not affected by the canonical engine path. |
+
+### New numbers worth caching (vol-32 correction)
+
+| Quantity | Value |
+|---|---|
+| True LearnedOnTies depth at canonical 16×16 (60s) | 165 (= baseline; Δ=0) |
+| True LearnedOnTies edge lift over baseline | +3 matched edges at same depth |
+| Pre-fix LearnedOnTies depth (the spurious "+9") | 174 (was InsertionOrder all along) |
+| InsertionOrder vs EdgeBpMarginals depth under joe_depth150_bp | +9 (174 vs 165) — real engine finding |
+| LOT_TRACE NN-call rate (post-fix) | 97.2% of events fire NN |
+| LOT_TRACE dom-size mode | 2 (binary tie-break) in 99% of events |
+| Bug fix commit | `95978a5` |
+
+### Filed BACKLOG updates
+
+- `learned-on-ties-hybrid` → `refuted`
+- `learned-on-ties-alns-postfill` → `refuted (re-attributed)`
+- `learned-on-ties-basin-escape` → `wont-do (premise refuted)`
+- `learned-on-ties-hyperparam-sweep` → `refuted (model never called)`
+- NEW: `insertion-order-under-joe-depth150-bp` → `partial` (under investigation)
+- NEW: `unsat-clause-propagator-prototype` → `partial` (Python prototype shipped)
