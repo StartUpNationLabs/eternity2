@@ -167,6 +167,20 @@ pub fn cp_repair(
     free_set: &BTreeSet<Position>,
     budget_ms: u64,
 ) -> Option<Board> {
+    cp_repair_with_opts(puzzle, board, free_set, budget_ms, true)
+}
+
+/// Vol-17 — CP repair with parallel/single-thread toggle. `parallel = true`
+/// matches the legacy throughput-oriented behaviour (`gacolor_ac3_par`);
+/// `parallel = false` uses single-thread `gacolor_ac3` for run-to-run
+/// reproducibility. Use single-thread when running deterministic A/B tests.
+pub fn cp_repair_with_opts(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_set: &BTreeSet<Position>,
+    budget_ms: u64,
+    parallel: bool,
+) -> Option<Board> {
     let n_cells = puzzle.cell_count();
     let mut hs: Vec<Hint> = Vec::with_capacity((n_cells as usize).saturating_sub(free_set.len()));
     for pos in 0..n_cells {
@@ -177,7 +191,7 @@ pub fn cp_repair(
     }
     let hints = Hints::new(hs);
 
-    let mut solver = EngineSolver::gacolor_ac3_par();
+    let mut solver = if parallel { EngineSolver::gacolor_ac3_par() } else { EngineSolver::gacolor_ac3() };
     let mut sink = BufferSink::new();
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = budget_ms;
@@ -212,13 +226,33 @@ pub fn sa_repair(
     budget_ms: u64,
     seed: u64,
 ) -> Board {
+    sa_repair_with_steps(puzzle, board, free_set, budget_ms, 0, seed)
+}
+
+/// Vol-17 — SA repair with optional fixed-step budget. When `step_budget > 0`,
+/// run exactly that many SA moves (deterministic); when 0, fall back to the
+/// wall-clock `budget_ms` (legacy). Use the step variant for scientific A/B,
+/// the time variant for record runs that want to fill all available wall time.
+pub fn sa_repair_with_steps(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_set: &BTreeSet<Position>,
+    budget_ms: u64,
+    step_budget: u64,
+    seed: u64,
+) -> Board {
     let n_cells = puzzle.cell_count();
     let mut pinned: Vec<Position> = Vec::with_capacity((n_cells as usize).saturating_sub(free_set.len()));
     for pos in 0..n_cells {
         if !free_set.contains(&pos) { pinned.push(pos); }
     }
     let mut cfg = SaConfig::default();
-    cfg.time_budget_ms = budget_ms;
+    if step_budget > 0 {
+        cfg.max_iters = step_budget;
+        cfg.time_budget_ms = 0;
+    } else {
+        cfg.time_budget_ms = budget_ms;
+    }
     cfg.seed = seed;
     cfg.pinned_positions = pinned;
     // Keep cooling fast for short repair bursts.
@@ -240,6 +274,24 @@ pub fn repair(
     match kind {
         RepairKind::Cp => cp_repair(puzzle, board, free_set, budget_ms),
         RepairKind::Sa => Some(sa_repair(puzzle, board, free_set, budget_ms, seed)),
+    }
+}
+
+/// Vol-17 — repair dispatch with per-kind determinism knobs. `sa_step_budget`
+/// fixes SA work; `cp_parallel = false` switches CP to single-thread.
+pub fn repair_with_opts(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_set: &BTreeSet<Position>,
+    budget_ms: u64,
+    kind: RepairKind,
+    seed: u64,
+    sa_step_budget: u64,
+    cp_parallel: bool,
+) -> Option<Board> {
+    match kind {
+        RepairKind::Cp => cp_repair_with_opts(puzzle, board, free_set, budget_ms, cp_parallel),
+        RepairKind::Sa => Some(sa_repair_with_steps(puzzle, board, free_set, budget_ms, sa_step_budget, seed)),
     }
 }
 
@@ -1011,6 +1063,18 @@ pub struct AlnsConfig {
     /// plateaus on iso-score landscapes (vol-17 empirical observation).
     /// Adds O(W*H) cluster computation per iter; cheap on 16×16.
     pub lex_break_isoscore: bool,
+    /// Vol-17 — fixed-step SA repair for deterministic A/B. When non-zero,
+    /// `sa_repair` runs exactly this many SA moves regardless of wall-clock,
+    /// instead of `repair_budget_ms`. Eliminates the timing-jitter
+    /// nondeterminism that produced same-seed score variance up to 11
+    /// matches in the overnight portfolio (see RESEARCH_NOTES_17_OVERNIGHT
+    /// F2 and OPTIMIZATION_REPORT). Default 0 = legacy wall-clock budget.
+    pub repair_step_budget: u64,
+    /// Vol-17 — when true (default), `cp_repair` uses parallel
+    /// `gacolor_ac3_par` for throughput; when false, uses single-thread
+    /// `gacolor_ac3` for reproducibility across runs. Set to false in
+    /// scientific benchmark binaries; leave true in portfolio/record runs.
+    pub cp_repair_parallel: bool,
 }
 
 impl Default for AlnsConfig {
@@ -1029,6 +1093,8 @@ impl Default for AlnsConfig {
             lex_break_isoscore: false,
             checkpoint_path: None,
             checkpoint_every_ms: 60_000,
+            repair_step_budget: 0,
+            cp_repair_parallel: true,
         }
     }
 }
@@ -1144,11 +1210,17 @@ pub fn run_alns(
 
         // Iteration-specific seed so SA repairs don't all walk the same path.
         let iter_seed = cfg.seed ^ ((stats.iters as u64).wrapping_mul(0xDEADBEEFCAFE0001));
-        let new_board = match repair(puzzle, &current, &free_set, cfg.repair_budget_ms, cfg.repair, iter_seed) {
+        let new_board = match repair_with_opts(
+            puzzle, &current, &free_set, cfg.repair_budget_ms,
+            cfg.repair, iter_seed, cfg.repair_step_budget, cfg.cp_repair_parallel,
+        ) {
             Some(b) => b,
             None => {
                 if cfg.repair == RepairKind::Cp && cfg.cp_fallback_to_sa {
-                    match repair(puzzle, &current, &free_set, cfg.repair_budget_ms, RepairKind::Sa, iter_seed) {
+                    match repair_with_opts(
+                        puzzle, &current, &free_set, cfg.repair_budget_ms,
+                        RepairKind::Sa, iter_seed, cfg.repair_step_budget, cfg.cp_repair_parallel,
+                    ) {
                         Some(b) => b,
                         None => { stats.repair_failures += 1; continue; }
                     }
@@ -1498,6 +1570,8 @@ where
                 lex_break_isoscore: base_cfg.lex_break_isoscore,
                 checkpoint_path: None,
                 checkpoint_every_ms: base_cfg.checkpoint_every_ms,
+                repair_step_budget: base_cfg.repair_step_budget,
+                cp_repair_parallel: base_cfg.cp_repair_parallel,
             };
             cfg.seed = seed;
             let mut ops = ops_factory(i);
@@ -1676,6 +1750,8 @@ pub fn run_alns_pt_multi_init(
                     lex_break_isoscore: false,
                     checkpoint_path: None,
                     checkpoint_every_ms: 60_000,
+                    repair_step_budget: 0,
+                    cp_repair_parallel: true,
                 };
                 let (new_board, new_stats) = run_alns(puzzle, &boards[i], ops.as_mut_slice(), &cfg_chain);
                 let new_score = score_board(puzzle, &new_board);

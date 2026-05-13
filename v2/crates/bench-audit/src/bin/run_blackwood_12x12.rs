@@ -144,6 +144,8 @@ fn run_alns_stage(
             lex_break_isoscore: false,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
+        repair_step_budget: 0,
+        cp_repair_parallel: true,
     };
     let t = Instant::now();
     let (board, stats) = run_alns(puzzle, cp_board, ops.as_mut_slice(), &cfg);

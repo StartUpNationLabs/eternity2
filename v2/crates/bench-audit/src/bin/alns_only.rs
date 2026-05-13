@@ -118,6 +118,8 @@ fn main() {
     let mut repair_kind = "sa".to_string();
     let mut t: f64 = 1.0;
     let mut lex = false;
+    let mut repair_step_budget: u64 = 0;
+    let mut cp_repair_parallel = true;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -129,6 +131,9 @@ fn main() {
             "--repair-kind" => repair_kind = args.next().unwrap(),
             "--t" => t = args.next().unwrap().parse().unwrap(),
             "--lex" => lex = true,
+            // Vol-17 OPTIMIZATION_REPORT phase 0 — determinism knobs.
+            "--repair-step-budget" => repair_step_budget = args.next().unwrap().parse().unwrap(),
+            "--cp-repair-single" => cp_repair_parallel = false,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -168,6 +173,8 @@ fn main() {
         lex_break_isoscore: lex,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
+        repair_step_budget,
+        cp_repair_parallel,
     };
 
     let t0 = Instant::now();

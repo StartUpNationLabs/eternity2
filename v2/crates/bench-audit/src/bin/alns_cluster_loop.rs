@@ -189,6 +189,8 @@ fn main() {
             lex_break_isoscore: false,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
+        repair_step_budget: 0,
+        cp_repair_parallel: true,
         };
         let alns_t = Instant::now();
         let (alns_board, alns_stats) = run_alns(&puzzle, &current, ops.as_mut_slice(), &cfg);

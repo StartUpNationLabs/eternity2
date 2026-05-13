@@ -167,6 +167,8 @@ fn run_arm(
             lex_break_isoscore: false,
         checkpoint_path: alns_checkpoint.clone(),
         checkpoint_every_ms: alns_checkpoint_every_ms,
+        repair_step_budget: 0,
+        cp_repair_parallel: true,
     };
     let t_alns = Instant::now();
     let (alns_board, alns_stats) = run_alns(puzzle, &cp_board, ops.as_mut_slice(), &cfg);

@@ -133,6 +133,8 @@ fn main() {
         lex_break_isoscore: lex,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
+        repair_step_budget: 0,
+        cp_repair_parallel: true,
     };
     let preset = ops_preset.clone();
     let ops_factory = move |_chain_idx: usize| build_ops(&preset);

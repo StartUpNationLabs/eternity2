@@ -301,6 +301,8 @@ fn main() {
             lex_break_isoscore: false,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
+        repair_step_budget: 0,
+        cp_repair_parallel: true,
     };
     let t_alns = Instant::now();
     let (best, stats) = run_alns(&puzzle, &initial, ops.as_mut_slice(), &cfg);
