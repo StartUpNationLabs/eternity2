@@ -124,3 +124,34 @@ bound_floor 470 or 471. Bound consistently dropped to 461-464
 under ALNS recovery. ALNS gradient is too aggressive even from
 within the high-bound basin.
 
+## 14:50 — 15-min hot-PT on 440/469 basin: PLATEAU AT 442
+
+15-min hot-PT, 8 chains, t_max=50 on the 440/469 basin:
+- Result: score=442, bound=462
+
+Same as 5-min hot-PT (442/462) and 5-min ALNS-only (442/463).
+
+**EMPIRICAL CONCLUSION**: The 469-bound basin's ALNS-PT plateau is
+**442**. Bound drifts from 469 to 462 under PT — PT leaves the
+high-bound basin and converges into a 462-bound sub-basin.
+
+ALNS ceiling = actual achievable. The bound is an UPPER bound but
+ALNS finds STRICTLY LOWER in new basins:
+
+| Basin start | Bound | Best ALNS-PT score | Gap |
+|---|---|---|---|
+| 457 (ours, saturated) | 461 | 457 | -4 |
+| 440/469 | 469 | 442 | -27 |
+| 426/458 | 458 | 426 | -32 |
+
+Our 457 basin's gap (-4) reflects ALNS-saturation from many hours.
+New basins have HUGE gaps (-27 to -32) that ALNS cannot close.
+
+## 14:55 — MaxSAT joint bound (small clusters)
+
+cluster_maxsat_repair on the 442/463 basin:
+- halo=2: 62 cluster cells + 210 free = too big, z3 UNKNOWN in 60s
+- halo=0 (just 38 mismatch cells): in progress, 180s timeout
+
+
+
