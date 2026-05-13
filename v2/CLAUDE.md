@@ -10,19 +10,152 @@ All v2 work lives inside `v2/`. The sibling directories of `v2/` (`solvers/`, `f
 
 ## Research vault — READ FIRST when starting a new volume
 
-`v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5-8 volumes.
+`v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5–8 volumes. It is an Obsidian-compatible vault: pages link via `[[wikilink]]`, the canonical entry point is `vault/INDEX.md` (Map-of-Content).
 
-**First action of every new volume**:
-1. Read `vault/plans/BACKLOG.md` — the canonical T-list across all volumes.
-2. Audit-at-open: any item with status `unbuilt` aged 3+ volumes must be PICKED or marked `wont-do` with reason.
-3. Read `vault/plans/CURRENT-VOL.md` for the previous vol's commitments and what's owed.
-4. Write a new `CURRENT-VOL.md` listing **at most 3 binding items** for the new vol.
+The vault is the single source of truth for **what we know and what we've tried** on Eternity II. Code is the source of truth for *what we currently do*; the vault is the source of truth for *the research history, current bounds, and the open questions*.
 
-**Concept pages** in `vault/concepts/` are the source of truth for algorithm classes. Do not redefine them in session notes; link to them.
+### Layout
 
-**Session journals** in `vault/sessions/vol-NN.md` are append-only records. They reference concepts but don't duplicate.
+```
+vault/
+├── INDEX.md                Map-of-Content (read first if disoriented)
+├── README.md               vault discipline (one page)
+├── concepts/               one page per algorithm class, propagator, structural finding
+├── basins/                 one page per notable board or basin
+├── sessions/
+│   ├── vol-NN.md           per-volume compact journal (one page per vol)
+│   ├── night-NN.md         per-night-session journal
+│   └── archive/raw/        original long-form RESEARCH_NOTES_*.md / NIGHT*.md / V15_*.md
+├── plans/
+│   ├── BACKLOG.md          canonical T-list across volumes
+│   └── CURRENT-VOL.md      the in-progress volume's binding items (1–3 max)
+└── reference/
+    ├── memory-crosswalk.md ~/.claude/.../memory/*.md → vault page mapping
+    └── reference-*.md      mirrors of authoritative reference memories
+```
 
-**Discoveries discipline**: mid-vol findings go to BACKLOG as new entries; they do NOT pivot the vol's three binding items unless they obsolete one. This prevents the "discovery hijacks the planned work" pattern.
+### Page schema — concepts
+
+Every `concepts/<slug>.md` SHOULD contain:
+
+1. **Title** (`# Concept name`).
+2. **Status line**: `built` | `partial` | `unbuilt` | `refuted` | `wont-do`.
+3. **Origin**: which volume introduced or measured it.
+4. **Files**: rust source paths and/or scripts.
+5. **Definition** — one short section. What the thing IS, not what we tried.
+6. **What we measured** — empirical results table where possible. Cite the volume.
+7. **What was refuted / unsound conditions** — if applicable.
+8. **What's still open** — backlog hooks.
+9. **Linked concepts** — wikilinks to related pages.
+10. **Linked memory** — names of relevant `~/.claude/.../memory/*.md` entries.
+
+Concepts are **stable**. They are amended (not rewritten) as new measurements come in. A concept whose status flips from `built` to `refuted` keeps its history; the status line and a refutation section are added — **no quiet deletes**.
+
+### Page schema — basins
+
+Every `basins/<slug>.md` SHOULD contain:
+
+- **Score** and (if measured) **bound** ([[relaxed-bound]]).
+- **Discovery**: vol + algorithm + seed if reproducible.
+- **Properties**: geometry, locked-under-K, MaxSAT-proven optimality.
+- **What couldn't break it**: enumerated dead ends.
+- **What might break it**: open hypotheses.
+- **Sister basins** and **Linked concepts**.
+
+### Page schema — sessions
+
+Every `sessions/vol-NN.md` (compact summary) SHOULD contain:
+
+- **Theme** — one-line headline.
+- **Raw** — link to the original `archive/raw/RESEARCH_NOTES_NN.md`.
+- **What was attempted** — bullet list of distinct tracks.
+- **What was measured / kept** — bullet list with numbers + concept links.
+- **What was refuted** — bullet list with reasoning.
+- **Concepts touched** — wikilinks to every concept page added or amended this vol.
+- **Open at close** — what carries into the next vol.
+- **Linked memory** — relevant memory file names.
+
+Sessions are **journals, not encyclopedias**. They describe what happened *this volume*; durable knowledge belongs in `concepts/`. A session page should be readable in under 90 seconds.
+
+### Status taxonomy
+
+| Status | Meaning |
+|---|---|
+| `unbuilt` | proposed; no code or measurement yet |
+| `partial` | code exists but not fully evaluated, OR measurement is partial |
+| `built` | shipped + measured, with current numbers in the page |
+| `refuted` | empirical or theoretical refutation, evidence linked |
+| `wont-do` | explicit decision not to pursue, with reason |
+
+Aged `unbuilt` (≥ 3 volumes) is a vault smell. The audit-at-open rule resolves it.
+
+### Naming conventions
+
+- **Slug-kebab-case**: `bound-ascent.md`, not `BoundAscent.md` or `bound_ascent.md`.
+- **Basin slugs** include score: `basin-457-pt.md`, `basin-440-469.md`.
+- **Session slugs** zero-padded: `vol-01.md`, `vol-22.md`.
+- **Wikilinks** use the slug without extension: `[[basin-457-pt]]`, `[[bound-ascent]]`.
+- **Cross-folder links** use the relative path: `[[sessions/vol-14]]`, `[[../sessions/archive/raw/RESEARCH_NOTES_14|RESEARCH_NOTES_14.md]]` (display text after `|`).
+
+### Audit-at-open discipline
+
+**First actions of every new volume** (the *prevent-8-vols-of-drift* protocol):
+
+1. Read `vault/plans/BACKLOG.md`. Skim every entry. The whole list.
+2. For each item with status `unbuilt` and `since: ≤ vol-(current−3)`: **make a decision**. Pick it, demote to `wont-do` with reason, or argue (in writing in BACKLOG) why it deserves another vol.
+3. Read the previous vol's `CURRENT-VOL.md`. Note what was promised vs delivered.
+4. Read the previous vol's `sessions/vol-NN.md` — specifically the "Open at close" section.
+5. Write a **new** `CURRENT-VOL.md`. At most **3 binding items** (often 1). Add an "Audit-at-open compliance" section explicitly listing the aged items resolved this vol.
+
+**Why 3 max**: every previous vol that committed to 6+ items shipped 1–2. The vol-22 close meta-finding ("8 volumes of deferring prune-restart") drove the limit.
+
+### Discoveries during a volume
+
+Mid-volume findings are **logged, not chased**:
+
+1. Anything genuinely new (a new operator, a new measurement, a new bound) → add an entry to `BACKLOG.md` with status `unbuilt` and `since: <current vol>`.
+2. Do **not** pivot the current vol's binding items. Their job is to ship.
+3. Exception: if the discovery *obsoletes* a binding item (e.g., a refutation makes the planned build pointless), update the binding item to `wont-do (reason: X discovery this vol)`.
+
+This rule exists because "discovery hijacks the planned work" was responsible for ~80% of the deferred-item pattern. The energy to write a BACKLOG entry is much less than the cost of mid-vol pivoting.
+
+### Vol-close protocol
+
+At vol close:
+
+1. Update the status of each binding item in `BACKLOG.md` (`built` / `partial` / `refuted` / `wont-do`).
+2. **Amend every concept page touched** (new measurements, new linked sessions, status updates). Do not duplicate measurements across pages — concept page is canonical.
+3. Write `sessions/vol-NN.md` per the schema above. One page, compact.
+4. If notable basins were discovered, add `basins/basin-<score>-<slug>.md`.
+5. Draft `CURRENT-VOL.md` for the next vol using the audit-at-open protocol.
+6. Update `memory/MEMORY.md` if a finding warrants a persistent agent memory.
+
+### Memory ↔ vault interplay
+
+The agent's persistent memory (`~/.claude/.../memory/*.md`) and the vault overlap. Rules:
+
+- **Memory is for agent re-loading**: high-density, prose, frontmatter-tagged. Loaded into every conversation.
+- **Vault is for human + agent navigation**: structured, wikilinked, browsable in Obsidian.
+- A finding usually exists in **both**. The memory entry is dense; the vault entry is structured.
+- `vault/reference/memory-crosswalk.md` maps every memory file to its vault page(s). Update it when a new memory entry is added.
+- When a memory entry's content has been **fully absorbed** into a vault concept page, the memory entry can be (a) trimmed to a one-line pointer with a `[[wikilink]]`, or (b) left as the canonical short-form reference. Either is fine; the canonical form *for the human researcher* is the vault page.
+
+### No quiet deletes
+
+If a concept is refuted, vault hygiene forbids removing the page. Instead:
+
+- Update the status line to `refuted`.
+- Add a `## Refutation` section with the evidence (volume, measurement, reasoning).
+- Keep all prior content. Future researchers (including ourselves) must be able to see *why* it was refuted, not just that it was.
+
+This rule preserves the audit trail and prevents re-attempting the same dead end (the [[dead-ends]] concept page exists for exactly this reason).
+
+### When in doubt
+
+- If unsure whether something is a `concept` or a `session` thing: **does this describe a durable algorithm/finding (concept) or a one-time observation tied to a particular volume (session)?**
+- If unsure whether to write a new concept page: **will anything in a future volume link to this?** If yes, page. If no, session note suffices.
+- If unsure whether a measurement is worth a memory entry: **would a fresh agent re-loading the project from scratch make a worse decision without this fact?** If yes, memory. If no, vault page alone.
+- If in doubt about whether to *delete* something: **don't**. Mark, amend, or move — never silently remove.
 
 ## Build, test, run
 

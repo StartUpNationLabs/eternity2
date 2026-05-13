@@ -925,8 +925,10 @@ triple-mode semantics, and WASM educational scope. No code written yet.
 
 ## Research log (Experiments A–G, 2026-05-11)
 
-Cross-references `v2/RESEARCH_NOTES.md` for the full hypothesis/measure/
-verdict trail. Headline state after deep-edge work:
+Cross-references `v2/vault/sessions/` (per-volume journals) and
+`v2/vault/sessions/archive/raw/RESEARCH_NOTES_*.md` (the original long-form
+hypothesis/measure/verdict trail). The vault's `INDEX.md` is the entry
+point. Headline state after deep-edge work:
 
 - **Engine baseline** (`border_first_lcv`): 1.3s aggregate on size-6/7
   corpus (32 puzzles).
