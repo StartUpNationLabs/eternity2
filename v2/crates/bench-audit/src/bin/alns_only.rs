@@ -165,7 +165,8 @@ fn main() {
         repair: match repair_kind.as_str() {
             "sa" => RepairKind::Sa,
             "cp" => RepairKind::Cp,
-            other => panic!("--repair-kind want sa|cp, got {other}"),
+            "ot" => RepairKind::IterativeOt,
+            other => panic!("--repair-kind want sa|cp|ot, got {other}"),
         },
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),

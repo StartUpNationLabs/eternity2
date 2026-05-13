@@ -233,3 +233,51 @@ to push toward 457+. Operator must accept oracle's pieces but
 also have moves that go *beyond* oracle (random destroy + SA
 repair, etc.) to discover something new.
 
+
+---
+
+## 2026-05-13 — R3 iterative-OT: empirically refuted as repair op
+
+Built `crates/localsearch/src/ot_repair.rs`: `iterative_ot_repair`
+takes a free_set, builds a (k×k) reward matrix where reward[i][j] =
+#matches piece-i would have at position-j with current static
+neighbors (max over 4 rotations), then runs Kuhn-Munkres
+(maximizing weight) to find the optimal piece→position assignment.
+Iterates until fixed point.
+
+CLI: `alns_only --repair-kind ot`.
+
+Test 1: 30s on a fully-placed 447 board.
+  SA  repair: 20 iters → 447 (locked in, no improvement)
+  OT  repair: 17 215 iters → 447 (same)
+
+Test 2: 30-60s on a 197-placed CP partial (chunk_0003).
+  SA  repair: 20 iters → **453** (+91, the normal pipeline result)
+  OT  repair: 4-8 M iters across seeds → **STUCK AT 362** (the CP
+              starting score, placed = 197/256)
+
+The OT op bails (returns unchanged board) whenever any free position
+is empty, so it cannot bootstrap a partial board.
+
+Test 3: 30s on a fully-placed 453 board.
+  OT  repair: 333-352 k iters × 5 seeds → all stuck at 453.
+
+The 453 board is at an OT-stable fixed point. **OT cannot cross
+the basin barrier** — same finding as R5e: every local move is
+downhill.
+
+### Verdict on R3
+
+- OT is ~1000× faster than SA (microseconds vs ms per iter).
+- But OT is a strict **valley-finder**: monotone non-decreasing in
+  match count under fixed neighbors. It cannot climb out of local
+  optima.
+- On fully-placed plateau states (453+), OT contributes zero.
+- On CP partials, OT structurally cannot start because of the
+  empty-slot bail.
+
+**R3 is REFUTED as a standalone repair op.** Still potentially useful
+as a *post-SA polish step* on borderline-improvable boards, but
+empirically not on 453/447 boards. Mark as null result. Memory entry
+to follow.
+
