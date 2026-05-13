@@ -63,8 +63,8 @@ Aged 10 vols. ~1-week build to replicate Joe's 11-hour SAT solve on a 2-weeks-of
 ### `piece-orbit-as-atom` (N9 from vol-20) — status: `wont-do` — since: vol-20, resolved: vol-27
 **Aged 7 volumes; resolved at vol-27 open.** 10 fungible pieces out of 256 represent < 4% of the search space; even a perfect orbit reduction wouldn't materially affect node counts on canonical 16×16. The vol-26 ML result demonstrates that the leverage on E2-family puzzles is in better value-ordering (540× node reduction), not in tightening the orbit/atom representation. Mark `wont-do`; do not revisit unless a different decomposition shows it could matter for the residual hard region.
 
-### `multi-cell-bound-ascent` (vol-22 T3) — status: `unbuilt` — since: vol-22, deferred at vol-27 open
-3-cycle and 4-cycle moves in bound-landscape, not just 2-swaps. Plateau at bound 470 might break. **Vol-27 scope is ML-axis (vol-26 follow-on); this is ALNS-side and orthogonal. Defer to a future ALNS-focused volume.**
+### `multi-cell-bound-ascent` (vol-22 T3) — status: `unbuilt` — since: vol-22, deferred at vol-31 open
+3-cycle and 4-cycle moves in bound-landscape, not just 2-swaps. Plateau at bound 470 might break. **Vol-31 uses existing ALNS as a black-box recovery layer for the depth-174 partial; this item would build NEW ALNS ops which is orthogonal. Defer; revisit after vol-31 score-axis result.**
 - See `concepts/bound-ascent.md`
 - Est. 1 day
 

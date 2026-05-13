@@ -9,7 +9,7 @@ use std::time::Instant;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_events::{EventBody, EventSink, SolverEvent};
 use eternity2_solver_engine::{load_edge_bp_marginals, EngineConfig, EngineSolver, ValueOrder};
-use eternity2_solver_trait::{SolveMode, SolveOpts, Solver};
+use eternity2_solver_trait::{SolveMode, SolveOpts, SolveOutcome, Solver};
 
 struct Sink {
     nodes: u64,
@@ -45,6 +45,7 @@ fn main() {
     let mut budget_ms: u64 = 30_000;
     let mut puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
     let mut bp_path = PathBuf::from("output/v12_bp/edge_bp_60i.json");
+    let mut dump_partial: Option<PathBuf> = None;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -54,6 +55,7 @@ fn main() {
             "--budget-ms" => { budget_ms = raw[i + 1].parse().expect("budget parse"); i += 2; }
             "--puzzle" => { puzzle_path = PathBuf::from(&raw[i + 1]); i += 2; }
             "--bp-path" => { bp_path = PathBuf::from(&raw[i + 1]); i += 2; }
+            "--dump-partial" => { dump_partial = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -105,8 +107,28 @@ fn main() {
 
     let mut sink = Sink { nodes: 0, backtracks: 0, max_depth: 0, solved: false };
     let t0 = Instant::now();
-    let _ = solver.solve(&puzzle, &opts, &mut sink);
+    let outcome = solver.solve(&puzzle, &opts, &mut sink);
     let elapsed = t0.elapsed().as_millis() as u64;
+
+    // Vol-31 — dump the partial board for ALNS post-fill.
+    if let Some(path) = dump_partial.as_ref() {
+        let board_opt = match &outcome {
+            SolveOutcome::TimedOut { best_partial, .. } => Some(best_partial.clone()),
+            SolveOutcome::Cancelled { best_partial, .. } => Some(best_partial.clone()),
+            SolveOutcome::Solved(b) => Some(b.clone()),
+            _ => None,
+        };
+        if let Some(board) = board_opt {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+            let json = serde_json::to_string(&board).expect("serialize board");
+            std::fs::write(path, json).expect("write partial");
+            eprintln!("dumped partial -> {}", path.display());
+        } else {
+            eprintln!("no partial to dump (outcome not TimedOut/Cancelled/Solved)");
+        }
+    }
 
     println!(
         "{{\"profile\":\"{}\",\"mode\":\"{}\",\"budget_ms\":{},\"elapsed_ms\":{},\"solved\":{},\"nodes\":{},\"backtracks\":{},\"max_depth\":{}}}",
