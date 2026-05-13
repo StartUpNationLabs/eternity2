@@ -115,10 +115,11 @@ struct Args {
     seed_end: u64,
     size: u32,
     colors: u32,
+    budget_ms: u64,
 }
 
 fn parse_args() -> (Args, PathBuf) {
-    let mut a = Args { seed_start: 1, seed_end: 10_001, size: 6, colors: 5 };
+    let mut a = Args { seed_start: 1, seed_end: 10_001, size: 6, colors: 5, budget_ms: 2_000 };
     let mut out = PathBuf::from("ml/data/train_6x6_5c.jsonl");
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -134,13 +135,14 @@ fn parse_args() -> (Args, PathBuf) {
             }
             "--size" => { a.size = raw[i + 1].parse().expect("size parse"); i += 2; }
             "--colors" => { a.colors = raw[i + 1].parse().expect("colors parse"); i += 2; }
+            "--budget-ms" => { a.budget_ms = raw[i + 1].parse().expect("budget-ms parse"); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
     (a, out)
 }
 
-fn export_one(seed: u64, size: u32, colors: u32) -> Option<PuzzleRecord> {
+fn export_one(seed: u64, size: u32, colors: u32, budget_ms: u64) -> Option<PuzzleRecord> {
     let (puzzle, canonical) = generate_with_solution(GeneratorConfig {
         size, interior_colors: colors, seed,
     }).expect("generate");
@@ -162,10 +164,10 @@ fn export_one(seed: u64, size: u32, colors: u32) -> Option<PuzzleRecord> {
     let opts = SolveOpts {
         mode: SolveMode::FirstSolution,
         seed,
-        time_budget_ms: 2_000,
+        time_budget_ms: budget_ms,
         ..SolveOpts::default()
     };
-    let deadline = Instant::now() + std::time::Duration::from_millis(2_500);
+    let deadline = Instant::now() + std::time::Duration::from_millis(budget_ms + 500);
     let mut sink = TrajectorySink::new(puzzle.cell_count() as usize, deadline);
     let _ = solver.solve(&puzzle, &opts, &mut sink);
 
@@ -209,7 +211,7 @@ fn main() {
     let mut dropped = 0u64;
     let start = Instant::now();
     for seed in args.seed_start..args.seed_end {
-        match export_one(seed, args.size, args.colors) {
+        match export_one(seed, args.size, args.colors, args.budget_ms) {
             Some(rec) => {
                 serde_json::to_writer(&mut w, &rec).expect("json write");
                 w.write_all(b"\n").expect("newline");

@@ -2271,13 +2271,13 @@ pub(crate) struct SearchState<'a> {
     /// branch-and-bound monotone-optimal under RootSplit; without it,
     /// workers can return strictly suboptimal local bests.
     pub(crate) shared_best_score: Option<Arc<std::sync::atomic::AtomicU32>>,
-    /// Vol-26 — Python inference subprocess for `ValueOrder::Learned`.
-    /// Lazily spawned at the first value-ordering query; `None` until
-    /// then or if startup fails. On drop the subprocess is killed.
+    /// Vol-27 — in-process ONNX scorer for `ValueOrder::Learned`. Lazily
+    /// constructed at the first value-ordering query; `None` until then
+    /// or if model loading fails. Replaces vol-26's stdio bridge.
     /// Not used when value_order != Learned.
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) learned_bridge: Option<crate::bridge::LearnedBridge>,
-    /// Vol-26 — set to `true` once we've attempted to spawn the bridge
+    pub(crate) learned_bridge: Option<crate::bridge::LearnedScorer>,
+    /// Vol-26 — set to `true` once we've attempted to load the scorer
     /// and failed, so we don't retry per-node.
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) learned_bridge_disabled: bool,
@@ -4399,24 +4399,27 @@ impl<'a> SearchState<'a> {
         scan_idx < self.is_break_index.len() && self.is_break_index[scan_idx]
     }
 
-    /// Vol-26 — call the learned-policy bridge to score each candidate
-    /// row at the given position. Returns `None` if the bridge is
-    /// unavailable (failed to start or IO error mid-run); the caller
-    /// then preserves the existing order. Feature layout matches
-    /// `ml/dataset.py` `TrajectoryDataset.__getitem__`:
-    /// per cell, 13 floats = placed_edges (4) + nb_known (4) + placed_flag (1) + border_mask (4).
+    /// Vol-27 — call the in-process ONNX learned scorer to rank each
+    /// candidate row at the given position. Returns `None` when the
+    /// model is unavailable or the puzzle size doesn't match the
+    /// trained model; the caller then preserves the existing order.
+    /// Feature layout matches `ml/dataset.py` `TrajectoryDataset`:
+    /// per cell, 13 floats = placed_edges (4) + nb_known (4) +
+    /// placed_flag (1) + border_mask (4).
     #[cfg(not(target_arch = "wasm32"))]
     fn learned_score_candidates(
         &mut self,
         pos: Position,
         domain_snapshot: &[u32],
     ) -> Option<Vec<f32>> {
+        use ndarray::Array3;
+
         if self.learned_bridge_disabled {
             return None;
         }
         if self.learned_bridge.is_none() {
-            match crate::bridge::LearnedBridge::spawn() {
-                Some(b) => self.learned_bridge = Some(b),
+            match crate::bridge::LearnedScorer::spawn() {
+                Some(s) => self.learned_bridge = Some(s),
                 None => {
                     self.learned_bridge_disabled = true;
                     return None;
@@ -4424,55 +4427,68 @@ impl<'a> SearchState<'a> {
             }
         }
 
-        let w = self.puzzle.width;
-        let h = self.puzzle.height;
-        let n_cells = (w * h) as usize;
-        let mut feats = String::with_capacity(n_cells * 60);
-        feats.push('[');
+        let w = self.puzzle.width as usize;
+        let h = self.puzzle.height as usize;
+        let n_cells = w * h;
+        // The trained model is size-specific; if the puzzle doesn't
+        // match, skip silently. The scorer also enforces this but
+        // catching here avoids the Array3 allocation.
+        if let Some(s) = self.learned_bridge.as_ref() {
+            if s.grid_size() != w || w != h {
+                self.learned_bridge_disabled = true;
+                return None;
+            }
+        }
+
+        let mut feats = Array3::<f32>::zeros((1, n_cells, 13));
         for y in 0..h {
             for x in 0..w {
-                let p = (y * w + x) as usize;
+                let p = y * w + x;
                 let (e0, e1, e2, e3, placed) = match self.placed[p] {
                     Some(r_id) => {
                         let r = self.rows[r_id as usize];
-                        (r.edges[0], r.edges[1], r.edges[2], r.edges[3], 1u8)
+                        (r.edges[0] as f32, r.edges[1] as f32, r.edges[2] as f32, r.edges[3] as f32, 1.0_f32)
                     }
-                    None => (0u8, 0u8, 0u8, 0u8, 0u8),
+                    None => (0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32),
                 };
-                let nb_top = if y == 0 { 1u8 } else if self.placed[((y - 1) * w + x) as usize].is_some() { 1 } else { 0 };
-                let nb_right = if x == w - 1 { 1 } else if self.placed[(y * w + x + 1) as usize].is_some() { 1 } else { 0 };
-                let nb_bot = if y == h - 1 { 1 } else if self.placed[((y + 1) * w + x) as usize].is_some() { 1 } else { 0 };
-                let nb_left = if x == 0 { 1 } else if self.placed[(y * w + (x - 1)) as usize].is_some() { 1 } else { 0 };
-                let bm_top = u8::from(y == 0);
-                let bm_right = u8::from(x == w - 1);
-                let bm_bot = u8::from(y == h - 1);
-                let bm_left = u8::from(x == 0);
-                if p != 0 { feats.push(','); }
-                use std::fmt::Write as _;
-                let _ = write!(
-                    feats,
-                    "[{e0},{e1},{e2},{e3},{nb_top},{nb_right},{nb_bot},{nb_left},{placed},{bm_top},{bm_right},{bm_bot},{bm_left}]"
-                );
+                let nb_top = if y == 0 { 1.0_f32 } else if self.placed[(y - 1) * w + x].is_some() { 1.0 } else { 0.0 };
+                let nb_right = if x == w - 1 { 1.0 } else if self.placed[y * w + x + 1].is_some() { 1.0 } else { 0.0 };
+                let nb_bot = if y == h - 1 { 1.0 } else if self.placed[(y + 1) * w + x].is_some() { 1.0 } else { 0.0 };
+                let nb_left = if x == 0 { 1.0 } else if self.placed[y * w + x - 1].is_some() { 1.0 } else { 0.0 };
+                let bm_top = if y == 0 { 1.0_f32 } else { 0.0 };
+                let bm_right = if x == w - 1 { 1.0 } else { 0.0 };
+                let bm_bot = if y == h - 1 { 1.0 } else { 0.0 };
+                let bm_left = if x == 0 { 1.0 } else { 0.0 };
+                feats[[0, p, 0]] = e0;
+                feats[[0, p, 1]] = e1;
+                feats[[0, p, 2]] = e2;
+                feats[[0, p, 3]] = e3;
+                feats[[0, p, 4]] = nb_top;
+                feats[[0, p, 5]] = nb_right;
+                feats[[0, p, 6]] = nb_bot;
+                feats[[0, p, 7]] = nb_left;
+                feats[[0, p, 8]] = placed;
+                feats[[0, p, 9]] = bm_top;
+                feats[[0, p, 10]] = bm_right;
+                feats[[0, p, 11]] = bm_bot;
+                feats[[0, p, 12]] = bm_left;
             }
         }
-        feats.push(']');
 
-        let mut cand = String::with_capacity(domain_snapshot.len() * 8);
-        cand.push('[');
-        for (i, &r_id) in domain_snapshot.iter().enumerate() {
-            let r = self.rows[r_id as usize];
-            if i != 0 { cand.push(','); }
-            use std::fmt::Write as _;
-            let _ = write!(cand, "[{},{}]", r.piece_id, r.rotation);
-        }
-        cand.push(']');
+        let candidates: Vec<(u16, u8)> = domain_snapshot
+            .iter()
+            .map(|&r_id| {
+                let r = self.rows[r_id as usize];
+                (r.piece_id, r.rotation)
+            })
+            .collect();
 
-        let bridge = self.learned_bridge.as_mut()?;
-        match bridge.score(&feats, pos, &cand) {
+        let scorer = self.learned_bridge.as_ref()?;
+        match scorer.score(&feats, pos, &candidates) {
             Some(scores) if scores.len() == domain_snapshot.len() => Some(scores),
             _ => {
-                // IO failure or shape mismatch — disable for the rest of
-                // the run so we don't keep paying setup cost.
+                // Inference failure or shape mismatch — disable for the
+                // rest of the run so we don't keep paying setup cost.
                 self.learned_bridge = None;
                 self.learned_bridge_disabled = true;
                 None
