@@ -153,6 +153,7 @@ impl SolverService for SolverServiceImpl {
                     excluded_pieces: Vec::new(),
                     preferred_pieces: Vec::new(),
                     edge_bp_marginals: None,
+                    batch_hint_application: false,
                 },
             });
         }

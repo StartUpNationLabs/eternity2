@@ -179,6 +179,7 @@ fn run_search(
         excluded_pieces: excluded.clone(),
         preferred_pieces: preferred,
         edge_bp_marginals: None,
+        batch_hint_application: false,
     };
     let mut sink = NullSink;
     let t0 = Instant::now();

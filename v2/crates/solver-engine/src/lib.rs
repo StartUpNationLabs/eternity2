@@ -3183,20 +3183,116 @@ impl<'a> SearchState<'a> {
             }
         }
 
-        for h in self.opts.hints.hints.clone() {
-            let row_id = u32::from(h.piece_id) * 4 + u32::from(h.rotation.as_u8());
-            let pos_idx = h.position as usize;
-            let n_pos = self.puzzle.cell_count() as usize;
-            if pos_idx >= n_pos || !self.domain_contains(pos_idx, row_id) {
-                return Err(SolveOutcome::Error(format!(
-                    "hint at position {} is incompatible with constraints", h.position
-                )));
+        // Vol-23 — batch hint application mode for prune-restart.
+        //
+        // In `per-hint` (default) mode: pin each hint and propagate
+        // immediately. The propagation removes options from other cells'
+        // domains; if a later hint's row was among those removed, the
+        // engine rejects the hint set even when it's globally consistent.
+        // This happens routinely for hint sets ≥ ~50 cells extracted from
+        // a DFS partial (the DFS visited cells in MRV order, not the
+        // order we pin them).
+        //
+        // In `batch` mode: pin all hint domains first (no propagation
+        // between hints), then run propagation once at the end. Self-
+        // consistent hint sets always succeed.
+        if self.opts.batch_hint_application {
+            // Phase 1: pin all hint domains + claim pieces, with no
+            // propagation. Validate each row is plausible (in domain
+            // BEFORE any hint was pinned — checked at construction).
+            for h in self.opts.hints.hints.clone() {
+                let row_id = u32::from(h.piece_id) * 4 + u32::from(h.rotation.as_u8());
+                let pos_idx = h.position as usize;
+                let n_pos = self.puzzle.cell_count() as usize;
+                if pos_idx >= n_pos {
+                    return Err(SolveOutcome::Error(format!(
+                        "hint at position {} out of range", h.position
+                    )));
+                }
+                // domain_contains is checked against the FRESHLY BUILT
+                // domain_bits (only border-class filtered, no propagation
+                // applied yet). Self-consistent hints pass.
+                if !self.domain_contains(pos_idx, row_id) {
+                    return Err(SolveOutcome::Error(format!(
+                        "hint at position {} (pid={}, rot={}) has border-class mismatch",
+                        h.position, h.piece_id, h.rotation.as_u8()
+                    )));
+                }
+                // Sanity: piece must not already be used. Catches duplicate
+                // hints for the same piece-id.
+                let piece_idx = usize::from(h.piece_id);
+                if piece_idx < self.used.len() && self.used[piece_idx] {
+                    return Err(SolveOutcome::Error(format!(
+                        "hint at position {} uses piece {} which is already pinned elsewhere",
+                        h.position, h.piece_id
+                    )));
+                }
+                self.pin_to(pos_idx, row_id);
+                self.placed[pos_idx] = Some(row_id);
+                self.used[piece_idx] = true;
+                // Vol-15 — update Blackwood heuristic count for this placement
+                // (mirroring the increment in place_and_propagate).
+                let row = self.rows[row_id as usize];
+                let inc = self.count_heuristic_in_row(&row.edges);
+                self.placed_heuristic_count = self.placed_heuristic_count.saturating_add(inc);
+                // Also update gacolor occupancy if active.
+                if self.gacolor.is_some() {
+                    let n_info = self.neighbor_info(h.position);
+                    if let Some(gc) = self.gacolor.as_mut() {
+                        gc.apply_place(&row.edges, &n_info);
+                    }
+                }
             }
-            self.pin_to(pos_idx, row_id);
-            if let PropagationOutcome::Wipeout { .. } = self.place_and_propagate(sink, 0, h.position, row_id) {
-                return Err(SolveOutcome::Error(format!(
-                    "hint at position {} causes immediate wipeout", h.position
-                )));
+            // Phase 2: now propagate from all pinned cells. We trigger
+            // propagation by re-pinning the LAST hint via
+            // place_and_propagate; the propagators are global and will
+            // see all already-pinned cells.
+            //
+            // Special case: if hints is empty, skip propagation entirely.
+            if let Some(last) = self.opts.hints.hints.last().copied() {
+                let row_id = u32::from(last.piece_id) * 4 + u32::from(last.rotation.as_u8());
+                let pos_idx = last.position as usize;
+                // Undo the last hint's pin/placed/used so place_and_propagate
+                // can re-apply it cleanly; the bookkeeping side-effects (count,
+                // gacolor) are idempotent under undo+redo.
+                self.placed[pos_idx] = None;
+                let piece_idx = usize::from(last.piece_id);
+                self.used[piece_idx] = false;
+                let row = self.rows[row_id as usize];
+                let dec = self.count_heuristic_in_row(&row.edges);
+                self.placed_heuristic_count = self.placed_heuristic_count.saturating_sub(dec);
+                if self.gacolor.is_some() {
+                    let n_info = self.neighbor_info(last.position);
+                    if let Some(gc) = self.gacolor.as_mut() {
+                        gc.apply_unplace(&row.edges, &n_info);
+                    }
+                }
+                self.pin_to(pos_idx, row_id);
+                if let PropagationOutcome::Wipeout { .. } =
+                    self.place_and_propagate(sink, 0, last.position, row_id)
+                {
+                    return Err(SolveOutcome::Error(format!(
+                        "batched hint propagation wiped out (final pin at position {})",
+                        last.position
+                    )));
+                }
+            }
+        } else {
+            for h in self.opts.hints.hints.clone() {
+                let row_id = u32::from(h.piece_id) * 4 + u32::from(h.rotation.as_u8());
+                let pos_idx = h.position as usize;
+                let n_pos = self.puzzle.cell_count() as usize;
+                if pos_idx >= n_pos || !self.domain_contains(pos_idx, row_id) {
+                    return Err(SolveOutcome::Error(format!(
+                        "hint at position {} is incompatible with constraints", h.position
+                    )));
+                }
+                self.pin_to(pos_idx, row_id);
+                if let PropagationOutcome::Wipeout { .. } = self.place_and_propagate(sink, 0, h.position, row_id) {
+                    return Err(SolveOutcome::Error(format!(
+                        "hint at position {} causes immediate wipeout", h.position
+                    )));
+                }
             }
         }
         Ok(())

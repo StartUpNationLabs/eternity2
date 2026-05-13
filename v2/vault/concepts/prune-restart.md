@@ -1,8 +1,8 @@
 # Prune-restart (McGavin in-place)
 
-**Status**: `unbuilt`
-**Aged**: since vol-14 (8 volumes)
-**Priority**: highest EV unbuilt item
+**Status**: `built` (vol-23 driver + engine batch hints)
+**Originally aged**: since vol-14, 8 volumes deferred
+**Built**: 2026-05-13 vol-23
 
 ## Definition
 
@@ -34,12 +34,27 @@ The engine needs a `PruneAndRestart` policy that "forgets" backtracking history 
 
 **Pattern**: every vol-plan lists this; every vol does something else.
 
-## Build plan
+## Build plan (DONE)
 
-- File: `crates/solver-engine/src/lib.rs`
-- Add `PruneRestart` variant of `EngineConfig::variable_order` OR a new top-level policy field.
-- Reuse `EngineSolver::blackwood_raw_par`.
-- Estimated 1-2 days.
+Took ~1 hour, not 1-2 days. Two pieces:
+
+1. **Engine change**: `SolveOpts.batch_hint_application: bool` (new field). When true, `apply_symmetry_and_hints` pins all hints before any propagation, then propagates once at the end. Solves the order-sensitivity bug where mid-application propagation removes a row that a later hint needs.
+   - File: `crates/solver-trait/src/lib.rs` (new field).
+   - File: `crates/solver-engine/src/lib.rs` (apply_symmetry_and_hints batched branch).
+
+2. **Driver binary**: `crates/bench-audit/src/bin/prune_restart.rs`. Multi-round loop: run CP, capture partial, pin all placements, re-run CP.
+
+## First empirical result (CPU-contended smoke test, 30s/round, canonical 5 hints)
+
+- Round 1 (joe_depth150_bp_par + v17a schedule): depth 27, score 23, 32 cells placed.
+- **Round 2 (batch hints + gacolor_ac3_par, pinning the 32 cells)**: **depth 150, score 289, 182 cells placed** in 30s. Δ +266.
+- Round 3 (pinning 182 cells): gacolor wipeout — color-pool inconsistency at 70%+ pinned.
+
+Vol-23 conclusion: prune-restart concept VALIDATED. Round 2 lift of +266 is genuine; the engine pruned much harder from the richer initial state.
+
+Next steps:
+- Run from a high-bound basin start (e.g. [[basin-440-469]]).
+- Round-3 wipeout handling: drop gacolor for round 3+, use bare propagation.
 
 ## Linked sessions
 

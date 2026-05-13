@@ -41,6 +41,19 @@ Our 457 basin has the smallest gap because it was ALNS-saturated by hours of sea
 
 **Conclusion**: ALNS-PT can't push the 469 basin past 442 in 30 min. Either need hours (overnight test PID 66809 ongoing) or stronger repair ([[prune-restart]]).
 
+## Vol-23 batch survey (16 seeds, killed early 47 min in)
+
+Ran the recipe from our 457 board with seeds 100-115. Each: bound-ascent 3000 iters → Hungarian → 90s ALNS. Results:
+
+- Best score: **451** (seed 112, bound 462) — close to but below our 457.
+- Best bound: 465 (seed 104, score 434).
+- Score range across 16 seeds: 428-451.
+- Bound range across 16 seeds: 450-465.
+
+**Pattern**: predictably produces basins in the 428-451 / 450-465 region. Vol-22's 440/469 single result was an outlier; the typical bound here is 455-465. None of 16 seeds beat 457.
+
+Conclusion: this recipe is a **basin-DIVERSIFIER**, not a basin-SOLVER. Variations of the recipe (different ALNS profile post-Hungarian, different bound-ascent budget) might find higher-score basins; but 90s ALNS recovery caps the score at ~445-451.
+
 ## Linked concepts
 
 - [[bound-ascent]] — step 1 of the recipe

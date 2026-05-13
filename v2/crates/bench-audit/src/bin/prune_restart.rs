@@ -39,6 +39,7 @@ use eternity2_solver_engine::{
     blackwood_schedule_calibrated_v17a, EngineSolver,
 };
 use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
+use eternity2_core::BORDER;
 
 fn load_board(path: &std::path::Path, puzzle: &Puzzle) -> Board {
     let raw = std::fs::read_to_string(path).expect("read");
@@ -56,13 +57,89 @@ fn load_board(path: &std::path::Path, puzzle: &Puzzle) -> Board {
     b
 }
 
+/// Local cell score: how many of `pos`'s 4 edges match its current
+/// neighbors. Used to drop mismatch cells.
+fn cell_local_score(puzzle: &Puzzle, board: &Board, pos: u32) -> u32 {
+    let Some((pid, rot)) = board.get(pos) else { return 0; };
+    let e = puzzle.piece(pid).unwrap().edges.rotated(rot).as_array();
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let x = pos % w;
+    let y = pos / w;
+    let mut s = 0u32;
+    for (dx, dy, our, theirs) in [(0i32, -1, 0, 2), (1, 0, 1, 3), (0, 1, 2, 0), (-1, 0, 3, 1)] {
+        let nx = x as i32 + dx;
+        let ny = y as i32 + dy;
+        if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 { continue; }
+        let npos = ny as u32 * w + nx as u32;
+        if let Some((npid, nrot)) = board.get(npos) {
+            let ne = puzzle.piece(npid).unwrap().edges.rotated(nrot).as_array();
+            if e[our] != BORDER && ne[theirs] != BORDER && e[our] == ne[theirs] {
+                s += 1;
+            }
+        }
+    }
+    s
+}
+
+/// Build hints from a board's placed cells, EXCLUDING canonical hint
+/// positions (which are already pinned) AND the `n_drop` lowest-scoring
+/// cells (which are unpinned to let CP re-search them).
+///
+/// When `n_drop == 0`, just pin all non-canonical cells.
+/// When `n_drop > 0`, drop the lowest-local-score `n_drop` cells.
+fn hints_from_board_with_drops(
+    board: &Board,
+    puzzle: &Puzzle,
+    canonical: &Hints,
+    n_drop: usize,
+) -> Hints {
+    let canonical_positions: std::collections::BTreeSet<u32> =
+        canonical.hints.iter().map(|h| h.position).collect();
+    let mut placed: Vec<(u32, u32)> = (0..puzzle.cell_count())
+        .filter(|p| !canonical_positions.contains(p))
+        .filter(|p| board.get(*p).is_some())
+        .map(|p| (p, cell_local_score(puzzle, board, p)))
+        .collect();
+    // Drop the n_drop lowest-scoring cells.
+    if n_drop > 0 && n_drop < placed.len() {
+        placed.sort_by_key(|(p, s)| (*s, *p));
+        placed.drain(0..n_drop);
+    }
+    let kept: std::collections::BTreeSet<u32> = placed.iter().map(|(p, _)| *p).collect();
+
+    let mut hs: Vec<Hint> = canonical.hints.clone();
+    let mut corners: Vec<Hint> = Vec::new();
+    let mut edges: Vec<Hint> = Vec::new();
+    let mut inner: Vec<Hint> = Vec::new();
+    let w = puzzle.width;
+    let h = puzzle.height;
+    for pos in 0..puzzle.cell_count() {
+        if canonical_positions.contains(&pos) { continue; }
+        if !kept.contains(&pos) { continue; }
+        let Some((pid, rot)) = board.get(pos) else { continue; };
+        let hint = Hint { position: pos, piece_id: pid, rotation: rot };
+        let x = pos % w;
+        let y = pos / w;
+        let n_border = (if x == 0 {1} else {0}) + (if x == w - 1 {1} else {0})
+            + (if y == 0 {1} else {0}) + (if y == h - 1 {1} else {0});
+        match n_border {
+            2 => corners.push(hint),
+            1 => edges.push(hint),
+            _ => inner.push(hint),
+        }
+    }
+    corners.sort_by_key(|h| h.position);
+    edges.sort_by_key(|h| h.position);
+    inner.sort_by_key(|h| h.position);
+    hs.extend(corners);
+    hs.extend(edges);
+    hs.extend(inner);
+    Hints::new(hs)
+}
+
 /// Build hints from a board's placed cells, EXCLUDING canonical hint
 /// positions (which are already pinned).
-///
-/// Hints are emitted in BORDER-FIRST order (corners → edges → interior)
-/// to match the engine's BORDER_FIRST_LCV variable ordering. Within
-/// each tier, sort by position. This minimises mid-apply propagation
-/// from removing options needed by later hints.
 fn hints_from_board(board: &Board, puzzle: &Puzzle, canonical: &Hints) -> Hints {
     let canonical_positions: std::collections::BTreeSet<u32> =
         canonical.hints.iter().map(|h| h.position).collect();
@@ -116,6 +193,7 @@ fn main() {
     let mut seed: u64 = 1;
     let mut out_dir = PathBuf::from("output/v23_prune_restart");
     let mut min_depth_growth: u32 = 5;
+    let mut drop_k: usize = 30;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -125,6 +203,7 @@ fn main() {
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--out-dir" => out_dir = PathBuf::from(args.next().unwrap()),
             "--min-depth-growth" => min_depth_growth = args.next().unwrap().parse().unwrap(),
+            "--drop-k" => drop_k = args.next().unwrap().parse().unwrap(),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -160,8 +239,11 @@ fn main() {
 
     // Use the initial board's placements as the seed hint set (round 1's inputs).
     // If no start board, round 1 just runs from canonical hints.
+    // When --start is provided AND --drop-k > 0, round 1 pins all-but-the-
+    // lowest-scoring `drop_k` cells, then CP fills those unpinned cells.
     let mut current_hints = if let Some(ref b) = initial_board {
-        hints_from_board(b, &puzzle, &canonical_hints)
+        eprintln!("dropping {drop_k} lowest-scoring cells from start board");
+        hints_from_board_with_drops(b, &puzzle, &canonical_hints, drop_k)
     } else {
         canonical_hints.clone()
     };
@@ -178,21 +260,36 @@ fn main() {
         opts.time_budget_ms = cp_budget_ms;
         opts.seed = seed;
         opts.hints = current_hints.clone();
-
         let n_pinned = current_hints.hints.len();
+        // Vol-23 engine change — batch mode pins all hints before
+        // propagation so a DFS-derived hint set doesn't reject itself.
+        // Enable whenever the hint set exceeds the canonical count
+        // (i.e. any round 2+, or round 1 if started from a partial board).
+        opts.batch_hint_application = n_pinned > canonical_count;
+
         eprintln!("\n=== ROUND {round}: pinned={n_pinned} (canonical={canonical_count} + {} extra) ===",
             n_pinned - canonical_count);
 
-        // Round 1: rich propagators (joe_depth150_bp_par) for the initial CP.
-        // Rounds 2+: border_first_lcv — bare minimum propagation. The point
-        // of prune-restart is the RE-PROPAGATION with hints fixed; we let the
-        // engine's standard propagation chain (edge-color matching, piece
-        // uniqueness) re-run from a richer state. Heavier propagators
-        // (gacolor, multiset_equality) over-prune when many hints are pinned.
-        let mut solver: Box<EngineSolver> = if round == 1 {
+        // Vol-23 — engine selection:
+        // - Round 1 from canonical-only hints: joe_depth150_bp_par + v17a
+        //   schedule (strongest cold-start CP).
+        // - Otherwise (round 1 from partial, or any round 2+):
+        //   gacolor_ac3_par WITHOUT schedule. The schedule is calibrated
+        //   for the 5-hint cold-start trajectory; running it with 30+
+        //   extra hints distorts the heuristic-count vs target check.
+        //   gacolor_ac3 provides decent propagation without the schedule.
+        let cold_start = round == 1 && n_pinned == canonical_count;
+        // For heavily-pinned starts (e.g. 226/256 cells), gacolor's
+        // incremental color-pool tracking triggers false-positive wipeouts.
+        // Use the bare-bones border_first_lcv_par profile (just class_balance
+        // + edge-color matching) for these.
+        let heavily_pinned = n_pinned > 100;
+        let mut solver: Box<EngineSolver> = if cold_start {
             Box::new(EngineSolver::joe_depth150_bp_par().with_blackwood_schedule(schedule.clone()))
-        } else {
+        } else if heavily_pinned {
             Box::new(EngineSolver::border_first_lcv_par())
+        } else {
+            Box::new(EngineSolver::gacolor_ac3_par())
         };
         let log_path = out_dir.join(format!("round_{round}.log"));
         let mut sink = ProgressSink::new(&log_path, 5_000).expect("open log");

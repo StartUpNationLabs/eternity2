@@ -57,6 +57,14 @@ pub struct SolveOpts {
     /// Only consulted when `EngineConfig.value_order ==
     /// ValueOrder::EdgeBpMarginals`.
     pub edge_bp_marginals: Option<Arc<Vec<f32>>>,
+    /// Vol-23 — when true, `apply_symmetry_and_hints` pins all hints
+    /// first (in supplied order) and then runs one batched propagation
+    /// pass. This avoids the issue where mid-application propagation
+    /// removes a row that a later (still pending) hint needs, which
+    /// happens routinely for hint sets ≥ ~50 cells extracted from a
+    /// previous DFS partial. Used by the prune-restart driver.
+    /// Default false (preserves existing per-hint propagation order).
+    pub batch_hint_application: bool,
 }
 
 impl Default for SolveOpts {
@@ -73,6 +81,7 @@ impl Default for SolveOpts {
             excluded_pieces: Vec::new(),
             preferred_pieces: Vec::new(),
             edge_bp_marginals: None,
+            batch_hint_application: false,
         }
     }
 }
