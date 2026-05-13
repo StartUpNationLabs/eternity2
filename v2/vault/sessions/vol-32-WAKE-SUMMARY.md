@@ -66,14 +66,19 @@ PT-5min from the same partial gave **451** — ALNS beats PT here.
 **Two distinct 456 boards** (different md5s — not byte-identical
 reproduction). **−1 from all-time record.**
 
-7-seed re-lottery from seed 2's 456 board + 15min extension running
-now to attempt 457+. Boards saved at
-`output/vol-32/blackwood_raw_alns_seed{2,4}_456.json`.
+**Both 456 basins are basin-locked under winning5 ALNS:**
 
-ORIGINAL lottery-monitor text below:
-**Multi-seed ALNS lottery is running now** (8 seeds × 5min); results
-in `output/vol-32/t8_bw190_lottery/`. Hopeful for 455+ on at least
-one seed.
+- **7-seed re-lottery from seed 2's 456 board (seeds 101-107, 5min each)**: 7/7 → 456 (basin-locked).
+- **4-seed test from seed 4's 456 board (seeds 201-204, 5min each)**: 4/4 → 456 (basin-locked).
+- **15min extension** from seed 2's 456 board (seed 100, 900s): 600 iters, 0 improvements past 456.
+
+Two distinct 456 basins (58/256 cells differ between them), both
+are stable local optima under winning5 ALNS. Breaking 456→457
+requires: different ALNS ops (k=80 ConflictDriven, HingeDestroy,
+Houdayer-on-ALNS), PT with higher temperatures, or vol-22's
+basin-escape recipe (bound-ascent + Hungarian + ALNS over hours).
+
+Boards saved at `output/vol-32/blackwood_raw_alns_seed{2,4}_456.json`.
 
 ### 4. Unsat-clause-propagator scaffold for vol-33
 
