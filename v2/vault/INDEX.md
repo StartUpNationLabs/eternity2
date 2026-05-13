@@ -39,6 +39,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  22 |             457 |       — | [[basin-escape-recipe]] finds [[basin-440-469                     | 469-ceiling basin]]           |
 |  23 |             457 |       — | [[prune-restart]] shipped; cold-start route +266 CP-depth lift but ALNS-fill only 424 (< 451 vanilla) |                               |
 |  24 |             457 |       — | [[score-optimizing-cp]] shipped — MaxScore CP-fill 412→419 vs vol-23 round-2 partial; cold-chain 413 at 40% budget |                               |
+|  26 |             457 |       — | [[learned-value-order]] gate at 6×6/5c — 540× engine-node reduction vs MRV+LCV; stdio bridge eats wall-clock win |                               |
 
 
 ## Concepts — by category
@@ -75,11 +76,13 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[edge-bp-marginals]] — vol-12 edge-color (partial-positive in pipeline)
 - [[survey-propagation]] — refuted (cavity-method block)
 - [[boundary-mps]] — vol-13 tensor network (refuted, 10¹⁰¹ overcounting)
+- [[learned-value-order]] — vol-26 imitation-learning gate (540× engine-node reduction at 6×6/5c; bridge eats wall-clock)
 
 ### Structural / measurement
 - [[mismatch-geometry]] — where errors live (universal mismatches, fracture threshold)
 - [[rare-color-rule]] — opposite-edge invariant + border exclusivity
 - [[selby-riordan-generator]] — the generator behind canonical E2
+- [[synthetic-puzzle-generator]] — vol-26 Rust impl + JSONL exporter for synthetic E2-family puzzles
 - [[mismatch-homology]] — vol-19 β_1 (small signal)
 - [[z22-vertex-charge]] — vol-7 gauge fingerprint
 - [[r5f-cooperativity]] — vol-18 76-cell barrier (KEY PHYSICS)

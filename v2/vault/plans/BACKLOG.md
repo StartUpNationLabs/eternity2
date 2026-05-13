@@ -8,6 +8,22 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ## Algorithm builds (engine-level)
 
+### `learned-value-order-gate` (vol-26 T1) — status: `built` — vol-26 (2026-05-13)
+Imitation-learning model + Rust↔Python stdio bridge for `ValueOrder::Learned`. Trained on 10k synthetic 6×6/5c puzzles (~360k state-target tuples), 53k-param 2-layer grid GNN, 5 epochs CPU. **Gate FAIL on spec, PASS on substance**:
+- Coverage (a): 200/200 vs 200/200 — PASS.
+- Median node ratio (b): 0.0018 (≈ 540× reduction) — PASS (≤ 0.80 required).
+- MRV-failed solved (c): 0 (MRV had zero failures at 6×6/5c within 5s) — FAIL on technicality.
+
+Wall-clock: 56× SLOWER median (609ms vs 11ms) because of stdio JSON + Python torch overhead.
+
+Substance is unambiguous: the model has internalised the expert search trajectory and reduces engine nodes ~540×, but the bridge eats the win. See [[learned-value-order]] for full table + analysis. Vol-27 unblocks via in-process inference (ONNX / PyO3 / hand-rolled forward).
+
+### `bridge-overhead-elimination` (vol-27 T1) — status: `unbuilt` — since: vol-26
+Stdio JSON + Python torch inference per node = ~15ms/node × 36 nodes ≈ 540ms vs MRV's 11ms. Three routes: ONNX-via-`ort` (recommended), PyO3 in-process, hand-rolled f32 Rust forward. See [[../plans/VOL-27]] T1 for the route comparison.
+
+### `learned-gate-at-7x7-8x8` (vol-27 T2) — status: `unbuilt` — since: vol-26
+After bridge fix, retest gate at 7×7 / 8×8 / 5c where MRV has 5-15% failure rate (per vol-26 difficulty measurement) → condition (c) becomes meaningful. Retrain model at the target size (cheap; ~10 min training). See [[../plans/VOL-27]] T2.
+
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.
 
