@@ -78,6 +78,7 @@ fn main() {
         "insertion" => ValueOrder::InsertionOrder,
         "learned" => ValueOrder::Learned,
         "edge_bp" => ValueOrder::EdgeBpMarginals,
+        "learned_on_ties" => ValueOrder::LearnedOnTies,
         other => panic!("unknown mode: {other}"),
     };
     cfg.value_order = value_order;
@@ -92,8 +93,9 @@ fn main() {
         time_budget_ms: budget_ms,
         ..SolveOpts::default()
     };
-    // If using EdgeBpMarginals load the BP file.
-    if matches!(value_order, ValueOrder::EdgeBpMarginals) {
+    // If using EdgeBpMarginals (or LearnedOnTies, which runs BP first)
+    // load the BP file.
+    if matches!(value_order, ValueOrder::EdgeBpMarginals | ValueOrder::LearnedOnTies) {
         if let Ok(bp) = load_edge_bp_marginals(&bp_path) {
             opts.edge_bp_marginals = Some(bp);
         } else {

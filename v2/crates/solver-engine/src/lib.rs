@@ -82,6 +82,16 @@ pub enum ValueOrder {
     /// model. Per-node overhead: ~1-3 ms (JSON + inference). Acceptable
     /// at small puzzle sizes; not intended for canonical E2.
     Learned,
+    /// Vol-30 — hybrid value order. Score candidates by EdgeBpMarginals
+    /// first; reorder only the top-k tied/near-tied candidates with the
+    /// Learned scorer. Cheaper per-node than `Learned` (we call the NN
+    /// only when a tie-break matters), and theoretically dominated by
+    /// EdgeBpMarginals when there are no ties. Vol-29 measurement showed
+    /// the learned model picks productive tie-breakers
+    /// (−35% nodes / −37% backtracks at iso-depth); this variant tests
+    /// whether that signal turns into Δ > 0 depth on canonical E2.
+    /// Requires both `opts.edge_bp_marginals` and a loaded Learned model.
+    LearnedOnTies,
 }
 
 /// Vol-15 — Blackwood 2020 algorithm parameters. The backtracker is
@@ -4004,13 +4014,15 @@ impl<'a> SearchState<'a> {
             }
         }
 
-        // EdgeBpMarginals: score each row by Σ over its 4 sides of the
-        // BP marginal mass at the row's edge color. Sort descending so
-        // the engine tries higher-mass colors first. Silently no-op if
-        // marginals or the mapping table aren't populated — preserves
-        // correctness for tests that pick this value-order without
-        // wiring the data.
-        if matches!(self.config.value_order, ValueOrder::EdgeBpMarginals)
+        // EdgeBpMarginals (and LearnedOnTies, which runs this first):
+        // score each row by Σ over its 4 sides of the BP marginal mass
+        // at the row's edge color. Sort descending so the engine tries
+        // higher-mass colors first. Silently no-op if marginals or the
+        // mapping table aren't populated.
+        let is_edge_bp = matches!(self.config.value_order, ValueOrder::EdgeBpMarginals);
+        let is_learned_on_ties = matches!(self.config.value_order, ValueOrder::LearnedOnTies);
+        let mut bp_keys: Vec<u64> = Vec::new();  // parallel to domain_snapshot after sort
+        if (is_edge_bp || is_learned_on_ties)
             && domain_snapshot.len() > 1
             && !self.cell_side_edge.is_empty()
             && self.opts.edge_bp_marginals.is_some()
@@ -4023,8 +4035,6 @@ impl<'a> SearchState<'a> {
                 self.cell_side_edge[base_side + 2] as usize,
                 self.cell_side_edge[base_side + 3] as usize,
             ];
-            // Score ∝ Σ marginal[eid][color]. Use a fixed-point key so
-            // the sort is deterministic + total. Higher score first.
             let mut scored: Vec<(u64, u32)> = domain_snapshot.iter().map(|&r_id| {
                 let r = self.rows[r_id as usize];
                 let mut s = 0.0f32;
@@ -4034,14 +4044,56 @@ impl<'a> SearchState<'a> {
                         s += marg[eids[side] * EDGE_BP_NSTATE + c];
                     }
                 }
-                // Map [0, 4] -> u64 with 1e6 resolution. Descending sort
-                // via negation: key = u64::MAX - quantized.
                 let q = (s * 1.0e6).max(0.0).min(4.0e6) as u64;
                 (u64::MAX - q, r_id)
             }).collect();
             scored.sort_by_key(|(k, _)| *k);
             domain_snapshot.clear();
-            domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
+            domain_snapshot.extend(scored.iter().map(|(_, r)| *r));
+            if is_learned_on_ties {
+                bp_keys.extend(scored.iter().map(|(k, _)| *k));
+            }
+        }
+
+        // Vol-30 — LearnedOnTies: rerank only the top-k tied candidates
+        // by Learned scores. "Tied" = within EPS of the top BP score.
+        // Cheaper per-node than the full Learned variant (we call the
+        // NN only when there's an ambiguous choice), and dominated by
+        // EdgeBpMarginals when no ties exist.
+        #[cfg(not(target_arch = "wasm32"))]
+        if is_learned_on_ties && bp_keys.len() >= 2 {
+            const EPS: u64 = 50_000;  // 0.05 in the 1e6-quantized BP scale
+            const MAX_TIE_K: usize = 8;
+            let top_key = bp_keys[0];
+            // Count near-tied candidates (smaller u64 key = higher BP score
+            // in the original space). bp_keys is sorted ascending.
+            let mut tie_len = 1usize;
+            while tie_len < bp_keys.len()
+                && tie_len < MAX_TIE_K
+                && bp_keys[tie_len].saturating_sub(top_key) <= EPS
+            {
+                tie_len += 1;
+            }
+            if tie_len >= 2 {
+                let tie_slice = &domain_snapshot[..tie_len].to_vec();
+                if let Some(scores) = self.learned_score_candidates(pos, tie_slice) {
+                    // Sort the tie region by Learned score descending,
+                    // preserving the rest of domain_snapshot as-is.
+                    let mut paired: Vec<(u64, u32)> = tie_slice
+                        .iter()
+                        .zip(scores.iter())
+                        .map(|(&r_id, &s)| {
+                            let q = (s * 1.0e6f32).max(-1.0e9).min(1.0e9) as i64;
+                            let key = (i64::MAX as i128 - q as i128) as u64;
+                            (key, r_id)
+                        })
+                        .collect();
+                    paired.sort_by_key(|(k, _)| *k);
+                    for (i, (_, r_id)) in paired.into_iter().enumerate() {
+                        domain_snapshot[i] = r_id;
+                    }
+                }
+            }
         }
 
         // Vol-26 — Learned imitation-policy value order. Hand the

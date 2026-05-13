@@ -108,8 +108,8 @@ Aged 3 vols. Vol-20 `basin_hop` at k=1,4 went nowhere; vol-22 basin-escape recip
 Use bound-ascent's high-bound edge structure as VALUE-ORDER for Blackwood CP starting from canonical hints. Most novel composition.
 - Est. 1 day
 
-### `gap-recording-instrumentation` (vol-22 T4) — status: `unbuilt` — since: vol-22, deferred at vol-29 open
-Cheap (1-2 hrs) but diagnostic-only — adds telemetry for "what gap (basin_ceiling − current_score) does ALNS bridge". Not a record lever; deferred again, would be a 1-vol-evening side project.
+### `gap-recording-instrumentation` (vol-22 T4) — status: `wont-do` — since: vol-22, resolved: vol-30 open
+**Aged 8 volumes; resolved.** Deferred at vol-23, vol-24, vol-25, vol-27, vol-29 with the same reason: diagnostic-only, no record lever. Five deferrals = wont-do per discipline. If future ALNS-axis work needs this telemetry, add it then as a 1-evening side-job.
 Add gap-recording to every ALNS/PT save. Cheap. Long-term diagnostic.
 - Est. 1-2 hrs
 
