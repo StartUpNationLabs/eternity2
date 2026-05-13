@@ -2842,14 +2842,16 @@ impl<'a> SearchState<'a> {
             //   rows belonging to the just-placed piece.
             let sc_base = (neighbor_edge_idx * n_colors + req_idx) * wpp;
             let pm_base = usize::from(row.piece_id) * wpp;
-            // Vol-16 Cat-4 — write the diff directly into the arena
-            // instead of allocating a per-call Vec. Reserve `wpp`
-            // zeroed words; truncate back to `arena_start` if popcount
-            // ends up zero (no actual entry produced).
-            let arena_start = this.undo_words_arena.len();
-            this.undo_words_arena.resize(arena_start + wpp, 0);
+            // Vol-23 — stack scratch + track survival in the same loop;
+            // see piece-uniqueness path in place_and_propagate for the
+            // motivation (eliminates bzero traffic + redundant
+            // domain_is_empty rescan).
+            const MAX_WPP: usize = 32;
+            debug_assert!(wpp <= MAX_WPP);
+            let mut drop_scratch = [0u64; MAX_WPP];
             let mut popcount: u32 = 0;
-            // Vol-16 follow-up: slice-based inner loop for bounds elision.
+            let mut survived: u64 = 0;
+            // Slice-based inner loop for bounds elision.
             let dom = &mut this.domain_bits[bit_base..bit_base + wpp];
             let pmask = &this.piece_mask[pm_base..pm_base + wpp];
             let sc_mask: &[u64] = if req_idx < n_colors {
@@ -2857,33 +2859,32 @@ impl<'a> SearchState<'a> {
             } else {
                 &[]
             };
-            let arena_slot = &mut this.undo_words_arena[arena_start..arena_start + wpp];
+            let scratch = &mut drop_scratch[..wpp];
             for w in 0..wpp {
                 let cur = dom[w];
-                if cur == 0 { continue; }
                 let keep = if req_idx < n_colors {
                     sc_mask[w] & !pmask[w]
                 } else {
                     !pmask[w]
                 };
                 let drop = cur & !keep;
-                if drop != 0 {
-                    arena_slot[w] = drop;
-                    popcount += drop.count_ones();
-                    dom[w] = cur & keep;
-                }
+                let new = cur & keep;
+                scratch[w] = drop;
+                survived |= new;
+                popcount += drop.count_ones();
+                dom[w] = new;
             }
             if popcount > 0 {
                 this.stats.propagations += popcount as u64;
+                let arena_start = this.undo_words_arena.len();
+                this.undo_words_arena.extend_from_slice(scratch);
                 let entry = UndoEntry { pos: neighbor, words_start: arena_start as u32 };
-                if this.domain_is_empty(neighbor as usize) {
+                if survived == 0 {
                     PruneResult::Wipeout { entry }
                 } else {
                     PruneResult::Removed(entry)
                 }
             } else {
-                // No diff produced — give back the arena reservation.
-                this.undo_words_arena.truncate(arena_start);
                 PruneResult::Ok
             }
         };
