@@ -56,10 +56,8 @@ Vol-22 T1 was the per-RUN version (null). Per-STEP version requires modifying AL
 - See `concepts/bound-ascent.md`
 - Est. 1-2 days (invasive)
 
-### `kissat-rc2-maxsat` (vol-22 T3, user-Q) — status: `unbuilt` — since: vol-22, deferred at vol-27 open
-z3 cannot solve our MaxSAT (UNKNOWN on 60-cell clusters in 180s). Need a real MaxSAT solver. Gives exact joint bound. **Vol-27 scope is ML-axis; defer to a future bound-axis volume.**
-- See `concepts/exact-joint-bound.md`
-- Est. 4-6 hrs
+### `kissat-rc2-maxsat` (vol-22 T3, user-Q) — status: `wont-do` — since: vol-22, resolved: vol-28 open
+**Aged 6 volumes; resolved.** The bound-axis hasn't produced a record-breaking lever in vols 21-27 (relaxed-bound found basin ceilings but the ALNS recovery undoes every step; bound-ascent reaches 473 then collapses). Even an exact joint bound would tell us "we're at the ceiling" — a diagnostic, not a lever. Mark `wont-do`; revisit only if a future bound-axis result re-motivates exact computation.
 
 ### `score-optimizing-cp` — status: `built` (route b) — vol-24 (2026-05-13)
 Vol-24 shipped route (b): branch-and-bound CP with edge-match objective. `SolveOpts.objective: Option<Objective>` field; engine tracks `matched_count` + `decided_edges` incrementally; prune at `matched_count + (total - decided) ≤ best_score`. RootSplit parallelism uses shared `Arc<AtomicU32>` cutoff + max-by-score aggregation.
