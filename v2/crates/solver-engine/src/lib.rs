@@ -3113,13 +3113,18 @@ impl<'a> SearchState<'a> {
         // its count row, then rebuild from current domain bits. Clear
         // the dirty flag as we go. Placed cells are skipped (their
         // count row is never read).
+        //
+        // Vol-23 — for each (side, color) we have a precomputed
+        // `side_color_mask` u64 bitset (rows whose edges[side]==color).
+        // count[p][s][c] = popcount(domain[p] & side_color_mask[s*nC+c]).
+        // This is O(stride_pos × wpp) per position instead of
+        // O(set_bits × 4); wins when domains are full (the common case
+        // mid-search) and trades a small loss for very sparse domains
+        // for the benefit of being autovectorizable.
         let dirty_len = self.ac3_dirty_list.len();
         if dirty_len > 0 {
-            let rows = self.rows.as_slice();
             let dom_bits = self.domain_bits.as_slice();
-            // Borrow-split: take refs to count / dirty_list / dirty_flag
-            // separately so the inner loop can mutate count while we
-            // iterate the (consumed) list.
+            let scm = self.side_color_mask.as_slice();
             for i in 0..dirty_len {
                 let p = self.ac3_dirty_list[i] as usize;
                 self.ac3_dirty_flag[p] = false;
@@ -3128,21 +3133,14 @@ impl<'a> SearchState<'a> {
                 let pos_count_base = p * stride_pos;
                 let dom_slice = &dom_bits[base..base + words_per_pos];
                 let count_slice = &mut self.ac3_count[pos_count_base..pos_count_base + stride_pos];
-                for v in count_slice.iter_mut() { *v = 0; }
-                for (w, &word_init) in dom_slice.iter().enumerate() {
-                    let mut word = word_init;
-                    let bit_base = (w as u32) * 64;
-                    while word != 0 {
-                        let bit = word.trailing_zeros();
-                        word &= word - 1;
-                        let r_id = bit_base + bit;
-                        let r = &rows[r_id as usize];
-                        // Unrolled 4-side accumulator.
-                        count_slice[r.edges[0] as usize] += 1;
-                        count_slice[n_colors + r.edges[1] as usize] += 1;
-                        count_slice[2 * n_colors + r.edges[2] as usize] += 1;
-                        count_slice[3 * n_colors + r.edges[3] as usize] += 1;
+                // count_slice[s * n_colors + c] = popcount(dom & scm[s,c])
+                for sc in 0..stride_pos {
+                    let scm_slice = &scm[sc * words_per_pos..sc * words_per_pos + words_per_pos];
+                    let mut acc: u32 = 0;
+                    for w in 0..words_per_pos {
+                        acc += (dom_slice[w] & scm_slice[w]).count_ones();
                     }
+                    count_slice[sc] = acc as u16;
                 }
             }
             self.ac3_dirty_list.clear();
