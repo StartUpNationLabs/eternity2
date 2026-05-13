@@ -429,3 +429,42 @@ Vol-18 strategic pivot:
 This is exactly the "stop over-fitting one basin" lever the user
 called for.
 
+
+---
+
+## 2026-05-13 — Road 1 hedge REFUTED
+
+Built new destroy ops: MegaBand{8,10,12}, WorstColumn, WorstColumnBand{4},
+HalfBoardDestroy{0-3}, RandomScatter{60}. Added "mega" / "mega_mix" /
+"halfboard" presets to alns_only and alns_pt.
+
+Test 1: alns_only --ops mega_mix from 457, SA, 5min, seed 1 → **457**.
+Test 2: alns_pt --ops mega_mix --t-max 30, 4 chains, 5min, seed 1 → **457**.
+
+In BOTH cases, "Global best at chain 0 round 0" — chains never found
+any new best. Even the half-board destroy (128 cells of brute-force
+perturbation) cannot produce a +1 from a 457 board.
+
+**This conclusively refutes Road 1**. The 457 ceiling is not a
+proposal-distribution problem solvable by adding new ops to the same
+destroy/SA-repair framework. The board IS at a deep local maximum
+of this entire family of algorithms.
+
+---
+
+## 2026-05-13 — Pivoting to Road 2 (trajectory family diversity)
+
+Per the user's directive ("drop 457 for a while, explore other paths"),
+abandoning hot-PT/oracle work on Family A 457 boards. Strategic moves:
+
+1. **Generate fresh CP partials** with v17b, v17c, v17e schedules,
+   different seeds. Each one defines a new trajectory family.
+2. **Run the established pipeline** (ALNS winning5 → if 456 reached,
+   OracleSwap → if 457 reached, attempt push) per family.
+3. **Catalogue ceilings across families**. Highest-ceiling family
+   becomes the new target.
+
+Schedule v17b is the documented best per vol-17 F4 (+4.3 mean matches
+vs v17a at fixed seed). v17e adds noise perturbation for stochastic
+diversity.
+
