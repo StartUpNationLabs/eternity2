@@ -1,0 +1,36 @@
+[package]
+name = "eternity2-ml-export"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Vol-26 tooling: dump synthetic E2-family puzzles + canonical solutions +
+# expert search trajectories to JSONL so the Python ML side can train on
+# them. This crate is intentionally minimal — if vol-26's gate fails,
+# delete the crate entry and the data pipeline is gone.
+
+[dependencies]
+eternity2-core = { path = "../core", features = ["serde"] }
+eternity2-generator = { path = "../generator" }
+eternity2-events = { path = "../events" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-trait = { path = "../solver-trait" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "gen-export"
+path = "src/bin/gen_export.rs"
+
+[[bin]]
+name = "measure-difficulty"
+path = "src/bin/measure_difficulty.rs"
+
+[[bin]]
+name = "bench-eval"
+path = "src/bin/bench_eval.rs"

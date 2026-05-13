@@ -12,6 +12,9 @@
 
 mod clock;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod bridge;
+
 use std::sync::Arc;
 
 use clock::Clock;
@@ -70,6 +73,15 @@ pub enum ValueOrder {
     /// Falls back silently to InsertionOrder when no schedule is
     /// attached (preserves correctness in tests).
     BlackwoodHeuristic,
+    /// Vol-26 — Learned imitation-policy value order. Score each
+    /// candidate row by an external Python subprocess running a small
+    /// neural network trained on expert search trajectories. The bridge
+    /// is spawned in `EngineSolver::new` when this variant is selected.
+    /// Silently falls back to `InsertionOrder` if the bridge isn't
+    /// available — preserves correctness for tests that don't ship the
+    /// model. Per-node overhead: ~1-3 ms (JSON + inference). Acceptable
+    /// at small puzzle sizes; not intended for canonical E2.
+    Learned,
 }
 
 /// Vol-15 — Blackwood 2020 algorithm parameters. The backtracker is
@@ -2259,6 +2271,16 @@ pub(crate) struct SearchState<'a> {
     /// branch-and-bound monotone-optimal under RootSplit; without it,
     /// workers can return strictly suboptimal local bests.
     pub(crate) shared_best_score: Option<Arc<std::sync::atomic::AtomicU32>>,
+    /// Vol-26 — Python inference subprocess for `ValueOrder::Learned`.
+    /// Lazily spawned at the first value-ordering query; `None` until
+    /// then or if startup fails. On drop the subprocess is killed.
+    /// Not used when value_order != Learned.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) learned_bridge: Option<crate::bridge::LearnedBridge>,
+    /// Vol-26 — set to `true` once we've attempted to spawn the bridge
+    /// and failed, so we don't retry per-node.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) learned_bridge_disabled: bool,
 }
 
 impl<'a> SearchState<'a> {
@@ -2593,6 +2615,10 @@ impl<'a> SearchState<'a> {
             best_score: 0,
             best_score_partial: None,
             shared_best_score: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            learned_bridge: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            learned_bridge_disabled: false,
         }
     }
 
@@ -4018,6 +4044,37 @@ impl<'a> SearchState<'a> {
             domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
         }
 
+        // Vol-26 — Learned imitation-policy value order. Hand the
+        // partial board + target position + candidates to a Python
+        // subprocess and reorder by returned scores (descending).
+        #[cfg(not(target_arch = "wasm32"))]
+        if matches!(self.config.value_order, ValueOrder::Learned)
+            && domain_snapshot.len() > 1
+        {
+            if let Some(scores) = self.learned_score_candidates(pos, &domain_snapshot) {
+                // scores[i] corresponds to domain_snapshot[i]. Sort
+                // candidates by descending score using a fixed-point key.
+                let mut paired: Vec<(u64, u32)> = domain_snapshot
+                    .iter()
+                    .zip(scores.iter())
+                    .map(|(&r_id, &s)| {
+                        let q = (s * 1.0e6f32).max(-1.0e9).min(1.0e9) as i64;
+                        // i64 -> u64 descending key: subtract from a large
+                        // anchor so larger s -> smaller u64 (sort ascending
+                        // gives descending score).
+                        let key = (i64::MAX as i128 - q as i128) as u64;
+                        (key, r_id)
+                    })
+                    .collect();
+                paired.sort_by_key(|(k, _)| *k);
+                domain_snapshot.clear();
+                domain_snapshot.extend(paired.into_iter().map(|(_, r)| r));
+            }
+            // If learned_score_candidates returned None (bridge
+            // unavailable), keep the current order — preserves the
+            // insertion-order fallback documented on ValueOrder::Learned.
+        }
+
         // PreferredFirst: stable partition; preferred-piece rows first.
         // Verhaard 2008. Caller sets `opts.preferred_pieces`.
         if matches!(self.config.value_order, ValueOrder::PreferredFirst)
@@ -4340,6 +4397,87 @@ impl<'a> SearchState<'a> {
         }
         let scan_idx = self.scan_index_of_cell[pos as usize] as usize;
         scan_idx < self.is_break_index.len() && self.is_break_index[scan_idx]
+    }
+
+    /// Vol-26 — call the learned-policy bridge to score each candidate
+    /// row at the given position. Returns `None` if the bridge is
+    /// unavailable (failed to start or IO error mid-run); the caller
+    /// then preserves the existing order. Feature layout matches
+    /// `ml/dataset.py` `TrajectoryDataset.__getitem__`:
+    /// per cell, 13 floats = placed_edges (4) + nb_known (4) + placed_flag (1) + border_mask (4).
+    #[cfg(not(target_arch = "wasm32"))]
+    fn learned_score_candidates(
+        &mut self,
+        pos: Position,
+        domain_snapshot: &[u32],
+    ) -> Option<Vec<f32>> {
+        if self.learned_bridge_disabled {
+            return None;
+        }
+        if self.learned_bridge.is_none() {
+            match crate::bridge::LearnedBridge::spawn() {
+                Some(b) => self.learned_bridge = Some(b),
+                None => {
+                    self.learned_bridge_disabled = true;
+                    return None;
+                }
+            }
+        }
+
+        let w = self.puzzle.width;
+        let h = self.puzzle.height;
+        let n_cells = (w * h) as usize;
+        let mut feats = String::with_capacity(n_cells * 60);
+        feats.push('[');
+        for y in 0..h {
+            for x in 0..w {
+                let p = (y * w + x) as usize;
+                let (e0, e1, e2, e3, placed) = match self.placed[p] {
+                    Some(r_id) => {
+                        let r = self.rows[r_id as usize];
+                        (r.edges[0], r.edges[1], r.edges[2], r.edges[3], 1u8)
+                    }
+                    None => (0u8, 0u8, 0u8, 0u8, 0u8),
+                };
+                let nb_top = if y == 0 { 1u8 } else if self.placed[((y - 1) * w + x) as usize].is_some() { 1 } else { 0 };
+                let nb_right = if x == w - 1 { 1 } else if self.placed[(y * w + x + 1) as usize].is_some() { 1 } else { 0 };
+                let nb_bot = if y == h - 1 { 1 } else if self.placed[((y + 1) * w + x) as usize].is_some() { 1 } else { 0 };
+                let nb_left = if x == 0 { 1 } else if self.placed[(y * w + (x - 1)) as usize].is_some() { 1 } else { 0 };
+                let bm_top = u8::from(y == 0);
+                let bm_right = u8::from(x == w - 1);
+                let bm_bot = u8::from(y == h - 1);
+                let bm_left = u8::from(x == 0);
+                if p != 0 { feats.push(','); }
+                use std::fmt::Write as _;
+                let _ = write!(
+                    feats,
+                    "[{e0},{e1},{e2},{e3},{nb_top},{nb_right},{nb_bot},{nb_left},{placed},{bm_top},{bm_right},{bm_bot},{bm_left}]"
+                );
+            }
+        }
+        feats.push(']');
+
+        let mut cand = String::with_capacity(domain_snapshot.len() * 8);
+        cand.push('[');
+        for (i, &r_id) in domain_snapshot.iter().enumerate() {
+            let r = self.rows[r_id as usize];
+            if i != 0 { cand.push(','); }
+            use std::fmt::Write as _;
+            let _ = write!(cand, "[{},{}]", r.piece_id, r.rotation);
+        }
+        cand.push(']');
+
+        let bridge = self.learned_bridge.as_mut()?;
+        match bridge.score(&feats, pos, &cand) {
+            Some(scores) if scores.len() == domain_snapshot.len() => Some(scores),
+            _ => {
+                // IO failure or shape mismatch — disable for the rest of
+                // the run so we don't keep paying setup cost.
+                self.learned_bridge = None;
+                self.learned_bridge_disabled = true;
+                None
+            }
+        }
     }
 }
 

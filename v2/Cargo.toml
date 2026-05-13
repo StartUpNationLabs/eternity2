@@ -8,6 +8,7 @@ members = [
     "crates/events",
     "crates/generator",
     "crates/localsearch",
+    "crates/ml-export",
     "crates/propagators",
     "crates/sat-encoder",
     "crates/solver-engine",

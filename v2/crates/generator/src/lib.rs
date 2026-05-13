@@ -4,7 +4,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use eternity2_core::{Color, Edges, Piece, PieceId, Puzzle, PuzzleError, BORDER};
+use eternity2_core::{Color, Edges, Piece, PieceId, Position, Puzzle, PuzzleError, Rotation, BORDER};
 
 // Deterministic PRNG. SplitMix64 — small, fast, no dep, wasm-clean. Not
 // crypto-grade but plenty for shuffling puzzle pieces; benchmark
@@ -75,6 +75,27 @@ impl GeneratorConfig {
 }
 
 pub fn generate(cfg: GeneratorConfig) -> Result<Puzzle, GeneratorError> {
+    generate_with_solution(cfg).map(|(p, _)| p)
+}
+
+/// A single placement in the canonical solution: at `position`, place the
+/// piece with `piece_id` rotated by `rotation`. The placed edges then
+/// satisfy adjacency with all neighbours by construction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Placement {
+    pub position: Position,
+    pub piece_id: PieceId,
+    pub rotation: Rotation,
+}
+
+/// Like `generate`, but also returns the canonical solution that was
+/// implicitly constructed by the Selby-Riordan procedure (place pieces
+/// at their original positions first, then randomly rotate + shuffle).
+/// Used by vol-26 to dump training data: each puzzle has a known
+/// optimal placement sequence.
+pub fn generate_with_solution(
+    cfg: GeneratorConfig,
+) -> Result<(Puzzle, Vec<Placement>), GeneratorError> {
     if cfg.size == 0 {
         return Err(GeneratorError::SizeZero);
     }
@@ -92,20 +113,12 @@ pub fn generate(cfg: GeneratorConfig) -> Result<Puzzle, GeneratorError> {
     let mut rng = SplitMix64::new(cfg.seed);
     let size = cfg.size;
 
-    // Interior edges. Vertical edges sit between columns; horizontal
-    // edges sit between rows. Order: all vertical first, then horizontal.
     let n_vertical = size * (size - 1);
     let n_horizontal = size * (size - 1);
     let total_interior = (n_vertical + n_horizontal) as usize;
 
     let mut edges: Vec<Color> = Vec::with_capacity(total_interior);
     if total_interior > 0 {
-        // Coverage pass: every non-border color appears at least once.
-        // Then fill the remainder with uniform random colors.
-        // interior_colors is bounded by max_interior_colors <= 2*size*(size-1)
-        // and color ids are 1..=interior_colors, so u8 cast is safe (max
-        // realistic size in this project is well under 16, max colors ~480
-        // — but the project never uses >32 colors anyway and core caps at u8).
         for c in 1..=cfg.interior_colors {
             edges.push(c as Color);
         }
@@ -140,18 +153,41 @@ pub fn generate(cfg: GeneratorConfig) -> Result<Puzzle, GeneratorError> {
         }
     }
 
-    // Apply a random rotation to each piece and shuffle their order so
-    // their positions in the catalog don't leak the solution. Piece ids
-    // remain stable — the id is just a handle, not the position.
-    for p in &mut pieces {
-        let r = rng.gen_range(4);
-        let rot = eternity2_core::Rotation::from_u8(r as u8).unwrap();
+    // Record the per-piece rotation applied by the generator. To place
+    // piece `i` into its canonical position the solver must rotate it
+    // BACK by `(4 - applied) % 4` (an R90 turn moves edge slots clockwise;
+    // its inverse is R270).
+    let mut applied_rotation = alloc::vec![0u8; pieces.len()];
+    for (idx, p) in pieces.iter_mut().enumerate() {
+        let r = rng.gen_range(4) as u8;
+        applied_rotation[idx] = r;
+        let rot = Rotation::from_u8(r).unwrap();
         p.edges = p.edges.rotated(rot);
     }
     rng.shuffle(&mut pieces);
 
-    Puzzle::new(size, size, cfg.interior_colors + 1, pieces)
-        .map_err(GeneratorError::Puzzle)
+    // After the shuffle, build the solution table: piece_id encodes the
+    // canonical (x, y) via `id = y*size + x`. The rotation needed at that
+    // position is the inverse of the random rotation we baked into the
+    // edges. We look up `applied_rotation` by the piece's original index
+    // in the pre-shuffle order, which is identical to `piece_id` (since
+    // pre-shuffle pieces[i].id == i).
+    let mut solution: Vec<Placement> = Vec::with_capacity(pieces.len());
+    for p in &pieces {
+        let pos: Position = u32::from(p.id);
+        let applied = applied_rotation[p.id as usize];
+        let inverse = ((4 - applied) % 4) as u8;
+        solution.push(Placement {
+            position: pos,
+            piece_id: p.id,
+            rotation: Rotation::from_u8(inverse).unwrap(),
+        });
+    }
+    solution.sort_by_key(|p| p.position);
+
+    let puzzle = Puzzle::new(size, size, cfg.interior_colors + 1, pieces)
+        .map_err(GeneratorError::Puzzle)?;
+    Ok((puzzle, solution))
 }
 
 #[cfg(test)]
@@ -207,6 +243,55 @@ mod tests {
         assert_eq!(corners, 4);
         assert_eq!(edges, 4 * (4 - 2));
         assert_eq!(inner, (4 - 2) * (4 - 2));
+    }
+
+    #[test]
+    fn solution_satisfies_all_adjacencies() {
+        for seed in 0..16u64 {
+            let cfg = GeneratorConfig { size: 6, interior_colors: 5, seed };
+            let (puz, sol) = generate_with_solution(cfg).unwrap();
+            assert_eq!(sol.len() as u32, puz.cell_count());
+
+            // Compute the placed edges at every cell, then check that
+            // every adjacent pair matches and every boundary edge is
+            // BORDER.
+            let w = puz.width;
+            let h = puz.height;
+            let mut placed_edges: Vec<[Color; 4]> = alloc::vec![[BORDER; 4]; sol.len()];
+            for placement in &sol {
+                let piece = puz.piece(placement.piece_id).unwrap();
+                placed_edges[placement.position as usize] =
+                    piece.edges.rotated(placement.rotation).as_array();
+            }
+            for y in 0..h {
+                for x in 0..w {
+                    let pos = (y * w + x) as usize;
+                    let e = placed_edges[pos];
+                    // Top
+                    if y == 0 {
+                        assert_eq!(e[0], BORDER, "seed {seed} cell ({x},{y}) top should be BORDER");
+                    } else {
+                        let above = placed_edges[((y - 1) * w + x) as usize];
+                        assert_eq!(e[0], above[2], "seed {seed} cell ({x},{y}) top != above bottom");
+                    }
+                    // Right
+                    if x == w - 1 {
+                        assert_eq!(e[1], BORDER, "seed {seed} cell ({x},{y}) right should be BORDER");
+                    } else {
+                        let right = placed_edges[(y * w + x + 1) as usize];
+                        assert_eq!(e[1], right[3], "seed {seed} cell ({x},{y}) right != neighbor left");
+                    }
+                    // Bottom
+                    if y == h - 1 {
+                        assert_eq!(e[2], BORDER, "seed {seed} cell ({x},{y}) bottom should be BORDER");
+                    }
+                    // Left
+                    if x == 0 {
+                        assert_eq!(e[3], BORDER, "seed {seed} cell ({x},{y}) left should be BORDER");
+                    }
+                }
+            }
+        }
     }
 
     #[test]

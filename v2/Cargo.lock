@@ -468,6 +468,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-ml-export"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-events",
+ "eternity2-generator",
+ "eternity2-solver-engine",
+ "eternity2-solver-trait",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "eternity2-propagators"
 version = "0.1.0"
 dependencies = [
@@ -516,6 +529,7 @@ dependencies = [
  "eternity2-solver-trait",
  "js-sys",
  "rayon",
+ "serde",
  "serde_json",
 ]
 
