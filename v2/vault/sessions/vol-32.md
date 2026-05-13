@@ -88,9 +88,23 @@ running; results in vol-33 once captured.
 ### T3 — Multi-seed PT lottery from insertion_174 (control)
 
 Running 30 seeds × 2 replicas × 15min PT (Houdayer + kicks), parallel-4.
-At vol-close: 8 seeds done, scores 438-442. Median ~440. Vol-31's
-single-seed 8-replica gave 445 — within range. Final histogram available
-post-completion (ETA 00:00).
+At vol-close: 20 seeds analysed via intra-run extraction (more than the
+summary.jsonl count because logs persist before the wrapper writes summary
+rows). Scores 436-445, mean 439.5, median 440, max 445.
+
+**KEY FINDING: PT saturates within 1.1s on every seed.**
+
+Analysis of 20 seed logs:
+- Mean t-to-final-best: 0.4s (median 0.2s, max 1.1s).
+- 99% of the 15-min budget produces zero improvement after the first second.
+- Seed 20 reached 445 with 2 replicas in 0.3s — matching vol-31's
+  8-replica result from the same partial. So vol-31's 8-replica was
+  overkill; the 445 ceiling for this partial is achievable with 2.
+- **Future PT-lottery experiments should use ≤30s budgets**. Tonight's T3
+  could have produced identical data in 4 min wall-clock (30 seeds × 30s
+  × parallel-4) instead of 1.9 hours.
+
+Data: `output/vol-32/t3_intra_run.json`.
 
 ### T6+ — Cross-profile InsertionOrder check (added at vol-close)
 
