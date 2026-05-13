@@ -12,22 +12,22 @@ Per [vault/README.md](../README.md): all items aged ≥ 3 volumes were reviewed 
 
 Older-than-3-vol items not picked are now explicitly marked `wont-do (deferred until prune-restart shows ROI)` in BACKLOG.
 
-## Vol-23 binding items (limit: 3 active)
+## Vol-23 binding items (limit: 1 active)
 
-### T1 — `prune-restart` engine (1-2 day build)
+Revised at user direction 2026-05-13 14:30: narrow to T1 only. T2 and the integration task stay in BACKLOG for vol-24+.
+
+### T1 — `prune-restart` engine (1-2 day build) — ONLY binding item
 **Score lift estimate**: +5..+10 if it closes the saturation gap in [[basin-440-469]].
 - File: `crates/solver-engine/src/lib.rs`
 - See `concepts/prune-restart.md`
-- **Binding**: by end of vol-23 either built or this concept is renamed status `refuted/wont-do` with reasoning.
+- **Binding**: by end of vol-23 either built or this concept is marked `refuted/wont-do` with reasoning.
 
-### T2 — `pt-tabu-zobrist` (4-6 hrs)
-**Score lift estimate**: +1..+3 if PT chains are revisiting a small 442-state set.
-- File: `crates/localsearch/src/alns.rs` (PT module)
-- See `concepts/pt-tabu.md`
+## Running in background (not binding work)
 
-### T3 — Read overnight results (cheap, integrate)
-- PID 66809: 8h hot-PT on 440/469 basin. Read final score, update [[basin-440-469]].
-- PID 66953: batch basin recipe (100 seeds). Read all results, update [[basin-escape-recipe]] with the highest-ceiling found.
+- PID 66809: 8h `alns_pt` on the 440/469 basin (will finish ~22:00 CEST). Result will be logged to [[basin-440-469]] at vol-close.
+- PID 66953: batch basin recipe (100 seeds, ~5 hrs total). Result will be logged to [[basin-escape-recipe]].
+
+Neither is a binding item — they're speculative compute. If their results suggest a new direction at vol-23 close, log to BACKLOG as new entries; do NOT pivot T1.
 
 ## Out-of-scope this vol (parked, not new ideas)
 
