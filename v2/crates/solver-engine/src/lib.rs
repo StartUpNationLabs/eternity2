@@ -3240,12 +3240,18 @@ impl<'a> SearchState<'a> {
                     }
                 }
             }
-            // Clone the small Vec out of self so we don't double-borrow
-            // (the inner loop mutates other fields of self).
-            let to_check_len = self.ac3_to_check.len();
-            for ti in 0..to_check_len {
-                let r_id = self.ac3_to_check[ti];
-                let r = self.rows[r_id as usize];
+            // Vol-23 — bind read-only slices once so the inner loop
+            // avoids re-dereffing self.* on every iteration. self.placed,
+            // self.rows, self.same_piece_rots, self.ac3_to_check are all
+            // read-only here; only count/present/domain_bits mutate (and
+            // those go through distinct paths via `count`, `present`).
+            let to_check_slice = self.ac3_to_check.as_slice();
+            let placed_slice = self.placed.as_slice();
+            let rows_slice = self.rows.as_slice();
+            let same_piece_rots_slice = self.same_piece_rots.as_slice();
+            for ti in 0..to_check_slice.len() {
+                let r_id = to_check_slice[ti];
+                let r = rows_slice[r_id as usize];
                 let mut supported = true;
                 let pid_base = usize::from(r.piece_id) * 4;
                 // Vol-16 Cat-4f — precomputed 4-bit rotation mask per
@@ -3256,13 +3262,13 @@ impl<'a> SearchState<'a> {
                 let present_shift = pid_base % 64;
                 for (nb_opt, side_a, side_b) in nb_info.iter() {
                     let Some(nb) = nb_opt else { continue; };
-                    if self.placed[*nb as usize].is_some() { continue; }
+                    if placed_slice[*nb as usize].is_some() { continue; }
                     let required = r.edges[*side_a] as usize;
                     let nb_u = *nb as usize;
                     let total = count[nb_u * stride_pos + side_b * n_colors + required];
                     // Precomputed: which rotations of r's piece satisfy
                     // edges[side_b] == r.edges[side_a]?
-                    let rot_mask = self.same_piece_rots[r_lut_base + side_a * 4 + side_b];
+                    let rot_mask = same_piece_rots_slice[r_lut_base + side_a * 4 + side_b];
                     // The 4 rotation bits are at pid_base..pid_base+4
                     // in `present`. Since 4 ≤ 64 they always sit inside
                     // a single u64 word.
