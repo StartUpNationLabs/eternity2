@@ -2221,10 +2221,6 @@ pub(crate) struct SearchState<'a> {
     /// Built once at SearchState::new from the static row table.
     /// Size: rows.len() * 16 bytes = ~16 KB on canonical E2.
     pub(crate) same_piece_rots: Vec<u8>,
-    /// Vol-16 Cat-4g — reusable scratch buffer for the AC-3 inner
-    /// "rows to support-check" list. Was a per-queue-pop allocation;
-    /// recycle the capacity on each AC-3 invocation.
-    pub(crate) ac3_to_check: Vec<u32>,
     /// Vol-16 Cat-4g — reusable AC-3 work queue (was Vec::with_capacity(16)
     /// per invocation). LIFO discipline.
     pub(crate) ac3_queue: Vec<Position>,
@@ -2581,7 +2577,6 @@ impl<'a> SearchState<'a> {
             },
             placed_heuristic_count: 0,
             same_piece_rots,
-            ac3_to_check: Vec::with_capacity(1024),
             ac3_queue: Vec::with_capacity(256),
             // Vol-16 Cat-4 — pre-reserve the arena for the worst-case
             // undo log: 4 prunes + n_pos piece-uniqueness entries per
@@ -2656,7 +2651,10 @@ impl<'a> SearchState<'a> {
         self.mark_ac3_dirty(pos);
     }
 
-    /// True iff domain[pos] is empty.
+    /// True iff domain[pos] is empty. Currently unused — the hot-loop
+    /// callers fold this check into their own bitset walk via an
+    /// OR-survival accumulator. Kept for tests and future helpers.
+    #[allow(dead_code)]
     #[inline]
     fn domain_is_empty(&self, pos: usize) -> bool {
         let base = pos * self.words_per_pos;
