@@ -44,6 +44,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  28 |             457 |       — | [[learned-value-order]] cross-domain transfer REFUTED — 6×6-trained v2 model gives Δ=−108 depth regression under `joe_depth150_bp` at canonical 16×16 |                               |
 |  29 |             457 |       — | [[learned-value-order]] distribution-matched imitation hits the teacher ceiling — Δ=−1 with −35% nodes, −37% backtracks at iso-depth (gate PASS at match condition) |                               |
 |  30 |             457 |       — | [[learned-value-order]] LearnedOnTies hybrid produces first Δ > 0 from ML at canonical — depth 165 → 174 (+9 at 1 min, +8 at 5 min); invariant across 3 trained models (v3, v3b, v4) → structural to puzzle, not model |                               |
+|  31 |             457 |       — | [[learned-value-order]] depth lift propagates to score — alns_only 5min: 426 → 436 (+10); pt_e2 15min strong config: 437 → 445 (+8). First ML-driven score lift at canonical 5-clue 16×16 |                               |
 
 
 ## Concepts — by category

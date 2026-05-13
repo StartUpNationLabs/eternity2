@@ -1,5 +1,11 @@
 # VOL-31 — does the LearnedOnTies depth lift translate to a score lift?
 
+**Status (post-close)**: T1 PASS — +10 at weak pipeline, +8 at strong
+pipeline. Vol-32 candidate `learned-on-ties-basin-escape` could break
+the 457 record by combining LearnedOnTies-174 with vol-22's
+basin-escape recipe.
+
+
 **Opened**: 2026-05-13 (drafted at vol-30 close, before vol-30 T2
 completes). Will be revised based on vol-30 T2 result.
 

@@ -572,6 +572,71 @@ the baseline depth 165 with **47% fewer engine nodes** (268k vs
 | Tunable env vars | `E2_LOT_EPS` (default 0.05), `E2_LOT_MAX_K` (default 8) |
 | Open question (vol-31) | depth-174 partial → ALNS → score ≷ 457? |
 
+---
+
+## Vol-31 measurement — depth lift propagates to score (2026-05-13)
+
+Vol-31 took the depth-174 partial board produced by vol-30's
+LearnedOnTies and fed it as `--start-from` to the score-axis recovery
+pipelines we used for our 457 record. Compared head-to-head against
+the same pipelines fed the baseline depth-165 partial.
+
+### Pipeline 1 — weak recovery (`alns_only winning5`, 5 min, single-thread, SA)
+
+| Starting partial | Final matched (5 min ALNS) | Δ vs baseline |
+|---|---:|---:|
+| baseline depth-165 (seed=1) | 426/480 | — |
+| baseline depth-165 (seed=2) | 425/480 | — |
+| **LearnedOnTies depth-174 (seed=1)** | **436/480** | **+10** |
+
+### Pipeline 2 — strong recovery (`pt_e2` 8 replicas + Houdayer + kicks, 15 min)
+
+| Starting partial | Initial edges | PT-15min best | Δ vs baseline |
+|---|---:|---:|---:|
+| baseline depth-165 | 280/480 | 437/480 | — |
+| **LearnedOnTies depth-174** | 303/480 | **445/480** | **+8** |
+
+### What this measurement says
+
+1. **The +9 depth lift from vol-30 compounds to score**: +10 at weak
+   pipeline (alns_only 5min), +8 at strong pipeline (pt_e2 15min).
+2. **The lift survives the stronger pipeline**: not just a quirk of
+   the weak ALNS recovery — the +8 at pt_e2 is post-Houdayer cluster
+   moves + kicks + 8 PT replicas, the same machinery that produced
+   our 437 baseline.
+3. **Most of the +8 is "carried over" from the better starting partial**:
+   PT-174 hit 443 at round 5 (~0.2 s), 445 by round 25 (~1 s), then
+   plateaued. The LearnedOnTies partial is just a *better starting
+   point* — both pipelines converge to a slightly-better basin from
+   there. The strong pipeline doesn't *amplify* the ML signal; it
+   *preserves* it.
+4. **Honest scope**: 445 is not the 457 record. Our 457 came from
+   vol-18's hot-PT discovery of a specific lucky basin (vol-22
+   confirmed all 11 PT-457 boards are byte-identical), not from
+   compute scaling. Vol-31 doesn't break 457; it shows the ML lift is
+   real at iso-budget A/B, across both weak and strong recovery
+   layers.
+
+### Files
+
+- `crates/ml-export/src/bin/canonical_eval.rs` — added `--dump-partial PATH`
+  to serialize SolveOutcome's best_partial board via core's existing serde.
+- Conversion to pt_e2 format (`{placement: [cell | null × 256]}`)
+  done in Python (~5 LOC).
+- Saved boards:
+  - `output/pt_e2_1778700046_437of480.json` (baseline-165 → PT 437)
+  - `output/pt_e2_1778700960_445of480.json` (LearnedOnTies-174 → PT 445)
+
+### Numbers worth caching (vol-31 amendment)
+
+| Quantity | Value |
+|---|---|
+| ML score lift at weak pipeline (5 min alns) | +10 (426 → 436) |
+| ML score lift at strong pipeline (15 min pt_e2) | +8 (437 → 445) |
+| Initial edges from depth-174 partial | 303/480 (vs 280 baseline) |
+| PT-174 plateau reached at | round 25 / ~1 second |
+| Distance from 457 record | 12 (would need basin-escape recipe) |
+
 ### Files changed at vol-27
 
 - `crates/solver-engine/Cargo.toml`: + `ort = "=2.0.0-rc.10"`, `ndarray = "0.16"`.

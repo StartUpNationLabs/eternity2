@@ -40,8 +40,18 @@ Honest expectation: long imitation hits a ceiling at "engine performance on its 
 ### `learned-on-ties-hybrid` (vol-30 T1) — status: `built` — vol-30 (2026-05-13)
 **First Δ > 0 from ML at canonical scale.** EdgeBpMarginals first, then rerank top-k tied candidates (within EPS=0.05 BP-score) with Learned. Depth 165 → **174** (+9) at 60s budget, 166 → 174 (+8) at 5min budget. Reproducible (engine deterministic given seed=1). EPS + MAX_K tunable via env vars. See [[learned-value-order]] "Vol-30 measurement" section.
 
-### `learned-on-ties-alns-postfill` — status: `unbuilt` — since: vol-30
-Take vol-30 T1's depth-174 partial board (max_depth_seen reached by `joe_depth150_bp + LearnedOnTies`) and feed it to ALNS-fill / PT to measure the post-recovery score. The depth lift is on the CP cold-start axis; whether it translates to a >457 score lift depends on ALNS recovery quality from a deeper start. Vol-23/24 showed deeper CP-partial doesn't always post-ALNS better. Worth ~1 day. Important: requires capturing the actual partial board, not just the depth scalar.
+### `learned-on-ties-alns-postfill` (vol-31 T1) — status: `built` — vol-31 (2026-05-13)
+Shipped `canonical-eval --dump-partial PATH`. Compared baseline-165 vs LearnedOnTies-174 partials through two recovery pipelines:
+- Weak (alns_only winning5 5 min): 426 → 436 (+10 score, seed=1; baseline reproducible at seed=2 → 425).
+- Strong (pt_e2 8-rep + Houdayer + kicks 15 min): 437 → 445 (+8 score).
+
+**First ML-driven score lift on canonical 5-clue 16×16 E2**, robust across pipeline strengths. The lift comes from the better starting partial (303 vs 280 initial edges); strong pipeline preserves but doesn't amplify (PT-174 hits 443 at round 5, plateaus at 445 by round 25). 445 is not the 457 record (which came from a lucky basin discovery, not iso-budget compute). See [[learned-value-order]] "Vol-31 measurement".
+
+### `learned-on-ties-basin-escape` — status: `unbuilt` — since: vol-31
+Combine vol-31's LearnedOnTies-174 partial with vol-22's basin-escape recipe (bound-ascent + Hungarian + ALNS over hours). Does the better starting basin let basin-escape find a >457 basin? Vol-22's 457 came from a specific basin found by chance; LearnedOnTies-174 might give access to a different basin family. ~1 day to wire + overnight run.
+
+### `learned-on-ties-long-pt` — status: `unbuilt` — since: vol-31
+Run pt_e2 from LearnedOnTies-174 at 1-2 hour budget (vs vol-31's 15 min). Does the 445 plateau open up with more compute, or is it a real ceiling? Cheap compute, overnight job.
 
 ### `learned-on-ties-hyperparam-sweep` — status: `unbuilt` — since: vol-30
 EPS ∈ {0.01, 0.02, 0.05, 0.10, 0.20} × MAX_K ∈ {4, 8, 16, 32}. ~5 min compute total at 60s/cell. Might lift past +9. Tunable in current code.
