@@ -33,7 +33,8 @@ pub struct SigmaCycle {
 ///
 /// σ on positions: σ(p) = ora_pos[piece at p].
 /// A cycle is positions [p, σ(p), σ²(p), ...] that closes.
-/// Cycles of length 1 (fixed points) are filtered out.
+/// Cycles of length 1 (fixed points) are filtered out — for rotation
+/// correction at fixed points use [`rotation_fixups`].
 pub fn compute_sigma_cycles(current: &Board, oracle: &Board, cell_count: usize) -> Vec<SigmaCycle> {
     // Build piece -> oracle_pos and piece -> oracle_rot maps.
     let mut ora_pos: BTreeMap<PieceId, (Position, Rotation)> = BTreeMap::new();
@@ -106,6 +107,33 @@ pub fn apply_all_cycles(board: &Board, cycles: &[SigmaCycle]) -> Board {
     let mut new = board.clone();
     for c in cycles {
         new = apply_cycle(&new, c);
+    }
+    new
+}
+
+/// Find positions where current and oracle agree on piece_id but disagree
+/// on rotation. These are σ fixed points; compute_sigma_cycles filters
+/// them out because their cycle length is 1, but they still contribute
+/// score gains when corrected.
+pub fn rotation_fixups(current: &Board, oracle: &Board, cell_count: usize) -> Vec<(Position, Rotation)> {
+    let mut out = Vec::new();
+    for pos in 0..cell_count as Position {
+        if let (Some((c_pid, c_rot)), Some((o_pid, o_rot))) = (current.get(pos), oracle.get(pos)) {
+            if c_pid == o_pid && c_rot != o_rot {
+                out.push((pos, o_rot));
+            }
+        }
+    }
+    out
+}
+
+/// Apply rotation fixups to a board.
+pub fn apply_rotation_fixups(board: &Board, fixups: &[(Position, Rotation)]) -> Board {
+    let mut new = board.clone();
+    for &(pos, rot) in fixups {
+        if let Some((pid, _)) = new.get(pos) {
+            new.place(pos, pid, rot);
+        }
     }
     new
 }
