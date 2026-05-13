@@ -38,21 +38,26 @@ Score lift estimate (1-2 days, +5..10) was wrong in spirit: the CP-deepener does
 ### `joe-2019-sat-postprune` — status: `wont-do` — since: vol-14, resolved: vol-24
 Aged 10 vols. ~1-week build to replicate Joe's 11-hour SAT solve on a 2-weeks-of-Blackwood pre-pruned domain. No clear path from here to canonical 5-clue 480 that doesn't already require the upstream Blackwood pre-prune (which we don't have). Mark `wont-do`; the gap-closer we actually need is `score-optimizing-cp` (active vol-24 binding).
 
-### `piece-orbit-as-atom` (N9 from vol-20) — status: `unbuilt` — since: vol-20
-Treat pieces in same edge-multiset orbit as fungible. There are only 5 such orbits in canonical E2 (10 pieces of 256). Low value. Likely `wont-do`.
+### `piece-orbit-as-atom` (N9 from vol-20) — status: `wont-do` — since: vol-20, resolved: vol-27
+**Aged 7 volumes; resolved at vol-27 open.** 10 fungible pieces out of 256 represent < 4% of the search space; even a perfect orbit reduction wouldn't materially affect node counts on canonical 16×16. The vol-26 ML result demonstrates that the leverage on E2-family puzzles is in better value-ordering (540× node reduction), not in tightening the orbit/atom representation. Mark `wont-do`; do not revisit unless a different decomposition shows it could matter for the residual hard region.
+
+### `multi-cell-bound-ascent` (vol-22 T3) — status: `unbuilt` — since: vol-22, deferred at vol-27 open
+3-cycle and 4-cycle moves in bound-landscape, not just 2-swaps. Plateau at bound 470 might break. **Vol-27 scope is ML-axis (vol-26 follow-on); this is ALNS-side and orthogonal. Defer to a future ALNS-focused volume.**
+- See `concepts/bound-ascent.md`
+- Est. 1 day
 
 ### `multi-cell-bound-ascent` (vol-22 T3) — status: `unbuilt` — since: vol-22
 3-cycle and 4-cycle moves in bound-landscape, not just 2-swaps. Plateau at bound 470 might break.
 - See `concepts/bound-ascent.md`
 - Est. 1 day
 
-### `bound-floor-alns-with-per-step-check` — status: `partial` — since: vol-22
-Vol-22 T1 was the per-RUN version (null). Per-STEP version requires modifying ALNS internals.
+### `bound-floor-alns-with-per-step-check` — status: `partial` — since: vol-22, deferred at vol-27 open
+Vol-22 T1 was the per-RUN version (null). Per-STEP version requires modifying ALNS internals. **Vol-27 scope is ML-axis; defer to a future ALNS-focused volume.**
 - See `concepts/bound-ascent.md`
 - Est. 1-2 days (invasive)
 
-### `kissat-rc2-maxsat` (vol-22 T3, user-Q) — status: `unbuilt` — since: vol-22
-z3 cannot solve our MaxSAT (UNKNOWN on 60-cell clusters in 180s). Need a real MaxSAT solver. Gives exact joint bound.
+### `kissat-rc2-maxsat` (vol-22 T3, user-Q) — status: `unbuilt` — since: vol-22, deferred at vol-27 open
+z3 cannot solve our MaxSAT (UNKNOWN on 60-cell clusters in 180s). Need a real MaxSAT solver. Gives exact joint bound. **Vol-27 scope is ML-axis; defer to a future bound-axis volume.**
 - See `concepts/exact-joint-bound.md`
 - Est. 4-6 hrs
 
@@ -81,8 +86,8 @@ Aged 3 vols. Color relabel is score-preserving (a π ∈ S_23 permutation of col
 ### `forced-perturb-meta-op` (vol-21 T6) — status: `wont-do` — since: vol-21, resolved: vol-24
 Aged 3 vols. Vol-20 `basin_hop` at k=1,4 went nowhere; vol-22 basin-escape recipe (bound→Hungarian→ALNS) is the actually-validated big-k move and is already the dominant cold-portfolio operator. Generic Δ=-k jolts into PT chains add stochasticity without the bound-guidance that made vol-22 work. Mark `wont-do`.
 
-### `diverse-457-search` (vol-21 T5) — status: `partial` — since: vol-21
-"Lottery" for finding non-byte-identical 457s. Vol-22 didn't run it; instead the basin-escape recipe found different >457-ceiling basins. Still valuable as separate axis.
+### `diverse-457-search` (vol-21 T5) — status: `partial` — since: vol-21, deferred at vol-27 open
+"Lottery" for finding non-byte-identical 457s. Vol-22 didn't run it; instead the basin-escape recipe found different >457-ceiling basins. Still valuable as separate axis. **Vol-27 scope is ML-axis; cheap overnight job, can run any time but not blocking.**
 - Est. 0 build, overnight compute
 
 ### `bound-ascent-then-blackwood-cp` (vol-22 T2) — status: `unbuilt` — since: vol-22
