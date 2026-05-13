@@ -114,12 +114,19 @@ not a value-order theory finding.**
 Python prototype shipped (`ml/unsat_propagator_proto.py`):
 - 130,180 literals decoded from `output/capiman_e2/e2_info.c` (0.43s).
 - Round_1 CNF (125 MB gz): 53,194,585 clauses parsed in 56.6s.
-- Forbidden-partner-count distribution: mean 817, max 4317.
-- Total directed forbidden-edges from round_1 alone: 106M.
-- Memory estimate for full CSR: ~430 MB. Manageable.
 
-Decoder JSON written to `output/vol-32/unsat_propagator/literal_decoder.json`
-(3 MB). Rust integration is vol-33 T1.
+**Rust port also shipped** (`crates/ml-export/src/bin/unsat_clauses_load.rs`,
+`target/release/unsat-clauses-load`):
+- 130,180 literals decoded in 0.04s (10× faster than Python).
+- Round_1 alone: 53M pairs in 9.9s (5.7× faster than Python).
+- **Full database (68 files): 67,402,169 pairs in <60s.** 134.8M CSR edges
+  (540 MB binary file). 130,175 literals with partners, mean 1036, max 6706.
+- Output: `output/vol-33/forbidden_all.bin` (UCP1 binary format) +
+  `output/vol-33/forbidden_round1.bin`. Ready for vol-33 engine integration.
+
+Decoder JSON also written to `output/vol-32/unsat_propagator/literal_decoder.json`
+(3 MB, Python output). The Rust binary format is the canonical one for
+engine consumption.
 
 ## What was refuted
 
