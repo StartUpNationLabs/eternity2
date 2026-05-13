@@ -64,6 +64,21 @@ This is a non-trivial conclusion: it tells us where prune-restart DOESN'T pay of
 
 Both logged in [[basin-440-469]] and [[basin-escape-recipe]].
 
+## Side experiment — X-skeleton scan order (NULL)
+
+User-proposed mid-vol: pre-commit two 3-cell-wide diagonals through the 5 canonical hints, hypothesising that *piercing* the 764-plateau (vs perimeter-wrapping like rectangle/layered) would let early-placed cells get two neighbours fast.
+
+Built and tested at 5min CP + 10min ALNS:
+
+- Stage 1 CP: depth=69, placed=74/256, matched=105/480 (vs baseline ~164/280/280).
+- Stage 2 ALNS: 396/480 (vs vol-17 calibrated cold-start record 447).
+
+**Refuted by 51 matched edges.** The piercing geometry made the CP stage *worse*, not better — the engine thrashed on widest-domain interior cells. Logged to [[scan-order]] as the third refuted pre-commit pattern (after hint-centric, rectangle/layered).
+
+Files shipped: `PathSkeleton::XSkeleton` + `build_x_skeleton_path` + `JOE_DEPTH150_BP_X_PAR` in `crates/solver-engine/src/lib.rs`; `crates/bench-audit/src/bin/run_e2_x_skeleton.rs`.
+
+Net cost: ~15 min compute + ~30 min build. Value: clean data point closing the perimeter-vs-piercing question. The vault predicted this would fail before launch — letting it run produced the falsification rather than only the prediction.
+
 ## What we owe to vol-24
 
 Per audit-at-open: items aged 3+ volumes that must resolve.

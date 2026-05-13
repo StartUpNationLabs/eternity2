@@ -35,6 +35,25 @@ The hint-centric hypothesis (start where information density is highest) was emp
 
 Ansótegui et al. 2008 CHESS static order (checkerboard cells, center-spiral). Without full Régin alldiff filter: **600× node explosion**. Requires bounded-width CSP which E2 lacks; not viable.
 
+### X-skeleton, 3-cell-wide diagonals (vol-23, NULL)
+
+User-proposed `PathSkeleton::XSkeleton`: pre-commit two 3-cell-wide diagonals through the 5 canonical hints (TL → centre → BR, TR → centre → BL), then Chebyshev-outward fill. The geometric hypothesis was distinct from rectangle/layered: instead of *wrapping* the 764-plateau, the X **pierces** it in two crossing bands so each diagonal cell has two already-placed neighbours.
+
+A/B at 5min CP + 10min ALNS on canonical E2 (seed 1):
+
+| Stage | X-skeleton | baseline (vol-17 calibrated_v17a cold-start) |
+|---|---|---|
+| CP depth | 69 | ~164 |
+| CP placed | 74/256 | ~280/256 |
+| CP matched | 105/480 | ~280/480 |
+| Final (post-ALNS) | **396/480** | **447/480** |
+
+**Refuted by 51 matched edges.** The "piercing" geometry did not save it; it made the CP stage *worse* than perimeter-shaped pre-commits because the engine spent its budget thrashing on center cells where domains are widest (the 764-plateau, [[mismatch-geometry]]). The +291 ALNS lift only recovered partial ground.
+
+Files: `crates/solver-engine/src/lib.rs` (`PathSkeleton::XSkeleton`, `build_x_skeleton_path`, `JOE_DEPTH150_BP_X_PAR`), `crates/bench-audit/src/bin/run_e2_x_skeleton.rs`.
+
+**Generalisation**: every static pre-commit through high-domain interior cells has lost — hint-centric (vol-14), rectangle/layered (vol-14, vol-15), X-skeleton (vol-23). The pattern: **static ordering chooses which region becomes the hard region; piercing the 764-plateau makes the hard region the widest-domain cells**. Border-first MRV remains the only ordering that lets the engine attack low-domain cells first.
+
 ## Mismatch-geometry consequence
 
 Scan order **determines** where mismatches accumulate (see [[mismatch-geometry]]):
