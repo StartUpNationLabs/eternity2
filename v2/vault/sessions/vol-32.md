@@ -92,6 +92,23 @@ At vol-close: 8 seeds done, scores 438-442. Median ~440. Vol-31's
 single-seed 8-replica gave 445 — within range. Final histogram available
 post-completion (ETA 00:00).
 
+### T6+ — Cross-profile InsertionOrder check (added at vol-close)
+
+While T3 ran, I also tested value-order modes under `border_first_lcv`
+(light propagators, the alternative profile):
+
+| Profile | MRV | InsertionOrder | EdgeBpMarginals |
+|---|---:|---:|---:|
+| border_first_lcv (light) | 65 | 60 | **87** |
+| joe_depth150_bp (heavy) | n/a | **174** | 165 |
+
+**Inversion**: under light propagators, EdgeBpMarginals is best (+22 vs MRV);
+under heavy propagators, EdgeBpMarginals REGRESSES (-9 vs InsertionOrder).
+This confirms vol-12's "BP helps" finding was scoped to light propagators
+and explains why it failed under joe_depth150_bp. The dominant value-order
+depends on propagator strength. **Real engine characterisation finding,
+not a value-order theory finding.**
+
 ### T7 — Unsat-clause-propagator prototype
 
 Python prototype shipped (`ml/unsat_propagator_proto.py`):
@@ -124,10 +141,11 @@ Decoder JSON written to `output/vol-32/unsat_propagator/literal_decoder.json`
 ## What was confirmed (NEW)
 
 - **InsertionOrder beats EdgeBpMarginals by +9 depth under joe_depth150_bp**
-  — real engine axis previously hidden by mis-attribution. Vol-12's
-  measurement that BP helps (+18.84% interior reduction under simpler
-  profiles) may not hold under the heavy joe_depth150_bp propagator
-  stack.
+  — real engine axis previously hidden by mis-attribution. Cross-profile
+  check confirms inversion: under `border_first_lcv` (light propagators)
+  EdgeBpMarginals is +22 vs MRV (vol-12's measurement holds); under
+  `joe_depth150_bp` (heavy propagators) EdgeBpMarginals is -9 vs
+  InsertionOrder. **The dominant value-order depends on propagator strength.**
 - **Real ML lift at canonical**: depth Δ=0 (165 = 165), edges Δ=+3.
   Imitation ceiling at the teacher confirmed (vol-29's result was real;
   it's just the only real ML result at canonical so far).
