@@ -94,6 +94,7 @@ fn main() {
     let mut seed_end: u64 = 21;  // exclusive
     let mut budget_ms: u64 = 30_000;
     let mut parallel: usize = 1;
+    let mut value_order_str: String = "edge_bp".to_string();
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -110,9 +111,16 @@ fn main() {
             }
             "--budget-ms" => { budget_ms = raw[i + 1].parse().expect("budget"); i += 2; }
             "--parallel" => { parallel = raw[i + 1].parse().expect("parallel"); i += 2; }
+            "--value-order" => { value_order_str = raw[i + 1].clone(); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
+    let value_order = match value_order_str.as_str() {
+        "edge_bp" => ValueOrder::EdgeBpMarginals,
+        "learned_on_ties" => ValueOrder::LearnedOnTies,
+        "learned" => ValueOrder::Learned,
+        other => panic!("unknown --value-order: {other}. valid: edge_bp, learned_on_ties, learned"),
+    };
 
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
     let n_cells = puzzle.cell_count() as usize;
@@ -137,7 +145,7 @@ fn main() {
     let run_seed = |seed: u64| -> SeedRecord {
         let mut cfg = EngineConfig::JOE_DEPTH150_BP;
         cfg.parallelism = Parallelism::SingleThread;
-        cfg.value_order = ValueOrder::EdgeBpMarginals;
+        cfg.value_order = value_order;
         let mut solver = EngineSolver::new(cfg, "engine", "canonical_capture");
         let opts = SolveOpts {
             mode: SolveMode::FirstSolution,

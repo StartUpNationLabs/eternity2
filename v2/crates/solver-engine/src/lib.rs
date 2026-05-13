@@ -2547,7 +2547,7 @@ impl<'a> SearchState<'a> {
             } else {
                 Vec::new()
             },
-            cell_side_edge: if matches!(solver.config.value_order, ValueOrder::EdgeBpMarginals)
+            cell_side_edge: if matches!(solver.config.value_order, ValueOrder::EdgeBpMarginals | ValueOrder::LearnedOnTies)
                 && opts.edge_bp_marginals.is_some()
             {
                 build_cell_side_edge(puzzle)
@@ -4081,6 +4081,13 @@ impl<'a> SearchState<'a> {
                 && bp_keys[tie_len].saturating_sub(top_key) <= eps
             {
                 tie_len += 1;
+            }
+            // Vol-32 T4 instrumentation: if E2_LOT_TRACE is set, emit
+            // (depth, tie_len, dom_len) to stderr so the Python diagnostic
+            // can compute per-depth fire-rate.
+            if std::env::var("E2_LOT_TRACE").is_ok() {
+                eprintln!("LOT_TRACE depth={} pos={} dom={} tie_len={} top_key={}",
+                    depth, pos, bp_keys.len(), tie_len, top_key);
             }
             if tie_len >= 2 {
                 let tie_slice = &domain_snapshot[..tie_len].to_vec();
