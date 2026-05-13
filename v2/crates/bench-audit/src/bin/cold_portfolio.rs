@@ -124,6 +124,8 @@ fn run_one_arm(
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
             lex_break_isoscore: false,
+        checkpoint_path: None,
+        checkpoint_every_ms: 60_000,
     };
     let t_alns = Instant::now();
     let (alns_board, _alns_stats) = run_alns(puzzle, &cp_board, ops.as_mut_slice(), &cfg);

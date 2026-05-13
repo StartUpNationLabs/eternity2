@@ -271,6 +271,8 @@ fn main() {
         pinned_positions: pinned_positions.clone(),
         iter_budget: 0,
             lex_break_isoscore: false,
+        checkpoint_path: None,
+        checkpoint_every_ms: 60_000,
     };
     eprintln!("[stage3] ALNS pinning {} positions, budget={}s", pinned_positions.len(), alns_ms / 1000);
     let t_alns = Instant::now();

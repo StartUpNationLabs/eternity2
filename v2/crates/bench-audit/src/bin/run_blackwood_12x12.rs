@@ -142,6 +142,8 @@ fn run_alns_stage(
         pinned_positions: Vec::new(),
         iter_budget: 0,
             lex_break_isoscore: false,
+        checkpoint_path: None,
+        checkpoint_every_ms: 60_000,
     };
     let t = Instant::now();
     let (board, stats) = run_alns(puzzle, cp_board, ops.as_mut_slice(), &cfg);

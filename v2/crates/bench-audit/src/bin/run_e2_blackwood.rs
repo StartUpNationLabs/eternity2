@@ -43,6 +43,8 @@ fn run_arm(
     cp_budget_ms: u64,
     alns_budget_ms: u64,
     out_dir: &std::path::Path,
+    alns_checkpoint: Option<std::path::PathBuf>,
+    alns_checkpoint_every_ms: u64,
 ) -> (u32, u32, u32) {
     let mut opts = SolveOpts::default();
     opts.time_budget_ms = cp_budget_ms;
@@ -134,6 +136,8 @@ fn run_arm(
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
             lex_break_isoscore: false,
+        checkpoint_path: alns_checkpoint.clone(),
+        checkpoint_every_ms: alns_checkpoint_every_ms,
     };
     let t_alns = Instant::now();
     let (alns_board, alns_stats) = run_alns(puzzle, &cp_board, ops.as_mut_slice(), &cfg);
@@ -199,6 +203,8 @@ fn main() {
     let mut noise_amplitude: f64 = 0.15;
     let mut schedule_seed: u64 = 0;
     let mut shuffle_blackwood_ties: bool = false;
+    let mut alns_checkpoint_path: Option<std::path::PathBuf> = None;
+    let mut alns_checkpoint_every_ms: u64 = 60_000;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -210,6 +216,8 @@ fn main() {
             "--noise-amplitude" => noise_amplitude = args.next().unwrap().parse().unwrap(),
             "--schedule-seed" => schedule_seed = args.next().unwrap().parse().unwrap(),
             "--shuffle-blackwood-ties" => shuffle_blackwood_ties = true,
+            "--alns-checkpoint" => alns_checkpoint_path = Some(std::path::PathBuf::from(args.next().unwrap())),
+            "--alns-checkpoint-every-ms" => alns_checkpoint_every_ms = args.next().unwrap().parse().unwrap(),
             _ => {}
         }
     }
@@ -264,7 +272,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("baseline".into(), m, p, d));
     }
@@ -280,7 +290,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood".into(), m, p, d));
     }
@@ -307,7 +319,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood_rect".into(), m, p, d));
     }
@@ -330,7 +344,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood_rect_layered".into(), m, p, d));
     }
@@ -357,7 +373,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood_raw".into(), m, p, d));
     }
@@ -382,7 +400,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood_raw_rect_layered".into(), m, p, d));
     }
@@ -404,7 +424,9 @@ fn main() {
             seed,
             cp_budget,
             alns_budget,
-            &out_dir,
+                        &out_dir,
+            alns_checkpoint_path.clone(),
+            alns_checkpoint_every_ms,
         );
         results.push(("blackwood_raw_rect".into(), m, p, d));
     }

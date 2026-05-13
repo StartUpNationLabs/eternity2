@@ -928,6 +928,50 @@ impl AdaptiveWeights {
     pub fn weights(&self) -> &[f64] { &self.weights }
 }
 
+/// Vol-17 — atomic write of a single best-board JSON checkpoint.
+/// Format mirrors what other vol-17 bins emit (placement array +
+/// matched score). Overwrites the file each call.
+fn write_alns_checkpoint(
+    puzzle: &Puzzle,
+    board: &Board,
+    score: u32,
+    iters: u32,
+    path: &std::path::Path,
+) {
+    use std::io::Write;
+    let n = puzzle.cell_count();
+    // Build a JSON string by hand to avoid pulling serde_json into
+    // the localsearch crate (which currently has no serde_json dep).
+    let mut s = String::with_capacity(8192);
+    s.push_str(&format!(
+        "{{\n  \"matched\": {},\n  \"iters\": {},\n  \"timestamp\": \"{}\",\n  \"placement\": [\n",
+        score, iters,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
+    ));
+    let mut first = true;
+    for pos in 0..n {
+        if !first { s.push_str(",\n"); }
+        first = false;
+        if let Some((pid, rot)) = board.get(pos) {
+            s.push_str(&format!(
+                "    {{\"pos\": {}, \"piece_id\": {}, \"rotation\": {}}}",
+                pos, u32::from(pid), rot.as_u8()
+            ));
+        } else {
+            s.push_str("    null");
+        }
+    }
+    s.push_str("\n  ]\n}\n");
+    // Write atomically via tmp + rename.
+    let tmp = path.with_extension("tmp");
+    if let Ok(mut f) = std::fs::File::create(&tmp) {
+        let _ = f.write_all(s.as_bytes());
+        let _ = f.sync_all();
+        let _ = std::fs::rename(&tmp, path);
+    }
+}
+
 // ----- ALNS config + driver --------------------------------------------
 
 pub struct AlnsConfig {
@@ -952,6 +996,15 @@ pub struct AlnsConfig {
     /// Vol-17 — optional hard cap on iters (0 = no cap). Used by PT-on-ALNS
     /// to do bounded inner loops between exchanges.
     pub iter_budget: u32,
+    /// Vol-17 — periodic mid-run checkpoint of the current-best board.
+    /// When `checkpoint_path` is `Some(path)`, every `checkpoint_every_ms`
+    /// (default 60s when 0), the current best board is written to
+    /// `<path>` as JSON containing the placement + score + bucas-style
+    /// metadata. Each checkpoint OVERWRITES the file (single rolling
+    /// snapshot). Used by long overnight runs to keep monitoring tools
+    /// in sync with in-flight ALNS progress.
+    pub checkpoint_path: Option<std::path::PathBuf>,
+    pub checkpoint_every_ms: u64,
     /// Vol-17 — when true, iso-score moves use largest-mismatch-component
     /// size as a tie-breaker. Smaller largest-component is preferred
     /// (easier to repair in future iters). Useful when matched count
@@ -974,6 +1027,8 @@ impl Default for AlnsConfig {
             pinned_positions: Vec::new(),
             iter_budget: 0,
             lex_break_isoscore: false,
+            checkpoint_path: None,
+            checkpoint_every_ms: 60_000,
         }
     }
 }
@@ -1056,6 +1111,9 @@ pub fn run_alns(
 
     let t_start = std::time::Instant::now();
     let mut last_log = t_start;
+    // Vol-17 — periodic best-board checkpoint (overwrites file each tick).
+    let mut last_checkpoint = t_start;
+    let checkpoint_every = std::time::Duration::from_millis(cfg.checkpoint_every_ms.max(1));
 
     let pinned_set: BTreeSet<Position> = cfg.pinned_positions.iter().copied().collect();
 
@@ -1141,6 +1199,14 @@ pub fn run_alns(
             stats.rejected += 1;
         }
         weights.reward(op_idx, sigma);
+
+        // Vol-17 — periodic checkpoint of current best board.
+        if let Some(cp_path) = cfg.checkpoint_path.as_ref() {
+            if last_checkpoint.elapsed() >= checkpoint_every {
+                write_alns_checkpoint(puzzle, &best, best_score, stats.iters, cp_path);
+                last_checkpoint = std::time::Instant::now();
+            }
+        }
 
         // Vol-17 — stagnation check: if no new best in stagnation_limit
         // iterations, jump back to best and reshuffle weights.
@@ -1430,6 +1496,8 @@ where
                 pinned_positions: base_cfg.pinned_positions.clone(),
                 iter_budget: base_cfg.iter_budget,
                 lex_break_isoscore: base_cfg.lex_break_isoscore,
+                checkpoint_path: None,
+                checkpoint_every_ms: base_cfg.checkpoint_every_ms,
             };
             cfg.seed = seed;
             let mut ops = ops_factory(i);
@@ -1606,6 +1674,8 @@ pub fn run_alns_pt_multi_init(
                     pinned_positions: pinned_positions.clone(),
                     iter_budget: cfg.inner_iters_per_round,
                     lex_break_isoscore: false,
+                    checkpoint_path: None,
+                    checkpoint_every_ms: 60_000,
                 };
                 let (new_board, new_stats) = run_alns(puzzle, &boards[i], ops.as_mut_slice(), &cfg_chain);
                 let new_score = score_board(puzzle, &new_board);

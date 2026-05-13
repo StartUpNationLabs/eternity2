@@ -120,6 +120,8 @@ fn main() {
             pinned_positions: Vec::new(),  // generated puzzle, no hints
             iter_budget: 0,
             lex_break_isoscore: false,
+        checkpoint_path: None,
+        checkpoint_every_ms: 60_000,
         };
         let t_alns = Instant::now();
         let (alns_board, alns_stats) = run_alns(&puzzle, &cp_board, ops.as_mut_slice(), &cfg);

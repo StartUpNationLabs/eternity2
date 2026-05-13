@@ -194,6 +194,8 @@ fn main() {
         pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
         lex_break_isoscore: false,
+        checkpoint_path: None,
+        checkpoint_every_ms: 60_000,
     };
     let t0 = Instant::now();
     let (alns_board, stats) = run_alns(&puzzle, &chimera, ops.as_mut_slice(), &cfg);
