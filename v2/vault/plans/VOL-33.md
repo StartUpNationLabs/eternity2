@@ -65,20 +65,34 @@ NEW vol-32 items pickable for vol-33:
 - At ~500K nodes per canonical run, overhead ≈ 120 ms — negligible.
 
 Vol-33 remaining work:
-1. **Engine integration**: in `place_and_propagate` (after gacolor +
+1. **Encoding reconciliation** (vol-32 discovered the mismatch — see
+   `output/vol-32/unsat_validation_FINDING.md`): 74% of our placements
+   aren't in capiman's encoder, and 21 conflict pairs flagged on
+   placements that ARE encoded (= known-good moves marked forbidden).
+   Need to:
+   a) Parse capiman's piece edge tuples (PatternN/E/S/W columns in
+      `e2_info.c`).
+   b) Build piece-equivalence map: capiman_card_N → our_piece_id_M
+      via edge-tuple match.
+   c) Resolve rotation convention (capiman 1..4 → our 0..3 + offset).
+   d) Re-validate against `edge_bp_165` until 0 conflicts.
+   Half a day of careful Rust work — NOT optional.
+2. **Engine integration**: in `place_and_propagate` (after gacolor +
    AC-3), compute the placed literal X via the encoder, iterate
    `forbidden_partners[X]`, decode each Y to `(piece, field, rot)`,
    and call `remove_from_domain` on that cell's row matching that
    piece+rotation.
-2. **Lazy load**: OnceCell-protected; only load when a profile that
+3. **Lazy load**: OnceCell-protected; only load when a profile that
    uses it is instantiated.
-3. **Profile registration**: new `joe_depth150_bp_unsat` profile in
+4. **Profile registration**: new `joe_depth150_bp_unsat` profile in
    `EngineConfig`. Falls back to no-op if `forbidden.bin` missing.
-4. **Gate**: depth lift ≥ +5 on canonical 5-clue at 60s; clear
+5. **Gate**: depth lift ≥ +5 on canonical 5-clue at 60s; clear
    measurement that adds to gacolor + AC-3 rather than subsumed by it.
 
-Cost: 1 day (loader + bench already done). Likely largest pruning
-gain since gacolor + AC-3.
+Cost: **1.5-2 days** (loader + bench done; reconciliation is the
+unblock). Estimate revised upward at vol-32 close after the
+validation found the encoding mismatch. Without reconciliation, the
+propagator would prune valid moves — silent correctness bug.
 
 ### T2 — Joe iteration-budgeted prune
 
