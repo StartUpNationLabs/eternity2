@@ -30,14 +30,21 @@ v2 model architecture shipped (position-relative GNN, size-agnostic + piece-coun
 ### `learned-16x16-trained` (vol-29 T1) — status: `built` — vol-29 (2026-05-13)
 Trained v3 model on 20 canonical-E2 trajectories × 60s = ~3300 samples (vol-28's distribution-match fix). Val_acc 94.55% at plateau. **Canonical gate PASS at match condition**: Δ=−1 vs `joe_depth150_bp` baseline (164 vs 165), with −35% nodes and −37% backtracks at same wall-clock. Strict-beat condition not met (and structurally cannot be under imitation). Vol-28's collapse (Δ=−108) was a distribution-gap problem, not architectural. See [[learned-value-order]] "Vol-29 measurement" section.
 
-### `learned-16x16-long-train` (user-Q vol-29) — status: `unbuilt` — since: vol-29
+### `learned-16x16-long-train` (user-Q vol-29) — status: `built` (flavor 1) — vol-30 T2 (2026-05-13)
+Vol-30 T2 shipped flavor 1 (long imitation): captured 100 canonical-E2 trajectories × 60s (parallel=4, ~25 min wall), trained v3b (hidden=64, 30 epochs) and v4 (hidden=128, color_emb=24, 50 epochs). **Result: all three models (v3, v3b, v4) hit depth 174 under LearnedOnTies — the +9 lift is invariant**. More data + bigger model gives 47% fewer nodes at iso-depth (v4 vs baseline under full Learned) but does NOT push past +9. Confirms imitation ceiling at the teacher. Flavor 2 (RL self-play) still unbuilt; only direction that can structurally beat the imitation ceiling.
 User request: "for the sake of science, train a 16×16-specific model for a long time and use it for a while". Distinct from vol-29 T1 (which uses imitation only). Two flavors worth trying:
 1. **Long imitation**: 1000+ seeds × 60s capture (~16 hours wall-clock with parallelism), 100+ training epochs, beefier architecture (hidden=128-256). Tests whether the vol-29 ceiling is data/compute-bound or fundamentally limited by the imitation framing.
 2. **RL self-play** (the only thing that could beat the engine, since imitation has a fixed ceiling at "engine's own performance"): train via PPO/REINFORCE where reward = max_depth reached. ~1 week build + many days of training compute. Different vol entirely (`vol-30+ if vol-29 fails informatively`).
 Honest expectation: long imitation hits a ceiling at "engine performance on its own data", maybe within Δ=+1..+5 of the baseline. RL would be the meaningful path to beating the baseline.
 
-### `learned-on-ties-hybrid` (vol-30 T1) — status: `unbuilt` — since: vol-28
-Add `ValueOrder::LearnedOnTies` — defer to EdgeBpMarginals (or LCV) first, use Learned only on tied/near-tied candidates. Vol-29 measurement (−35% nodes at iso-depth) suggests the model picks productive tie-breakers. Gate: depth ≥ 165 + at least one seed showing 166+. ~1 day. See [[../plans/VOL-30]].
+### `learned-on-ties-hybrid` (vol-30 T1) — status: `built` — vol-30 (2026-05-13)
+**First Δ > 0 from ML at canonical scale.** EdgeBpMarginals first, then rerank top-k tied candidates (within EPS=0.05 BP-score) with Learned. Depth 165 → **174** (+9) at 60s budget, 166 → 174 (+8) at 5min budget. Reproducible (engine deterministic given seed=1). EPS + MAX_K tunable via env vars. See [[learned-value-order]] "Vol-30 measurement" section.
+
+### `learned-on-ties-alns-postfill` — status: `unbuilt` — since: vol-30
+Take vol-30 T1's depth-174 partial board (max_depth_seen reached by `joe_depth150_bp + LearnedOnTies`) and feed it to ALNS-fill / PT to measure the post-recovery score. The depth lift is on the CP cold-start axis; whether it translates to a >457 score lift depends on ALNS recovery quality from a deeper start. Vol-23/24 showed deeper CP-partial doesn't always post-ALNS better. Worth ~1 day. Important: requires capturing the actual partial board, not just the depth scalar.
+
+### `learned-on-ties-hyperparam-sweep` — status: `unbuilt` — since: vol-30
+EPS ∈ {0.01, 0.02, 0.05, 0.10, 0.20} × MAX_K ∈ {4, 8, 16, 32}. ~5 min compute total at 60s/cell. Might lift past +9. Tunable in current code.
 
 ### `mcgavin-prune-restart` — status: `built` — vol-23 (2026-05-13)
 Built after 8 vols of deferral. Engine: `SolveOpts.batch_hint_application: bool` lets the engine pin DFS-derived hint sets without false-positive wipeouts. Driver: `crates/bench-audit/src/bin/prune_restart.rs`.

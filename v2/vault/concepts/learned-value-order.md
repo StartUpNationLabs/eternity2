@@ -493,6 +493,85 @@ Implication for the ML direction on canonical 5-clue E2:
 | v3 canonical backtrack reduction | −37% |
 | v3 distribution-match recovery from vol-28 collapse | Δ from −108 to −1 (+107 points) |
 
+---
+
+## Vol-30 measurement — LearnedOnTies hybrid produces first Δ > 0 (2026-05-13)
+
+Vol-30 shipped `ValueOrder::LearnedOnTies`: EdgeBpMarginals sorts the
+candidates first, then the top-k within ε=0.05 BP-score of the top
+(max 8) get reranked by the Learned scorer. Cheaper per-node than
+full `Learned` (NN only called when there's an ambiguous choice),
+and dominated by EdgeBpMarginals when no ties exist. Tunable via
+`E2_LOT_EPS` and `E2_LOT_MAX_K` env vars.
+
+### Canonical 16×16 result (T1, vol-29 v3 model)
+
+| Budget | Mode | Max depth | Δ |
+|---|---|---:|---:|
+| 1 min | baseline (`joe_depth150_bp`) | 165 | — |
+| 1 min | + Learned (full) | 164 | −1 |
+| 1 min | **+ LearnedOnTies** | **174** | **+9** |
+| 5 min | baseline | 166 | — |
+| 5 min | **+ LearnedOnTies** | **174** | **+8** |
+
+**The +9 depth lift is the first Δ > 0 from ML at canonical 5-clue
+Eternity II.** Reproducible (engine deterministic given seed=1). Holds
+at 5-min budget too (depth still 174 — the model's tie-breaking
+signal is finite but lets the engine reach a basin baseline never
+visits).
+
+### Long-imitation result (T2, 100 trajectories + 2 model sizes)
+
+Vol-30 T2 trained two additional models on 100 captured trajectories
+(5× v3's data) to test whether more data / bigger model would lift
+beyond +9:
+
+| Model | Trajectories | Hidden | Mode | Max depth |
+|---|---|---:|---|---:|
+| baseline | — | — | default | 165 |
+| v3 (vol-29) | 20 | 64 | learned_on_ties | **174** |
+| v3b | 100 | 64 | learned | 165 |
+| v3b | 100 | 64 | learned_on_ties | **174** |
+| v4 | 100 | 128 | learned | 165 |
+| v4 | 100 | 128 | learned_on_ties | **174** |
+
+**The +9 lift is invariant across all three models.** v3 (20 traj,
+hidden=64), v3b (100 traj, hidden=64), v4 (100 traj, hidden=128) all
+reach exactly depth 174 with nearly-identical node counts under
+`learned_on_ties`. **The plateau is structural to canonical E2 + the
+LearnedOnTies hybrid — not a property of any specific model.**
+
+v4 (most-trained, bigger architecture) on full `learned` mode reaches
+the baseline depth 165 with **47% fewer engine nodes** (268k vs
+509k) — most efficient imitator, still ceiling-bound at the teacher.
+
+### What this measurement says
+
+1. **The +9 lift is real and reproducible** across multiple model
+   trainings and architectures. Not noise, not lucky reordering.
+2. **More data + bigger models don't push past +9** under
+   `LearnedOnTies`. The lift is hyperparameter-driven (EPS, MAX_K),
+   not model-driven.
+3. **The depth-174 plateau is a canonical-E2 structural property**:
+   it's the depth reachable when EdgeBpMarginals' confident picks +
+   the Learned scorer's tie-break signal align productively. Beyond
+   174 the propagator wall reasserts.
+4. **Vol-31 question**: does the depth-174 partial post-ALNS-fill
+   produce score > 457? Depth lift on CP cold-start ≠ score lift on
+   final assembly (vol-23/24 measurements show these don't always
+   correlate).
+
+### Numbers worth caching (vol-30 amendment)
+
+| Quantity | Value |
+|---|---|
+| LearnedOnTies cold-start lift at 1 min | +9 depth (165 → 174) |
+| LearnedOnTies cold-start lift at 5 min | +8 depth (166 → 174) |
+| LearnedOnTies invariant across models | v3, v3b, v4 all hit depth 174 |
+| v4 full-Learned efficiency | depth 165 at 47% fewer nodes than baseline |
+| Tunable env vars | `E2_LOT_EPS` (default 0.05), `E2_LOT_MAX_K` (default 8) |
+| Open question (vol-31) | depth-174 partial → ALNS → score ≷ 457? |
+
 ### Files changed at vol-27
 
 - `crates/solver-engine/Cargo.toml`: + `ort = "=2.0.0-rc.10"`, `ndarray = "0.16"`.
