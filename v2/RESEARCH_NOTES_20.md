@@ -992,6 +992,145 @@ and may be a viable operator class.
 Running 8 trials × 30s ALNS (3 min total), seed 42. Result below
 when complete.
 
+### Early observations (2 of 8 trials)
+
+```
+trial 0: break (0,7) rot 0→3, pre=455, post=457   ← recovered
+trial 1: break (1,8) rot 1→2, pre=453, post=457   ← recovered
+```
+
+The 457 basin is **strongly attracting**: perturbations of Δ=-2 or
+Δ=-4 are reabsorbed by ALNS in 30s. Confirms basin-stability.
+
+### Full result (all 8 trials done)
+
+```
+trial 0: break (0,7)   rot 0→3, pre=455, post=457  ← recovered
+trial 1: break (1,8)   rot 1→2, pre=453, post=457  ← recovered
+trial 2: break (11,10) rot 1→2, pre=453, post=457  ← recovered
+trial 3: break (3,0)   rot 3→0, pre=454, post=457  ← recovered
+trial 4: break (11,13) rot 0→1, pre=453, post=457  ← recovered
+trial 5: break (13,6)  rot 1→3, pre=453, post=457  ← recovered
+trial 6: break (15,6)  rot 2→0, pre=454, post=457  ← recovered
+trial 7: break (13,12) rot 0→2, pre=453, post=457  ← recovered
+
+Summary: 8/8 trials recovered to 457. None worse, none better.
+```
+
+**Every single Δ=-2,-3,-4 perturbation is reabsorbed by 30s ALNS.**
+The 457 basin's attractor radius extends to at least Δ=-4 (i.e., a
+multi-edge rotation break of up to 4 edges still gets pulled back).
+
+→ For basin escape, we'd need to inject larger perturbations (Δ=-6
+to -15), i.e. force-rotate k cells simultaneously where k ≥ 2-3.
+Or attack a different axis entirely (T6 from vol-21 plan).
+
+→ **Forced single-rotation perturbation does NOT break the lock.**
+For basin escape, a k-rotation perturbation with k ≥ 5 (or a
+multi-cell destroy at radius k ≥ 8) would be the next test.
+
+---
+
+## 2026-05-13 — N4c: cooperative 3-cycle composition
+
+Built `scripts/n4c_pair_compose.py`. Strategy: 23 Δ=-1 transpositions
+found in N4; 8 cells appear in ≥2 of them. For each cell with shared
+endpoints, try every 3-cycle (a→b→c→a) where ab and bc are both
+Δ=-1 swaps.
+
+This is a *targeted* 3-cycle search — selecting 3-cycles likely to
+be cooperative based on Δ=-1 evidence.
+
+**Result**:
+```
+26 cooperative 3-cycles tested
+Δ ≥ 0: 0
+Best Δ: -2 on cycle ((57, 44, 62) = (3,9), (2,12), (3,14))
+```
+
+Even hand-crafted cooperative 3-cycles can't reach Δ=0. The minimum
+cooperative cardinality on this 457 board is K ≥ 4. K=4 has 2 cycles
+at Δ=-1; we'd need K=5 or K=6 to find Δ=0, and even those scans show
+zero (vol-20 cycle_scan).
+
+The cooperative threshold for THIS 457 board is probably K ≈ 22+
+(matching the R5f cooperativity prediction for a Δ=23 score gap).
+
+---
+
+## 2026-05-13 — vol-20 closeout summary
+
+### What vol-20 shipped
+
+**Code** (committed):
+- `scripts/n3_pair_rotation.py` — adjacent pair rotation sweep (480 pairs).
+- `scripts/n4_swap_landscape.py` — non-adjacent transposition energy landscape.
+- `scripts/n4b_cycle_scan.py` — 3-cycle/4-cycle scan on mismatch cells.
+- `scripts/n4c_pair_compose.py` — cooperative 3-cycle composition.
+- `scripts/n5_patch_analysis.py` — single-cell candidate analysis.
+- `scripts/n5_patch_enumerate.py` — 38-cell BB on the mismatch patch.
+- `scripts/n5_patch_halo.py` — radius-r halo BB.
+- `scripts/n6_backbone.py` — cross-board consensus.
+- `scripts/n6c_cross_scan.py` — top-down vs bottom-up backbone analysis.
+- `crates/bench-audit/src/bin/cycle_scan.rs` — Rust cycle scanner (K≤6).
+- `crates/bench-audit/src/bin/topdown_portfolio.rs` — top-down CP portfolio.
+- `crates/bench-audit/src/bin/basin_hop.rs` — perturbation-then-ALNS probe.
+
+**Findings** (memory entries):
+- `project_e2_vol20_backbone_correction` — corrects vol-17 18-cell backbone claim.
+- `project_e2_vol20_operator_lock` — exhaustive null record for moves ≤ K=5.
+
+**Documents**:
+- `RESEARCH_NOTES_20.md` — full live log.
+- `RESEARCH_NOTES_21_PLAN.md` — vol-21 entry plan with T1-T6 priorities.
+
+### The exhaustive null record
+
+The single 457 board (`pt_winning5_n4_t1_30_s1_1778661199.json`) is
+strict-local-maximum under every move family of cardinality ≤ K=5
+we measured:
+
+| K | Move family | Count | Improvers |
+|---|------------|------:|----------:|
+| 1 | rotation flip | 256×4 | 0 |
+| 1 | piece swap | full | 0 |
+| 2 | adjacent-pair rotation | 6,720 | 0 (also 0 Δ=0) |
+| 2 | non-adjacent transposition | 20,240 | 0 (2 Δ=0) |
+| 3 | full cycle | 32,796 | 0 |
+| 3 | cooperative cycle (N4c) | 26 | 0 |
+| 4 | full cycle | 982,200 | 0 |
+| 5 | full cycle | 28,480,440 | 0 |
+| 38 | patch permutation BB | 60s/1M nodes | 0 |
+| 82 | halo-r1 BB | 90s/122k nodes | 0 |
+| ≤4 | basin_hop perturbation+ALNS-30s | 7+ trials | 0 (all recovered) |
+
+### What's proven and what's not
+
+**Proven**:
+- This 457 board is in a strong basin attractor.
+- No move of cardinality ≤ 5 cells crosses to +1.
+- The 12-cell "bottom-left backbone" was a scan-order artefact.
+- All 10 PT-457 saved boards are the SAME board.
+
+**Not proven** (but strongly suggested by extrapolation):
+- That ALL 457-class boards have this same lock (we only have one).
+- That K=6,7,..,10 cycles wouldn't unlock (we stopped at K=5).
+- That the prune-restart algorithm wouldn't help.
+
+### The path forward (vol-21)
+
+Read `RESEARCH_NOTES_21_PLAN.md`:
+- T1 = prune-restart engine (1-2 day build, est. +5..10 score lift).
+- T2 = cooperative-pair-swap ALNS op (3-4 hours, low-EV given N4c null).
+- T3 = edge-grid dual reformulation (1-2 days, high-novelty).
+- T4 = color-relabel as variable (4-8 hours).
+- T5 = diverse 457 search overnight (cheap, EV = find a different 457).
+- T6 = larger basin_hop perturbations (2-3 hours, tests escape boundary).
+
+Recommend pursuing T1 + T5 in parallel.
+
+
+
 
 
 
