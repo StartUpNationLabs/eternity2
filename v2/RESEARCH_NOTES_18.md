@@ -314,3 +314,78 @@ If replication shows 456 is rare (e.g., 1/5), do hot-PT from the
 most stable basin reached (likely 451-453). If replication is good
 (3+/5), do hot-PT from a 456 directly.
 
+
+---
+
+## 2026-05-13 — Replication test → trajectory-families finding
+
+5-seed replication of winning5 + SA repair from chunk_0019/cp_board
+(stopped at seed 3 per user direction): seeds 1, 2, 3 → **454, 454, 449**.
+None reached 456.
+
+Followed up with piece-position + region overlap comparison across
+2 new 454 boards + 447-chunk_0003 + 2 known 456 oracles:
+
+| | within family | between families |
+|---|---:|---:|
+| piece-position overlap | 70-89% | **12%** |
+| 4-row-region overlap | 89-99% | **43%** |
+
+**Two distinct trajectory families exist**:
+- **Family A** (pre-overnight CP): 447-chunk_0003 + 4 known 456 boards.
+- **Family B** (chunk_0019 overnight CP): the new 454 boards.
+
+Score-distance ≠ configuration-distance:
+- 447 → 456 within Family A: 9 score pts, **76 misplaced pieces**.
+- 454 → 456 between B → A: 2 score pts, **218 misplaced pieces**.
+
+σ-cycles in the cross-family 454→456: cycles up to 88-129 cells with
+Δ ∈ {−132, −171}. Hot-PT at any reasonable T cannot cross.
+
+Implication: chunk_0019 is 456-unreachable. Must work within Family A
+trajectories, or generate new families via schedule diversity.
+
+Memory: project_e2_vol18_456_unreplicable, project_e2_vol18_trajectory_families.
+
+---
+
+## 2026-05-13 — 🏆 NEW COLD-START RECORD: 457/480
+
+Built `oracle_swap.rs` module + `oracle_cycle_swap` binary:
+- compute_sigma_cycles, apply_cycle, apply_all_cycles, rotation_fixups.
+- Within-family test on 447-chunk_0003 → 456-oracle: applying 10
+  cycles + 2 rotation fixups produces **456 exactly, in microseconds**
+  (the precise +9 score gap the cooperativity math predicted).
+- Cross-456-trajectory: winning5_456 → diverse_456 transforms one
+  into the other via 7 cycles + 1 fixup. Both at 456; no 457 reachable
+  this way.
+
+Then ran hot-PT FROM the freshly OracleCycleSwap'd 456:
+- `alns_pt --cp-board <456> --n-chains 4 --t-min 1 --t-max 30
+  --time-budget-ms 300000 --ops winning5 --seed 1`.
+- Per-chain scores: **[456, 456, 457, 457]**.
+- Global best: **457**, found by chain 1 at round 2.
+- Saved at output/v17_alns_pt/pt_winning5_n4_t1_30_s1_1778661199.json.
+
+**Validates R5f physics prediction**: Δ=−21 transitions need T≈30 for
+~50% acceptance. Standard PT runs T_max=2-5 → useless. Hot-PT at
+T_max=30 empirically opens the 456→457 barrier.
+
+Memory: project_e2_vol18_457_record.
+
+---
+
+## 2026-05-13 — Pushing past 457 (in progress)
+
+T_max=30 from 457, seed 2: 4 chains all stuck at 457.
+T_max=50 from 457, seed 1 (4 chains) AND seed 2 (6 chains): all stuck at 457.
+
+457→458 barrier is harder than 456→457. Currently running seeds 3, 4, 5
+at T_max=30 (background, ~10 min remaining) as reproducibility probe.
+
+If 0/3 find 458: budget hypothesis (5 min × 4 chains × T=30 insufficient).
+Next attempt: longer budget (15-30 min), and/or T_max=80-100, and/or
+multi-init PT from several distinct 457 boards if we can generate them.
+
+If 1/3 find 458: 458 IS accessible, push further with same recipe.
+
