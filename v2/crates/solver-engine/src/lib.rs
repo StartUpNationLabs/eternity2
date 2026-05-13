@@ -3221,76 +3221,72 @@ impl<'a> SearchState<'a> {
             let mut diff_scratch = [0u64; MAX_WPP];
             let mut removed_popcount: u32 = 0;
             let a_u = a as usize;
-            // Iterate set bits of domain_bits[a_u]. Mutate the bitset
-            // in-place when a row is unsupported (the iteration takes a
-            // snapshot before the loop body so we don't observe our own
-            // mutations).
-            // Vol-16 Cat-4g — reuse the scratch Vec across queue pops.
-            // Length-reset (no reallocation); capacity persists for the
-            // lifetime of SearchState.
-            self.ac3_to_check.clear();
+            // Vol-23 — stack snapshot of domain_bits[a_u] for safe
+            // iteration during in-place mutation. Replaces the
+            // `ac3_to_check` Vec<u32> materialization (4.78% self-time
+            // on `push`) plus its subsequent re-read. Now the bitset
+            // walk and the support-check happen in one fused pass over
+            // stack-resident words.
+            let mut dom_snapshot = [0u64; MAX_WPP];
             {
                 let base = a_u * words_per_pos;
-                for w in 0..words_per_pos {
-                    let mut word = self.domain_bits[base + w];
-                    while word != 0 {
-                        let bit = word.trailing_zeros();
-                        word &= word - 1;
-                        self.ac3_to_check.push((w as u32) * 64 + bit);
-                    }
-                }
+                let src = &self.domain_bits[base..base + words_per_pos];
+                dom_snapshot[..words_per_pos].copy_from_slice(src);
             }
             // Vol-23 — bind read-only slices once so the inner loop
             // avoids re-dereffing self.* on every iteration. self.placed,
-            // self.rows, self.same_piece_rots, self.ac3_to_check are all
-            // read-only here; only count/present/domain_bits mutate (and
-            // those go through distinct paths via `count`, `present`).
-            let to_check_slice = self.ac3_to_check.as_slice();
+            // self.rows, self.same_piece_rots are all read-only here;
+            // only count/present/domain_bits mutate (and those go
+            // through distinct paths via `count`, `present`).
             let placed_slice = self.placed.as_slice();
             let rows_slice = self.rows.as_slice();
             let same_piece_rots_slice = self.same_piece_rots.as_slice();
-            for ti in 0..to_check_slice.len() {
-                let r_id = to_check_slice[ti];
-                let r = rows_slice[r_id as usize];
-                let mut supported = true;
-                let pid_base = usize::from(r.piece_id) * 4;
-                // Vol-16 Cat-4f — precomputed 4-bit rotation mask per
-                // (row, side_a, side_b). Replaces the inner 4-iteration
-                // loop with a single AND + popcount over `present`.
-                let r_lut_base = (r_id as usize) * 16;
-                let present_word_idx = pid_base / 64;
-                let present_shift = pid_base % 64;
-                for (nb_opt, side_a, side_b) in nb_info.iter() {
-                    let Some(nb) = nb_opt else { continue; };
-                    if placed_slice[*nb as usize].is_some() { continue; }
-                    let required = r.edges[*side_a] as usize;
-                    let nb_u = *nb as usize;
-                    let total = count[nb_u * stride_pos + side_b * n_colors + required];
-                    // Precomputed: which rotations of r's piece satisfy
-                    // edges[side_b] == r.edges[side_a]?
-                    let rot_mask = same_piece_rots_slice[r_lut_base + side_a * 4 + side_b];
-                    // The 4 rotation bits are at pid_base..pid_base+4
-                    // in `present`. Since 4 ≤ 64 they always sit inside
-                    // a single u64 word.
-                    let present_word = present[nb_u * words_per_pos + present_word_idx];
-                    let present_4 = ((present_word >> present_shift) & 0xF) as u8;
-                    let same_piece = (rot_mask & present_4).count_ones() as u16;
-                    if total <= same_piece {
-                        supported = false;
-                        break;
+            for w_idx in 0..words_per_pos {
+                let mut word = dom_snapshot[w_idx];
+                let bit_base = (w_idx as u32) * 64;
+                while word != 0 {
+                    let bit = word.trailing_zeros();
+                    word &= word - 1;
+                    let r_id = bit_base + bit;
+                    let r = rows_slice[r_id as usize];
+                    let mut supported = true;
+                    let pid_base = usize::from(r.piece_id) * 4;
+                    // Vol-16 Cat-4f — precomputed 4-bit rotation mask per
+                    // (row, side_a, side_b). Replaces the inner 4-iteration
+                    // loop with a single AND + popcount over `present`.
+                    let r_lut_base = (r_id as usize) * 16;
+                    let present_word_idx = pid_base / 64;
+                    let present_shift = pid_base % 64;
+                    for (nb_opt, side_a, side_b) in nb_info.iter() {
+                        let Some(nb) = nb_opt else { continue; };
+                        if placed_slice[*nb as usize].is_some() { continue; }
+                        let required = r.edges[*side_a] as usize;
+                        let nb_u = *nb as usize;
+                        let total = count[nb_u * stride_pos + side_b * n_colors + required];
+                        // Precomputed: which rotations of r's piece satisfy
+                        // edges[side_b] == r.edges[side_a]?
+                        let rot_mask = same_piece_rots_slice[r_lut_base + side_a * 4 + side_b];
+                        // The 4 rotation bits are at pid_base..pid_base+4
+                        // in `present`. Since 4 ≤ 64 they always sit inside
+                        // a single u64 word.
+                        let present_word = present[nb_u * words_per_pos + present_word_idx];
+                        let present_4 = ((present_word >> present_shift) & 0xF) as u8;
+                        let same_piece = (rot_mask & present_4).count_ones() as u16;
+                        if total <= same_piece {
+                            supported = false;
+                            break;
+                        }
                     }
-                }
-                if !supported {
-                    let r_idx = r_id as usize;
-                    let word_idx = r_idx / 64;
-                    let bit_mask = 1u64 << (r_idx % 64);
-                    diff_scratch[word_idx] |= bit_mask;
-                    removed_popcount += 1;
-                    present[a_u * words_per_pos + word_idx] &= !bit_mask;
-                    self.domain_bits[a_u * words_per_pos + word_idx] &= !bit_mask;
-                    for s in 0..4 {
-                        let c = r.edges[s] as usize;
-                        count[a_u * stride_pos + s * n_colors + c] -= 1;
+                    if !supported {
+                        let bit_mask = 1u64 << (r_id as usize % 64);
+                        diff_scratch[w_idx] |= bit_mask;
+                        removed_popcount += 1;
+                        present[a_u * words_per_pos + w_idx] &= !bit_mask;
+                        self.domain_bits[a_u * words_per_pos + w_idx] &= !bit_mask;
+                        for s in 0..4 {
+                            let c = r.edges[s] as usize;
+                            count[a_u * stride_pos + s * n_colors + c] -= 1;
+                        }
                     }
                 }
             }
