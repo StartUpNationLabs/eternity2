@@ -177,5 +177,47 @@ For a different puzzle (different piece set or size):
 - A harder puzzle: basin ceilings might be well below the
   information-theoretic max.
 
+## Vol-22 SUMMARY of innovations + findings
+
+### Innovations shipped (this session, ~2 hrs)
+1. **edge_bound_floor_alns.rs** — bound-floor rejection ALNS (NULL)
+2. **edge_tight_bound.rs** — per-edge loose bound (480, all matchable)
+3. **edge_bound_score_alt.rs** — alternating bound+score (NULL)
+4. **scripts/v22_basin_jump_recipe.sh** — bound + Hungarian + ALNS
+   composite recipe (BREAKTHROUGH)
+
+### KEY EMPIRICAL FINDINGS
+
+1. **Basin escape recipe FOUND**: bound-ascent + Hungarian matching
+   + ALNS finds basins HAMMING-DISTANCE 72+ from our 457, with
+   ceilings up to 471 (community = 469).
+
+2. **ALNS-saturation gap**: in fresh basins, ALNS plateaus at
+   `ceiling - 25..30`. Our 457 basin has gap -4 only because it
+   was ALNS-saturated by hours of search.
+
+3. **The 440/469 basin**: ALNS-PT plateau is FIRMLY 442/462 across
+   60s, 300s, 5min, 15min budgets. PT cannot push higher.
+
+4. **MaxSAT joint bound is hard**: z3 UNKNOWN on 60-cell clusters
+   in 180s. Need a real MaxSAT solver (kissat-configured-as-RC2)
+   or smaller clusters to compute exact joint bound.
+
+5. **Per-edge loose bound = 480**: every edge is matchable;
+   no structural barrier to E2 having a 480-bound configuration.
+   Whether such a config is piece-uniqueness-feasible is OPEN.
+
+### Score impact
+- **Score: still 457** (no new record this session)
+- **Theoretical infrastructure**: substantial — new bounds, new
+  algorithms, new search-progress metrics.
+
+### Vol-23 entry points
+
+1. **MaxSAT with kissat-RC2** for exact joint bound on small clusters.
+2. **McGavin prune-restart engine** (vol-14 T1, still un-built) —
+   the right repair algorithm for high-bound basins.
+3. **Overnight ALNS-PT** at hours-scale on the best high-bound basin.
+
 
 
