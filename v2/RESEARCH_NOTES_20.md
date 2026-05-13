@@ -1025,6 +1025,29 @@ multi-edge rotation break of up to 4 edges still gets pulled back).
 to -15), i.e. force-rotate k cells simultaneously where k ≥ 2-3.
 Or attack a different axis entirely (T6 from vol-21 plan).
 
+### basin_hop with k=4 (partial: 2/6 trials done, killed early)
+
+```
+trial 0 (k=4): pre_alns=441 (Δ=-16), post_alns=457  ← still recovered
+trial 1 (k=4): pre_alns=445 (Δ=-12), post_alns=457  ← still recovered
+```
+
+Even **Δ=-16 perturbations** (4 simultaneous rotation breaks) get
+reabsorbed to 457 in 30s ALNS. The basin attractor radius is **at
+least Δ=-16**.
+
+This is a remarkable result. The 457 basin pulls in ANY destruction
+of up to 16 edges (the score itself). This means:
+- ALNS is doing *excellent* repair, the basin is *excellent* terrain.
+- We've reached a "good local optimum" — high attractor radius is
+  a sign of basin depth, not basin escape opportunity.
+- The way out is NOT through perturbation. It's through different
+  representation, different algorithm, or different basin.
+
+Killed at 2/6 because pattern was clear.
+
+
+
 → **Forced single-rotation perturbation does NOT break the lock.**
 For basin escape, a k-rotation perturbation with k ≥ 5 (or a
 multi-cell destroy at radius k ≥ 8) would be the next test.

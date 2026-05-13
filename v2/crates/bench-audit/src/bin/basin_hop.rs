@@ -64,6 +64,7 @@ fn main() {
     let mut n_trials: u64 = 32;
     let mut alns_budget_ms: u64 = 60_000;
     let mut seed: u64 = 1;
+    let mut k_perturbations: usize = 1;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -71,6 +72,7 @@ fn main() {
             "--n-trials" => n_trials = args.next().unwrap().parse().unwrap(),
             "--alns-budget-ms" => alns_budget_ms = args.next().unwrap().parse().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
+            "--k-perturbations" => k_perturbations = args.next().unwrap().parse().unwrap(),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -107,21 +109,29 @@ fn main() {
     let mut best_score = src_m;
     let mut best_board_id: i32 = -1;
 
-    for trial in 0..n_trials.min(candidate_cells.len() as u64) {
-        let pos = candidate_cells[trial as usize];
-        let Some((pid, cur_rot)) = src.get(pos) else { continue };
-        // Pick a different rotation deterministically per trial.
-        let trial_seed = (seed.wrapping_add(trial)).wrapping_mul(0x9E3779B97F4A7C15);
-        let new_rot_id = ((trial_seed >> 32) as u8 + 1) % 4;
-        // Wrap to ensure != cur_rot
-        let new_rot_id = if new_rot_id == cur_rot.as_u8() { (cur_rot.as_u8() + 1) % 4 } else { new_rot_id };
-        let new_rot = Rotation::from_u8(new_rot_id).unwrap();
-        if new_rot == cur_rot { continue; }
-
-        // Build perturbed board.
+    for trial in 0..n_trials {
         let mut perturbed = src.clone();
-        perturbed.place(pos, pid, new_rot);
+        // Perturb k cells: pick k cells offset by trial × k.
+        let base = (trial as usize) * k_perturbations;
+        let mut perturb_log: Vec<(u32, u8, u8)> = Vec::new();
+        for kk in 0..k_perturbations {
+            let idx = (base + kk) % candidate_cells.len();
+            let pos = candidate_cells[idx];
+            let Some((pid, cur_rot)) = perturbed.get(pos) else { continue };
+            let trial_seed = (seed.wrapping_add(trial).wrapping_add(kk as u64 * 13))
+                .wrapping_mul(0x9E3779B97F4A7C15);
+            let new_rot_id = ((trial_seed >> 32) as u8 + 1) % 4;
+            let new_rot_id = if new_rot_id == cur_rot.as_u8() { (cur_rot.as_u8() + 1) % 4 } else { new_rot_id };
+            let new_rot = Rotation::from_u8(new_rot_id).unwrap();
+            if new_rot == cur_rot { continue; }
+            perturbed.place(pos, pid, new_rot);
+            perturb_log.push((pos, cur_rot.as_u8(), new_rot.as_u8()));
+        }
         let (pre_alns_m, _) = score_board(&puzzle, &perturbed);
+        if perturb_log.is_empty() { continue; }
+        let pos = perturb_log[0].0;  // log first one as anchor
+        let cur_rot = Rotation::from_u8(perturb_log[0].1).unwrap();
+        let new_rot = Rotation::from_u8(perturb_log[0].2).unwrap();
 
         // Run ALNS.
         let cfg = AlnsConfig {
@@ -149,10 +159,10 @@ fn main() {
         let elapsed = t0.elapsed();
         let (final_m, _) = score_board(&puzzle, &alns_board);
         eprintln!(
-            "trial {}: break pos={} (row={},col={}) rot {} -> {}: pre_alns={}/480, post_alns={}/480 (Δ vs source = {:+}, polish_rot=+{}, polish_swap=+{}), elapsed {:.1}s",
-            trial, pos, pos / puzzle.width, pos % puzzle.width, cur_rot.as_u8(), new_rot.as_u8(),
-            pre_alns_m, final_m, final_m as i32 - src_m as i32, rg, sg, elapsed.as_secs_f64(),
+            "trial {} (k={}): pre_alns={}/480, post_alns={}/480 (Δ vs source = {:+}, polish_rot=+{}, polish_swap=+{}), elapsed {:.1}s",
+            trial, perturb_log.len(), pre_alns_m, final_m, final_m as i32 - src_m as i32, rg, sg, elapsed.as_secs_f64(),
         );
+        let _ = (pos, cur_rot, new_rot);  // suppress unused for now
         results.push((trial as u32, pos, new_rot.as_u8() as u32, pre_alns_m, final_m));
         if final_m > best_score {
             best_score = final_m;
