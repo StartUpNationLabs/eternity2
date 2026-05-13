@@ -4399,20 +4399,19 @@ impl<'a> SearchState<'a> {
         scan_idx < self.is_break_index.len() && self.is_break_index[scan_idx]
     }
 
-    /// Vol-27 — call the in-process ONNX learned scorer to rank each
+    /// Vol-27/28 — call the in-process ONNX learned scorer to rank each
     /// candidate row at the given position. Returns `None` when the
-    /// model is unavailable or the puzzle size doesn't match the
-    /// trained model; the caller then preserves the existing order.
-    /// Feature layout matches `ml/dataset.py` `TrajectoryDataset`:
-    /// per cell, 13 floats = placed_edges (4) + nb_known (4) +
-    /// placed_flag (1) + border_mask (4).
+    /// model is unavailable or the puzzle size doesn't match a v1
+    /// model; the caller then preserves the existing order. Dispatches
+    /// to v1 (fixed-size) or v2 (size-agnostic) based on the loaded
+    /// scorer.
     #[cfg(not(target_arch = "wasm32"))]
     fn learned_score_candidates(
         &mut self,
         pos: Position,
         domain_snapshot: &[u32],
     ) -> Option<Vec<f32>> {
-        use ndarray::Array3;
+        use ndarray::{Array2, Array3};
 
         if self.learned_bridge_disabled {
             return None;
@@ -4430,16 +4429,19 @@ impl<'a> SearchState<'a> {
         let w = self.puzzle.width as usize;
         let h = self.puzzle.height as usize;
         let n_cells = w * h;
-        // The trained model is size-specific; if the puzzle doesn't
-        // match, skip silently. The scorer also enforces this but
-        // catching here avoids the Array3 allocation.
-        if let Some(s) = self.learned_bridge.as_ref() {
-            if s.grid_size() != w || w != h {
-                self.learned_bridge_disabled = true;
-                return None;
+        let is_v2 = self.learned_bridge.as_ref().map(|s| s.is_v2()).unwrap_or(false);
+
+        // V1: refuse non-square or wrong-size puzzles up-front.
+        if !is_v2 {
+            if let Some(s) = self.learned_bridge.as_ref() {
+                if s.grid_size() != Some(w) || w != h {
+                    self.learned_bridge_disabled = true;
+                    return None;
+                }
             }
         }
 
+        // Build the 13-D per-cell features. Same layout for v1 and v2.
         let mut feats = Array3::<f32>::zeros((1, n_cells, 13));
         for y in 0..h {
             for x in 0..w {
@@ -4475,23 +4477,57 @@ impl<'a> SearchState<'a> {
             }
         }
 
-        let candidates: Vec<(u16, u8)> = domain_snapshot
-            .iter()
-            .map(|&r_id| {
+        if is_v2 {
+            // Build nb_idx (n_cells, 4) with off-board = n_cells sentinel.
+            let mut nb_idx = Array2::<i64>::zeros((n_cells, 4));
+            let mut valid_mask = Array2::<f32>::zeros((n_cells, 4));
+            let pad = n_cells as i64;
+            for y in 0..h {
+                for x in 0..w {
+                    let p = y * w + x;
+                    if y > 0 { nb_idx[[p, 0]] = ((y - 1) * w + x) as i64; valid_mask[[p, 0]] = 1.0; } else { nb_idx[[p, 0]] = pad; }
+                    if x < w - 1 { nb_idx[[p, 1]] = (y * w + x + 1) as i64; valid_mask[[p, 1]] = 1.0; } else { nb_idx[[p, 1]] = pad; }
+                    if y < h - 1 { nb_idx[[p, 2]] = ((y + 1) * w + x) as i64; valid_mask[[p, 2]] = 1.0; } else { nb_idx[[p, 2]] = pad; }
+                    if x > 0 { nb_idx[[p, 3]] = (y * w + x - 1) as i64; valid_mask[[p, 3]] = 1.0; } else { nb_idx[[p, 3]] = pad; }
+                }
+            }
+            // Build cand_edges (1, C, 4) from the domain_snapshot rows
+            // ROTATED according to row.rotation — the candidate's edges
+            // as they would appear placed on the board.
+            let c = domain_snapshot.len();
+            let mut cand = Array3::<i64>::zeros((1, c, 4));
+            for (i, &r_id) in domain_snapshot.iter().enumerate() {
                 let r = self.rows[r_id as usize];
-                (r.piece_id, r.rotation)
-            })
-            .collect();
-
-        let scorer = self.learned_bridge.as_ref()?;
-        match scorer.score(&feats, pos, &candidates) {
-            Some(scores) if scores.len() == domain_snapshot.len() => Some(scores),
-            _ => {
-                // Inference failure or shape mismatch — disable for the
-                // rest of the run so we don't keep paying setup cost.
-                self.learned_bridge = None;
-                self.learned_bridge_disabled = true;
-                None
+                for k in 0..4 {
+                    cand[[0, i, k]] = i64::from(r.edges[k]);
+                }
+            }
+            let scorer = self.learned_bridge.as_ref()?;
+            match scorer.score_v2(&feats, &nb_idx, &valid_mask, pos, &cand) {
+                Some(scores) if scores.len() == c => Some(scores),
+                _ => {
+                    self.learned_bridge = None;
+                    self.learned_bridge_disabled = true;
+                    None
+                }
+            }
+        } else {
+            // V1 path
+            let candidates: Vec<(u16, u8)> = domain_snapshot
+                .iter()
+                .map(|&r_id| {
+                    let r = self.rows[r_id as usize];
+                    (r.piece_id, r.rotation)
+                })
+                .collect();
+            let scorer = self.learned_bridge.as_ref()?;
+            match scorer.score(&feats, pos, &candidates) {
+                Some(scores) if scores.len() == domain_snapshot.len() => Some(scores),
+                _ => {
+                    self.learned_bridge = None;
+                    self.learned_bridge_disabled = true;
+                    None
+                }
             }
         }
     }
