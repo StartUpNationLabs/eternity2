@@ -386,6 +386,95 @@ Possibly: bound-ascent gives us a richer starting state for CP
 than random or hint-only, because the edge structure is closer to
 maximal.
 
+## Vol-21 — SUMMARY of innovations and deliverables
+
+**Date**: 2026-05-13, single autonomous session (~3 hours).
+
+### Innovations shipped
+1. **edge_kempe.rs** — Kempe-chain operator probe (Phase 1-3)
+2. **edge_relax.rs** — Relaxed piece-uniqueness bound (REVELATION)
+3. **edge_relax_8perm.rs** — 8/11 cell exhaustive permutation (null)
+4. **edge_relax_chain.rs** — Chain search on missing pieces (null)
+5. **edge_target_match.rs** — Hungarian matching to relaxed target
+6. **edge_relax_global.rs** — Random-init relaxed (447-498 cap)
+7. **edge_relax_hints.rs** — Hint-only relaxed (max 448)
+8. **edge_gap_attack.rs** — Gap-region ALNS destroy
+9. **edge_bound_ascent.rs** — Bound-ascent search (reaches 473)
+10. **edge_bound_score_alt.rs** — Alternating bound + ALNS
+11. **scripts/v21_gap_survey.py** — Gap mapped across 121 boards
+
+### Theoretical findings (the science)
+
+1. **The edge-relax bound is a NEW upper bound class** for local
+   E2 search. It measures basin-local-information-theoretic max
+   under cell-by-cell perturbation with piece-uniqueness relaxed.
+
+2. **Basin diversity is REAL**: different 456-score boards have
+   ceilings 457, 461, 462, 464. Our 457 basin's ceiling is 461.
+   The community 469 basin's ceiling is presumably ≥469.
+
+3. **The +4 gap on our 457 is HARD-LOCKED**: the 4 dup/4 missing
+   pieces have NO rotation in common (min hamming 2). Provably
+   unrecoverable via local cell-perturbation.
+
+4. **Bound ↑ != Score ↑**: bound-ascent moves cross basin barriers
+   but ALNS-recovery falls back into the original basin. We have
+   PROVED higher-bound basins exist (bound 468-473 found) but
+   cannot reach them via ALNS recovery.
+
+5. **Dead-end detector**: gap = relaxed_bound - score. Gap = 0
+   means provable strict local maximum under relaxed uniqueness,
+   STRICTLY STRONGER than K=5 operator-lock.
+
+### Score impact (this session)
+- **Score: still 457**. No new record this session.
+- **Theoretical infrastructure: substantial**. New metric, new
+  algorithm class (bound-ascent), new dead-end test, new basin
+  diversity map.
+
+### Vol-22 entry points
+
+1. **Gap-guided basin selection**: For each saved board, compute
+   gap. Drop dead-end boards (gap=0). Bias search toward high-gap
+   basins where there's still local room.
+
+2. **Bound-ascent + CP-recovery**: Replace ALNS-recovery with
+   Blackwood CP. After bound-ascent reaches a bound-470 state,
+   run CP from canonical hints with VALUE-ORDER biased toward
+   the bound-470 edge structure. This might find a 470-score
+   placement directly.
+
+3. **Multi-cell bound-ascent moves**: Single-swap plateaued at
+   bound 470-473. Try K-cycle bound-ascent moves (analogous to
+   our vol-20 cycle search, but on the bound, not score).
+
+4. **Score-with-bound-constraint ALNS**: Modify ALNS acceptance
+   to require bound >= bound_at_init. This keeps us in the
+   higher-bound basin during repair.
+
+### 15:50 — Alternating bound-score EMPIRICAL CONFIRMATION
+
+`edge_bound_score_alt --board 457 --n-outer 5 --alns-ms 30000`:
+```
+iter 1: bound 461→462, score 451 → ALNS → score=457, bound=461 (BACK TO LOCK)
+iter 2: bound 461→462, score 452 → ALNS → score=457, bound=461
+iter 3: bound 461→462, score 452 → ALNS → score=456, bound=460 (LOST!)
+iter 4: bound 460→461, score 450 → ALNS → score=457, bound=460
+iter 5: bound 460→461, score 450 → ALNS → score=457, bound=460
+```
+
+**Every bound-ascent step is undone by ALNS recovery**. ALNS
+optimizes score and falls back to the 457 lock. The bound-ascent
+operator and ALNS-recovery operator commute toward our 457 fixed
+point. To exploit higher-bound basins we need a STRONGER recovery
+(CP enumeration with bound-preserving constraints, or a fundamentally
+different score-climber).
+
+This confirms the theoretical prediction: ALNS doesn't see bound,
+so it can't preserve it. The bound-ascent step creates a new edge
+structure, but ALNS finds the bound-461 local-score-max within
+that new structure and that maximum equals our original 457 board.
+
 
 
 
