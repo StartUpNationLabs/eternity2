@@ -8,6 +8,22 @@ All v2 work lives inside `v2/`. The sibling directories of `v2/` (`solvers/`, `f
 
 `v2/V2_DESIGN.md` is the contract everything implements. It is a living document: when implementation reveals a better answer or a hidden constraint, edit `V2_DESIGN.md` in the same change. Do not let code and spec drift.
 
+## Research vault — READ FIRST when starting a new volume
+
+`v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5-8 volumes.
+
+**First action of every new volume**:
+1. Read `vault/plans/BACKLOG.md` — the canonical T-list across all volumes.
+2. Audit-at-open: any item with status `unbuilt` aged 3+ volumes must be PICKED or marked `wont-do` with reason.
+3. Read `vault/plans/CURRENT-VOL.md` for the previous vol's commitments and what's owed.
+4. Write a new `CURRENT-VOL.md` listing **at most 3 binding items** for the new vol.
+
+**Concept pages** in `vault/concepts/` are the source of truth for algorithm classes. Do not redefine them in session notes; link to them.
+
+**Session journals** in `vault/sessions/vol-NN.md` are append-only records. They reference concepts but don't duplicate.
+
+**Discoveries discipline**: mid-vol findings go to BACKLOG as new entries; they do NOT pivot the vol's three binding items unless they obsolete one. This prevents the "discovery hijacks the planned work" pattern.
+
 ## Build, test, run
 
 The toolchain is a Cargo workspace at `v2/Cargo.toml` plus a pnpm frontend at `v2/frontend/`. All commands assume `$HOME/.cargo/env` is sourced.
