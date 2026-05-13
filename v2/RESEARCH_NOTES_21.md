@@ -329,6 +329,63 @@ This composes with the vol-15 BLACKWOOD_RAW:
 2. Use BLACKWOOD_RAW + AC-3 to enumerate within-K cell extensions.
 3. If a high-score extension exists at the new bound, we win.
 
+### 15:20 — Gap survey across 121 high-score boards
+
+Built `scripts/v21_gap_survey.py`. Computed `(score, bound, gap)`
+for every board with score ≥ 440 in `output/`:
+
+**Critical basins with HIGH ceilings**:
+- 456 portfolio_winning5_n4_s1_1778624572: bound **464** (+3 above
+  our 457 basin's 461). 59 cells different from our 457.
+- 450 ocs_1778660488: bound **465** (+15 gap).
+- 453 winning5_sa_s1_1778658914: bound **463** (+10 gap).
+
+**Saturated basins** (low gap, dead-ended):
+- 456 ocs_1778669308: bound 457 (gap +1)
+- diverse_sa 456: bound 457 (gap +1)
+
+### 15:30 — Hot-PT on the 456/464 basin → no progress
+
+Ran `alns_pt --t-max 30 --time-budget-ms 300000` on the 456/464 board.
+Result: score stayed at 456, bound stayed at 464. The +8 gap is
+NOT closeable by hot-PT in 5min.
+
+### 15:35 — Multi-seed bound-ascent on 450/465 board
+
+10 seeds, 2000 iters each:
+- bound terminal values: 467, 470, 470, 471, 471, ...
+- median ~470, max 471
+
+**Long run (50k iters seed 42)**: bound reached **473** (+8 above
+the starting basin ceiling, +12 above our 457 basin ceiling).
+
+Bound-ascent CAN climb past 461 but score-recovery is the bottleneck.
+
+### 15:40 — Theoretical framing
+
+The bound = relaxed_score(board). It's the value of a continuous
+relaxation of the E2 integer program. 
+
+- It is monotonically non-decreasing under bound-ascent.
+- It is bounded by 480.
+- Bound = 480 implies *every cell can independently fit some piece*
+  with k=4 given current neighbors. This may or may not be jointly
+  satisfiable under piece-uniqueness; if it is, it's a solution.
+
+So bound-ascent is a *relaxed* optimization. Reaching bound=480
+gives a feasibility test, not a constructive solution. To turn it
+into a solution, we need a separate (combinatorial) step.
+
+**Vol-22 hypothesis**: at bound-ascent terminal states (bound 470+),
+the cell-tuples are "almost solvable" — every cell has a unique
+piece (the 251 cyclic-distinct pieces ensure this). Combinatorial
+piece-assignment may still fail at <5 cells, but those mismatches
+are the same kind of "tight" structure as our 457 mismatch zone.
+
+Possibly: bound-ascent gives us a richer starting state for CP
+than random or hint-only, because the edge structure is closer to
+maximal.
+
 
 
 
