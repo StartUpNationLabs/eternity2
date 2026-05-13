@@ -48,6 +48,29 @@ rotations). Verified by `target/release/rescore_board`.
 **Only −4 from the all-time record, at iso-budget. Single seed.**
 
 PT-5min from the same partial gave **451** — ALNS beats PT here.
+
+**8-seed ALNS lottery from blackwood_raw_190 partial DONE** (5min/seed):
+
+| seed | score |
+|---:|---:|
+| 2 | **456** |
+| 4 | **456** |
+| 1 | 454 |
+| 8 | 454 |
+| 5 | 452 |
+| 7 | 451 |
+| 3 | 450 |
+| 6 | 442 |
+
+**N=8 mean=451.9, median=453, max=456, min=442.**
+**Two distinct 456 boards** (different md5s — not byte-identical
+reproduction). **−1 from all-time record.**
+
+7-seed re-lottery from seed 2's 456 board + 15min extension running
+now to attempt 457+. Boards saved at
+`output/vol-32/blackwood_raw_alns_seed{2,4}_456.json`.
+
+ORIGINAL lottery-monitor text below:
 **Multi-seed ALNS lottery is running now** (8 seeds × 5min); results
 in `output/vol-32/t8_bw190_lottery/`. Hopeful for 455+ on at least
 one seed.
