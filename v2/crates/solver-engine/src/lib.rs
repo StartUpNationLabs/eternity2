@@ -4060,17 +4060,25 @@ impl<'a> SearchState<'a> {
         // Cheaper per-node than the full Learned variant (we call the
         // NN only when there's an ambiguous choice), and dominated by
         // EdgeBpMarginals when no ties exist.
+        // Tunable: E2_LOT_EPS (BP-score units, default 0.05) and
+        // E2_LOT_MAX_K (default 8). Read once per recurse — cheap and
+        // lets us sweep without rebuilding.
         #[cfg(not(target_arch = "wasm32"))]
         if is_learned_on_ties && bp_keys.len() >= 2 {
-            const EPS: u64 = 50_000;  // 0.05 in the 1e6-quantized BP scale
-            const MAX_TIE_K: usize = 8;
+            let eps_f: f32 = std::env::var("E2_LOT_EPS")
+                .ok().and_then(|s| s.parse().ok()).unwrap_or(0.05);
+            let eps_u: u64 = (eps_f * 1.0e6).clamp(0.0, 4.0e6) as u64;
+            let max_tie_k: usize = std::env::var("E2_LOT_MAX_K")
+                .ok().and_then(|s| s.parse().ok()).unwrap_or(8);
+            let eps: u64 = eps_u;
+            let max_tie_k_v: usize = max_tie_k;
             let top_key = bp_keys[0];
             // Count near-tied candidates (smaller u64 key = higher BP score
             // in the original space). bp_keys is sorted ascending.
             let mut tie_len = 1usize;
             while tie_len < bp_keys.len()
-                && tie_len < MAX_TIE_K
-                && bp_keys[tie_len].saturating_sub(top_key) <= EPS
+                && tie_len < max_tie_k_v
+                && bp_keys[tie_len].saturating_sub(top_key) <= eps
             {
                 tie_len += 1;
             }
