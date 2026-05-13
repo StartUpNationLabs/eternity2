@@ -68,7 +68,12 @@ fn main() {
     let mut cfg = match profile.as_str() {
         "border_first_lcv" => EngineConfig::BORDER_FIRST_LCV,
         "joe_depth150_bp" => EngineConfig::JOE_DEPTH150_BP,
-        other => panic!("unknown profile: {other}. valid: border_first_lcv, joe_depth150_bp"),
+        "border_first_full" => EngineConfig::BORDER_FIRST_FULL,
+        "border_first_gacolor" => EngineConfig::BORDER_FIRST_GACOLOR,
+        "gacolor_ac3" => EngineConfig::GACOLOR_AC3,
+        "gacolor_symbreak" => EngineConfig::GACOLOR_SYMBREAK,
+        "blackwood_raw" => EngineConfig::BLACKWOOD_RAW,
+        other => panic!("unknown profile: {other}. valid: border_first_lcv, joe_depth150_bp, border_first_full, border_first_gacolor, gacolor_ac3, gacolor_symbreak, blackwood_raw"),
     };
 
     // Override value-order with the mode setting. Note that some profiles
