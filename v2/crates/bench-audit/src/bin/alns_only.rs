@@ -261,11 +261,20 @@ fn main() {
             }))
         }).collect::<Vec<_>>(),
     });
-    let run_id = std::time::SystemTime::now()
+    // Vol-34 fix — include nanos + pid in run_id so concurrent ALNS
+    // runs with the same (ops, repair, t, seed) don't overwrite each
+    // other's output files. The earlier secs-only naming collided
+    // when 8 parallel processes finished in the same second.
+    let run_id_secs = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let run_id_nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0);
+    let pid = std::process::id();
     let out_dir = PathBuf::from("output/v17_alns_only");
     let _ = std::fs::create_dir_all(&out_dir);
-    let p = out_dir.join(format!("{ops_preset}_{repair_kind}_t{t}_s{seed}_{run_id}.json"));
+    let p = out_dir.join(format!(
+        "{ops_preset}_{repair_kind}_t{t}_s{seed}_{run_id_secs}_{run_id_nanos}_p{pid}.json"
+    ));
     let _ = std::fs::write(&p, serde_json::to_string_pretty(&json).unwrap());
     eprintln!("saved: {}", p.display());
 }
