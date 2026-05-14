@@ -1,6 +1,34 @@
-# Vol-32 wake-up summary (2026-05-14 ~01:30)
+# Vol-32 wake-up summary (2026-05-14 ~03:25)
 
 Read this first.
+
+## 🎯 HEADLINE: 457/480 RECORD TIE via blackwood_raw+MRV pipeline
+
+**Achievement**: tied vol-18's all-time cold-start record of **457/480**
+in just **10 minutes of compute** (5min CP + 5min ALNS, single seed),
+using the **blackwood_raw + MRV** value-order discovered as a vol-32
+bonus from the bug-investigation cross-profile sweep.
+
+**Pipeline**:
+```
+canonical-eval --profile blackwood_raw --mode mrv --budget-ms 300000 --dump-partial <out>
+   ↓ depth 191, 196/256 placed, 359/480 edges
+alns_only --cp-board <partial> --alns-budget-ms 300000 --seed 7 --ops winning5 --repair-kind sa
+   ↓ matched=457/480 (95.2%), 256/256 placed
+```
+
+**Saved board**: `output/vol-32/RECORD_TIE_457_blackwood_mrv_5min_seed7.json`
+(md5: 969a282d...). **3rd distinct 457 in project history**
+(vol-18 byte-identical x11, vol-21 bound-ascent 457 at basin-bound 461,
+this vol-32 457). 247/256 cells differ from vol-21's 457.
+
+**Lottery context**: 1/8 seeds hit 457; mean=449.1, median=450.5.
+**16-seed extended lottery running now** — expect to see another 457
+or possibly a 458.
+
+See `vault/sessions/vol-32-457-record-tie.md` for full details.
+
+---
 
 ## What happened tonight
 
