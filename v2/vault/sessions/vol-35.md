@@ -101,6 +101,45 @@ clusters with winning5 + 3min budget all stay at 457).
 Current ops cannot escape any 457 attractor. Cross-basin
 moves at 100+ piece coordination scale need oracle guidance.
 
+## Vol-35 LATE FINDING: pin_hints snapshot bug
+
+After all the cluster analysis, discovered that vanilla_fast's
+`--pin-hints` snapshot writer produces **invalid partials with
+duplicate pieces** when the search hasn't reached deep hint
+positions (210, 221) but has placed those hint pieces at
+non-hint positions via the bucket-shuffle ordering.
+
+**This invalidates ~half of vol-34 and vol-35's "record" boards**:
+- vol-34 t1signal, t3_t01: INVALID (180, 248 duped)
+- vol-35 family-255 all 3 records: INVALID
+
+**Valid records remaining**: 4 from vol-32 (458 + 3 × 457
+blackwood) + the new vol-35 458 (byte-identical replication
+from deep_458_basin lottery).
+
+**Vol-35 deep_458_basin lottery in flight**: 48 ALNS × 5min × 4
+ops on the valid 210-cell vanilla_fast partial (which was made
+WITHOUT pin_hints, so it's correct). 16/48 done, 1 × 458 already
+replicated (byte-identical to vol-32 458). Continuing.
+
+**Fix shipped**: vanilla_fast.rs snapshot writer now checks
+`already_placed` set before filling hint slots.
+verify_records.sh now checks piece-uniqueness alongside score.
+
+## σ-cycle finding AMENDED
+
+With invalid records removed, the σ-cycle distance analysis
+shows: ALL 3 valid 457 clusters (s7, s10, s4) are in the
+**SAME piece-multiset family as the 458 record**. The previous
+claim of "5 different families" was an artifact of the dup-piece
+bug — the σ-cycle code panicked on dup-piece boards.
+
+Refined picture: blackwood_mrv lottery + vanilla_fast + ALNS all
+produce boards in ONE dominant piece-multiset family. Scores
+within this family range 453-458; we have **5+ known boards in
+this family** (vol-32 458, A=s7=457, A'=s10=457, B=s4=457,
+plus 456-class blackwood seed4).
+
 ## Open at close
 
 1. **Cluster B (bound=465) deep lottery untested**. Family 255 was
