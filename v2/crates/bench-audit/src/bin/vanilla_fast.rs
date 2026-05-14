@@ -73,6 +73,10 @@ fn main() {
     let mut pin_hints = false;
     let mut save_best: Option<PathBuf> = None;
     let mut threads: usize = 1;
+    // Vol-34 T1 — periodic deep-partial sampling for diverse basin seeding.
+    let mut snapshot_dir: Option<PathBuf> = None;
+    let mut snapshot_interval_ms: u64 = 60_000;
+    let mut snapshot_min_depth: u32 = 200;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -83,6 +87,15 @@ fn main() {
             "--pin-hints" => { pin_hints = true; i += 1; }
             "--save-best" => { save_best = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--threads" => { threads = raw[i + 1].parse().expect("threads"); i += 2; }
+            "--snapshot-dir" => { snapshot_dir = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--snapshot-interval-ms" => {
+                snapshot_interval_ms = raw[i + 1].parse().expect("snapshot-interval-ms");
+                i += 2;
+            }
+            "--snapshot-min-depth" => {
+                snapshot_min_depth = raw[i + 1].parse().expect("snapshot-min-depth");
+                i += 2;
+            }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -313,6 +326,10 @@ fn main() {
         let mut best_depth: u32 = 0;
         let mut best_chosen: Vec<u32> = vec![0u32; N_POS];
 
+        // Vol-34 T1 — periodic deep-partial snapshots
+        let mut last_snapshot_ms: u64 = 0;
+        let mut snapshot_index: u32 = 0;
+
         let mut depth: usize = 0;
 
         // Helper: enter depth d freshly (compute bucket).
@@ -377,6 +394,57 @@ fn main() {
                     max_depth = depth as u32;
                     best_chosen.copy_from_slice(&chosen);
                     best_depth = max_depth;
+                    // Vol-34 T1 — write a snapshot if we crossed the threshold
+                    // AND enough time has passed since the last one. The check
+                    // is gated by max_depth ≥ snapshot_min_depth so we don't
+                    // spam the disk early in the run.
+                    if let Some(dir) = snapshot_dir.as_ref() {
+                        if max_depth >= snapshot_min_depth {
+                            let now_ms = t0.elapsed().as_millis() as u64;
+                            if now_ms.saturating_sub(last_snapshot_ms)
+                                >= snapshot_interval_ms
+                                || last_snapshot_ms == 0
+                            {
+                                last_snapshot_ms = now_ms;
+                                let path = dir.join(format!(
+                                    "t{thread_id:02}_s{snapshot_index:03}_d{max_depth:03}.json"
+                                ));
+                                snapshot_index += 1;
+                                let mut snap: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+                                for p_i in 0..max_depth as usize {
+                                    let e = best_chosen[p_i];
+                                    snap[p_i] = Some((entry_piece_id(e), entry_rot(e)));
+                                }
+                                if pin_hints {
+                                    for h in hints.hints.iter() {
+                                        let pp = h.position as usize;
+                                        if snap[pp].is_none() {
+                                            snap[pp] = Some((h.piece_id, h.rotation.as_u8()));
+                                        }
+                                    }
+                                }
+                                let mut placement_json = String::from("{\"placement\": [");
+                                for (p_i, slot) in snap.iter().enumerate() {
+                                    if p_i > 0 {
+                                        placement_json.push(',');
+                                    }
+                                    match slot {
+                                        None => placement_json.push_str("null"),
+                                        Some((pid, rot)) => placement_json.push_str(&format!(
+                                            "{{\"piece_id\":{pid},\"rotation\":{rot}}}"
+                                        )),
+                                    }
+                                }
+                                placement_json.push_str("]}");
+                                if let Some(parent) = path.parent() {
+                                    std::fs::create_dir_all(parent).ok();
+                                }
+                                if let Err(e) = std::fs::write(&path, &placement_json) {
+                                    eprintln!("[t{thread_id}] snapshot write failed: {e}");
+                                }
+                            }
+                        }
+                    }
                 }
                 if depth == N_POS {
                     solved_count += 1;
