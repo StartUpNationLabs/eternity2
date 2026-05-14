@@ -119,6 +119,7 @@ eternity2-solver-verhaard = { path = "../solver-verhaard" }
 eternity2-edge-solver = { path = "../edge-solver" }
 eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-events = { path = "../events" }
+eternity2-export = { path = "../export" }
 eternity2-generator = { path = "../generator" }
 eternity2-localsearch = { path = "../localsearch" }
 eternity2-solver-engine = { path = "../solver-engine" }

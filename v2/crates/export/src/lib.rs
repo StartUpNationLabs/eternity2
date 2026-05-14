@@ -1,0 +1,20 @@
+// Reporting + serialization utilities shared across all bench/benchmark
+// binaries. Consolidates what used to be duplicated between
+// `bench-audit`, `benchmark::report`, and `benchmark::board_io`.
+//
+// Scope: pure functions over (Puzzle, Board) + JSON I/O. No solver,
+// no localsearch, no propagator state — those keep their own
+// inlinable scoring helpers (e.g. `localsearch::alns::score_board`)
+// because they live on the hot path.
+
+#![forbid(unsafe_code)]
+
+mod board_io;
+mod bucas;
+mod report;
+mod score;
+
+pub use board_io::{read_dump, write_dump, DumpedBoard};
+pub use bucas::{board_to_bucas_edges, bucas_url};
+pub use report::{puzzle_name_from_path, write_report, RunReport};
+pub use score::{internal_edge_count, placed_count, render_board, score_board};

@@ -16,6 +16,7 @@ path = "src/lib.rs"
 eternity2-benchmark = { path = "../benchmark" }
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
+eternity2-export = { path = "../export" }
 eternity2-generator = { path = "../generator" }
 eternity2-localsearch = { path = "../localsearch" }
 eternity2-propagators = { path = "../propagators" }
