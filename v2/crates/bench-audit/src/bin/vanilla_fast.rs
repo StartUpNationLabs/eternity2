@@ -73,6 +73,10 @@ fn main() {
     let mut pin_hints = false;
     let mut save_best: Option<PathBuf> = None;
     let mut threads: usize = 1;
+    // Vol-34/35 — offset the thread_id used to seed the per-thread
+    // bucket shuffle. Lets a sweep find productive bucket-orderings
+    // beyond the default {0..threads-1} range.
+    let mut thread_id_offset: usize = 0;
     // Vol-34 T1 — periodic deep-partial sampling for diverse basin seeding.
     let mut snapshot_dir: Option<PathBuf> = None;
     let mut snapshot_interval_ms: u64 = 60_000;
@@ -101,6 +105,10 @@ fn main() {
                 i += 2;
             }
             "--snapshot-on-visit" => { snapshot_on_visit = true; i += 1; }
+            "--thread-id-offset" => {
+                thread_id_offset = raw[i + 1].parse().expect("thread-id-offset");
+                i += 2;
+            }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -286,7 +294,8 @@ fn main() {
         bucket_data_seed: u64,
     }
 
-    let thread_results: Vec<ThreadResult> = (0..threads).into_par_iter().map(|thread_id| {
+    let thread_results: Vec<ThreadResult> = (0..threads).into_par_iter().map(|thread_idx| {
+        let thread_id = thread_idx + thread_id_offset;
         // Per-thread bucket_data: clone the global, then shuffle within each bucket
         // using thread_id as seed (thread 0 keeps the rare-first order from the global).
         let mut my_bucket_data = bucket_data.clone();
