@@ -121,6 +121,7 @@ eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-events = { path = "../events" }
 eternity2-export = { path = "../export" }
 eternity2-generator = { path = "../generator" }
+eternity2-puzzle-io = { path = "../puzzle-io" }
 eternity2-localsearch = { path = "../localsearch" }
 eternity2-solver-engine = { path = "../solver-engine" }
 eternity2-solver-naive = { path = "../solver-naive" }

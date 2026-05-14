@@ -515,6 +515,7 @@ dependencies = [
  "eternity2-generator",
  "eternity2-localsearch",
  "eternity2-propagators",
+ "eternity2-puzzle-io",
  "eternity2-sat-encoder",
  "eternity2-solver-engine",
  "eternity2-solver-naive",
@@ -598,6 +599,13 @@ dependencies = [
 
 [[package]]
 name = "eternity2-propagators"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+]
+
+[[package]]
+name = "eternity2-puzzle-io"
 version = "0.1.0"
 dependencies = [
  "eternity2-core",

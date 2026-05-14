@@ -11,6 +11,7 @@ members = [
     "crates/localsearch",
     "crates/ml-export",
     "crates/propagators",
+    "crates/puzzle-io",
     "crates/sat-encoder",
     "crates/solver-engine",
     "crates/solver-naive",
