@@ -190,3 +190,30 @@ partials → 50 different basin attractors after 5-min ALNS. That's
 effectively what vol-34 T3 did with 14 partials × 4 seeds. Treating
 those 56 boards as "LOs" gives a cleaner FDC measurement at the
 relevant score range.
+
+## Update — 10×10/8c (canonical-ratio) landscape
+
+100 restarts × 20s ALNS at 10×10/8c (canonical-ratio: 12.5 pp/c).
+
+| Metric | 6×6/5c (7.2 pp/c) | 8×8/5c (12.8 pp/c) | 10×10/8c (12.5 pp/c) | 12×12/8c (18 pp/c) | 16×16/22c canonical (11.6 pp/c) |
+|---|---:|---:|---:|---:|---:|
+| Max edges | 60 | 112 | 180 | 264 | 480 |
+| Best LO | 54 | (run not analyzed) | 148 | 222 | 316 |
+| Best/Max | 90% | - | 82% | 84% | 66% |
+| Mean H | 35.4/36 | - | 99.5/100 | 143.6/144 | 255.6/256 |
+| FDC r | -0.031 | -0.000 | -0.105 | -0.104 | -0.068 |
+| Min pair H | 28/36 | - | 4/100 | - | - |
+| Clusters H≤25 | 500/500 | - | 100/106 (6 pairs) | 100/100 | 50/50 |
+
+**10×10/8c shows REAL clustering** (6 pairs of LOs at H≤25, including
+one at H≤4). This is the first puzzle size to show clear basin
+structure under naive ALNS-from-random.
+
+FDC -0.105 at 10×10 matches 12×12 (-0.104). 8×8/5c was -0.000 (no
+structure). The color-ratio hypothesis is partially confirmed: at
+canonical-class ratios (≥12 pp/c), structure emerges; at smaller
+puzzles (regardless of ratio), structure is invisible to ALNS-random.
+
+The clustering metric scales differently from FDC: 10×10 has
+clusters but 12×12 doesn't (despite similar FDC). The "right scale"
+for landscape mapping may be 10×10.
