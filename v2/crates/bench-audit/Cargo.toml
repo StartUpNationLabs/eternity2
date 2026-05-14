@@ -182,6 +182,10 @@ name = "cluster_repair_lo00001"
 path = "src/bin/cluster_repair_lo00001.rs"
 
 [[bin]]
+name = "border_lp_perturb_k"
+path = "src/bin/border_lp_perturb_k.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 

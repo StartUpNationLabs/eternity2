@@ -156,6 +156,27 @@ LP UB beyond 478. To find a higher-UB border, we need either:
 - Borders generated from scratch (different CP trajectory).
 - Constrained border-class enumeration.
 
+## k=3 perturbation extends k=2 finding
+
+8 random k=3 perturbation trials on vol-32 458's border. ALL 8
+decreased LP UB. Range: −2.0 to −5.0. Best = −2.0.
+
+| k | trials | hits delta > 0 | range of delta |
+|---:|:---:|:---:|---|
+| 2 (single swap) | 5 | 0 | −5.5 to −2.0 |
+| 3 (random perm of 3) | 8 | 0 | −5.0 to −2.0 |
+| **TOTAL** | **13** | **0** | — |
+
+**Strong claim**: vol-32 458's border is at a substantial local
+maximum in the LP UB landscape under random k ≤ 3 swaps. The UB
+falls off ~2-5 points per random perturbation.
+
+Random-walk methods cannot find a better basin from class A. To
+discover LP UB > 478, we need:
+- Larger k (5-10 simultaneous swaps), AND/OR
+- Directed (non-random) moves — gradient-like search, AND/OR
+- Different starting border from another CP trajectory.
+
 ## Open questions
 
 - How many distinct LP-UB-478 basins are there in our 4746-board
