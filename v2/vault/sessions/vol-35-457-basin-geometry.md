@@ -69,6 +69,28 @@ So at minimum the three vol-32 cold-start blackwood-mrv 457s are
 **not all the same basin** — two are sister-basins, one is more
 distant.
 
+## Edge-relax bound per cluster
+
+Ran `edge_relax --max-iters 20` on each cluster rep:
+
+| Cluster | rep | bound | gap above 457 |
+|---|---|---:|---:|
+| A | blackwood_mrv s7 | 462 | +5 |
+| B | blackwood_mrv s4 | **465** | **+8** |
+| C | vol-34 t1signal | 464 | +7 |
+| D | vol-34 t3_t01 | 464 | +7 |
+| E | vol-35 f255 | 463 | +6 |
+
+**Cluster B has the highest bound (465)** — 8 above current score.
+This is the most promising target for further ALNS recovery.
+
+The bound depends on the cluster, not the score. Two boards both
+at score 457 can have very different headroom. The vol-21 measurement
+methodology (bound on the partial that fed ALNS) gave family 255 →
+463; running the same on the recovered 457 board itself gives a
+slightly different value (462–465 across clusters) because the
+relaxed greedy iterates differently from different starting points.
+
 ## Consensus-core analysis (confirms vol-20)
 
 Across the 5 distinct cluster representatives (A,B,C,D,E), counted
@@ -92,6 +114,27 @@ will over-constrain the search.
 
 No "backbone" beyond hints discovered. Second independent confirmation
 of vol-20.
+
+## Greedy bound-ascent on cluster B (vol-22 reproduction)
+
+Ran greedy bound-ascent (only accept bound-monotone moves) on
+cluster B's 457 board (initial bound=465):
+- 5000 iters, 1455 accepts in 165s
+- best bound reached: **470** (+5 from start)
+- best score at that bound: **78** (massive score collapse)
+
+This reproduces [[../../../../Users/raphaelanjou/.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2-v2/memory/project_e2_vol22_basin_escape.md|vol-22's finding]]:
+greedy bound-ascent CAN find higher-bound basins (up to 471 in
+vol-22, 470 here in 165s), but the score collapses to <100 and
+ALNS recovery in those fresh basins plateaus at ceiling-25..30.
+
+A bound=470 board with -30 recovery would land near 440 — not
+a record. The vol-22 conclusion holds: **bound-ascent without
+matching ALNS-recovery upgrade is a dead end**.
+
+The unshipped tool from vol-22 backlog: McGavin-style prune-restart
+that retains more of the basin context as it walks. That would be
+the real unblock to converting high-bound destinations into score.
 
 ## Vol-36 follow-up
 

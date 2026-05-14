@@ -10,7 +10,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 
 - **Goal**: solve canonical 5-clue Eternity II (16×16 Monckton piece set) — score 480/480.
 - **Community ceiling**: 469/480 ([[basin-mcgavin-469|McGavin 2020]] via Blackwood algorithm).
-- **Our current cold-start record**: 457/480 ([[basin-457-pt]]).
+- **Our current cold-start record**: 458/480 (vol-32 vanilla_fast + ALNS).
 - **Our current warm-start record**: 454/480 ([[basin-454-vol6]], historic vol-6).
 - **Gap to community**: 12 points; characterised in [[mcgavin-blackwood-gap-analysis]].
 - **Spec contract**: `v2/V2_DESIGN.md`.
@@ -48,6 +48,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  32 |         **458** |       — | **NEW RECORD** via vanilla_fast (125M pp/s, community-class) + ALNS-5min: matched=458/480 (caveat: 2 of 5 canonical hints displaced). Also: vol-30/31 BUG DISCOVERED, [[unsat-clause-propagator]] prototype, blackwood_raw+MRV cold-start tied 457 in 10min |                               |
 |  33 |               — |       — | code refactor: 5 deferred items shipped (eternity2-time, -export, -puzzle-io crates; solver-engine modules split; bin-harness scaffold). solver-engine lib.rs: 5355→3705 lines |  |
 |  34 |             457 |       — | T1 vanilla_fast snapshot infra; T2 unsat-clause-propagator hard-pruner refuted (encoding reconciled); T3 lottery: 2 verified 457s (distinct basins), no 458 break. **2 alns_only bugs found and fixed** (polish_swap over-count + filename collision). User-proposed [[fitness-landscape-mapping]] vol-35 T1. |  |
+|  35 |             457 |       — | Fitness landscape + basin structure: 46 productive thread_ids (vs 5 default); 5 distinct 457 cluster reps confirmed at H≥246; cross-cluster consensus = canonical hints only (vol-20 re-confirmed); cluster bounds 462–465; family-255 deep lottery 3min×48 runs caps at 457. [[vol-35]]. **Refines vol-32 memory**: 3 cold-start blackwood-mrv 457s are 2 clusters, not 1. |  |
 
 
 ## Concepts — by category
