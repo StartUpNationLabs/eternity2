@@ -17,7 +17,8 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
-use eternity2_core::BORDER;
+use eternity2_benchmark::report::bucas_url;
+use eternity2_core::{Board, PieceId, Rotation, BORDER};
 
 const N: usize = 16;
 const N_POS: usize = N * N;
@@ -443,6 +444,19 @@ fn main() {
     best_score = matched_internal + matched_border;
     eprintln!("[best-partial] depth={} matched_internal={} matched_border={} matched_total={}/480",
         best_depth, matched_internal, matched_border, best_score);
+
+    // Construct a Board for canonical scoring + bucas URL.
+    let mut board = Board::empty(&puzzle);
+    for pos in 0..best_depth as usize {
+        let entry = best_chosen[pos];
+        let pid = entry_piece_id(entry);
+        let rot_u8 = entry_rot(entry);
+        if let Some(rot) = Rotation::from_u8(rot_u8) {
+            board.place(pos as u32, PieceId::from(pid), rot);
+        }
+    }
+    let bucas = bucas_url(&puzzle, &board, "size_16_official_eternity");
+    eprintln!("[bucas] {}", bucas);
 
     // Save best partial if requested
     if let Some(path) = save_best {
