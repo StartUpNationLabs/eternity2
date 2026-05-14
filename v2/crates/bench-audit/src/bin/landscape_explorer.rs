@@ -22,8 +22,8 @@ use eternity2_core::{Board, Position, Rotation};
 use eternity2_export::score_board;
 use eternity2_generator::{generate, GeneratorConfig};
 use eternity2_localsearch::{
-    run_alns, Acceptance, AlnsConfig, ConflictDriven, DestroyOp, MwpmDefectPair, RandomRegion,
-    RepairKind, WorstBand, WorstWindow,
+    piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig, ConflictDriven,
+    DestroyOp, MwpmDefectPair, RandomRegion, RepairKind, WorstBand, WorstWindow,
 };
 use rayon::prelude::*;
 use serde_json::json;
@@ -136,7 +136,13 @@ fn main() {
                 cp_repair_parallel: false,
             };
             let mut ops = build_ops();
-            let (final_board, _stats) = run_alns(&puzzle, &init, ops.as_mut_slice(), &cfg);
+            let (alns_board, _stats) = run_alns(&puzzle, &init, ops.as_mut_slice(), &cfg);
+            // Polish to a (rotation, single-swap) local optimum so the
+            // saved board is a deterministic attractor, not a transient
+            // best-along-trajectory snapshot.
+            let pinned: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+            let (alns_board, _) = polish_rotations(&puzzle, &alns_board, &pinned);
+            let (final_board, _) = piece_swap_hillclimb(&puzzle, &alns_board, &pinned);
             let (score, _) = score_board(&puzzle, &final_board);
 
             // Write per-restart JSON
