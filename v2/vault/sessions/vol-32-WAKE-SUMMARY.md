@@ -88,12 +88,19 @@ PT high-T (T_max=4.0, 8-rep, Houdayer-every-5, kick-every-10, 5min):
 back to the 416 plateau the cold replica found, let alone past 456.
 
 **Comprehensive basin-lock verification (vol-32 close)**:
-- 7 ALNS seeds × 5min, winning5 ops → 7/7 = 456
-- 4 ALNS seeds × 5min, winning5 ops on seed 4's basin → 4/4 = 456
+- 8 ALNS seeds × 5min from MRV partial → 442-456, max=456 (2 seeds)
+- 7 ALNS seeds × 5min from seed 2's 456 board → 7/7 = 456
+- 4 ALNS seeds × 5min from seed 4's 456 board → 4/4 = 456
 - 8 distinct ALNS ops presets × 5min × same seed → 8/8 = 456
 - 15min ALNS extension (600 iters) → 456 (0 lifts)
 - PT 5min strong (vol-31 config) → 451 (worse than ALNS)
 - PT 5min hot (T_max=4) → 456 (matches but doesn't escape)
+- 8 ALNS seeds × 5min from edge_bp partial (different CP partial,
+  same depth 190) → 438-456, max=456 (1 seed)
+
+**The 456 ceiling appears across two distinct depth-190 partials
+(MRV-derived and edge_bp-derived) of blackwood_raw cold-start.**
+Total 27 ALNS runs across all setups, 6 reached 456, none beat 456.
 
 Breaking 456→457 requires vol-22's basin-escape recipe (bound-ascent
 + Hungarian + multi-hour ALNS), a fundamentally different starting
