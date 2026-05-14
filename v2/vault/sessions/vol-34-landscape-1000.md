@@ -107,3 +107,21 @@ The straightforward "ALNS-sample → cluster → predict" plan is
 Alternative interpretation: maybe ALNS at 5s isn't a strong enough
 attractor finder. With longer budgets the bell-curve might collapse
 to a few discrete super-LOs. Worth testing.
+
+## Update — 30s ALNS comparison
+
+| Metric | 5s ALNS (n=1000) | 30s ALNS (n=100) |
+|---|---:|---:|
+| Mean | 48.2 | 48.0 |
+| Max | 54 | 54 |
+| Mean H | 35.4 | 35.4 |
+| Clusters (H≤25) | 500/500 | 100/100 |
+| FDC r | -0.031 | -0.049 |
+
+**Longer ALNS does NOT reveal super-basin structure**. Statistics
+are essentially identical across budgets. The landscape is genuinely
+rugged at 6×6/5c, not just under-sampled with short ALNS.
+
+This refutes vol-35 T1 alternative (a) "stronger super-basin discovery
+via longer ALNS". Path forward: alternatives (b) brute-force LO
+enumeration or (c) larger puzzle size.
