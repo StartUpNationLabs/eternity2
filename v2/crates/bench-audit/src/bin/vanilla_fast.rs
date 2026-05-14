@@ -465,6 +465,18 @@ fn main() {
             let e = best_chosen[pos];
             placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
         }
+        // CRITICAL: if pin_hints, ALWAYS include hints in the saved partial
+        // even if they're at positions beyond max_depth — otherwise downstream
+        // ALNS will fill those positions with non-hint pieces, producing
+        // boards that violate canonical 5-clue constraints.
+        if pin_hints {
+            for h in hints.hints.iter() {
+                let pos = h.position as usize;
+                if placement[pos].is_none() {
+                    placement[pos] = Some((h.piece_id, h.rotation.as_u8()));
+                }
+            }
+        }
         // Write pt_e2-format JSON
         let mut json = String::from("{\"placement\": [");
         for (i, p) in placement.iter().enumerate() {
