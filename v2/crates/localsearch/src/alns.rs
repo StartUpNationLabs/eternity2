@@ -1517,7 +1517,13 @@ pub fn piece_swap_hillclimb(
     let mut b = board.clone();
     let w = puzzle.width;
     let h = puzzle.height;
-    let mut total_gain = 0u32;
+    // Vol-34 fix — compute actual score before and after each swap.
+    // The local-delta accumulation had cases (notably adjacent pairs;
+    // possibly other shared-neighbour topologies) where reported gain
+    // diverged from actual. Anchor on the real score_board metric to
+    // bound the damage.
+    let start_score = score_board(puzzle, &b);
+    let mut prev_score = start_score;
     let mut iters = 0u32;
     loop {
         iters += 1;
@@ -1583,16 +1589,27 @@ pub fn piece_swap_hillclimb(
             }
         }
         match best {
-            Some((a, bp, arot, brot, delta)) => {
+            Some((a, bp, arot, brot, _delta_estimate)) => {
                 let (apid, _) = b.get(a).unwrap();
                 let (bpid, _) = b.get(bp).unwrap();
+                let snapshot = b.clone();
                 b.place(a, bpid, brot);
                 b.place(bp, apid, arot);
-                total_gain += delta as u32;
+                // Verify with the real metric. If the swap actually
+                // worsens the global score (the delta-estimator was wrong),
+                // roll back and stop.
+                let new_score = score_board(puzzle, &b);
+                if new_score <= prev_score {
+                    b = snapshot;
+                    break;
+                }
+                prev_score = new_score;
             }
             None => break,
         }
     }
+    let final_score = score_board(puzzle, &b);
+    let total_gain = final_score.saturating_sub(start_score);
     (b, total_gain)
 }
 
