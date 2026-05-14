@@ -123,25 +123,61 @@ pub fn repair_cluster(
         r4
     }).collect();
 
+    // Map cell -> (piece-index-in-`pieces`, current-rotation) for warmstart.
+    let mut current_at: HashMap<Position, (usize, Rotation)> = HashMap::new();
+    for &c in cluster {
+        if let Some((bpid, brot)) = board.get(c) {
+            for (i, &(pid, _, _)) in pieces.iter().enumerate() {
+                if pid == bpid { current_at.insert(c, (i, brot)); break; }
+            }
+        }
+    }
+
     for i in 0..n_pieces {
         for &c in cluster {
             for &r in &Rotation::ALL {
-                let v = problem.add(variable().binary());
+                let mut vd = variable().binary();
+                if let Some(&(ci, crot)) = current_at.get(&c) {
+                    let val = if ci == i && crot == r { 1.0 } else { 0.0 };
+                    vd = vd.initial(val);
+                }
+                let v = problem.add(vd);
                 x.insert((i, c, r), v);
             }
         }
     }
 
-    // y vars: per internal edge, per color.
+    // y vars: per internal edge, per color. Warmstart from the current board:
+    // for each internal edge, if the current pieces match at color k_current, set
+    // y_in[ei, k_current] = 1, others = 0.
     let max_color = (puzzle.color_count.saturating_sub(1)) as u8;
     let mut y_in: HashMap<(usize, u8), Variable> = HashMap::new();
-    for (ei, _) in e_in.iter().enumerate() {
+    for (ei, &(c1, c2, dir)) in e_in.iter().enumerate() {
+        let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
+        let cur_match_color = {
+            let (pid1, rot1) = board.get(c1).unwrap();
+            let (pid2, rot2) = board.get(c2).unwrap();
+            let e1 = puzzle.piece(pid1).unwrap().edges.rotated(rot1).as_array();
+            let e2 = puzzle.piece(pid2).unwrap().edges.rotated(rot2).as_array();
+            if e1[s1 as usize] == e2[s2 as usize] && e1[s1 as usize] != 0 {
+                Some(e1[s1 as usize])
+            } else {
+                None
+            }
+        };
         for k in 1..=max_color {
-            y_in.insert((ei, k), problem.add(variable().binary()));
+            let init = if Some(k) == cur_match_color { 1.0 } else { 0.0 };
+            y_in.insert((ei, k), problem.add(variable().binary().initial(init)));
         }
     }
-    // y vars per boundary edge: 1 variable, since the required color is fixed.
-    let y_bdy: Vec<Variable> = (0..e_bdy.len()).map(|_| problem.add(variable().binary())).collect();
+    // y_bdy[bi]: 1 iff current cell matches the required boundary color.
+    let mut y_bdy: Vec<Variable> = Vec::with_capacity(e_bdy.len());
+    for &(c, side, kreq) in &e_bdy {
+        let (pid, rot) = board.get(c).unwrap();
+        let e = puzzle.piece(pid).unwrap().edges.rotated(rot).as_array();
+        let init = if e[side as usize] == kreq { 1.0 } else { 0.0 };
+        y_bdy.push(problem.add(variable().binary().initial(init)));
+    }
 
     // Objective.
     let obj_in: Expression = y_in.values().copied().sum();

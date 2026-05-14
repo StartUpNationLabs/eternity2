@@ -223,6 +223,23 @@ example — a 14×9 = 126 cell rectangle covering the bottom 9 rows.
 MIP would be ~126 × 126 × 4 ≈ 63 000 binary x-vars. Might or might
 not be tractable for HiGHS. Worth trying with 10-min budget.
 
+## Engineering note: warmstart is essential
+
+When the region is large (>50 cells), HiGHS's feasibility-jump
+heuristic takes a LONG time to find any feasible integer solution
+from scratch. Without warmstart, the 98-cell region MIP didn't find
+ANY integer feasible in 2 minutes — best-sol stayed at `-0`.
+
+**With x-var AND y-var warmstart** (setting initial values from the
+current board), HiGHS accepts the warmstart immediately. From there,
+B&B improves only if a better integer is reachable. Initial
+BestBound 3017 (LP) vs BestSol 195 (current) — 1447% gap, which means
+the dual bound is still terrible, but the primal solution is at
+least the current board's score and CAN only improve from there.
+
+This is a critical pattern for cluster-repair: **always warmstart
+with the current board's piece-by-piece values.**
+
 ## Linked
 
 - [[vol-44]] — session
