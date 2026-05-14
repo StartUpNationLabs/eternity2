@@ -110,6 +110,27 @@ To break 458 within LP-UB-478, we need either:
 The vol-32 458 basin is special: only basin sampled where score
 EQUALS the apparent local-opt under our operators.
 
+## McGavin canonical-projected LP UB
+
+| Source | bb | bi_ub | lp_interior | total UB |
+|---|---:|---:|---:|---:|
+| McGavin 469 canonical-projected (440/480) | 60 | 54.68 | 362.32 | **477.0** |
+
+McGavin's community 469 is on the 1-clue variant — when projected to
+canonical 5-clue by overlaying our 5 hints and refilling, the 4
+displaced positions change the puzzle structure enough that the
+LP UB drops to **477**, BELOW class A's 478.
+
+**Implication**: McGavin's border is NOT a route to break 458 under
+canonical 5-clue. Forcing canonical hints destroys 1 point of
+LP-headroom relative to vol-32 458's basin.
+
+This is also a structural argument that the canonical 5-clue ceiling
+might genuinely be lower than the 1-clue ceiling. The 5-clue hint
+constraint reduces achievable scores by AT LEAST 1 LP-point on
+McGavin's specific border (vol-42's empirical 469 → 444 corresponds
+to integer drop, but LP UB drops by 1 from 478ish to 477).
+
 ## Open questions
 
 - How many distinct LP-UB-478 basins are there in our 4746-board
