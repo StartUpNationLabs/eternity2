@@ -155,6 +155,7 @@ impl SolverService for SolverServiceImpl {
                     edge_bp_marginals: None,
                     batch_hint_application: false,
                     objective: None,
+                    records_prior_map: None,
                 },
             });
         }

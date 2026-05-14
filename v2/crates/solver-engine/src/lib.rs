@@ -74,6 +74,14 @@ impl EngineSolver {
         self
     }
 
+    /// Vol-41 — override the value-order of an existing engine profile.
+    /// Useful for A/B testing alternate value-orders against a fixed
+    /// variable-order + propagator stack.
+    pub fn with_value_order(mut self, vo: ValueOrder) -> Self {
+        self.config.value_order = vo;
+        self
+    }
+
     pub fn blackwood_schedule(&self) -> Option<Arc<BlackwoodSchedule>> {
         self.blackwood_schedule.clone()
     }
@@ -443,6 +451,45 @@ pub fn load_edge_bp_marginals(path: &std::path::Path) -> std::io::Result<Arc<Vec
         }
     }
     Ok(Arc::new(flat))
+}
+
+/// Vol-41 — Load per-cell records-prior value-order JSON.
+/// Format produced by `ml/structural_scan.py`:
+///   { "n_records": 7, "value_order": { "0": [{"piece_id", "rotation", "count"}, ...], ... } }
+/// Returns Vec<Vec<(piece_id, rotation, freq)>> indexed by cell position (length 256 for canonical E2),
+/// inner Vec sorted descending by freq.
+pub fn load_records_prior_map(path: &std::path::Path) -> std::io::Result<Arc<Vec<Vec<(u16, u8, u32)>>>> {
+    let bytes = std::fs::read(path)?;
+    let doc: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    let vo = doc.get("value_order").and_then(|v| v.as_object()).ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "missing value_order object")
+    })?;
+    // Determine max position to allocate correctly.
+    let max_pos = vo.keys()
+        .filter_map(|k| k.parse::<usize>().ok())
+        .max()
+        .unwrap_or(255);
+    let n_cells = max_pos + 1;
+    let mut out: Vec<Vec<(u16, u8, u32)>> = vec![Vec::new(); n_cells];
+    for (k, v) in vo.iter() {
+        let pos: usize = k.parse().map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("invalid pos key: {k}"))
+        })?;
+        let entries = v.as_array().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "value_order entry not an array")
+        })?;
+        let mut variants: Vec<(u16, u8, u32)> = entries.iter().filter_map(|e| {
+            let pid = e.get("piece_id")?.as_u64()? as u16;
+            let rot = e.get("rotation")?.as_u64()? as u8;
+            let cnt = e.get("count")?.as_u64()? as u32;
+            Some((pid, rot, cnt))
+        }).collect();
+        // Sort descending by count
+        variants.sort_by(|a, b| b.2.cmp(&a.2));
+        out[pos] = variants;
+    }
+    Ok(Arc::new(out))
 }
 
 
@@ -2569,6 +2616,40 @@ impl<'a> SearchState<'a> {
             }
             domain_snapshot.clear();
             domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
+        }
+
+        // Vol-41 — RecordsPrior value-order. Rank rows by record frequency
+        // at this position (from opts.records_prior_map[pos]). Rows whose
+        // (piece_id, rotation) appears in N/7 records get a key of u32::MAX - N,
+        // so descending-frequency wins. Unranked rows get u32::MAX (lowest priority).
+        // No-op if records_prior_map is None.
+        if matches!(self.config.value_order, ValueOrder::RecordsPrior)
+            && domain_snapshot.len() > 1
+            && self.opts.records_prior_map.is_some()
+        {
+            let map = self.opts.records_prior_map.as_ref().unwrap();
+            if (pos as usize) < map.len() {
+                let cell_priors = &map[pos as usize];
+                // Build (piece_id, rotation) → freq lookup. Linear scan
+                // OK since cell_priors is typically ≤7 entries.
+                let mut scored: Vec<(u32, u32)> = domain_snapshot
+                    .iter()
+                    .map(|&r_id| {
+                        let r = self.rows[r_id as usize];
+                        let freq = cell_priors.iter()
+                            .find(|(p, rot, _)| {
+                                u16::from(r.piece_id) == *p && r.rotation == *rot
+                            })
+                            .map(|(_, _, f)| *f)
+                            .unwrap_or(0);
+                        // Descending: invert key. Unranked (freq=0) → u32::MAX.
+                        (u32::MAX - freq, r_id)
+                    })
+                    .collect();
+                scored.sort_by_key(|(k, _)| *k);
+                domain_snapshot.clear();
+                domain_snapshot.extend(scored.into_iter().map(|(_, r)| r));
+            }
         }
 
         // Vol-15 — Blackwood break-index: at a break depth, the cell's

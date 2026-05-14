@@ -70,6 +70,14 @@ pub enum ValueOrder {
     /// whether that signal turns into Δ > 0 depth on canonical E2.
     /// Requires both `opts.edge_bp_marginals` and a loaded Learned model.
     LearnedOnTies,
+    /// Vol-41 — records-prior value order. At each cell, rank candidates
+    /// by how many of our 7 verified canonical-E2 records have that
+    /// (piece_id, rotation) at that position. Concept: records are a
+    /// biased sample of high-score local optima; their per-cell
+    /// distribution is a useful prior on "good" placements.
+    /// Requires `SolveOpts.records_prior_map` (Vec of (cell → ranked
+    /// variants)). Falls back to InsertionOrder if absent.
+    RecordsPrior,
 }
 
 /// Vol-15 — Blackwood 2020 algorithm parameters. The backtracker is

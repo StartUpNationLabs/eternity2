@@ -155,6 +155,7 @@ pub fn solve_naive(input: JsValue) -> Result<JsValue, JsValue> {
         edge_bp_marginals: None,
         batch_hint_application: false,
         objective: None,
+        records_prior_map: None,
     };
 
     let mut sink = BufferSink::new();

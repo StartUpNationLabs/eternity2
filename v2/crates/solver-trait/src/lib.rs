@@ -90,6 +90,14 @@ pub struct SolveOpts {
     /// preserves vol-23 FirstSolution behaviour. Honoured only by
     /// `EngineSolver`; legacy solvers ignore it.
     pub objective: Option<Objective>,
+    /// Vol-41 — records-prior value order. Per cell, a vector of
+    /// `(piece_id, rotation, frequency)` from our 7 canonical-E2
+    /// verified records. Length: `n_cells`. Each inner vec is sorted
+    /// descending by frequency. Only consulted when
+    /// `EngineConfig.value_order == ValueOrder::RecordsPrior`.
+    /// Produced by `ml/structural_scan.py` (output/vol-37_revised/cell_value_order.json).
+    /// Wrapped in `Arc` so it is cheap to share across rayon workers.
+    pub records_prior_map: Option<Arc<Vec<Vec<(u16, u8, u32)>>>>,
 }
 
 impl Default for SolveOpts {
@@ -108,6 +116,7 @@ impl Default for SolveOpts {
             edge_bp_marginals: None,
             batch_hint_application: false,
             objective: None,
+            records_prior_map: None,
         }
     }
 }

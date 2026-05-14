@@ -131,3 +131,7 @@ path = "src/bin/vanilla_fast_n.rs"
 [[bin]]
 name = "vanilla_path"
 path = "src/bin/vanilla_path.rs"
+
+[[bin]]
+name = "run_e2_records_prior_ab"
+path = "src/bin/run_e2_records_prior_ab.rs"
