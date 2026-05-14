@@ -30,41 +30,59 @@ Items aged ≥ 3 volumes per BACKLOG that must be resolved or extended:
 
 ## Candidate binding items (pick 1-3)
 
-### T1 (high EV) — vanilla_fast oversubscribed probe
+### T1 (RECOMMENDED) — fitness-landscape mapping on small puzzles
 
-Run vanilla_fast with `--threads 32` (oversubscribed but on M1's
-8 cores) AND `--snapshot-on-visit`. Each thread gets a different
-bucket-shuffle seed → more distinct early prefixes → more basin
-families. The 5 → 32 basin-family count would 6× the lottery's
-exploratory coverage.
+User-proposed (vol-34 mid-vol). Systematically enumerate local
+optima and basin properties at 4×4 / 6×6 / 8×8, look for
+transferable structural invariants.
+
+See [[../concepts/fitness-landscape-mapping]] for the 5-phase plan
+(enumerate LOs, measure basin properties, compute FDC, test
+transferability, predict + exploit at 16×16).
+
+**Why this is highest EV**: gives a principled basis for operator
+design. Until we understand the landscape's structure, ALNS
+operator-tuning is folk-wisdom. Many vol-15-vol-32 negative
+results (e.g. bound-ascent-collapse, basin-escape ALNS recovery
+failure) become explainable — and potentially fixable — if we
+understand the saddle-point geometry.
+
+Cost: 2-3 days. Compute is cheap at 6×6 scale.
+
+**Gate**: at 6×6/5c, produce a basin graph with ≥50 LOs and
+measured saddle-heights. At 8×8/5c, confirm at least one invariant
+from 6×6 (e.g. "best basin is within Hamming N/4 of every other
+basin"). Predict canonical-16×16 saddle-height and compare to
+the vol-18 76-cell barrier (oracle-data point).
+
+### T2 (medium EV) — vanilla_fast oversubscribed probe
+
+Run vanilla_fast with `--threads 32` AND `--snapshot-on-visit`.
+More distinct early prefixes → more basin families. The 5 → 32
+basin-family count would 6× the lottery's exploratory coverage.
 
 Cost: 1h compute. Builds on vol-34 T1 infrastructure.
 
-**Gate**: lottery from new partials produces a score ≥ 458 (matches
-vol-32 record on a non-vol-32 seed).
+**Gate**: lottery from new partials produces a verified score ≥ 458
+(rescore_board confirmed) on a non-vol-32 seed.
 
-### T2 (medium EV) — soft unsat-pruner depth-conditional
+### T3 (medium EV) — soft unsat-pruner depth-conditional
 
 Wire capiman's unsat database into engine as `ValueOrder::UnsatSoft`
-or as an EdgeBpMarginals-like value-order. Active at depth < 100,
-fallback to MRV+LCV at d ≥ 100. The depth analysis showed the
-unsat signal is strongest at shallow depths (rank 0-12% at d=30-120).
+active at depth < 100, fallback to MRV+LCV at d ≥ 100. The depth
+analysis showed the unsat signal is strongest at shallow depths
+(rank 0-12% at d=30-120, inconsistent at d≥160).
 
-Cost: 4-6h build + 2h measurement. Uses the reconciliation maps
-already built in vol-34.
+Cost: 4-6h build + 2h measurement. Uses ml/data/ reconciliation maps.
 
 **Gate**: at depth=120 with unsat-soft + joe_depth150_bp, depth ≥ 174
 matches insertion mode baseline. AND no canonical-validity
 violations on a known-good 458 partial test.
 
-### T3 (low EV, exploratory) — Joe iteration-budgeted prune
+### T4 (low EV, deferred) — Joe iteration-budgeted prune
 
-Build the iteration-count-triggered prune-restart from vol-32 BACKLOG.
-30-49% search-space reduction expected. Half-day build, overnight
-measurement.
-
-**Gate**: cold-start CP depth ≥ 178 (vs vol-32's 174 baseline) on
-canonical E2 with the iteration-budgeted policy.
+Build iteration-count-triggered prune-restart from vol-32 BACKLOG.
+30-49% search-space reduction expected. Defer if T1+T2 fill the volume.
 
 ## What this vol explicitly does NOT do
 
