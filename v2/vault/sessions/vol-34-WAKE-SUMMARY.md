@@ -39,20 +39,26 @@ not globally unsat.
 showed rank 0%/perfect at d=30; 9-20% at d=80; inconsistent at d≥160.
 Vol-35 T3 candidate.
 
-### T3 — mass ALNS lottery
+### T3 — mass ALNS lottery — DONE
 
-14 partials × 4 ALNS seeds × 5 min. Discovered + fixed TWO bugs en route:
+14 partials × 4 ALNS seeds × 5 min = 56 runs. Discovered + fixed
+TWO bugs en route:
 
 1. **piece_swap_hillclimb gain over-count** (commit `4474987`) —
    local-delta estimator over-counted on shared-neighbour swap
    topologies; reported `polish_swap=+400` while real gain was 0-2.
 2. **alns_only filename collision** (commit `4c82bc1`) — parallel ALNS
    processes writing to `output/v17_alns_only/{ops}_{repair}_t{T}_s{seed}_{epoch_secs}.json`
-   could overwrite each other when finishing in the same second. Manifestation:
-   rescore_board on saved JSON disagrees with log score by ±2-10 edges.
+   could overwrite each other when finishing in the same second.
 
-Post-fix T3: results trustworthy. Max score (rescored): TBD (in flight at
-write time).
+**Final results (56/56 rescore-verified)**:
+- 2 verified 457s (distinct basins, 1.2% cell overlap, both bound 464)
+- 1 × 456, 2 × 455, 5 × 454, mean 446.7, max 457
+- Gate "≥458" NOT met. 458 is structurally unreachable from the
+  vanilla_fast basin family.
+
+The 5 distinct 457 cold-start basins now known across project history:
+vol-18, vol-32-seed7, vol-32-seed10, vol-32-seed4-30m, vol-34 #1, vol-34 #2.
 
 ## 🚨 CRITICAL: ALWAYS rescore_board before claiming a record
 
