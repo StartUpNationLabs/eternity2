@@ -1,117 +1,107 @@
-# VOL-34 — throughput exploitation + record chase
+# VOL-35 — draft plan
 
-**Opened**: 2026-05-14 (vol-32 close).
-**Status**: drafted at vol-32 close.
-**Theme**: study + exploit vol-32's vanilla_fast throughput
-(125M pp/s single-thread, 577M aggregate × 8 cores). Use it to find
-459+ basins.
-
-Companion to **vol-33** (code quality). Can run in parallel if the
-user wants record-chase + refactor simultaneously.
+**Opened**: 2026-05-14 at vol-34 close.
+**Status**: draft pending audit-at-open.
 
 ## Why this volume exists
 
-Vol-32 produced the vanilla_fast bin at 125M placements/sec (60×
-faster than blackwood_raw). The basin landscape findings:
+Vol-34 produced 3 main outputs:
+1. The piece_swap_hillclimb bug fix (+ verified all vol-32 records).
+2. Encoding reconciliation for capiman's unsat database.
+3. Empirical confirmation that vanilla_fast 8-thread × 30min only
+   produces 5 distinct basin families with all caps at 454-457.
 
-- 458 is the new record (vol-32). Basin-locked under ALL our ALNS
-  ops presets (mega, full, hingeonly, componentonly all → 458 at
-  5min × seed 1).
-- Bound-ascent navigates to higher-bound configs (b463, b464 from
-  the 458 board) but ALNS recovery from those doesn't reach 458+.
-- 8-thread ALNS lottery on diverse vanilla_fast partials: 1/8 hit
-  458; max stays at 458 (basin family ceiling).
-
-**The bottleneck is basin diversity + ALNS recovery quality**, not
-throughput. But more throughput enables:
-1. Sampling thousands of distinct depth-210+ partials (basin diversity)
-2. Affording slower-but-stronger per-placement propagators (algorithmic pruning)
-3. Hours-long deep-CP runs (depth 220+ unexplored)
+The bottleneck for breaking 458 is **basin diversity + ALNS recovery
+quality** — confirmed across all measurements. Vol-35 should attack
+exactly one of these.
 
 ## Audit-at-open
 
-- `unsat-clause-propagator-prototype` (vol-32 open): Python prototype
-  shipped; Rust loader + 540MB CSR binary saved; encoding-reconciliation
-  is the blocker. **PICKED, becomes T2**.
-- `vanilla-fast-backtracker` (vol-32 open): **SHIPPED** at vol-32 close;
-  becomes the foundation for T1 + T3.
-- `diverse-457-search` (since vol-21, 13 vols): **subsumed** by T3
-  (vanilla_fast basin sampling).
-- `multi-cell-bound-ascent` (since vol-22, 12 vols): defer or mark wont-do.
-- `joe-iteration-budgeted-prune` (since vol-32 open): defer to vol-35
-  (vanilla_fast doesn't restart; prune-policy isn't the right axis).
+Items aged ≥ 3 volumes per BACKLOG that must be resolved or extended:
 
-## Binding items (3 tracks)
+- `multi-cell-bound-ascent` (13 vols, vol-22): aged out — mark wont-do
+  unless picked here.
+- `bound-floor-alns-with-per-step-check` (13 vols, vol-22, partial):
+  invasive, low EV given basin-escape recipe didn't deliver. Mark
+  wont-do.
+- `diverse-457-search` (14 vols, vol-21, partial): subsumed by vol-34
+  T1+T3 (the vanilla_fast snapshot lottery IS the diverse-457 search).
+- `joe-iteration-budgeted-prune` (3 vols, vol-32): viable, low cost.
 
-### T1 — Hour-long vanilla_fast probe + basin sampling
+## Candidate binding items (pick 1-3)
 
-**Setup**: extend vanilla_fast to periodically (every 60s) save the
-deepest partial seen. Run for 1 hour × 8 threads. Total: 480
-thread-minutes of compute = ~3.6 trillion placements.
+### T1 (RECOMMENDED) — fitness-landscape mapping on small puzzles
 
-**Expected output**:
-- ~60-480 distinct depth-210+ partials saved
-- Possibly depth-215+ or 220 reached (vol-32 hit 211 in 1 min)
-- Diverse basin families
+User-proposed (vol-34 mid-vol). Systematically enumerate local
+optima and basin properties at 4×4 / 6×6 / 8×8, look for
+transferable structural invariants.
 
-**Cost**: 1 hour compute + 1h analysis = half day.
+See [[../concepts/fitness-landscape-mapping]] for the 5-phase plan
+(enumerate LOs, measure basin properties, compute FDC, test
+transferability, predict + exploit at 16×16).
 
-**Gate**: at least one partial reaches depth ≥ 215.
+**Why this is highest EV**: gives a principled basis for operator
+design. Until we understand the landscape's structure, ALNS
+operator-tuning is folk-wisdom. Many vol-15-vol-32 negative
+results (e.g. bound-ascent-collapse, basin-escape ALNS recovery
+failure) become explainable — and potentially fixable — if we
+understand the saddle-point geometry.
 
-### T2 — Unsat-clause-propagator integration
+Cost: 2-3 days. Compute is cheap at 6×6 scale.
 
-**Prereqs ready from vol-32**: 540 MB CSR binary
-(`output/vol-33/forbidden_all.bin`), 238 ns/lookup benchmark,
-validator script (`ml/validate_unsat_partial.py`).
+**Gate**: at 6×6/5c, produce a basin graph with ≥50 LOs and
+measured saddle-heights. At 8×8/5c, confirm at least one invariant
+from 6×6 (e.g. "best basin is within Hamming N/4 of every other
+basin"). Predict canonical-16×16 saddle-height and compare to
+the vol-18 76-cell barrier (oracle-data point).
 
-**Vol-32 blocker**: 74% of our placements aren't in capiman's
-encoder; 21 conflict pairs on known-good moves. Encoding-
-reconciliation must come first.
+### T2 (medium EV) — vanilla_fast oversubscribed probe
 
-1. **Encoding reconciliation** (4h): capiman card↔our piece_id map
-   via edge-tuple match. Validate against `edge_bp_165.json` until
-   0 conflicts.
-2. **Engine hook in vanilla_fast** (4h): add propagator call at
-   each placement; lazy-load forbidden_all.bin via OnceCell.
-3. **Measurement** (1h): pruning rate, throughput cost, depth lift.
+Run vanilla_fast with `--threads 32` AND `--snapshot-on-visit`.
+More distinct early prefixes → more basin families. The 5 → 32
+basin-family count would 6× the lottery's exploratory coverage.
 
-**Cost**: 1-1.5 days.
+Cost: 1h compute. Builds on vol-34 T1 infrastructure.
 
-**Gate**: 5%+ pruning rate AND zero canonical-validity violations.
+**Gate**: lottery from new partials produces a verified score ≥ 458
+(rescore_board confirmed) on a non-vol-32 seed.
 
-### T3 — Mass ALNS lottery from vanilla_fast partials
+### T3 (medium EV) — soft unsat-pruner depth-conditional
 
-**Depends on T1** (partials collected).
+Wire capiman's unsat database into engine as `ValueOrder::UnsatSoft`
+active at depth < 100, fallback to MRV+LCV at d ≥ 100. The depth
+analysis showed the unsat signal is strongest at shallow depths
+(rank 0-12% at d=30-120, inconsistent at d≥160).
 
-For top 100 partials by depth:
-- 4 ALNS seeds × 5 min each × winning5 ops
-- 1 ALNS run × 5 min × full ops (HingeDestroy + ConflictDriven{80} + MegaBand)
-- Save scores > 458
+Cost: 4-6h build + 2h measurement. Uses ml/data/ reconciliation maps.
 
-Total: 100 × 5 = 500 ALNS runs = 250 min wall-clock on 8 cores.
+**Gate**: at depth=120 with unsat-soft + joe_depth150_bp, depth ≥ 174
+matches insertion mode baseline. AND no canonical-validity
+violations on a known-good 458 partial test.
 
-**Gate**: at least one score ≥ 459 OR clear evidence the basin family
-caps at 458.
+### T4 (low EV, deferred) — Joe iteration-budgeted prune
+
+Build iteration-count-triggered prune-restart from vol-32 BACKLOG.
+30-49% search-space reduction expected. Defer if T1+T2 fill the volume.
 
 ## What this vol explicitly does NOT do
 
-- ❌ Code quality refactors (that's vol-33).
-- ❌ More ML.
-- ❌ Vol-22 basin-escape from 458 (already tried at vol-32 close;
-  bound-ascent moved to b464 but ALNS recovered to 452 — recipe
-  doesn't generalize past 457).
-- ❌ Heavy operator engineering (no Houdayer-on-ALNS-side this vol).
+- ❌ Code refactor (vol-33 territory).
+- ❌ More ML training.
+- ❌ Hard unsat-clause-pruner (refuted vol-34).
+- ❌ Basin-escape recipe extension (vol-22's path; bounds without
+  ALNS-recovery).
 
-## Cost
+## Cost summary
 
-- T1: half day
-- T2: 1-1.5 days
-- T3: half day compute, half day analysis
+- T1: 0.5 day (probe + analysis)
+- T2: 0.5-1 day (build + measurement)
+- T3: 0.5 day (build) + 0.5 day (compute)
 
-**Total**: 2-3 days.
+**Total**: 1.5-2 days.
 
-## Linked concepts
+## Linked
 
-- [[../concepts/unsat-clause-propagator]] — vol-32 prototype, vol-34 build target.
-- [[../sessions/vol-32-458-NEW-RECORD]] — what we're trying to break.
-- [[../sessions/vol-32-blackwood-mrv-discovery]] — alt cold-start path (456 ceiling).
+- [[vol-34]] — predecessor.
+- [[unsat-clause-propagator]] — concept, status updated.
+- [[vanilla-fast-backtracker]] — infrastructure to extend.
