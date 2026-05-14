@@ -152,3 +152,7 @@ path = "src/bin/border_lp_ub_small.rs"
 [[bin]]
 name = "border_lp_perturb"
 path = "src/bin/border_lp_perturb.rs"
+
+[[bin]]
+name = "border_mip"
+path = "src/bin/border_mip.rs"

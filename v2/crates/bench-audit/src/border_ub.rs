@@ -17,6 +17,7 @@ pub struct LpOptions {
     pub time_limit_secs: f64,
     pub use_ipm: bool,
     pub presolve: bool,
+    pub integer: bool,         // make x[c,p,r] and y[edge,k] binary (MIP mode)
 }
 
 impl Default for LpOptions {
@@ -27,6 +28,7 @@ impl Default for LpOptions {
             time_limit_secs: 300.0,
             use_ipm: true,
             presolve: true,
+            integer: false,
         }
     }
 }
@@ -216,7 +218,9 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
         let cands = &cell_cands[&c];
         let mut cell_vars = Vec::with_capacity(cands.len());
         for &(pid, rot, e) in cands {
-            let v = problem.add(variable().min(0.0).max(1.0));
+            let mut vd = variable().min(0.0).max(1.0);
+            if opts.integer { vd = vd.binary(); }
+            let v = problem.add(vd);
             x_var.insert((c, pid, rot), v);
             cell_vars.push((v, e));
             x_per_piece.entry(pid).or_default().push(v);
@@ -245,11 +249,15 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
     // Colors are 1..=(color_count-1); color_count includes BORDER=0.
     let max_color = (puzzle.color_count.saturating_sub(1)) as u8;
     let n_y = ii_edges.len() * max_color as usize;
-    let y_list: Vec<Variable> = problem.add_vector(variable().min(0.0).max(1.0), n_y);
+    let y_def = {
+        let vd = variable().min(0.0).max(1.0);
+        if opts.integer { vd.binary() } else { vd }
+    };
+    let y_list: Vec<Variable> = problem.add_vector(y_def.clone(), n_y);
 
     // B-I match variables: one per B-I edge (interior_cell, side, required_color).
     let n_y_bi = bi.len();
-    let y_bi_list: Vec<Variable> = problem.add_vector(variable().min(0.0).max(1.0), n_y_bi);
+    let y_bi_list: Vec<Variable> = problem.add_vector(y_def, n_y_bi);
 
     let obj_ii: Expression = y_list.iter().copied().sum();
     let obj_bi: Expression = y_bi_list.iter().copied().sum();

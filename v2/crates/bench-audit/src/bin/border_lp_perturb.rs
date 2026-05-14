@@ -115,7 +115,7 @@ fn main() {
         .collect();
 
     // Compute baseline UB.
-    let opts = LpOptions { verbose: false, threads: 8, time_limit_secs: 600.0, use_ipm: true, presolve: true };
+    let opts = LpOptions { verbose: false, threads: 8, time_limit_secs: 600.0, use_ipm: true, presolve: true, integer: false };
     eprintln!("Computing baseline LP UB on {} ...", path_arg);
     let baseline = lp_ub_with(&puzzle, &border_board, opts.clone()).expect("baseline LP");
     println!("baseline\ttotal_ub={:.4}\tbi_ub={:.4}\tinterior_ub={:.4}\ttime={:.1}s",

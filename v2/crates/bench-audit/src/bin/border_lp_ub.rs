@@ -61,6 +61,7 @@ fn main() {
             time_limit_secs: 600.0,
             use_ipm: true,
             presolve: true,
+            integer: false,
         };
         match lp_ub_with(&puzzle, &border_board, opts) {
             Ok(r) => {
