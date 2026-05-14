@@ -68,8 +68,42 @@ Same 5min partial, 8 seeds 1-8:
 
 **N=8 mean=449.1, median=450.5, max=457, stdev=8.22.**
 
-The 457 is a lucky hit in this 8-seed lottery (1/8 = 12.5%
-probability). Mean is 449 — most seeds hit 444-456.
+## Extended lottery (N=24 total, seeds 1-24)
+
+| Score | Count |
+|---:|---:|
+| 457 | 2 (seeds 7, 10) |
+| 456 | 5 |
+| 455 | 4 |
+| 454 | 2 |
+| 452 | 1 |
+| 449 | 1 |
+| 446 | 2 |
+| 445 | 2 |
+| 444 | 1 |
+| 443 | 2 |
+| 436 | 1 |
+| 434 | 1 |
+
+**N=24 mean=450.2, median=454, max=457, min=434, stdev=6.86.**
+**2/24 (8%) reached 457.**
+
+## Bound-ascent confirms 457 is the operator-reachable ceiling
+
+- seed 7's 457 board: bound = 462, gap = +5
+- seed 10's 457 board: bound = 457, gap = 0 (saturated)
+
+5000-iter bound-ascent SA from seed 7's 457: best bound stays 462,
+best score stays 457. No higher-bound config found.
+
+The 462-bound is structural to this basin family. ALNS converges to
+457 reliably; bound-ascent can't escape to higher-bound regions.
+
+## Two distinct 457 boards from tonight
+
+- seed 7's 457 (md5: `969a282d...`)
+- seed 10's 457 (md5: `4d662a0c...`)
+- 203/256 cells identical, 53 differ. Same "neighborhood" but distinct.
 
 ## What this means for vol-33
 
