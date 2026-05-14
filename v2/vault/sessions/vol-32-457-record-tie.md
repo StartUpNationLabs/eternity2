@@ -88,15 +88,20 @@ Same 5min partial, 8 seeds 1-8:
 **N=24 mean=450.2, median=454, max=457, min=434, stdev=6.86.**
 **2/24 (8%) reached 457.**
 
-## Bound-ascent confirms 457 is the operator-reachable ceiling
+## Bound-ascent: basin bounds vary across 457 boards
 
-- seed 7's 457 board: bound = 462, gap = +5
-- seed 10's 457 board: bound = 457, gap = 0 (saturated)
+- 5min seed 7's 457: bound = 462, gap = +5 (5000-iter SA stays at 462)
+- 5min seed 10's 457: bound = 457, gap = 0 (saturated)
+- **30min seed 4's 457: bound = 465, gap = +8** (HIGHEST seen)
 
-5000-iter bound-ascent SA from seed 7's 457: best bound stays 462,
-best score stays 457. No higher-bound config found.
+The 30min CP partial leads to a **different basin family** with higher
+bounds. 95-92/256 cells differ from the 5min 457 boards — these are
+genuinely different solutions.
 
-The 462-bound is structural to this basin family. ALNS converges to
+10000-iter bound-ascent + 6-seed ALNS lottery from the 465-bound
+basin running now to test if higher-bound region produces 458+.
+
+The 462-bound is structural to the 5min-partial basin family. ALNS converges to
 457 reliably; bound-ascent can't escape to higher-bound regions.
 
 ## Two distinct 457 boards from tonight
