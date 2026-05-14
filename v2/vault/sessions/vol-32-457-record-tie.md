@@ -98,8 +98,20 @@ The 30min CP partial leads to a **different basin family** with higher
 bounds. 95-92/256 cells differ from the 5min 457 boards — these are
 genuinely different solutions.
 
-10000-iter bound-ascent + 6-seed ALNS lottery from the 465-bound
-basin running now to test if higher-bound region produces 458+.
+**10000-iter bound-ascent + 6-seed ALNS lottery on 465-bound basin: ALL HOLD AT 457.**
+
+- bound-ascent 10000 iter: best stays at bound=465, score=457 (no progression).
+- 6-seed ALNS lottery from this basin: 6/6 = 457 exact. Basin-locked.
+
+So even with the higher 465-bound basin, our ALNS operators cap at 457.
+The bound is theoretically reachable but operators don't navigate to it.
+
+**Cumulative across all blackwood_raw lotteries (vol-32 total)**:
+- 30s-partial × 2 value-orders, 16 seeds: max=456
+- 5min-partial × 24 seeds: max=457 (2 hits, bounds 457 & 462)
+- 30min-partial × 8 seeds: max=457 (1 hit, bound 465)
+- 6 seeds from 465-bound 457: all 457
+- **Total 54 ALNS lottery runs, 3 distinct 457 boards, 0 broke 457.**
 
 The 462-bound is structural to the 5min-partial basin family. ALNS converges to
 457 reliably; bound-ascent can't escape to higher-bound regions.
