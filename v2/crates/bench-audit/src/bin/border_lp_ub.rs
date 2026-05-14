@@ -56,7 +56,7 @@ fn main() {
         let placed = (0..puzzle.cell_count()).filter(|&p| border_board.get(p).is_some()).count();
         eprintln!("[{arg}] border+hint cells placed: {placed}");
         let opts = LpOptions {
-            verbose: true,
+            verbose: false,
             threads: 8,
             time_limit_secs: 600.0,
             use_ipm: true,
@@ -64,8 +64,8 @@ fn main() {
         };
         match lp_ub_with(&puzzle, &border_board, opts) {
             Ok(r) => {
-                println!("{arg}\tplaced={placed}\tbb={}\tbi={}\tlp_interior={:.4}\ttotal_ub={:.4}\tn_x={}\tn_y={}\tn_constraints={}\ttime={:.2}s",
-                    r.bb_matches, r.bi_matches, r.interior_ub, r.total_ub, r.n_x, r.n_y, r.n_constraints, r.solve_secs);
+                println!("{arg}\tplaced={placed}\tbb={}\tbi_ub={:.4}\tlp_interior={:.4}\ttotal_ub={:.4}\tn_x={}\tn_y={}\tn_constraints={}\ttime={:.2}s",
+                    r.bb_matches, r.bi_ub, r.interior_ub, r.total_ub, r.n_x, r.n_y, r.n_constraints, r.solve_secs);
             }
             Err(e) => {
                 eprintln!("{arg}\tERROR: {e}");

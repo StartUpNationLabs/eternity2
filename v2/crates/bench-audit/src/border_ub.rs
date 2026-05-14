@@ -129,7 +129,6 @@ pub fn b_i_constraints(puzzle: &Puzzle, board: &Board) -> Vec<(Position, u8, u8)
 
 fn cell_candidates(
     puzzle: &Puzzle,
-    bi_at_cell: &[(u8, u8)],
     pinned_pieces: &[PieceId],
 ) -> Vec<(PieceId, Rotation, [u8; 4])> {
     let mut out = Vec::new();
@@ -138,13 +137,7 @@ fn cell_candidates(
         if pinned_pieces.contains(&piece.id) { continue; }
         for &r in &Rotation::ALL {
             let e = piece.edges.rotated(r).as_array();
-            let mut ok = true;
-            for &(side, c) in bi_at_cell {
-                if e[side as usize] != c { ok = false; break; }
-            }
-            if ok {
-                out.push((piece.id, r, e));
-            }
+            out.push((piece.id, r, e));
         }
     }
     out
@@ -153,7 +146,8 @@ fn cell_candidates(
 #[derive(Debug, Clone)]
 pub struct LpUb {
     pub bb_matches: u32,
-    pub bi_matches: u32,
+    pub bi_matches: u32,    // rounded LP B-I match value (was: forced)
+    pub bi_ub: f64,         // exact LP B-I match
     pub interior_ub: f64,
     pub total_ub: f64,
     pub n_x: usize,
@@ -204,8 +198,7 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
             let e = p.edges.rotated(rot).as_array();
             cell_cands.insert(c, vec![(pid, rot, e)]);
         } else {
-            let bi_here = bi_by_cell.get(&c).map(|v| v.as_slice()).unwrap_or(&[]);
-            let cands = cell_candidates(puzzle, bi_here, &pinned_pieces);
+            let cands = cell_candidates(puzzle, &pinned_pieces);
             if cands.is_empty() {
                 return Err(format!("infeasible: cell {c} has 0 candidates"));
             }
@@ -254,7 +247,13 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
     let n_y = ii_edges.len() * max_color as usize;
     let y_list: Vec<Variable> = problem.add_vector(variable().min(0.0).max(1.0), n_y);
 
-    let obj: Expression = y_list.iter().copied().sum();
+    // B-I match variables: one per B-I edge (interior_cell, side, required_color).
+    let n_y_bi = bi.len();
+    let y_bi_list: Vec<Variable> = problem.add_vector(variable().min(0.0).max(1.0), n_y_bi);
+
+    let obj_ii: Expression = y_list.iter().copied().sum();
+    let obj_bi: Expression = y_bi_list.iter().copied().sum();
+    let obj: Expression = obj_ii + obj_bi;
     let mut hp = problem.maximise(obj).using(highs);
     hp.set_verbose(opts.verbose);
     let mut hp = hp.set_time_limit(opts.time_limit_secs);
@@ -288,7 +287,17 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
         model = model.with(constraint!(v == 1.0));
     }
 
-    let mut n_y_constraints = 0usize;
+    // B-I match constraints: y_bi[i] ≤ Σ x[c, p, r where rotated-edge[side] == required_color].
+    for (i, &(cell, side, color)) in bi.iter().enumerate() {
+        let y_bi_v = y_bi_list[i];
+        let supply: Expression = x_per_cell[&cell].iter()
+            .filter(|(_, e)| e[side as usize] == color)
+            .map(|&(v, _)| v)
+            .sum();
+        model = model.with(constraint!(y_bi_v <= supply));
+    }
+
+    let mut n_y_constraints = bi.len();
     for (i, &(c1, c2, dir)) in ii_edges.iter().enumerate() {
         let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
         let mut a_buckets: Vec<Vec<Variable>> = vec![Vec::new(); (max_color as usize) + 1];
@@ -322,12 +331,14 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
     let solve_secs = t0.elapsed().as_secs_f64();
 
     let interior_ub: f64 = y_list.iter().map(|v| sol.value(*v)).sum();
-    let bi_matches = bi.len() as u32;
-    let total = bb as f64 + bi_matches as f64 + interior_ub;
+    let bi_ub: f64 = y_bi_list.iter().map(|v| sol.value(*v)).sum();
+    let bi_matches = bi_ub.round() as u32; // for legacy reporting
+    let total = bb as f64 + bi_ub + interior_ub;
 
     Ok(LpUb {
         bb_matches: bb,
         bi_matches,
+        bi_ub,
         interior_ub,
         total_ub: total,
         n_x: total_x,
