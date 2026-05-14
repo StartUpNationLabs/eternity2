@@ -14,11 +14,13 @@
 #![forbid(unsafe_code)]
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, PieceId, Rotation, BORDER};
+use rayon::prelude::*;
 
 const N: usize = 16;
 const N_POS: usize = N * N;
@@ -70,6 +72,7 @@ fn main() {
     let mut want_solve = false;
     let mut pin_hints = false;
     let mut save_best: Option<PathBuf> = None;
+    let mut threads: usize = 1;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -79,6 +82,7 @@ fn main() {
             "--solve" => { want_solve = true; i += 1; }
             "--pin-hints" => { pin_hints = true; i += 1; }
             "--save-best" => { save_best = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--threads" => { threads = raw[i + 1].parse().expect("threads"); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -219,14 +223,6 @@ fn main() {
         );
     }
 
-    // Search state — keep per-depth packed entry chosen + cursor into that bucket.
-    let mut chosen: Vec<u32> = vec![0u32; N_POS];  // packed entries
-    let mut frame_cursor: Vec<u32> = vec![0u32; N_POS + 1];
-    let mut bucket_start_at_depth: Vec<u32> = vec![0u32; N_POS];
-    let mut bucket_end_at_depth: Vec<u32> = vec![0u32; N_POS];
-    // `used` as plain bool array — faster than bitmask on M1 because single-byte loads.
-    let mut used: [bool; N_PIECES] = [false; N_PIECES];
-
     // Hint pool: bucket_data-like vec where hint positions get their own (single-entry)
     // bucket. We append all hint entries to bucket_data, and override
     // bucket_starts/end logic to point here for hint positions.
@@ -251,134 +247,203 @@ fn main() {
     let t0 = Instant::now();
     let deadline = t0 + std::time::Duration::from_millis(budget_ms);
 
-    let mut total_placements: u64 = 0;
-    let mut total_backtracks: u64 = 0;
-    let mut max_depth: u32 = 0;
-    let mut solved_count: u64 = 0;
-    // Per-depth placement counter for profiling distribution
-    let mut depth_placements: [u64; N_POS + 1] = [0u64; N_POS + 1];
-    // Best-partial tracking: track deepest depth and save the chosen[] snapshot.
-    let mut best_depth: u32 = 0;
-    let mut best_chosen: Vec<u32> = vec![0u32; N_POS];
-    let mut best_score: u32 = 0;  // matched edges
+    // Aggregate stats across threads (atomics)
+    let total_placements_atomic = AtomicU64::new(0);
+    let total_backtracks_atomic = AtomicU64::new(0);
+    let max_depth_atomic = AtomicU64::new(0);
+    let solved_count_atomic = AtomicU64::new(0);
 
-    let mut depth: usize = 0;
+    eprintln!("[init] running {} worker(s) for {} ms", threads, budget_ms);
 
-    // For each depth, when entering, we COMPUTE the bucket once: derive (N, W) from
-    // placed neighbours (which are the chosen entries at depth-N and depth-1).
-    // Stored in bucket_start_at_depth / bucket_end_at_depth and reused on backtrack.
-    // On entry to depth d (fresh): compute and store bucket.
-    // On backtrack to depth d: reuse stored bucket, advance frame_cursor.
-
-    // Helper: enter depth d freshly (compute bucket).
-    // If this position has a hint, override bucket to single hint entry —
-    // BUT only if the hint's (N, W) edges match the current state. If not, the
-    // hint is incompatible with the partial → empty bucket → immediate backtrack.
-    macro_rules! enter_fresh {
-        ($d:expr) => {{
-            let d = $d;
-            let pos = d;
-            let n_color = if pos < N {
-                BORDER
-            } else {
-                entry_s(chosen[pos - N])
-            };
-            let w_color = if pos % N == 0 {
-                BORDER
-            } else {
-                entry_e(chosen[pos - 1])
-            };
-            let hint_idx = hint_entry_idx[pos];
-            if hint_idx != u32::MAX {
-                // This is a hint position — try only the hint entry if its (N, W) match.
-                let hint_entry = bucket_data[hint_idx as usize];
-                // Decode the hint's N, W from piece_rots. To save time, we stash
-                // (N, W) in upper bits of the packed entry — but we packed only S, E.
-                // So we look up by piece_id+rot in the original piece_rots table.
-                // Note: hint pieces are rare (5 cells); the table lookup is fine.
-                let hint_pid = entry_piece_id(hint_entry);
-                let hint_rot = entry_rot(hint_entry);
-                let pr = &piece_rots[hint_pid as usize * N_ROT + hint_rot as usize];
-                if pr.n == n_color && pr.w == w_color {
-                    bucket_start_at_depth[d] = hint_idx;
-                    bucket_end_at_depth[d] = hint_idx + 1;
-                    frame_cursor[d] = hint_idx;
-                } else {
-                    // Hint incompatible with current N/W — force empty bucket
-                    bucket_start_at_depth[d] = 0;
-                    bucket_end_at_depth[d] = 0;
-                    frame_cursor[d] = 0;
-                }
-            } else {
-                let key = (n_color as usize) * N_COLORS + (w_color as usize);
-                let bkt_idx = pos * NW_KEYS + key;
-                bucket_start_at_depth[d] = bucket_starts[bkt_idx];
-                bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
-                frame_cursor[d] = bucket_starts[bkt_idx];
-            }
-        }};
+    // Per-thread results
+    #[derive(Clone)]
+    struct ThreadResult {
+        thread_id: usize,
+        placements: u64,
+        backtracks: u64,
+        max_depth: u32,
+        solved: u64,
+        best_chosen: Vec<u32>,
+        depth_placements: Vec<u64>,
+        bucket_data_seed: u64,
     }
 
-    enter_fresh!(0);
-
-    'outer: loop {
-        // Check budget every 256k placements
-        if (total_placements & 0x3FFFF) == 0 && Instant::now() >= deadline {
-            break;
+    let thread_results: Vec<ThreadResult> = (0..threads).into_par_iter().map(|thread_id| {
+        // Per-thread bucket_data: clone the global, then shuffle within each bucket
+        // using thread_id as seed (thread 0 keeps the rare-first order from the global).
+        let mut my_bucket_data = bucket_data.clone();
+        if thread_id > 0 {
+            // xorshift64 with seed = thread_id+0xDEADBEEF
+            let mut rng_state: u64 = (thread_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                .wrapping_add(0xDEAD_BEEF_CAFE_BABE);
+            let mut next_rand = |state: &mut u64| -> u64 {
+                *state ^= *state << 13;
+                *state ^= *state >> 7;
+                *state ^= *state << 17;
+                *state
+            };
+            // Fisher-Yates per bucket
+            for pos in 0..N_POS {
+                for key in 0..NW_KEYS {
+                    let idx = pos * NW_KEYS + key;
+                    let start = bucket_starts[idx] as usize;
+                    let end = bucket_starts[idx + 1] as usize;
+                    let len = end - start;
+                    if len <= 1 { continue; }
+                    for i in (1..len).rev() {
+                        let j = (next_rand(&mut rng_state) as usize) % (i + 1);
+                        my_bucket_data.swap(start + i, start + j);
+                    }
+                }
+            }
         }
 
-        let end = bucket_end_at_depth[depth];
-        let mut cur = frame_cursor[depth];
-        let mut found = u32::MAX;
-        // Hot loop: scan bucket for first un-used piece.
-        while cur < end {
-            let entry = bucket_data[cur as usize];
-            let pid = (entry >> 12) as usize;
-            if !used[pid] {
-                found = entry;
+        // Per-thread search state
+        let mut chosen: Vec<u32> = vec![0u32; N_POS];
+        let mut frame_cursor: Vec<u32> = vec![0u32; N_POS + 1];
+        let mut bucket_start_at_depth: Vec<u32> = vec![0u32; N_POS];
+        let mut bucket_end_at_depth: Vec<u32> = vec![0u32; N_POS];
+        let mut used: [bool; N_PIECES] = [false; N_PIECES];
+
+        let mut total_placements: u64 = 0;
+        let mut total_backtracks: u64 = 0;
+        let mut max_depth: u32 = 0;
+        let mut solved_count: u64 = 0;
+        let mut depth_placements: Vec<u64> = vec![0u64; N_POS + 1];
+        let mut best_depth: u32 = 0;
+        let mut best_chosen: Vec<u32> = vec![0u32; N_POS];
+
+        let mut depth: usize = 0;
+
+        // Helper: enter depth d freshly (compute bucket).
+        macro_rules! enter_fresh {
+            ($d:expr) => {{
+                let d = $d;
+                let pos = d;
+                let n_color = if pos < N { BORDER } else { entry_s(chosen[pos - N]) };
+                let w_color = if pos % N == 0 { BORDER } else { entry_e(chosen[pos - 1]) };
+                let hint_idx = hint_entry_idx[pos];
+                if hint_idx != u32::MAX {
+                    let hint_entry = my_bucket_data[hint_idx as usize];
+                    let hint_pid = entry_piece_id(hint_entry);
+                    let hint_rot = entry_rot(hint_entry);
+                    let pr = &piece_rots[hint_pid as usize * N_ROT + hint_rot as usize];
+                    if pr.n == n_color && pr.w == w_color {
+                        bucket_start_at_depth[d] = hint_idx;
+                        bucket_end_at_depth[d] = hint_idx + 1;
+                        frame_cursor[d] = hint_idx;
+                    } else {
+                        bucket_start_at_depth[d] = 0;
+                        bucket_end_at_depth[d] = 0;
+                        frame_cursor[d] = 0;
+                    }
+                } else {
+                    let key = (n_color as usize) * N_COLORS + (w_color as usize);
+                    let bkt_idx = pos * NW_KEYS + key;
+                    bucket_start_at_depth[d] = bucket_starts[bkt_idx];
+                    bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
+                    frame_cursor[d] = bucket_starts[bkt_idx];
+                }
+            }};
+        }
+
+        enter_fresh!(0);
+
+        'outer: loop {
+            if (total_placements & 0x3FFFF) == 0 && Instant::now() >= deadline {
                 break;
             }
-            cur += 1;
-        }
-
-        if found != u32::MAX {
-            chosen[depth] = found;
-            let pid = (found >> 12) as usize;
-            used[pid] = true;
-            frame_cursor[depth] = cur;
-            total_placements += 1;
-            depth_placements[depth] += 1;
-            depth += 1;
-            if depth as u32 > max_depth {
-                max_depth = depth as u32;
-                // Snapshot deepest partial
-                best_chosen.copy_from_slice(&chosen);
-                best_depth = max_depth;
-            }
-            if depth == N_POS {
-                solved_count += 1;
-                if want_solve {
-                    eprintln!("[solve] FOUND in {} ms", t0.elapsed().as_millis());
+            let end = bucket_end_at_depth[depth];
+            let mut cur = frame_cursor[depth];
+            let mut found = u32::MAX;
+            while cur < end {
+                let entry = my_bucket_data[cur as usize];
+                let pid = (entry >> 12) as usize;
+                if !used[pid] {
+                    found = entry;
                     break;
                 }
+                cur += 1;
+            }
+            if found != u32::MAX {
+                chosen[depth] = found;
+                let pid = (found >> 12) as usize;
+                used[pid] = true;
+                frame_cursor[depth] = cur;
+                total_placements += 1;
+                depth_placements[depth] += 1;
+                depth += 1;
+                if depth as u32 > max_depth {
+                    max_depth = depth as u32;
+                    best_chosen.copy_from_slice(&chosen);
+                    best_depth = max_depth;
+                }
+                if depth == N_POS {
+                    solved_count += 1;
+                    if want_solve {
+                        eprintln!("[t{thread_id}] [solve] FOUND in {} ms", t0.elapsed().as_millis());
+                        break;
+                    }
+                    depth -= 1;
+                    let pid = (chosen[depth] >> 12) as usize;
+                    used[pid] = false;
+                    frame_cursor[depth] += 1;
+                    continue;
+                }
+                enter_fresh!(depth);
+            } else {
+                if depth == 0 { break 'outer; }
                 depth -= 1;
+                total_backtracks += 1;
                 let pid = (chosen[depth] >> 12) as usize;
                 used[pid] = false;
                 frame_cursor[depth] += 1;
-                continue;
             }
-            enter_fresh!(depth);
-        } else {
-            if depth == 0 {
-                break 'outer;
-            }
-            depth -= 1;
-            total_backtracks += 1;
-            let pid = (chosen[depth] >> 12) as usize;
-            used[pid] = false;
-            frame_cursor[depth] += 1;
+        }
+
+        total_placements_atomic.fetch_add(total_placements, Ordering::Relaxed);
+        total_backtracks_atomic.fetch_add(total_backtracks, Ordering::Relaxed);
+        max_depth_atomic.fetch_max(max_depth as u64, Ordering::Relaxed);
+        solved_count_atomic.fetch_add(solved_count, Ordering::Relaxed);
+
+        let _ = best_depth;  // included in result
+        ThreadResult {
+            thread_id,
+            placements: total_placements,
+            backtracks: total_backtracks,
+            max_depth,
+            solved: solved_count,
+            best_chosen,
+            depth_placements,
+            bucket_data_seed: thread_id as u64,
+        }
+    }).collect();
+
+    // Pick global best across threads
+    let global_best = thread_results.iter().max_by_key(|r| r.max_depth).expect("at least one thread");
+    let best_chosen = global_best.best_chosen.clone();
+    let best_depth = global_best.max_depth;
+    let total_placements = total_placements_atomic.load(Ordering::Relaxed);
+    let total_backtracks = total_backtracks_atomic.load(Ordering::Relaxed);
+    let max_depth = max_depth_atomic.load(Ordering::Relaxed) as u32;
+    let solved_count = solved_count_atomic.load(Ordering::Relaxed);
+
+    // Aggregate per-depth placements
+    let mut depth_placements: [u64; N_POS + 1] = [0u64; N_POS + 1];
+    for r in &thread_results {
+        for d in 0..=N_POS {
+            depth_placements[d] += r.depth_placements[d];
         }
     }
+
+    // Per-thread summary
+    eprintln!("[per-thread] results:");
+    for r in &thread_results {
+        let pps = r.placements as f64 / t0.elapsed().as_secs_f64();
+        eprintln!("  thread {}: depth={} placements={} ({:.0} pp/s)", r.thread_id, r.max_depth, r.placements, pps);
+    }
+
+    let mut best_score: u32 = 0;  // computed later
 
     let elapsed = t0.elapsed();
     let elapsed_s = elapsed.as_secs_f64();
@@ -457,6 +522,44 @@ fn main() {
     }
     let bucas = bucas_url(&puzzle, &board, "size_16_official_eternity");
     eprintln!("[bucas] {}", bucas);
+
+    // Save EACH THREAD's best partial as a separate file when --save-best is set + multi-thread.
+    if let (true, Some(base_path)) = (threads > 1, save_best.as_ref()) {
+        for r in &thread_results {
+            let mut placement: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+            for pos in 0..r.max_depth as usize {
+                let e = r.best_chosen[pos];
+                placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
+            }
+            if pin_hints {
+                for h in hints.hints.iter() {
+                    let pos = h.position as usize;
+                    if placement[pos].is_none() {
+                        placement[pos] = Some((h.piece_id, h.rotation.as_u8()));
+                    }
+                }
+            }
+            // Per-thread filename: insert ".tN." before extension
+            let stem = base_path.file_stem().unwrap().to_string_lossy().to_string();
+            let ext = base_path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_else(|| "json".into());
+            let parent = base_path.parent().unwrap_or(std::path::Path::new(""));
+            let per_thread_path = parent.join(format!("{}.t{}.{}", stem, r.thread_id, ext));
+            let mut json = String::from("{\"placement\": [");
+            for (i, p) in placement.iter().enumerate() {
+                if i > 0 { json.push(','); }
+                match p {
+                    None => json.push_str("null"),
+                    Some((pid, rot)) => json.push_str(&format!("{{\"piece_id\":{},\"rotation\":{}}}", pid, rot)),
+                }
+            }
+            json.push_str("]}");
+            if let Some(parent) = per_thread_path.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+            std::fs::write(&per_thread_path, json).expect("write per-thread");
+            eprintln!("[saved] thread {} → {} (depth={})", r.thread_id, per_thread_path.display(), r.max_depth);
+        }
+    }
 
     // Save best partial if requested
     if let Some(path) = save_best {
