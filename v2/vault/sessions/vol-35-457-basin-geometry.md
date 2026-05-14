@@ -136,6 +136,53 @@ The unshipped tool from vol-22 backlog: McGavin-style prune-restart
 that retains more of the basin context as it walks. That would be
 the real unblock to converting high-bound destinations into score.
 
+## σ-cycle distance to 458 record
+
+Used `oracle_cycle_swap` to compute the piece-permutation distance
+between each 457 cluster and the vol-32 458 board.
+
+| Cluster | rep | # cycles | longest cycle | applying all cycles | applying cycles+rot |
+|---|---|---:|---:|---:|---:|
+| A | blackwood s7 | 12 | 114 | **458 (+1)** ✓ | 458 |
+| B | blackwood s4 | 6 | 191 | 454 | **458 (+1)** ✓ (1 rot fixup) |
+| C | vol-34 t1signal | 11 | 56 | 447 | 447 |
+| D | vol-34 t3 | 13 | 52 | 434 | 438 |
+| E | vol-35 f255 | 13 | 77 | 426 | 430 |
+
+**KEY**: clusters A and B reach the 458 board via σ-cycle
+decomposition (A directly, B with 1 rotation fixup). Both are in
+the **458 piece-multiset family**. Cluster C is partial (cycle
+application drops below 458); D and E are different families.
+
+So in piece-multiset space, the 458 family includes 4 known boards:
+- vol-32 458 (record)
+- cluster A: blackwood_mrv s7 (457)
+- cluster A': blackwood_mrv s10 (457, sister of s7 at H=53)
+- cluster B: blackwood_mrv s4 (457)
+
+That's **3 distinct 457 boards + 1 458 board** in the same family,
+all from blackwood_mrv runs. Clusters C, D, E are genuinely
+disjoint piece-multiset families.
+
+**Implication for ALNS escape**:
+- Cluster B → 458 is a coordinated 191-piece-permutation, far
+  beyond current ALNS destroy capability (max K=80 destroys
+  ~80 cells; this needs 191 coordinated).
+- Cluster C → 458 has 11 simultaneous cycles, all needed for
+  consistency. ALNS can't apply 11 coordinated swaps in one move.
+
+The 458 sits in a "neighborhood" of cluster B in piece-multiset
+space but not in spatial-placement space (full H=249/256). The
+vol-22 finding that ALNS-PT plateaus at ceiling-25..30 in fresh
+basins implies that the cluster B → 458 transition CANNOT be
+made via local search without oracle guidance.
+
+The structural insight: **`polish_rotations` is already optimal
+on cluster B's 457** (no rotation fixup found by local search).
+The "1 rotation fixup" reachable from cluster B comes only AFTER
+applying the 191-cycle σ-permutation — it's a different piece
+arrangement, not the current one.
+
 ## Vol-36 follow-up
 
 - Run K=6, K=8, K=10 operator-lock test on the 5 distinct
