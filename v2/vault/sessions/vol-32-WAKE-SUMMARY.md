@@ -22,11 +22,22 @@ alns_only --cp-board <partial> --alns-budget-ms 300000 --seed 7 --ops winning5 -
 (vol-18 byte-identical x11, vol-21 bound-ascent 457 at basin-bound 461,
 this vol-32 457). 247/256 cells differ from vol-21's 457.
 
-**Lottery context**: 1/8 seeds hit 457; mean=449.1, median=450.5.
-**16-seed extended lottery running now** — expect to see another 457
-or possibly a 458.
+**Lottery context (N=24 seeds × 5min ALNS from the 5min CP partial)**:
+- 2/24 (8%) reached **457** (seeds 7 & 10, distinct boards)
+- 5/24 reached 456
+- 4/24 reached 455
+- mean=450.2, median=454, max=457, min=434, stdev=6.86
+
+**Bound-ascent on seed 7's 457**: bound = 462 (gap=+5).
+5000-iter SA bound-ascent: best bound stays 462, score stays 457.
+**462 is the structural ceiling of this basin family** — 457 is the
+operator-reachable max under our current toolkit.
 
 See `vault/sessions/vol-32-457-record-tie.md` for full details.
+
+**Saved boards**:
+- `output/vol-32/RECORD_TIE_457_blackwood_mrv_5min_seed7.json` (bound 462)
+- `output/vol-32/RECORD_TIE_457_blackwood_mrv_5min_seed10.json` (bound 457, saturated)
 
 ---
 
