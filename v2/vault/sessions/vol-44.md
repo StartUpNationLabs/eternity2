@@ -115,11 +115,19 @@ all in rows 10-14. Top 9 interior rows perfect.
 Total ~2 hours wall. Multiple research-grade findings, all
 committed and documented.
 
-## What's running at vol close
+## Last experiment (mega_mix push)
 
-8 ALNS-mega_mix seeds × 1h each on vol-32 458 board. Different
-operator set from previously-tried diverse. Last chance attempt
-to find 459+ within class A's basin via heavy operator mix.
+8 ALNS-mega_mix seeds × 1h each on vol-32 458 board. ALL 8 ended
+at 458 (no lift, no drop).
+
+Combined locked-at-458 evidence for vol-32 458 basin:
+- ALNS-diverse, 10 min × 24 seeds (vol-40): 0/24 ≥ 458.
+- ALNS-mega_mix, 60 min × 8 seeds (vol-44): 8/8 = 458 exactly.
+- MIP cluster-repair, halo ≤ 2, all 10 clusters: delta = 0.
+- MIP on union of all mismatch clusters (28 cells): delta = 0.
+
+The 458 basin is fully locked under all tested operators and
+exact MIP within ≤ 30-cell rearrangements.
 
 ## Unfinished frontiers
 
