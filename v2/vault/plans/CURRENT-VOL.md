@@ -1,107 +1,117 @@
-# VOL-35 — draft plan
+# VOL-36 — binding plan
 
-**Opened**: 2026-05-14 at vol-34 close.
-**Status**: draft pending audit-at-open.
+**Opened**: 2026-05-14 (~15:45 CEST) at vol-35 close.
+**Status**: BINDING (user-approved direction).
 
 ## Why this volume exists
 
-Vol-34 produced 3 main outputs:
-1. The piece_swap_hillclimb bug fix (+ verified all vol-32 records).
-2. Encoding reconciliation for capiman's unsat database.
-3. Empirical confirmation that vanilla_fast 8-thread × 30min only
-   produces 5 distinct basin families with all caps at 454-457.
+Vol-35 closed cleanly: 458 record stands, pin_hints bug fixed,
+landscape mapped, no 459 break. The 457 attractors are
+operator-locked under all current ops. Vol-36 picks the structural
+unblock the audit-at-open keeps surfacing — and adds the user's
+new "raw-DFS hint-linking path" idea, which is genuinely
+new (vanilla_fast was hardcoded row-major; vol-14's
+rectangle/layered used the engine, not vanilla).
 
-The bottleneck for breaking 458 is **basin diversity + ALNS recovery
-quality** — confirmed across all measurements. Vol-35 should attack
-exactly one of these.
+## Multi-volume plan (user-approved 2026-05-14)
 
-## Audit-at-open
+User intent: cover all four candidate directions across vol-36..38+
+plus the layered-rectangle-on-vanilla idea.
 
-Items aged ≥ 3 volumes per BACKLOG that must be resolved or extended:
+| Vol | Binding items | Why this order |
+|---:|---|---|
+| **36** | (1) custom-path vanilla_fast bin (hints → center → outside); (2) McGavin prune-restart PoC | T1 is novel + user-fresh-proposed; T2 is the structural backlog item |
+| 37 | (1) Soft unsat-pruner depth-conditional; (2) code-refactor batch (vol-25 debt) start | Mixed engine + code-quality vol |
+| 38 | RL self-play for value-order | Big-swing; needs the unblock from earlier vols to compose |
 
-- `multi-cell-bound-ascent` (13 vols, vol-22): aged out — mark wont-do
-  unless picked here.
-- `bound-floor-alns-with-per-step-check` (13 vols, vol-22, partial):
-  invasive, low EV given basin-escape recipe didn't deliver. Mark
-  wont-do.
-- `diverse-457-search` (14 vols, vol-21, partial): subsumed by vol-34
-  T1+T3 (the vanilla_fast snapshot lottery IS the diverse-457 search).
-- `joe-iteration-budgeted-prune` (3 vols, vol-32): viable, low cost.
+This file pins vol-36's binding items. vol-37/38 listed in BACKLOG
+under their own entries.
 
-## Candidate binding items (pick 1-3)
+## Vol-36 binding items (≤3 per discipline)
 
-### T1 (RECOMMENDED) — fitness-landscape mapping on small puzzles
+### T1 — Raw-DFS custom-path vanilla (user-proposed)
 
-User-proposed (vol-34 mid-vol). Systematically enumerate local
-optima and basin properties at 4×4 / 6×6 / 8×8, look for
-transferable structural invariants.
+**Build**: a vanilla-style backtracker (no propagators, dense bucket
+arrays, ~100M+ pp/s target) that takes a **custom path** instead of
+row-major scan. Default path: 5 canonical hints connected by short
+shortest-grid-paths, then fill remaining interior cells (centre-out
+spiral), then border ring.
 
-See [[../concepts/fitness-landscape-mapping]] for the 5-phase plan
-(enumerate LOs, measure basin properties, compute FDC, test
-transferability, predict + exploit at 16×16).
+**Why now**: vol-14's rectangle/layered (engine-based) lost as
+static pre-commit because the engine's propagators choked on the
+late-stage propagator-induced ordering conflicts. A raw DFS doesn't
+have that failure mode — it just match-or-bust on each cell.
+Different failure mode → potentially different basin geometry.
 
-**Why this is highest EV**: gives a principled basis for operator
-design. Until we understand the landscape's structure, ALNS
-operator-tuning is folk-wisdom. Many vol-15-vol-32 negative
-results (e.g. bound-ascent-collapse, basin-escape ALNS recovery
-failure) become explainable — and potentially fixable — if we
-understand the saddle-point geometry.
+**Cost**: 0.5d build + 0.5d measurement. The infrastructure is in
+place (vanilla_fast.rs is 687 lines, the bucket-array index is by
+(north_color, west_color, n_is_border, ...)). Two changes:
+1. accept `--path-csv <file>` for cell-visit order
+2. recompute the lookup keys for non-row-major paths (cells have
+   different known-neighbour sets when path differs)
 
-Cost: 2-3 days. Compute is cheap at 6×6 scale.
+**Gate**:
+- Hint-linking path reaches depth ≥ 200 (vs vanilla_fast's typical
+  200 in row-major) in 60s.
+- ALNS post-fill from depth-200 hint-linking partial scores ≥ 450.
+- Bonus: any seed reaches verified rescore ≥ 458.
 
-**Gate**: at 6×6/5c, produce a basin graph with ≥50 LOs and
-measured saddle-heights. At 8×8/5c, confirm at least one invariant
-from 6×6 (e.g. "best basin is within Hamming N/4 of every other
-basin"). Predict canonical-16×16 saddle-height and compare to
-the vol-18 76-cell barrier (oracle-data point).
+### T2 — McGavin prune-restart PoC
 
-### T2 (medium EV) — vanilla_fast oversubscribed probe
+**Build**: structural unblock for vol-22 + vol-35 bound-ascent
+dead-end. At each bound-improving move, store a monotonically
+growing "pinned set" of cells. The bound walk operates only on
+un-pinned cells. Once bound reaches a target (e.g. 466), the pinned
+set is materialised as Hints for an ALNS recovery pass — but the
+recovery happens *with* the pinned set, not from scratch.
 
-Run vanilla_fast with `--threads 32` AND `--snapshot-on-visit`.
-More distinct early prefixes → more basin families. The 5 → 32
-basin-family count would 6× the lottery's exploratory coverage.
+The vol-23 `mcgavin-prune-restart` shipped as a CP-depth-trigger
+mechanism (depth-150 in joe_depth150 profile). T2 is a different
+trigger: bound-improvement.
 
-Cost: 1h compute. Builds on vol-34 T1 infrastructure.
+**Cost**: 1-2d. Engine already has `batch_hint_application`. New
+work: pin-set growth schedule + bound-walk + handoff to ALNS.
 
-**Gate**: lottery from new partials produces a verified score ≥ 458
-(rescore_board confirmed) on a non-vol-32 seed.
+**Gate**:
+- The pipeline produces a verified score ≥ 458 from ANY starting
+  basin in our 5-cluster verified record set.
+- OR: at minimum, produces a score-≥455 board with a structurally
+  different consensus from any existing 457 cluster (measured by
+  pairwise Hamming with our 5 reps).
 
-### T3 (medium EV) — soft unsat-pruner depth-conditional
+## Audit-at-open compliance
 
-Wire capiman's unsat database into engine as `ValueOrder::UnsatSoft`
-active at depth < 100, fallback to MRV+LCV at d ≥ 100. The depth
-analysis showed the unsat signal is strongest at shallow depths
-(rank 0-12% at d=30-120, inconsistent at d≥160).
+Resolved aged-unbuilt items:
 
-Cost: 4-6h build + 2h measurement. Uses ml/data/ reconciliation maps.
+| Item | Vol since | Resolution |
+|---|---:|---|
+| `multi-cell-bound-ascent` | vol-22 (14 vols) | **wont-do** — superseded by McGavin prune-restart (T2); 3/4-cycle moves without basin-context retention were the vol-21/22 failure mode |
+| `bound-floor-alns-with-per-step-check` | vol-22 (14 vols) | **wont-do** — invasive, low EV; bounds-axis has fundamentally hit the recovery-collapse wall, no point shipping more bound-machinery without the retention fix that T2 IS |
+| `diverse-457-search` | vol-21 (15 vols, partial) | **mark built (subsumed)** — vol-35 T1b shipped a comprehensive thread-id-offset basin diversity sweep that IS this item. 5 distinct cluster reps, 19 distinct basin families. No more diverse-457 lottery needed without a new operator. |
+| `joe-iteration-budgeted-prune` | vol-32 (4 vols) | **defer to vol-37** — viable, low-cost (half-day), but vol-36's binding items already fill the volume. Move to BACKLOG vol-37 candidates. |
 
-**Gate**: at depth=120 with unsat-soft + joe_depth150_bp, depth ≥ 174
-matches insertion mode baseline. AND no canonical-validity
-violations on a known-good 458 partial test.
+Aged items left intentionally:
+- `unsat-soft-value-order-depth-conditional` (vol-34, 2 vols old, not yet aged).
 
-### T4 (low EV, deferred) — Joe iteration-budgeted prune
+## Out of scope for vol-36
 
-Build iteration-count-triggered prune-restart from vol-32 BACKLOG.
-30-49% search-space reduction expected. Defer if T1+T2 fill the volume.
-
-## What this vol explicitly does NOT do
-
-- ❌ Code refactor (vol-33 territory).
-- ❌ More ML training.
-- ❌ Hard unsat-clause-pruner (refuted vol-34).
-- ❌ Basin-escape recipe extension (vol-22's path; bounds without
-  ALNS-recovery).
+- ❌ Code refactor (vol-37 territory).
+- ❌ RL self-play training (vol-38).
+- ❌ More vanilla_fast → ALNS replication (luck-chase, low EV
+  per vol-35 finding).
+- ❌ ML hyperparam sweeps (post-vol-32 bug fix, the ML space is
+  largely closed under imitation; RL is the unblock, deferred to vol-38).
 
 ## Cost summary
 
-- T1: 0.5 day (probe + analysis)
-- T2: 0.5-1 day (build + measurement)
-- T3: 0.5 day (build) + 0.5 day (compute)
+- T1: 0.5d build + 0.5d measurement (total 1d).
+- T2: 1-2d build + 0.5d measurement (total 1.5-2.5d).
 
-**Total**: 1.5-2 days.
+**Vol total**: 2.5-3.5 days.
 
 ## Linked
 
-- [[vol-34]] — predecessor.
-- [[unsat-clause-propagator]] — concept, status updated.
-- [[vanilla-fast-backtracker]] — infrastructure to extend.
+- [[vol-35]] — predecessor.
+- [[../concepts/prune-restart]] — vol-23 base; T2 extends.
+- [[../basins/basin-457-pt]] — the locked attractor T2 targets.
+- vol-14 [[../sessions/archive/raw/RESEARCH_NOTES_14|RESEARCH_NOTES_14.md]] for rectangle/layered prior art.

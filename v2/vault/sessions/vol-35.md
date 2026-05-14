@@ -155,20 +155,29 @@ plus 456-class blackwood seed4).
    trajectories. Train on cluster-A vs cluster-B traces separately
    to see if there's a per-cluster ML lift.
 
-## Records ledger (verify_records.sh)
+## Records ledger (verify_records.sh, post pin-hints retraction)
 
 | score | source | verified |
 |---:|---|---|
-| 458 | vol-32 vanilla_fast → ALNS | ✓ |
+| 458 | vol-32 vanilla_fast → ALNS (RECORD_BREAK) | ✓ |
+| 458 | vol-35 deep458 reproduce (byte-identical) | ✓ |
 | 457 | vol-32 blackwood_mrv seed 7 | ✓ |
 | 457 | vol-32 blackwood_mrv seed 10 | ✓ |
 | 457 | vol-32 blackwood_mrv seed 4 (30min) | ✓ |
-| 457 | vol-34 t1signal seed 1 | ✓ |
-| 457 | vol-34 t3 t01 seed 1 | ✓ |
-| 457 | vol-35 family-255 seed 1 | ✓ |
-| 457 | vol-35 family-255 deep seed 1 (byte-dup) | ✓ |
+| 457 | vol-35 deep458 full seed 5 (3 hints) | ✓ |
+| 457 | vol-35 deep458 diverse seed 5 (3 hints) | ✓ |
 
-PASS=8/8.
+PASS=7/7. **458 record stands. No 459 break this volume.**
+
+## sweep_v3 / lottery_v3 — closed without rescue
+
+`sweep_v3` (post-fix bug-clean re-probe at offsets {0..450}) completed.
+A first `family_lottery_v3` run hit jetsam OOM kills at -P8; the
+followup `family_lottery_v3_b` at -P4 over 19 family representatives
+was killed by user pre-completion. No further 458+ verified record
+emerged from any post-fix snapshot before user returned. The clean
+snapshots remain available at `output/vol-35/sweep_v3/` for vol-36+
+re-use.
 
 ## Linked memory
 

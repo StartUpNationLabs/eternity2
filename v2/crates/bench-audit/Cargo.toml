@@ -127,3 +127,7 @@ path = "src/bin/dump_puzzle_csv.rs"
 [[bin]]
 name = "vanilla_fast_n"
 path = "src/bin/vanilla_fast_n.rs"
+
+[[bin]]
+name = "vanilla_path"
+path = "src/bin/vanilla_path.rs"

@@ -59,6 +59,33 @@ Shipped at vol-32 close. 125M pp/s single-thread, 577M aggregate × 8 cores (com
 ### `unsat-clause-propagator` (Marie + Akos's database) — status: `refuted (hard pruner)` — vol-34 (2026-05-14)
 Hard-pruner refuted at vol-34 after full encoding reconciliation (ml/data/{color_map,piece_card_map}.json shipped). Capiman's "unsat" clauses are heuristic-search-regime-specific (per-round), not globally unsat — validation on the verified-good vol-32 458 record board gives 56 conflict pairs (round_1 alone gives 18). Using as a hard prune would silently kill valid moves.
 
+### `vanilla-path-custom-order` (vol-36 T1) — status: `built` — vol-36 (2026-05-14)
+Raw-DFS backtracker with custom cell-visit path (vs vanilla_fast's hardcoded row-major). Per-step pre-bucketing on constrained-side colors (mask-aware). 4 built-in paths + `--path-csv`. **30s A/B**: border-first 445/480, row-major 433/480, outer-spiral 204/480, hint-link 51/480. **border-first wins +12 edges**. Hint-link refuted at raw-DFS level (matches vol-14 engine-level refutation). See `vault/sessions/vol-36-vanilla-path-ab.md`.
+**Open**: does border-first + ALNS lottery exceed vol-32 458 record? Awaits 5min × 8 thread run + lottery (in flight).
+
+### `mcgavin-prune-restart-bound-trigger` (vol-36 T2) — status: `unbuilt` — since: vol-36 (2026-05-14)
+Different trigger from vol-23 prune_restart (which uses CP-depth trigger). At each bound-improving move, store monotonically-growing pinned set; bound walk operates only on un-pinned cells. Once bound reaches target, materialise pinned set as Hints for ALNS recovery WITH retention. **Estimated 1-2d.** Vol-36 T2; deferred to a later session pending T1 results.
+
+### `rl-self-play-value-order` — status: `unbuilt` — since: vol-30 (resolved-as-defer at vol-38)
+Vol-29 imitation hit teacher ceiling. RL is the only path to structurally beat baseline. Vol-38 candidate. Estimated 1 week build + days training.
+
+### `code-refactor-vol25-batch` — status: `unbuilt` — since: vol-25
+Vol-25's 5 deferred code-debt items (extract eternity2-time, -export, -puzzle-io crates; split solver-engine lib; consolidate 76-bin harness). Vol-37 candidate per multi-vol plan (2026-05-14).
+
+### `unsat-soft-value-order-vol37` — status: `unbuilt` — since: vol-34
+Wire capiman's unsat database as ValueOrder::UnsatSoft at depth<100. Vol-37 candidate per multi-vol plan (2026-05-14). 1d build + 0.5d measurement.
+
+### `fitness-landscape-mapping` (vol-35 T1) — status: `partial` — vol-35 (2026-05-14)
+Multi-scale landscape probe across 4×4/4c, 6×6/5c, 8×8/{5c,8c}, 10×10/8c, 12×12/8c, 16×16/22c.
+Built: `landscape_explorer` bin, `analyze_landscape.py`, `multi_puzzle_landscape.sh`, `cluster_basins.py`. **Findings**: rugged at all scales; FDC weak ∈ [-0.211, +0.084]; **10×10/8c smallest size showing clear basin clustering** (6 pairs at H≤25); canonical 16×16 LO Hamming-distance is trimodal under random-restart ALNS. Color ratio (pp/c) hypothesis REFUTED — size, not ratio, governs structure. The landscape work is structural understanding, not yet an operator design.
+**Open**: per-cluster ALNS-operator design; saddle-height to predict cross-basin barrier (untackled at 16×16).
+
+### `vanilla-fast-thread-id-sweep` (vol-35 T2) — status: `built` — vol-35 (2026-05-14)
+`vanilla_fast --thread-id-offset N` flag for sweeping bucket-shuffle seeds. Sweep at offsets {0..450} × 5min × 8 threads → 46 productive thread_ids → 19 distinct basin families (`cluster_basins.py`). Vs default {0..7} which gives 5 families. Basin diversity scales linearly with offset coverage. **Family-lottery on the original buggy snapshots gave 7th "457 basin" claim that was retracted as pin_hints duplicate-piece artifact.** Post-fix re-sweep (`sweep_v3`) completed; lottery on clean snapshots was started but killed pre-completion when user returned. Clean snapshots saved at `output/vol-35/sweep_v3/` for vol-36+ pickup.
+
+### `pin-hints-snapshot-bug-fix` (vol-35 mid-vol) — status: `built` — vol-35 (2026-05-14)
+**Critical bug discovered mid-vol**. `vanilla_fast --pin-hints` snapshot/save paths filled canonical hint positions without checking `already_placed`. 221/225 sweep snapshots had duplicate pieces (typically 180×2 and/or 248×2). All ALNS scores derived from those partials were invalid as canonical-E2 claims. **3 save paths fixed** (commits `1f5ebef`, `834368e`). `verify_records.sh` now checks piece-uniqueness alongside score. **Retracted**: vol-34 "2× 457" + vol-35 "family-255 457×3" + vol-35 "7th basin" claims. **Stands**: vol-32 458 RECORD + 4 valid 457 basins + vol-35 deep458 reproduce (1× 458 byte-identical + 2 new 457 satellites of the 458 family).
+
 ### `unsat-soft-value-order-depth-conditional` — status: `unbuilt` — since: vol-34 (2026-05-14)
 Despite the hard-pruner refutation, vol-34 measured that capiman's unsat database HAS signal as a soft value-order at shallow depths. Ranking ground-truth-candidate position in unsat-ascending order on three verified record boards (vol-32 458, two 457s): rank 0%/perfect at d=30; 9-20% at d=80; 2-89% at d=160+ (inconsistent at deep). Integrate as `ValueOrder::UnsatSoft` active at depth < 100, fallback to MRV+LCV at d ≥ 100. Uses ml/data/ reconciliation maps already shipped. Cost: 4-6h build + 2h measurement. Vol-35 T2 candidate.
 
