@@ -52,29 +52,50 @@ See [[vol-34-basin-clustering]] for the prefix-clustering analysis.
   (d≤100), inconsistent at deeper. Vol-35 backlog candidate
   (`unsat-soft-value-order-depth-conditional`).
 
-### T3 — mass ALNS lottery from T1 partials
+### T3 — mass ALNS lottery from T1 partials — DONE
 
 14 partials × 4 ALNS seeds × 5min each = 56 runs in parallel
 batches of 8 (~35 min wall-clock on M1's 8 cores).
 
 **Required two restarts** due to two bugs discovered (see "What
-was discovered" below). Post-fix:
-- Batches 1-2 (16 runs): all consistent (rescore == log). One **verified
-  457** (distinct basin from vol-34 T1's first 457).
-- Batches 3-7 (40 more): in flight at vault-write time.
+was discovered" below). Post-fix: 56/56 rescore-consistent.
 
-5 distinct 457 basins now known: vol-18, vol-32-seed7, vol-32-seed10,
-vol-34 T1-signal, vol-34 T3-t01-seed1. None breaks the 458 record.
+**Final results (all 56 runs verified by rescore_board)**:
 
-Score distribution from 16 verified runs:
-- 457: 1 (6%)
-- 454: 2
-- 452-450: 3
-- 449-441: 8
-- 439: 1
-- 433-(below 440): 1
+| Score | Count | % |
+|---:|---:|---:|
+| 457 | 2 | 3.6% |
+| 456 | 1 | 1.8% |
+| 455 | 2 | 3.6% |
+| 454 | 5 | 8.9% |
+| 453 | 2 | 3.6% |
+| 452 | 3 | 5.4% |
+| 451 | 2 | 3.6% |
+| 450 | 3 | 5.4% |
+| 449 | 4 | 7.1% |
+| 448 | 5 | 8.9% |
+| 447 | 5 | 8.9% |
+| 446 | 3 | 5.4% |
+| 445 | 4 | 7.1% |
+| 444 | 2 | 3.6% |
+| 443 | 2 | 3.6% |
+| 442 | 1 | 1.8% |
+| 441 | 4 | 7.1% |
+| 440 | 0 | 0% |
+| <440 | 6 | 10.7% |
 
-Mean=~448. Confirms vanilla_fast's basin family caps around 454-457.
+Mean=446.7, median=449, max=457. **Gate "≥458" NOT met.**
+
+The two 457 boards are from distinct basins (1.2% cell overlap):
+- t01_s001_d208 seed=1 (bound 464, +7 gap)
+- t00_s002_d207 seed=1 (bound 464, +7 gap)
+
+5 distinct 457 basins now known across project history: vol-18,
+vol-32-seed7, vol-32-seed10, vol-32-seed4-30m, vol-34 #1, vol-34 #2.
+
+Conclusion: vanilla_fast partial basin family reliably reaches 457
+(~3.6% probability per ALNS seed) but DOES NOT reach 458. Vol-32's
+458 record stands.
 
 ## What was measured / kept
 
