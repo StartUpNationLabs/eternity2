@@ -125,3 +125,30 @@ rugged at 6×6/5c, not just under-sampled with short ALNS.
 This refutes vol-35 T1 alternative (a) "stronger super-basin discovery
 via longer ALNS". Path forward: alternatives (b) brute-force LO
 enumeration or (c) larger puzzle size.
+
+## Update — 12×12/8c probe
+
+100 restarts × 30s × 8 thread = ~7 min wall-clock at 12×12/8c.
+
+| Metric | 6×6/5c | 12×12/8c |
+|---|---:|---:|
+| Max edges | 60 | 264 |
+| Max LO score | 54 (90%) | 222 (84%) |
+| Mean LO score | 48.2 | 207.1 |
+| Mean Hamming | 35.4 / 36 (98%) | 143.6 / 144 (99.7%) |
+| Clusters (H≤25) | 100/100 | 100/100 |
+| FDC r | -0.031 | -0.104 |
+
+**Bigger puzzle has slightly more FDC structure** (r=-0.104 vs -0.031).
+Still small, but consistently signed and an order of magnitude
+larger.
+
+Hypothesis for canonical 16×16/22c: the FDC might be measurable
+(r ~ -0.3 to -0.5). If so, vol-35 should run a 100-restart probe
+at canonical size with ~5min ALNS budget. That'd be 100 × 5min / 8
+= ~1 hr compute. Worth doing in vol-35.
+
+If canonical FDC is meaningful (r << 0), then there IS a big-valley
+structure at 16×16 — operators that navigate toward high-score LOs
+SHOULD be effective. The vol-32 458 record is potentially the "tip"
+of such a valley.
