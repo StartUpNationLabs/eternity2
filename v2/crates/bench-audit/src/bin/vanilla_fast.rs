@@ -180,6 +180,24 @@ fn main() {
     let nonempty = bucket_lens.iter().filter(|&&l| l > 0).count();
     eprintln!("[init] max bucket: {}, non-empty: {}/{}", max_b, nonempty, total_keys);
 
+    // Bucket sort: within each bucket, sort entries by piece-id RARITY (descending).
+    // Pieces appearing in fewer buckets are less likely to be already placed.
+    // Heuristic: rare pieces first → 'used' check fails earlier → fewer iterations on avg.
+    let mut pid_global_count: [u32; N_PIECES] = [0; N_PIECES];
+    for &entry in &bucket_data {
+        pid_global_count[(entry >> 12) as usize] += 1;
+    }
+    for pos in 0..N_POS {
+        for key in 0..NW_KEYS {
+            let idx = pos * NW_KEYS + key;
+            let start = bucket_starts[idx] as usize;
+            let end = bucket_starts[idx + 1] as usize;
+            if end - start <= 1 { continue; }
+            bucket_data[start..end].sort_by_key(|&e| pid_global_count[(e >> 12) as usize]);
+        }
+    }
+    eprintln!("[init] buckets sorted by pid rarity (ascending count = rare first)");
+
     // Hint table: hint_at[pos] = Some(packed_entry) for hint positions, None otherwise.
     // When pin_hints is true, at hint positions we ONLY consider the hint entry.
     let mut hint_at: Vec<Option<u32>> = vec![None; N_POS];
