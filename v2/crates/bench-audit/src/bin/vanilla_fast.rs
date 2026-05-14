@@ -67,6 +67,8 @@ fn main() {
     let mut budget_ms: u64 = 10_000;
     let mut puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
     let mut want_solve = false;
+    let mut pin_hints = false;
+    let mut save_best: Option<PathBuf> = None;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -74,11 +76,13 @@ fn main() {
             "--budget-ms" => { budget_ms = raw[i + 1].parse().expect("budget"); i += 2; }
             "--puzzle" => { puzzle_path = PathBuf::from(&raw[i + 1]); i += 2; }
             "--solve" => { want_solve = true; i += 1; }
+            "--pin-hints" => { pin_hints = true; i += 1; }
+            "--save-best" => { save_best = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             other => panic!("unknown arg: {other}"),
         }
     }
 
-    let (puzzle, _hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
+    let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
     assert_eq!(puzzle.width as usize, N);
     assert_eq!(puzzle.height as usize, N);
 
@@ -176,6 +180,26 @@ fn main() {
     let nonempty = bucket_lens.iter().filter(|&&l| l > 0).count();
     eprintln!("[init] max bucket: {}, non-empty: {}/{}", max_b, nonempty, total_keys);
 
+    // Hint table: hint_at[pos] = Some(packed_entry) for hint positions, None otherwise.
+    // When pin_hints is true, at hint positions we ONLY consider the hint entry.
+    let mut hint_at: Vec<Option<u32>> = vec![None; N_POS];
+    if pin_hints {
+        for h in hints.hints.iter() {
+            let pos = h.position as usize;
+            let pid = h.piece_id;
+            let rot = h.rotation.as_u8();
+            // Find the matching piece_rot to pack
+            let pr = piece_rots.iter()
+                .find(|pr| pr.piece_id == pid && pr.rot == rot)
+                .expect("hint piece+rot not found");
+            hint_at[pos] = Some(pack_entry(pr.piece_id, pr.rot, pr.s, pr.e));
+        }
+        eprintln!("[init] {} hints pinned: {:?}",
+            hint_at.iter().filter(|h| h.is_some()).count(),
+            hint_at.iter().enumerate().filter_map(|(p, h)| h.map(|_| p)).collect::<Vec<_>>(),
+        );
+    }
+
     // Search state — keep per-depth packed entry chosen + cursor into that bucket.
     let mut chosen: Vec<u32> = vec![0u32; N_POS];  // packed entries
     let mut frame_cursor: Vec<u32> = vec![0u32; N_POS + 1];
@@ -183,6 +207,27 @@ fn main() {
     let mut bucket_end_at_depth: Vec<u32> = vec![0u32; N_POS];
     // `used` as plain bool array — faster than bitmask on M1 because single-byte loads.
     let mut used: [bool; N_PIECES] = [false; N_PIECES];
+
+    // Hint pool: bucket_data-like vec where hint positions get their own (single-entry)
+    // bucket. We append all hint entries to bucket_data, and override
+    // bucket_starts/end logic to point here for hint positions.
+    let hint_pool_start = bucket_data.len() as u32;
+    for h in &hint_at {
+        if let Some(entry) = h {
+            bucket_data.push(*entry);
+        }
+    }
+    // hint_entry_idx[pos] = index into bucket_data where this hint's entry lives, or u32::MAX if no hint.
+    let mut hint_entry_idx: Vec<u32> = vec![u32::MAX; N_POS];
+    {
+        let mut idx = hint_pool_start;
+        for (pos, h) in hint_at.iter().enumerate() {
+            if h.is_some() {
+                hint_entry_idx[pos] = idx;
+                idx += 1;
+            }
+        }
+    }
 
     let t0 = Instant::now();
     let deadline = t0 + std::time::Duration::from_millis(budget_ms);
@@ -193,6 +238,10 @@ fn main() {
     let mut solved_count: u64 = 0;
     // Per-depth placement counter for profiling distribution
     let mut depth_placements: [u64; N_POS + 1] = [0u64; N_POS + 1];
+    // Best-partial tracking: track deepest depth and save the chosen[] snapshot.
+    let mut best_depth: u32 = 0;
+    let mut best_chosen: Vec<u32> = vec![0u32; N_POS];
+    let mut best_score: u32 = 0;  // matched edges
 
     let mut depth: usize = 0;
 
@@ -203,6 +252,9 @@ fn main() {
     // On backtrack to depth d: reuse stored bucket, advance frame_cursor.
 
     // Helper: enter depth d freshly (compute bucket).
+    // If this position has a hint, override bucket to single hint entry —
+    // BUT only if the hint's (N, W) edges match the current state. If not, the
+    // hint is incompatible with the partial → empty bucket → immediate backtrack.
     macro_rules! enter_fresh {
         ($d:expr) => {{
             let d = $d;
@@ -217,11 +269,34 @@ fn main() {
             } else {
                 entry_e(chosen[pos - 1])
             };
-            let key = (n_color as usize) * N_COLORS + (w_color as usize);
-            let bkt_idx = pos * NW_KEYS + key;
-            bucket_start_at_depth[d] = bucket_starts[bkt_idx];
-            bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
-            frame_cursor[d] = bucket_starts[bkt_idx];
+            let hint_idx = hint_entry_idx[pos];
+            if hint_idx != u32::MAX {
+                // This is a hint position — try only the hint entry if its (N, W) match.
+                let hint_entry = bucket_data[hint_idx as usize];
+                // Decode the hint's N, W from piece_rots. To save time, we stash
+                // (N, W) in upper bits of the packed entry — but we packed only S, E.
+                // So we look up by piece_id+rot in the original piece_rots table.
+                // Note: hint pieces are rare (5 cells); the table lookup is fine.
+                let hint_pid = entry_piece_id(hint_entry);
+                let hint_rot = entry_rot(hint_entry);
+                let pr = &piece_rots[hint_pid as usize * N_ROT + hint_rot as usize];
+                if pr.n == n_color && pr.w == w_color {
+                    bucket_start_at_depth[d] = hint_idx;
+                    bucket_end_at_depth[d] = hint_idx + 1;
+                    frame_cursor[d] = hint_idx;
+                } else {
+                    // Hint incompatible with current N/W — force empty bucket
+                    bucket_start_at_depth[d] = 0;
+                    bucket_end_at_depth[d] = 0;
+                    frame_cursor[d] = 0;
+                }
+            } else {
+                let key = (n_color as usize) * N_COLORS + (w_color as usize);
+                let bkt_idx = pos * NW_KEYS + key;
+                bucket_start_at_depth[d] = bucket_starts[bkt_idx];
+                bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
+                frame_cursor[d] = bucket_starts[bkt_idx];
+            }
         }};
     }
 
@@ -257,6 +332,9 @@ fn main() {
             depth += 1;
             if depth as u32 > max_depth {
                 max_depth = depth as u32;
+                // Snapshot deepest partial
+                best_chosen.copy_from_slice(&chosen);
+                best_depth = max_depth;
             }
             if depth == N_POS {
                 solved_count += 1;
@@ -307,5 +385,68 @@ fn main() {
         if sum > 0 {
             eprintln!("  d={:>3}-{:>3}: {:>15} ({:>5.1}%)", lo, hi, sum, sum as f64 * 100.0 / total_placements as f64);
         }
+    }
+
+    // Compute matched edges on the best partial.
+    // For each placed cell, check right and down edges against neighbours (if placed too).
+    let mut matched_internal = 0u32;
+    let mut matched_border = 0u32;
+    for pos in 0..best_depth as usize {
+        let entry = best_chosen[pos];
+        let pid = entry_piece_id(entry) as usize;
+        let rot = entry_rot(entry) as usize;
+        let pr = &piece_rots[pid * N_ROT + rot];
+        // East match (if right neighbour placed)
+        let x = pos % N;
+        let y = pos / N;
+        if x + 1 < N {
+            let np = pos + 1;
+            if (np as u32) < best_depth {
+                let np_entry = best_chosen[np];
+                let np_pr = &piece_rots[entry_piece_id(np_entry) as usize * N_ROT + entry_rot(np_entry) as usize];
+                if pr.e == np_pr.w { matched_internal += 1; }
+            }
+        }
+        // South match
+        if y + 1 < N {
+            let np = pos + N;
+            if (np as u32) < best_depth {
+                let np_entry = best_chosen[np];
+                let np_pr = &piece_rots[entry_piece_id(np_entry) as usize * N_ROT + entry_rot(np_entry) as usize];
+                if pr.s == np_pr.n { matched_internal += 1; }
+            }
+        }
+        // Border edges — count border-meets-border matches as matched
+        if y == 0 && pr.n == BORDER { matched_border += 1; }
+        if x == N - 1 && pr.e == BORDER { matched_border += 1; }
+        if y == N - 1 && pr.s == BORDER { matched_border += 1; }
+        if x == 0 && pr.w == BORDER { matched_border += 1; }
+    }
+    best_score = matched_internal + matched_border;
+    eprintln!("[best-partial] depth={} matched_internal={} matched_border={} matched_total={}/480",
+        best_depth, matched_internal, matched_border, best_score);
+
+    // Save best partial if requested
+    if let Some(path) = save_best {
+        let mut placement: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+        for pos in 0..best_depth as usize {
+            let e = best_chosen[pos];
+            placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
+        }
+        // Write pt_e2-format JSON
+        let mut json = String::from("{\"placement\": [");
+        for (i, p) in placement.iter().enumerate() {
+            if i > 0 { json.push(','); }
+            match p {
+                None => json.push_str("null"),
+                Some((pid, rot)) => json.push_str(&format!("{{\"piece_id\":{},\"rotation\":{}}}", pid, rot)),
+            }
+        }
+        json.push_str("]}");
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        std::fs::write(&path, json).expect("write save-best");
+        eprintln!("[saved] best partial → {}", path.display());
     }
 }
