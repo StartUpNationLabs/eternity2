@@ -183,6 +183,46 @@ The "1 rotation fixup" reachable from cluster B comes only AFTER
 applying the 191-cycle σ-permutation — it's a different piece
 arrangement, not the current one.
 
+## VOL-35 CRITICAL BUG DISCOVERY (amendment)
+
+**Late vol-35 finding (post-σ-cycle analysis)**: 5 of the 8 records
+claimed in vol-34 and vol-35 are INVALID — they have duplicate
+pieces (180, 248) caused by a vanilla_fast `--pin-hints` snapshot
+writer bug.
+
+**The bug**: when the algorithm hasn't reached a hint position
+(e.g., pos 210, 221) but has placed the hint piece (180, 248)
+elsewhere via the bucket-shuffle ordering, the snapshot writer
+unconditionally fills the hint slot — creating a duplicate piece.
+
+**Affected records**:
+- vol-34 `REAL_RECORD_TIE_457_vol34_t1signal_seed1`: INVALID (180, 248 dup)
+- vol-34 `RECORD_TIE_457_vol34_t3_t01_seed1`: INVALID
+- vol-35 `RECORD_TIE_457_vol35_family255_seed{1,10}`: INVALID
+- vol-35 `RECORD_TIE_457_vol35_family255_ops_full_seed5`: INVALID
+
+**Valid records (post-fix)**:
+- vol-32 458 vanilla_fast_alns ✓
+- vol-32 457 × 3 (blackwood s7, s10, s4) ✓
+- vol-35 458 deep_458_winning5_seed5 (byte-identical to vol-32 458) ✓
+
+**Fix**: snapshot writer now checks already-placed pieces before
+filling hint slots. `ml/verify_records.sh` now checks piece-uniqueness.
+
+## Amendment to σ-cycle finding
+
+With the bogus records removed, the "5 distinct 457 clusters" claim
+becomes "3 valid clusters" (A, A', B) — all in the 458 piece-multiset
+family. The previous claim of clusters C, D, E being "different families"
+was an artifact of the duplicate-piece bug: their piece-multisets had
+180 and 248 twice (not unique), so the σ-cycle code couldn't even
+compute distances (panicked at "piece has oracle pos").
+
+**Corrected geometry**: all VALID known 457 boards are in the 458
+piece-multiset family. The 458 family is the dominant E2 attractor
+in our search. Cross-cluster consensus claim should be re-tested
+with valid boards only.
+
 ## Vol-36 follow-up
 
 - Run K=6, K=8, K=10 operator-lock test on the 5 distinct

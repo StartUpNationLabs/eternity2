@@ -437,9 +437,18 @@ fn main() {
                                 snap[p_i] = Some((entry_piece_id(e), entry_rot(e)));
                             }
                             if pin_hints {
+                                // VOL-35 BUG FIX: only fill the hint slot if the
+                                // hint piece is not already placed elsewhere.
+                                // Otherwise we'd write a duplicate piece into the
+                                // snapshot when the algorithm has the hint piece
+                                // placed at some non-hint position but hasn't
+                                // reached the hint position yet.
+                                let already_placed: std::collections::HashSet<u16> = snap.iter()
+                                    .filter_map(|s| s.map(|(pid, _)| pid))
+                                    .collect();
                                 for h in hints.hints.iter() {
                                     let pp = h.position as usize;
-                                    if snap[pp].is_none() {
+                                    if snap[pp].is_none() && !already_placed.contains(&h.piece_id) {
                                         snap[pp] = Some((h.piece_id, h.rotation.as_u8()));
                                     }
                                 }
