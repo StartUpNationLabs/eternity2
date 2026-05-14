@@ -50,6 +50,28 @@ Remaining aged items:
 NEW vol-32 items pickable for vol-33:
 - `unsat-clause-propagator-prototype` (Python prototype shipped) — **PICKED, becomes T1**.
 - `insertion-order-under-joe-depth150-bp` (partial) — **PICKED, becomes T3**.
+- `blackwood-raw-mrv-record-tie` (NEW vol-32 finding) — **PICKED, becomes T2 (priority bumped)**.
+
+## Priority update at vol-32 close (05:50)
+
+**Vol-32's blackwood_raw + MRV → 457 record tie** changes the priority
+ordering. The original VOL-33 plan put the unsat-propagator first (T1)
+because we hadn't yet discovered the blackwood_raw route. After vol-32:
+
+- The fastest known route to 457 = 10 min compute (vs vol-18's hours).
+- 3 distinct 457 boards saved, basin family characterised (bounds 457-465).
+- All operator attempts to push past 457 failed (54+ runs).
+
+Vol-33 T2 (NEW priority) should be **building operators that can push
+past the 457 basin family**, since the blackwood_raw_mrv → 457 route
+is now reliable. Concretely:
+- Houdayer-on-ALNS-side (currently only PT has Houdayer cluster moves).
+- Per-step bound-floor ALNS (BACKLOG item, partial).
+- Larger-radius ConflictDriven (k=120+ to escape 457's structure).
+- ALNS warm-restart from bound-ascent-perturbed configs.
+
+The unsat-propagator (T1) is still valuable for CP-depth — but the
+score-axis blocker is operator engineering, not CP depth.
 
 ## Binding items (3 max)
 
