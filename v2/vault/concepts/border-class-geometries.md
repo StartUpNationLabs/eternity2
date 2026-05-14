@@ -77,6 +77,31 @@ Cluster-repair MIP on vol-32 RECORD_TIE_457_blackwood_mrv_5min_seed7
 
 **Class B is also locally optimal under MIP-exact cluster repair.**
 
+## Class A and B boards are nearly disjoint (measured)
+
+Board diff between vol-32 458 (class A) and vol-32 457 s7 (class B):
+
+| Metric | Value |
+|---|---:|
+| Same (pos, piece, rotation) | **7 / 256** |
+| Same pos, same piece, diff rotation | 0 |
+| Same pos, diff piece | 249 |
+| Perimeter same | 3 / 60 |
+| Interior same | 4 / 196 |
+
+| Region | Pieces in common (out of 56-70) |
+|---|---:|
+| Perim horiz | 17 / 32 (53%) |
+| Perim vert | 13 / 28 (46%) |
+| Top (rows 1-4) | 18 / 56 (32%) |
+| Mid (rows 5-9) | 23 / 70 (33%) |
+| Bot (rows 10-14) | 28 / 70 (40%) |
+
+**A and B are nearly disjoint boards**, sharing only 7/256 = 2.7% of
+positions exactly. They are NOT two arrangements of the same border.
+Cross-class graft via "copy regions" is therefore non-trivial: the
+piece sets in any one row don't even overlap that much.
+
 ## Combined conclusion (classes A and B)
 
 Both basin classes A (UB 478, integer 458) and B (UB 477, integer 457)
