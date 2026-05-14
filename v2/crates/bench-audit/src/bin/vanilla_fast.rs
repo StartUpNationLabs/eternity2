@@ -629,9 +629,16 @@ fn main() {
                 placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
             }
             if pin_hints {
+                // VOL-35 BUG FIX (same as snapshot path): don't fill hint
+                // slot if the hint piece is already placed elsewhere; that
+                // produces duplicate-piece boards.
+                let already_placed: std::collections::HashSet<u16> = placement
+                    .iter()
+                    .filter_map(|s| s.map(|(pid, _)| pid))
+                    .collect();
                 for h in hints.hints.iter() {
                     let pos = h.position as usize;
-                    if placement[pos].is_none() {
+                    if placement[pos].is_none() && !already_placed.contains(&h.piece_id) {
                         placement[pos] = Some((h.piece_id, h.rotation.as_u8()));
                     }
                 }
@@ -669,10 +676,16 @@ fn main() {
         // even if they're at positions beyond max_depth — otherwise downstream
         // ALNS will fill those positions with non-hint pieces, producing
         // boards that violate canonical 5-clue constraints.
+        // VOL-35 BUG FIX: don't fill hint slot if the hint piece is already
+        // placed elsewhere; that produces duplicate-piece boards.
         if pin_hints {
+            let already_placed: std::collections::HashSet<u16> = placement
+                .iter()
+                .filter_map(|s| s.map(|(pid, _)| pid))
+                .collect();
             for h in hints.hints.iter() {
                 let pos = h.position as usize;
-                if placement[pos].is_none() {
+                if placement[pos].is_none() && !already_placed.contains(&h.piece_id) {
                     placement[pos] = Some((h.piece_id, h.rotation.as_u8()));
                 }
             }
