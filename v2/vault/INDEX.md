@@ -45,7 +45,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  29 |             457 |       — | [[learned-value-order]] distribution-matched imitation hits the teacher ceiling — Δ=−1 with −35% nodes, −37% backtracks at iso-depth (gate PASS at match condition) |                               |
 |  30 |             457 |       — | ~~[[learned-value-order]] +9 depth lift from LearnedOnTies~~ **REFUTED vol-32** — bug at lib.rs:2550 caused LOT to silently fall through to InsertionOrder; model never called |                               |
 |  31 |             457 |       — | ~~[[learned-value-order]] +10/+8 score lift~~ **MIS-ATTRIBUTED vol-32** — the "depth-174 ML partial" was actually an InsertionOrder partial; real numbers but wrong attribution |                               |
-|  32 |             457 |       — | [[learned-value-order]] **vol-30/31 BUG DISCOVERED**: cell_side_edge initializer missed LearnedOnTies. Fix `95978a5`. True LOT depth = 165 (Δ=0), edges +3. NEW: [[unsat-clause-propagator]] Python prototype (130k literals, 53M clauses parsed). Real engine axis: InsertionOrder > EdgeBpMarginals by +9 depth under joe_depth150_bp |                               |
+|  32 |         **458** |       — | **NEW RECORD** via vanilla_fast (125M pp/s, community-class) + ALNS-5min: matched=458/480 (caveat: 2 of 5 canonical hints displaced). Also: vol-30/31 BUG DISCOVERED, [[unsat-clause-propagator]] prototype, blackwood_raw+MRV cold-start tied 457 in 10min |                               |
 
 
 ## Concepts — by category

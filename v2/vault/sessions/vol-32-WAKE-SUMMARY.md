@@ -54,6 +54,46 @@ See `vault/sessions/vol-32-457-record-tie.md` for full experiment list.
 
 ---
 
+## 🚨 MORNING UPDATE (07:30-08:10) — 458/480 NEW RECORD
+
+Morning push achieved:
+1. **vanilla_fast bin shipped** — 125M pp/s single-thread (community
+   speed range, Yendor 97M / Razvan 140M). 8-thread mode: 577M
+   aggregate pp/s. See `vault/sessions/vol-32-458-NEW-RECORD.md`.
+2. **vanilla_fast → ALNS gave 458/480** (seed 5 of 8-seed lottery) —
+   **+1 over all-time record**.
+3. **Caveat**: 2 of 5 canonical hints displaced (cells 210, 221).
+   User accepts: matched-edges on canonical piece set is the
+   achievement.
+4. **Fix shipped**: vanilla_fast --pin-hints now always includes
+   all 5 hints in saved partial regardless of max_depth.
+5. **vanilla_fastest** (unsafe variant): same throughput as safe
+   (LLVM already at optimization ceiling).
+
+**Morning lottery attempts** (post-458):
+- 8 ALNS seeds × 5min from 458 board (winning5): all 458 (basin lock)
+- 4 ALNS ops variants (mega, full, hingeonly, componentonly): all 458
+- Bound-ascent from 458: found b463-464 configs (higher bounds)
+- ALNS recovery from b463/b464: 452, 456, 456 (recipe doesn't bridge)
+
+**Verdict**: 458 stands. 459+ needs algorithmic propagation
+(unsat-propagator) or fundamentally different operators.
+
+**Bucas URL**: see `output/vol-32/RECORD_BREAK_458_vanilla_fast_alns.url.txt`.
+
+---
+
+## NEXT VOLUMES (split per user)
+
+- **VOL-33**: code quality refactor (vol-25 items, 8 vols deferred).
+  Pure refactor — extract-eternity2-time/export/puzzle-io crates,
+  split solver-engine lib, consolidate bin harness.
+- **VOL-34**: throughput exploitation + record chase.
+  Hour-long vanilla_fast probes, unsat-clause-propagator Rust
+  integration, mass ALNS lottery from 100 partials.
+
+---
+
 ## What happened tonight
 
 ### 1. The original ML plan was invalidated (early on)
