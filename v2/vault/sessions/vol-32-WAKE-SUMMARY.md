@@ -73,10 +73,22 @@ reproduction). **−1 from all-time record.**
 - **15min extension** from seed 2's 456 board (seed 100, 900s): 600 iters, 0 improvements past 456.
 
 Two distinct 456 basins (58/256 cells differ between them), both
-are stable local optima under winning5 ALNS. Breaking 456→457
-requires: different ALNS ops (k=80 ConflictDriven, HingeDestroy,
-Houdayer-on-ALNS), PT with higher temperatures, or vol-22's
-basin-escape recipe (bound-ascent + Hungarian + ALNS over hours).
+are stable local optima.
+
+**ALNS operator portfolio is structurally insufficient to break 456:**
+Tested 8 different ALNS ops presets (basic, full, mega, mega_mix,
+cdonly, componentonly, hingeonly, wbonly) on seed 2's 456 board ×
+5min each. **ALL 8 → 456 exactly, 0 lifts past starting score.**
+That covers every operator subset our codebase exposes, including
+the strong ones (k=80 ConflictDriven, full HingeDestroy + ComponentDestroy
++ WorstRow, MegaBand, etc.).
+
+PT high-T (T_max=4.0, 8-rep + Houdayer-every-5 + kick-every-10, 5min)
+was the final attempt — see t12_pt_hot_from_456 logs.
+
+Breaking 456→457 requires vol-22's basin-escape recipe (bound-ascent
++ Hungarian + multi-hour ALNS), a fundamentally different starting
+partial, or new operator engineering. Vol-33 work.
 
 Boards saved at `output/vol-32/blackwood_raw_alns_seed{2,4}_456.json`.
 
