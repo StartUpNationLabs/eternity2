@@ -22,12 +22,9 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, PieceId, Rotation, BORDER};
 use rayon::prelude::*;
 
-const N: usize = 16;
-const N_POS: usize = N * N;
-const N_PIECES: usize = 256;
+// Vol-35 — n, n_pos, n_pieces, n_colors, nw_keys are read at runtime from
+// the puzzle file. Only N_ROT (4) is compile-time constant.
 const N_ROT: usize = 4;
-const N_COLORS: usize = 23;  // 0=border, 1..22 interior
-const NW_KEYS: usize = N_COLORS * N_COLORS;  // 529
 
 // Packed candidate entry: (piece_id : 9 bits | rot : 2 | S : 5 | E : 5) — fits in u32.
 // We don't need N, W in the entry (those are the bucket key).
@@ -47,13 +44,13 @@ fn entry_s(p: u32) -> u8 { ((p >> 5) & 0x1f) as u8 }
 fn entry_e(p: u32) -> u8 { (p & 0x1f) as u8 }
 
 #[inline(always)]
-fn need_north_border(pos: usize) -> bool { pos < N }
+fn need_north_border(pos: usize, n: usize) -> bool { pos < n }
 #[inline(always)]
-fn need_west_border(pos: usize) -> bool { pos % N == 0 }
+fn need_west_border(pos: usize, n: usize) -> bool { pos % n == 0 }
 #[inline(always)]
-fn need_south_border(pos: usize) -> bool { pos >= N_POS - N }
+fn need_south_border(pos: usize, n: usize, n_pos: usize) -> bool { pos >= n_pos - n }
 #[inline(always)]
-fn need_east_border(pos: usize) -> bool { pos % N == N - 1 }
+fn need_east_border(pos: usize, n: usize) -> bool { pos % n == n - 1 }
 
 fn rotate_edges(e: [u8; 4], r: u8) -> [u8; 4] {
     // CSV stores [top, right, bottom, left]
@@ -114,8 +111,17 @@ fn main() {
     }
 
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
-    assert_eq!(puzzle.width as usize, N);
-    assert_eq!(puzzle.height as usize, N);
+    let n: usize = puzzle.width as usize;
+    assert_eq!(puzzle.height as usize, n, "puzzle must be square");
+    let n_pos: usize = n * n;
+    let n_pieces: usize = puzzle.pieces().len();
+    let n_colors: usize = puzzle.color_count as usize;
+    let nw_keys: usize = n_colors * n_colors;
+    eprintln!(
+        "[init] sizes: n={n}, n_pos={n_pos}, n_pieces={n_pieces}, n_colors={n_colors}"
+    );
+    assert!(n_pieces <= 512, "piece_id needs ≤ 9 bits");
+    assert!(n_colors <= 32, "S/E colors need ≤ 5 bits");
 
     // Build per-piece rotation tables temporarily.
     #[derive(Copy, Clone)]
@@ -127,8 +133,8 @@ fn main() {
         s: u8,
         w: u8,
     }
-    let mut piece_rots: Vec<PieceRot> = Vec::with_capacity(N_PIECES * N_ROT);
-    for pid in 0..N_PIECES as u16 {
+    let mut piece_rots: Vec<PieceRot> = Vec::with_capacity(n_pieces * N_ROT);
+    for pid in 0..n_pieces as u16 {
         let p = puzzle.piece(pid).expect("piece");
         let base = p.edges.as_array();
         for r in 0..N_ROT as u8 {
@@ -141,21 +147,21 @@ fn main() {
     }
 
     // For each pos, group candidates by (N, W) into a contiguous slice.
-    // Layout: bucket_data is one big Vec<u32>. bucket_starts[pos * NW_KEYS + key] gives
-    // start index; bucket_lens stores length. Both indexed by pos * NW_KEYS + key.
+    // Layout: bucket_data is one big Vec<u32>. bucket_starts[pos * nw_keys + key] gives
+    // start index; bucket_lens stores length. Both indexed by pos * nw_keys + key.
     // Total entries: ~157k (avg 600 candidates/pos × 256 pos / ~600 keys/pos coverage)
     // But many (pos, key) pairs are empty. We pre-compute per-(pos,key) the candidate slice.
-    let total_keys = N_POS * NW_KEYS;
+    let total_keys = n_pos * nw_keys;
     let mut bucket_starts: Vec<u32> = vec![0; total_keys + 1];
     let mut bucket_lens: Vec<u16> = vec![0; total_keys];
 
     // First pass: count.
     let mut counts: Vec<u32> = vec![0; total_keys];
-    for pos in 0..N_POS {
-        let need_n_border = need_north_border(pos);
-        let need_e_border = need_east_border(pos);
-        let need_s_border = need_south_border(pos);
-        let need_w_border = need_west_border(pos);
+    for pos in 0..n_pos {
+        let need_n_border = need_north_border(pos, n);
+        let need_e_border = need_east_border(pos, n);
+        let need_s_border = need_south_border(pos, n, n_pos);
+        let need_w_border = need_west_border(pos, n);
         for pr in piece_rots.iter() {
             let n_is_border = pr.n == BORDER;
             let e_is_border = pr.e == BORDER;
@@ -165,8 +171,8 @@ fn main() {
             if e_is_border != need_e_border { continue; }
             if s_is_border != need_s_border { continue; }
             if w_is_border != need_w_border { continue; }
-            let key = (pr.n as usize) * N_COLORS + (pr.w as usize);
-            counts[pos * NW_KEYS + key] += 1;
+            let key = (pr.n as usize) * n_colors + (pr.w as usize);
+            counts[pos * nw_keys + key] += 1;
         }
     }
     // Prefix-sum into bucket_starts
@@ -183,11 +189,11 @@ fn main() {
 
     // Second pass: fill, using counts as cursors
     let mut cursor: Vec<u32> = bucket_starts.clone();
-    for pos in 0..N_POS {
-        let need_n_border = need_north_border(pos);
-        let need_e_border = need_east_border(pos);
-        let need_s_border = need_south_border(pos);
-        let need_w_border = need_west_border(pos);
+    for pos in 0..n_pos {
+        let need_n_border = need_north_border(pos, n);
+        let need_e_border = need_east_border(pos, n);
+        let need_s_border = need_south_border(pos, n, n_pos);
+        let need_w_border = need_west_border(pos, n);
         for pr in piece_rots.iter() {
             let n_is_border = pr.n == BORDER;
             let e_is_border = pr.e == BORDER;
@@ -197,8 +203,8 @@ fn main() {
             if e_is_border != need_e_border { continue; }
             if s_is_border != need_s_border { continue; }
             if w_is_border != need_w_border { continue; }
-            let key = (pr.n as usize) * N_COLORS + (pr.w as usize);
-            let idx = pos * NW_KEYS + key;
+            let key = (pr.n as usize) * n_colors + (pr.w as usize);
+            let idx = pos * nw_keys + key;
             let dst = cursor[idx] as usize;
             bucket_data[dst] = pack_entry(pr.piece_id, pr.rot, pr.s, pr.e);
             cursor[idx] += 1;
@@ -214,13 +220,13 @@ fn main() {
     // Bucket sort: within each bucket, sort entries by piece-id RARITY (descending).
     // Pieces appearing in fewer buckets are less likely to be already placed.
     // Heuristic: rare pieces first → 'used' check fails earlier → fewer iterations on avg.
-    let mut pid_global_count: [u32; N_PIECES] = [0; N_PIECES];
+    let mut pid_global_count: Vec<u32> = vec![0u32; n_pieces];
     for &entry in &bucket_data {
         pid_global_count[(entry >> 12) as usize] += 1;
     }
-    for pos in 0..N_POS {
-        for key in 0..NW_KEYS {
-            let idx = pos * NW_KEYS + key;
+    for pos in 0..n_pos {
+        for key in 0..nw_keys {
+            let idx = pos * nw_keys + key;
             let start = bucket_starts[idx] as usize;
             let end = bucket_starts[idx + 1] as usize;
             if end - start <= 1 { continue; }
@@ -231,7 +237,7 @@ fn main() {
 
     // Hint table: hint_at[pos] = Some(packed_entry) for hint positions, None otherwise.
     // When pin_hints is true, at hint positions we ONLY consider the hint entry.
-    let mut hint_at: Vec<Option<u32>> = vec![None; N_POS];
+    let mut hint_at: Vec<Option<u32>> = vec![None; n_pos];
     if pin_hints {
         for h in hints.hints.iter() {
             let pos = h.position as usize;
@@ -259,7 +265,7 @@ fn main() {
         }
     }
     // hint_entry_idx[pos] = index into bucket_data where this hint's entry lives, or u32::MAX if no hint.
-    let mut hint_entry_idx: Vec<u32> = vec![u32::MAX; N_POS];
+    let mut hint_entry_idx: Vec<u32> = vec![u32::MAX; n_pos];
     {
         let mut idx = hint_pool_start;
         for (pos, h) in hint_at.iter().enumerate() {
@@ -310,9 +316,9 @@ fn main() {
                 *state
             };
             // Fisher-Yates per bucket
-            for pos in 0..N_POS {
-                for key in 0..NW_KEYS {
-                    let idx = pos * NW_KEYS + key;
+            for pos in 0..n_pos {
+                for key in 0..nw_keys {
+                    let idx = pos * nw_keys + key;
                     let start = bucket_starts[idx] as usize;
                     let end = bucket_starts[idx + 1] as usize;
                     let len = end - start;
@@ -326,19 +332,19 @@ fn main() {
         }
 
         // Per-thread search state
-        let mut chosen: Vec<u32> = vec![0u32; N_POS];
-        let mut frame_cursor: Vec<u32> = vec![0u32; N_POS + 1];
-        let mut bucket_start_at_depth: Vec<u32> = vec![0u32; N_POS];
-        let mut bucket_end_at_depth: Vec<u32> = vec![0u32; N_POS];
-        let mut used: [bool; N_PIECES] = [false; N_PIECES];
+        let mut chosen: Vec<u32> = vec![0u32; n_pos];
+        let mut frame_cursor: Vec<u32> = vec![0u32; n_pos + 1];
+        let mut bucket_start_at_depth: Vec<u32> = vec![0u32; n_pos];
+        let mut bucket_end_at_depth: Vec<u32> = vec![0u32; n_pos];
+        let mut used: Vec<bool> = vec![false; n_pieces];
 
         let mut total_placements: u64 = 0;
         let mut total_backtracks: u64 = 0;
         let mut max_depth: u32 = 0;
         let mut solved_count: u64 = 0;
-        let mut depth_placements: Vec<u64> = vec![0u64; N_POS + 1];
+        let mut depth_placements: Vec<u64> = vec![0u64; n_pos + 1];
         let mut best_depth: u32 = 0;
-        let mut best_chosen: Vec<u32> = vec![0u32; N_POS];
+        let mut best_chosen: Vec<u32> = vec![0u32; n_pos];
 
         // Vol-34 T1 — periodic deep-partial snapshots
         let mut last_snapshot_ms: u64 = 0;
@@ -351,8 +357,8 @@ fn main() {
             ($d:expr) => {{
                 let d = $d;
                 let pos = d;
-                let n_color = if pos < N { BORDER } else { entry_s(chosen[pos - N]) };
-                let w_color = if pos % N == 0 { BORDER } else { entry_e(chosen[pos - 1]) };
+                let n_color = if pos < n { BORDER } else { entry_s(chosen[pos - n]) };
+                let w_color = if pos % n == 0 { BORDER } else { entry_e(chosen[pos - 1]) };
                 let hint_idx = hint_entry_idx[pos];
                 if hint_idx != u32::MAX {
                     let hint_entry = my_bucket_data[hint_idx as usize];
@@ -369,8 +375,8 @@ fn main() {
                         frame_cursor[d] = 0;
                     }
                 } else {
-                    let key = (n_color as usize) * N_COLORS + (w_color as usize);
-                    let bkt_idx = pos * NW_KEYS + key;
+                    let key = (n_color as usize) * n_colors + (w_color as usize);
+                    let bkt_idx = pos * nw_keys + key;
                     bucket_start_at_depth[d] = bucket_starts[bkt_idx];
                     bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
                     frame_cursor[d] = bucket_starts[bkt_idx];
@@ -431,7 +437,7 @@ fn main() {
                             // current chosen since we just copied). For on-visit
                             // snapshots use chosen directly.
                             let src = if is_new_max { &best_chosen } else { &chosen };
-                            let mut snap: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+                            let mut snap: Vec<Option<(u16, u8)>> = vec![None; n_pos];
                             for p_i in 0..depth_now as usize {
                                 let e = src[p_i];
                                 snap[p_i] = Some((entry_piece_id(e), entry_rot(e)));
@@ -466,7 +472,7 @@ fn main() {
                         }
                     }
                 }
-                if depth == N_POS {
+                if depth == n_pos {
                     solved_count += 1;
                     if want_solve {
                         eprintln!("[t{thread_id}] [solve] FOUND in {} ms", t0.elapsed().as_millis());
@@ -517,9 +523,9 @@ fn main() {
     let solved_count = solved_count_atomic.load(Ordering::Relaxed);
 
     // Aggregate per-depth placements
-    let mut depth_placements: [u64; N_POS + 1] = [0u64; N_POS + 1];
+    let mut depth_placements: Vec<u64> = vec![0u64; n_pos + 1];
     for r in &thread_results {
-        for d in 0..=N_POS {
+        for d in 0..=n_pos {
             depth_placements[d] += r.depth_placements[d];
         }
     }
@@ -551,8 +557,8 @@ fn main() {
 
     // Depth distribution — group by ranges of 20 for readability
     eprintln!("[depth-dist] placements at depth-range:");
-    for lo in (0..N_POS as u32).step_by(20) {
-        let hi = (lo + 19).min(N_POS as u32 - 1);
+    for lo in (0..n_pos as u32).step_by(20) {
+        let hi = (lo + 19).min(n_pos as u32 - 1);
         let sum: u64 = (lo..=hi).map(|d| depth_placements[d as usize]).sum();
         if sum > 0 {
             eprintln!("  d={:>3}-{:>3}: {:>15} ({:>5.1}%)", lo, hi, sum, sum as f64 * 100.0 / total_placements as f64);
@@ -569,9 +575,9 @@ fn main() {
         let rot = entry_rot(entry) as usize;
         let pr = &piece_rots[pid * N_ROT + rot];
         // East match (if right neighbour placed)
-        let x = pos % N;
-        let y = pos / N;
-        if x + 1 < N {
+        let x = pos % n;
+        let y = pos / n;
+        if x + 1 < n {
             let np = pos + 1;
             if (np as u32) < best_depth {
                 let np_entry = best_chosen[np];
@@ -580,8 +586,8 @@ fn main() {
             }
         }
         // South match
-        if y + 1 < N {
-            let np = pos + N;
+        if y + 1 < n {
+            let np = pos + n;
             if (np as u32) < best_depth {
                 let np_entry = best_chosen[np];
                 let np_pr = &piece_rots[entry_piece_id(np_entry) as usize * N_ROT + entry_rot(np_entry) as usize];
@@ -590,8 +596,8 @@ fn main() {
         }
         // Border edges — count border-meets-border matches as matched
         if y == 0 && pr.n == BORDER { matched_border += 1; }
-        if x == N - 1 && pr.e == BORDER { matched_border += 1; }
-        if y == N - 1 && pr.s == BORDER { matched_border += 1; }
+        if x == n - 1 && pr.e == BORDER { matched_border += 1; }
+        if y == n - 1 && pr.s == BORDER { matched_border += 1; }
         if x == 0 && pr.w == BORDER { matched_border += 1; }
     }
     best_score = matched_internal + matched_border;
@@ -614,7 +620,7 @@ fn main() {
     // Save EACH THREAD's best partial as a separate file when --save-best is set + multi-thread.
     if let (true, Some(base_path)) = (threads > 1, save_best.as_ref()) {
         for r in &thread_results {
-            let mut placement: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+            let mut placement: Vec<Option<(u16, u8)>> = vec![None; n_pos];
             for pos in 0..r.max_depth as usize {
                 let e = r.best_chosen[pos];
                 placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
@@ -651,7 +657,7 @@ fn main() {
 
     // Save best partial if requested
     if let Some(path) = save_best {
-        let mut placement: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+        let mut placement: Vec<Option<(u16, u8)>> = vec![None; n_pos];
         for pos in 0..best_depth as usize {
             let e = best_chosen[pos];
             placement[pos] = Some((entry_piece_id(e), entry_rot(e)));
