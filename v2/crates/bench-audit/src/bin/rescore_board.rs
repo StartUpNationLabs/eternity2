@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use eternity2_bench_audit::{placed_count, score_board_dense as score_board};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_core::{Board, PieceId, Rotation};
+use eternity2_localsearch::alns::score_board as ls_score_board;
 use eternity2_solver_trait as _;
 
 
@@ -43,15 +44,19 @@ fn main() {
         eprintln!("usage: rescore_board <board.json> [...]");
         std::process::exit(2);
     }
-    println!("path\tplaced/256\tmatched/480\tpct");
+    println!("path\tplaced/256\tmatched/480\tls_score\tpct");
     for a in &args {
         let p = PathBuf::from(a);
         match load_board(&p, &puzzle) {
             Ok(b) => {
                 let placed = placed_count(&b, &puzzle);
                 let (m, t) = score_board(&puzzle, &b);
+                let ls = ls_score_board(&puzzle, &b);
                 let pct = m as f64 * 100.0 / t as f64;
-                println!("{a}\t{placed}/{}\t{m}/{t}\t{pct:.1}%", puzzle.cell_count());
+                println!(
+                    "{a}\t{placed}/{}\t{m}/{t}\t{ls}\t{pct:.1}%",
+                    puzzle.cell_count()
+                );
             }
             Err(e) => eprintln!("{a}\tERROR: {e}"),
         }
