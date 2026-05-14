@@ -131,6 +131,31 @@ constraint reduces achievable scores by AT LEAST 1 LP-point on
 McGavin's specific border (vol-42's empirical 469 → 444 corresponds
 to integer drop, but LP UB drops by 1 from 478ish to 477).
 
+## vol-32 458 border is locally LP-UB-maximal
+
+Tool: `border_lp_perturb` with `--swaps 5 --seed 1` on
+vol-32 458 board. Each swap: pick two random non-corner perimeter
+positions, swap their pieces (each with the forced rotation
+keeping BORDER outward). Recompute LP UB.
+
+| Swap | (p1, p2) | LP UB | ΔUB |
+|---|---|---:|---:|
+| baseline | — | 478.0 | — |
+| 0 | (242, 16) | 472.5 | **−5.5** |
+| 1 | (241, 243) | 476.0 | −2.0 |
+| 2 | (1, 7) | 475.0 | −3.0 |
+| 3 | (249, 127) | 474.0 | −4.0 |
+| 4 | (242, 2) | 473.0 | −5.0 |
+
+**Every random swap decreases LP UB.** vol-32 458's border is at a
+local maximum of LP UB under 1-swap perturbations.
+
+**Implication**: 1-perturbation search on the border can't improve
+LP UB beyond 478. To find a higher-UB border, we need either:
+- Multi-piece swaps (2+ edge pieces simultaneously).
+- Borders generated from scratch (different CP trajectory).
+- Constrained border-class enumeration.
+
 ## Open questions
 
 - How many distinct LP-UB-478 basins are there in our 4746-board
