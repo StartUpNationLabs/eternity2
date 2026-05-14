@@ -14,6 +14,7 @@ eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
 eternity2-propagators = { path = "../propagators" }
 eternity2-solver-trait = { path = "../solver-trait" }
+eternity2-time = { path = "../time" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 crossbeam-channel = "0.5"
@@ -26,9 +27,6 @@ serde = { version = "1", features = ["derive"] }
 # point at a custom libonnxruntime if needed.
 ort = { version = "=2.0.0-rc.10", default-features = false, features = ["std", "download-binaries", "ndarray"] }
 ndarray = "0.16"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3"
 
 [dev-dependencies]
 eternity2-generator = { path = "../generator" }

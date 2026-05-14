@@ -491,12 +491,14 @@ dependencies = [
  "eternity2-benchmark",
  "eternity2-core",
  "eternity2-events",
+ "eternity2-export",
  "eternity2-generator",
  "eternity2-localsearch",
  "eternity2-propagators",
  "eternity2-sat-encoder",
  "eternity2-solver-engine",
  "eternity2-solver-trait",
+ "rayon",
  "serde",
  "serde_json",
 ]
@@ -509,6 +511,7 @@ dependencies = [
  "eternity2-core",
  "eternity2-edge-solver",
  "eternity2-events",
+ "eternity2-export",
  "eternity2-generator",
  "eternity2-localsearch",
  "eternity2-propagators",
@@ -545,6 +548,15 @@ version = "0.1.0"
 dependencies = [
  "eternity2-core",
  "serde",
+]
+
+[[package]]
+name = "eternity2-export"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -631,7 +643,7 @@ dependencies = [
  "eternity2-generator",
  "eternity2-propagators",
  "eternity2-solver-trait",
- "js-sys",
+ "eternity2-time",
  "ndarray",
  "ort",
  "rayon",
@@ -647,7 +659,7 @@ dependencies = [
  "eternity2-events",
  "eternity2-generator",
  "eternity2-solver-trait",
- "js-sys",
+ "eternity2-time",
 ]
 
 [[package]]
@@ -679,6 +691,13 @@ version = "0.1.0"
 dependencies = [
  "eternity2-core",
  "serde",
+]
+
+[[package]]
+name = "eternity2-time"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
 ]
 
 [[package]]

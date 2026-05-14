@@ -16,9 +16,7 @@ default = []
 eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
 eternity2-solver-trait = { path = "../solver-trait" }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3"
+eternity2-time = { path = "../time" }
 
 [dev-dependencies]
 eternity2-generator = { path = "../generator" }

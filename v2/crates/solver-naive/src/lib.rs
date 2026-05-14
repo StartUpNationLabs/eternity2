@@ -1,8 +1,6 @@
 #![forbid(unsafe_code)]
 
-mod clock;
-
-use clock::Clock;
+use eternity2_time::Clock;
 use eternity2_core::{Board, Color, PathPolicy, PieceId, Position, Puzzle, Rotation, BORDER};
 use eternity2_events::{
     BacktrackCause, EventBody, EventSink, FinalStats, SelectionReason, SolverEvent,

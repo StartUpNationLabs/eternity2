@@ -10,14 +10,12 @@
 
 #![forbid(unsafe_code)]
 
-mod clock;
-
 #[cfg(not(target_arch = "wasm32"))]
 mod bridge;
 
 use std::sync::Arc;
 
-use clock::Clock;
+use eternity2_time::Clock;
 use eternity2_core::{Board, Color, PathPolicy, PieceId, Position, Puzzle, Rotation, BORDER};
 use eternity2_events::{
     BacktrackCause, EventBody, EventSink, FinalStats, SelectionReason, SolverEvent,
