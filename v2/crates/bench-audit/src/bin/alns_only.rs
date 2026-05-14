@@ -133,9 +133,15 @@ fn load_cp_board(path: &std::path::Path) -> Board {
     let (puzzle, _) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
     let mut b = Board::empty(&puzzle);
     if let Some(arr) = v.get("placement").and_then(|x| x.as_array()) {
-        for p in arr {
+        // Two supported formats:
+        // (a) positional: [{piece_id,rotation} | null, ...] — pos = array index
+        // (b) sparse:     [{pos,piece_id,rotation}, ...] — explicit pos field
+        for (idx, p) in arr.iter().enumerate() {
             if p.is_null() { continue; }
-            let pos = p["pos"].as_u64().unwrap() as u32;
+            let pos = match p.get("pos").and_then(|x| x.as_u64()) {
+                Some(v) => v as u32,
+                None => idx as u32, // positional format
+            };
             let pid = p["piece_id"].as_u64().unwrap() as u16;
             let rot_u = p["rotation"].as_u64().unwrap() as u8;
             let rot = Rotation::from_u8(rot_u).unwrap();
