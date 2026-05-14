@@ -85,6 +85,22 @@ If step 5 finds a family with max > 457, that's a record break.
 If not, we've at least mapped the full canonical-E2 basin-family
 landscape (a real scientific contribution).
 
+## Mid-vol-34 follow-up: oversubscription doesn't scale basin count
+
+Ran `vanilla_fast --threads 16 --pin-hints --budget-ms 1800000` with
+`--snapshot-on-visit`. Results after 10 min:
+- 100 snapshots from 5 productive threads {0, 1, 4, 7, 8}
+- Other 11 threads got no CPU under oversubscription
+- Vol-34 T1's 8-thread probe found {0, 1, 4, 5, 7} productive — 4 overlap
+
+**Conclusion**: thread_id-keyed bucket-shuffle is "spiky" — most seeds
+don't lead to productive deep search. Oversubscription doesn't help.
+
+**Fix for vol-35**: add `--thread-id-offset N` flag so we can span
+thread_id range {100..150} or {1000..1100} to find new productive
+bucket orderings beyond {0..15}. Then run 8-thread × multiple offsets
+sequentially.
+
 ## Files
 
 - `output/vol-35/landscape_t3/` — 56 T3 LOs with rebuilt summary.jsonl
