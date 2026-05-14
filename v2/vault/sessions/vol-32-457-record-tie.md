@@ -110,6 +110,13 @@ The bound is theoretically reachable but operators don't navigate to it.
 - 30s-partial × 2 value-orders, 16 seeds: max=456
 - 5min-partial × 24 seeds: max=457 (2 hits, bounds 457 & 462)
 - 30min-partial × 8 seeds: max=457 (1 hit, bound 465)
+- 6-seed re-lottery from 465-bound 457: all 6 → 457
+- 3-board PT lottery (T_max=3.0, 4-rep, 10min, Houdayer-5, kick-10): all 3 → 457
+
+**Total: 57 runs across all setups, 3 distinct 457s found, 0 broke 457.**
+The basin family is structurally capped at 457 under our entire
+ALNS + PT + bound-ascent toolkit. Vol-22 basin-escape recipe is the
+documented mechanism that could break 457.
 - 6 seeds from 465-bound 457: all 457
 - **Total 54 ALNS lottery runs, 3 distinct 457 boards, 0 broke 457.**
 
