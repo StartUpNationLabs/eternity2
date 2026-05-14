@@ -23,6 +23,7 @@ Discoveries should produce candidates for:
 """
 import json
 import sys
+import collections
 from collections import defaultdict, Counter
 from pathlib import Path
 
@@ -190,6 +191,58 @@ def main():
             print(f"  ... and {len(backbone) - 30} more")
     else:
         print("No backbone cells beyond canonical hints.")
+
+    # 7. Near-invariant cells (diversity=2): could be SOFT hints
+    print()
+    print("=== 7. NEAR-INVARIANT (diversity=2) candidates ===")
+    near = []
+    for pos in range(256):
+        prs_with_path = [(b.get(pos, (None, None))) for _, b in boards]
+        prs = [p for p in prs_with_path if p != (None, None)]
+        unique_prs = set(prs)
+        if len(unique_prs) == 2 and pos not in canonical_hint_positions:
+            # Show frequency
+            c = Counter(prs)
+            top, top_n = c.most_common(1)[0]
+            near.append((pos, top, top_n, sum(c.values())))
+    print(f"Diversity=2 cells (NEW soft-hint candidates): {len(near)}")
+    for pos, (pid, rot), n, total in near[:30]:
+        x, y = pos % N, pos // N
+        print(f"  pos {pos:3d} (x={x:2d},y={y:2d}): top=pid{pid:3d}/rot{rot} ({n}/{total} records)")
+    if len(near) > 30:
+        print(f"  ... and {len(near) - 30} more")
+
+    # 8. Most-frequent (pid, rot) per position (value-order signal)
+    # For each position, sort variants by frequency
+    print()
+    print("=== 8. CELL-LEVEL VALUE-ORDER (top variant per position) ===")
+    # Useful for engine integration: pre-sort candidate list at each position
+    # by frequency across records.
+    cell_top_variants = {}
+    for pos in range(256):
+        prs = [b.get(pos, (None, None)) for _, b in boards]
+        prs = [p for p in prs if p != (None, None)]
+        c = Counter(prs)
+        sorted_variants = c.most_common()
+        cell_top_variants[pos] = sorted_variants
+    # Dump to JSON for use in engine
+    out_path = Path("output/vol-37_revised/cell_value_order.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    json_safe = {
+        str(pos): [{"piece_id": pr[0], "rotation": pr[1], "count": cnt}
+                   for pr, cnt in variants]
+        for pos, variants in cell_top_variants.items()
+    }
+    with open(out_path, "w") as f:
+        json.dump({"n_records": len(boards), "value_order": json_safe}, f, indent=2)
+    print(f"Cell-level value-order dumped to {out_path}")
+    # Show summary of variant counts
+    total_variants_per_cell = [len(v) for v in cell_top_variants.values()]
+    avg_variants = sum(total_variants_per_cell) / len(total_variants_per_cell)
+    print(f"  avg distinct (pid, rot) per cell: {avg_variants:.2f}")
+    print(f"  cells with 1 variant: {sum(1 for v in total_variants_per_cell if v == 1)}")
+    print(f"  cells with ≤2 variants: {sum(1 for v in total_variants_per_cell if v <= 2)}")
+    print(f"  cells with ≤3 variants: {sum(1 for v in total_variants_per_cell if v <= 3)}")
 
 
 if __name__ == "__main__":

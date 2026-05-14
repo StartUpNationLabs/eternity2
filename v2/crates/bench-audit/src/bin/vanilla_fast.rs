@@ -71,6 +71,10 @@ fn main() {
     let mut puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
     let mut want_solve = false;
     let mut pin_hints = false;
+    // Vol-37 — extra synthetic hints from structural invariant scan
+    // (e.g. pos 161 → pid 234 rot 0). Format: POS:PID:ROT per --extra-hint.
+    // These are applied IN ADDITION to canonical hints (when --pin-hints is set).
+    let mut extra_hints: Vec<(usize, u16, u8)> = Vec::new();
     let mut save_best: Option<PathBuf> = None;
     let mut threads: usize = 1;
     // Vol-34/35 — offset the thread_id used to seed the per-thread
@@ -93,6 +97,17 @@ fn main() {
             "--puzzle" => { puzzle_path = PathBuf::from(&raw[i + 1]); i += 2; }
             "--solve" => { want_solve = true; i += 1; }
             "--pin-hints" => { pin_hints = true; i += 1; }
+            "--extra-hint" => {
+                // Format: POS:PID:ROT (e.g. 161:234:0)
+                let parts: Vec<&str> = raw[i + 1].split(':').collect();
+                assert_eq!(parts.len(), 3, "--extra-hint format: POS:PID:ROT");
+                extra_hints.push((
+                    parts[0].parse().expect("pos"),
+                    parts[1].parse().expect("pid"),
+                    parts[2].parse().expect("rot"),
+                ));
+                i += 2;
+            }
             "--save-best" => { save_best = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--threads" => { threads = raw[i + 1].parse().expect("threads"); i += 2; }
             "--snapshot-dir" => { snapshot_dir = Some(PathBuf::from(&raw[i + 1])); i += 2; }
@@ -247,6 +262,19 @@ fn main() {
             hint_at.iter().filter(|h| h.is_some()).count(),
             hint_at.iter().enumerate().filter_map(|(p, h)| h.map(|_| p)).collect::<Vec<_>>(),
         );
+    }
+    // Vol-37 — apply --extra-hint entries (synthetic structural invariants).
+    // Works WITHOUT --pin-hints too; just acts as additional pinned cells.
+    for &(pos, pid, rot) in &extra_hints {
+        assert!(pos < N_POS, "extra-hint pos {pos} out of range");
+        let pr = piece_rots.iter()
+            .find(|pr| pr.piece_id == pid && pr.rot == rot)
+            .expect("extra-hint piece+rot not found");
+        hint_at[pos] = Some(pack_entry(pr.piece_id, pr.rot, pr.s, pr.e));
+    }
+    if !extra_hints.is_empty() {
+        eprintln!("[init] {} extra hints: {:?}", extra_hints.len(), extra_hints);
+        eprintln!("[init] total pinned: {} positions", hint_at.iter().filter(|h| h.is_some()).count());
     }
 
     // Hint pool: bucket_data-like vec where hint positions get their own (single-entry)
