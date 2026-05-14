@@ -77,6 +77,10 @@ fn main() {
     let mut snapshot_dir: Option<PathBuf> = None;
     let mut snapshot_interval_ms: u64 = 60_000;
     let mut snapshot_min_depth: u32 = 200;
+    // Vol-34 T1b — when true, snapshot ANY visit at depth ≥ min-depth that
+    // satisfies the interval gate, not just visits that beat current
+    // max_depth. Boosts basin diversity at the cost of more disk writes.
+    let mut snapshot_on_visit = false;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -96,6 +100,7 @@ fn main() {
                 snapshot_min_depth = raw[i + 1].parse().expect("snapshot-min-depth");
                 i += 2;
             }
+            "--snapshot-on-visit" => { snapshot_on_visit = true; i += 1; }
             other => panic!("unknown arg: {other}"),
         }
     }
@@ -390,58 +395,64 @@ fn main() {
                 total_placements += 1;
                 depth_placements[depth] += 1;
                 depth += 1;
-                if depth as u32 > max_depth {
+                let is_new_max = depth as u32 > max_depth;
+                if is_new_max {
                     max_depth = depth as u32;
                     best_chosen.copy_from_slice(&chosen);
                     best_depth = max_depth;
-                    // Vol-34 T1 — write a snapshot if we crossed the threshold
-                    // AND enough time has passed since the last one. The check
-                    // is gated by max_depth ≥ snapshot_min_depth so we don't
-                    // spam the disk early in the run.
+                }
+                // Vol-34 T1 snapshot logic: fire on a new max-depth, OR (if
+                // --snapshot-on-visit) on ANY visit at depth ≥ min-depth.
+                // Rate-limited by snapshot_interval_ms per thread.
+                let depth_now = depth as u32;
+                let snapshot_trigger = (is_new_max && depth_now >= snapshot_min_depth)
+                    || (snapshot_on_visit && depth_now >= snapshot_min_depth);
+                if snapshot_trigger {
                     if let Some(dir) = snapshot_dir.as_ref() {
-                        if max_depth >= snapshot_min_depth {
-                            let now_ms = t0.elapsed().as_millis() as u64;
-                            if now_ms.saturating_sub(last_snapshot_ms)
-                                >= snapshot_interval_ms
-                                || last_snapshot_ms == 0
-                            {
-                                last_snapshot_ms = now_ms;
-                                let path = dir.join(format!(
-                                    "t{thread_id:02}_s{snapshot_index:03}_d{max_depth:03}.json"
-                                ));
-                                snapshot_index += 1;
-                                let mut snap: Vec<Option<(u16, u8)>> = vec![None; N_POS];
-                                for p_i in 0..max_depth as usize {
-                                    let e = best_chosen[p_i];
-                                    snap[p_i] = Some((entry_piece_id(e), entry_rot(e)));
-                                }
-                                if pin_hints {
-                                    for h in hints.hints.iter() {
-                                        let pp = h.position as usize;
-                                        if snap[pp].is_none() {
-                                            snap[pp] = Some((h.piece_id, h.rotation.as_u8()));
-                                        }
+                        let now_ms = t0.elapsed().as_millis() as u64;
+                        if now_ms.saturating_sub(last_snapshot_ms) >= snapshot_interval_ms
+                            || last_snapshot_ms == 0
+                        {
+                            last_snapshot_ms = now_ms;
+                            let path = dir.join(format!(
+                                "t{thread_id:02}_s{snapshot_index:03}_d{depth_now:03}.json"
+                            ));
+                            snapshot_index += 1;
+                            // For new-max snapshots use best_chosen (which equals
+                            // current chosen since we just copied). For on-visit
+                            // snapshots use chosen directly.
+                            let src = if is_new_max { &best_chosen } else { &chosen };
+                            let mut snap: Vec<Option<(u16, u8)>> = vec![None; N_POS];
+                            for p_i in 0..depth_now as usize {
+                                let e = src[p_i];
+                                snap[p_i] = Some((entry_piece_id(e), entry_rot(e)));
+                            }
+                            if pin_hints {
+                                for h in hints.hints.iter() {
+                                    let pp = h.position as usize;
+                                    if snap[pp].is_none() {
+                                        snap[pp] = Some((h.piece_id, h.rotation.as_u8()));
                                     }
                                 }
-                                let mut placement_json = String::from("{\"placement\": [");
-                                for (p_i, slot) in snap.iter().enumerate() {
-                                    if p_i > 0 {
-                                        placement_json.push(',');
-                                    }
-                                    match slot {
-                                        None => placement_json.push_str("null"),
-                                        Some((pid, rot)) => placement_json.push_str(&format!(
-                                            "{{\"piece_id\":{pid},\"rotation\":{rot}}}"
-                                        )),
-                                    }
+                            }
+                            let mut placement_json = String::from("{\"placement\": [");
+                            for (p_i, slot) in snap.iter().enumerate() {
+                                if p_i > 0 {
+                                    placement_json.push(',');
                                 }
-                                placement_json.push_str("]}");
-                                if let Some(parent) = path.parent() {
-                                    std::fs::create_dir_all(parent).ok();
+                                match slot {
+                                    None => placement_json.push_str("null"),
+                                    Some((pid, rot)) => placement_json.push_str(&format!(
+                                        "{{\"piece_id\":{pid},\"rotation\":{rot}}}"
+                                    )),
                                 }
-                                if let Err(e) = std::fs::write(&path, &placement_json) {
-                                    eprintln!("[t{thread_id}] snapshot write failed: {e}");
-                                }
+                            }
+                            placement_json.push_str("]}");
+                            if let Some(parent) = path.parent() {
+                                std::fs::create_dir_all(parent).ok();
+                            }
+                            if let Err(e) = std::fs::write(&path, &placement_json) {
+                                eprintln!("[t{thread_id}] snapshot write failed: {e}");
                             }
                         }
                     }
