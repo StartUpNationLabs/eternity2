@@ -58,3 +58,38 @@ To break 458 we need either:
 
 Deep family-255 lottery is testing #2. If it pushes past 455, we have
 a new tool. If it caps at ~455, the structural barrier holds.
+
+## Update — Cross-family Hamming + FDC analysis
+
+Treating the 46 family-lottery boards as a landscape sample
+(one LO per basin family):
+
+| Metric | Value |
+|---|---:|
+| Mean Hamming (pairwise) | 248.2 / 256 |
+| Hamming range | 235-251 |
+| Cluster count (H≤25) | 46/46 (none clustered) |
+| FDC r | **+0.084** (positive!) |
+| Score range | 427-455 |
+
+**Striking**: FDC is slightly POSITIVE here. In landscape terms,
+**distance to the best LO has no predictive power for an LO's score
+when sampling one-per-basin**. The trimodal Hamming we observed
+in vol-34 T3 (56 LOs, 14 partials × 4 seeds) was an artifact of
+multiple seeds per partial — same-partial LOs clustered near each other.
+
+**Methodological lesson**: cross-basin Hamming is uninformative
+when each LO is a distinct basin. Within-basin Hamming (from
+multiple ALNS seeds on same partial) shows clustering. The
+"trimodal" finding is structure, but it's about within-basin
+versus cross-basin distance, not about basin attractors.
+
+## Vol-35 T1b status: ROUND-1 COMPLETE
+
+- 46 productive thread_ids discovered
+- 46 family lottery runs verified
+- Max score = 455
+- Best bound found = 463 (family 255)
+- No 458 record break
+
+Deep family-255 lottery (12 seeds × 4 ops × 3min) now running.
