@@ -104,3 +104,7 @@ path = "src/bin/run_e2_rectangle_full_pipeline.rs"
 [[bin]]
 name = "run_e2_layered_pipeline"
 path = "src/bin/run_e2_layered_pipeline.rs"
+
+[[bin]]
+name = "vanilla_fast"
+path = "src/bin/vanilla_fast.rs"
