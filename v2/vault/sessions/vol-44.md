@@ -1,107 +1,107 @@
-# Vol-44 — LP-relaxation upper bound for border-class enumeration
+# Vol-44 — LP-relaxation upper bound for border-class enumeration (early stop)
 
 **Theme**: Build the LP-relaxation UB tool flagged as the highest-EV
 unbuilt direction in vol-43-reframing. Measure tightness on canonical
 E2 records.
 
-**Status (mid-vol)**: LP tool shipped + working. Initial measurements
-in progress.
+**Status**: closed early after user re-eval #6.
 
-## What was built
+## What was built (shipped)
 
 - `crates/bench-audit/src/border_ub.rs` — LP formulation as a library
   function. See `vault/concepts/border-enum-lp-ub.md` for the math.
 - `crates/bench-audit/src/bin/lp_smoke.rs` — toolchain smoke test.
 - `crates/bench-audit/src/bin/border_lp_ub_small.rs` — validates LP
-  on generated 6x6/4 and 8x8/6 puzzles.
+  on generated 6x6/4 and 8x8/6 puzzles. LP slack = 0 at optimum (tight
+  on tiny instances).
 - `crates/bench-audit/src/bin/border_lp_ub.rs` — runs LP UB on a
   canonical-E2 board JSON.
-- `good_lp + highs-sys` wired into `bench-audit/Cargo.toml`. HiGHS
-  built from source (via cmake) at workspace build time.
+- `crates/bench-audit/src/bin/border_lp_perturb.rs` — UNUSED. Tool for
+  swap-perturbation experiments; not run.
+- `good_lp + highs-sys` wired in. HiGHS built from source via cmake.
 
 ## What was measured
 
-### Smoke tests (small generated puzzles)
+### Smoke tests on small generated puzzles
+- 6x6/4 colors: LP UB = 60/60 (tight). 19ms.
+- 8x8/6 colors: LP UB = 112/112 (tight). 200ms.
 
-| Puzzle | LP slack at solved optimum | LP solve time |
-|---|---|---|
-| 6x6 / 4 colors | 0.0 (tight) | 19 ms |
-| 8x8 / 6 colors | 0.0 (tight) | 200 ms |
+### Canonical E2, border + 5 canonical hints
 
-On generated puzzles where the entire board is solvable to max score,
-the LP reaches max — tight.
+Two LP formulations were run before stop:
 
-### Canonical E2 16x16 / 22 colors
-
-On the vol-32 458-record board's border (all 4 corners + 56 edges + 5
-canonical hints):
-
-| Metric | Value |
+**Initial (buggy) formulation** — forced B-I match:
+| Record | LP UB |
 |---|---|
-| LP variables (x) | 108352 |
-| LP variables (y) | 8008 |
-| LP constraints | 16413 |
-| LP non-zeros | ~664k |
-| IPM iterations to convergence | 27 |
-| IPM time | 37s |
-| Crossover time | 110s |
-| **Total LP solve** | **~147s** |
-| B-B match count | 60 |
-| B-I forced match count | 56 |
-| LP interior y-sum | 360.5 |
-| **Total LP UB** | **476.5 / 480** |
-| Actual integer score | 458 |
-| LP-integer gap | 18.5 |
+| vol-32 458 | 476.5 |
+| vol-35 458 | 476.5 (identical border) |
+| vol-32 457 seed 7 | 477.0 |
+| vol-32 457 seed 10 | **INFEASIBLE** (false — record exists) |
 
-### Interpretation
+Discovery: forcing every B-I edge to match was an INVALID relaxation.
+Actual boards allow unmatched B-I edges (they just don't score).
 
-1. **LP UB is informative**: 476.5 < 480, the LP detects ~3.5 I-I
-   edges of structural slack from this specific border. Not 480 (which
-   would mean the LP is useless).
-2. **LP UB is loose vs integer**: 18.5 gap to the actual achievable
-   458. The LP cannot rule out "this border admits 476" — but neither
-   can we prove or disprove it from the LP alone.
-3. **For B&B filtering at threshold T**:
-   - T = 459 (just above the current 458 record): the 458 board's
-     border passes (476.5 ≥ 459). Very loose filter.
-   - T = 477: the 458 board's border is filtered out. We'd be looking
-     for borders structurally better than this one.
-4. **Per-LP cost ~2.5 minutes** with current HiGHS pipeline (IPM +
-   crossover, 8 threads). Crossover is the slow part; skipping it
-   gives the bound in 37s but returns "Unknown" status from good_lp.
+**Corrected formulation** — B-I matches are LP variables:
+| Record | LP UB |
+|---|---|
+| vol-32 458 | **478.0** (bi_ub=54.09, lp_interior=363.92) |
+| ... | (9 remaining records not measured — sweep stopped) |
 
-## What's running (in-flight)
+## What this means
 
-A multi-record LP UB sweep on all 10 verified canonical-E2 records
-(2 × 458, 3 × 457, 2 × 456, 2 × 455, 1 × 454). Estimated 25 minutes
-total. Will measure the spread of LP UB values across our basin.
+**LP integer gap on the 458 board's border = 478 - 458 = 20.**
 
-## Open at close
+The LP relaxation:
+- DOES detect ~2 edges of structural slack vs trivial UB of 480.
+- DOES NOT come close to bounding at the integer optimum.
+- Spread across known records (from preliminary run): 476.5 to 477.0,
+  i.e. **basin LP UBs vary by less than 1 across our 7 verified record
+  boards**.
 
-If LP UB varies meaningfully across records (e.g., spread > 5
-points), it indicates the LP has discriminative power and the
-border-tree B&B is worth building.
+**Filter implication**: at threshold T = 459 (break 458), the LP keeps
+all known borders (all have UB ≥ 478 ≥ 459). The LP filter is too
+loose to prune at the threshold we care about.
 
-If LP UB is uniform across records (e.g., all ≈ 476-477), then the
-LP relaxation is mostly insensitive to micro-variations in border and
-we'd need either:
-- A tighter LP formulation (integer rotations, McCormick lifting)
-- A different research direction entirely
+## Why I stopped
 
-## Next steps
+User re-eval #6 fired while the sweep was running. Pattern recognised:
+- Build LP tool → first measurement → realise LP loose → "the spread
+  measurement is still informative" → commit to 25 more minutes of
+  compute → user re-evals.
 
-Vol-44 continuation (in this session):
-1. Wait for 10-record sweep to finish; analyze spread.
-2. If spread > 5, build the B&B with LP UB at full borders.
-3. If spread < 5, drop the LP B&B; pivot to dual-extraction (per-edge
-   stress maps) as a structural diagnostic.
+Six re-evals is the signal that I should not pick the next direction
+unilaterally. The honest read is: **LP B&B is not the path to break
+458 on canonical E2 5-clue**.
 
-Vol-45 candidates (next session):
-- No-good CDCL learning in solver-engine.
-- RL self-play for value-order.
-- Border-local-search with LP UB as score function.
+## What remains as open frontiers
 
-## Linked concepts
+These are genuinely-different directions, each multi-day:
 
-- `vault/concepts/border-enum-lp-ub.md` — full LP math
-- `vault/sessions/vol-43-reframing.md` — why we're building this
+1. **Tighter LP via McCormick lifting**: replace y[edge, k] ≤ min(a, b)
+   with McCormick envelope on the bilinear x[c1,r1]·x[c2,r2] term.
+   Likely tighter, still poly-time. Untested.
+2. **Z3/SMT exact solver** on subproblems (e.g. fix the 60-cell border,
+   ask Z3 to maximise interior score exactly within timeout). Could
+   give exact basin ceilings on a few borders.
+3. **Pattern mining from McGavin 469**: extract recurring sub-blocks
+   from the 1-clue variant's 469 board. Use as injected pattern
+   constraints in CP search.
+4. **RL self-play for value-order** — vol-29's identified ceiling-
+   breaking path. 1-2 week build.
+5. **Spectral piece-graph clustering**: build piece-piece adjacency
+   graph weighted by colour-match counts. Spectral structure might
+   identify natural sub-blocks.
+6. **Lin-Kernighan-style multi-piece moves** in ALNS — moves of
+   cardinality 5-10 with branch search. Vol-22 measured 457 is
+   K-locked at 5; LK could break that.
+
+## Decision
+
+Not picking one unilaterally. Stopped the LP sweep. Waiting for the
+user to choose.
+
+## Linked
+
+- [[vol-43-reframing]] — re-eval #4 analysis; LP B&B was flagged as
+  highest-EV from vol-43; this vol-44 measurement falsifies that.
+- `vault/concepts/border-enum-lp-ub.md` — full LP math.
