@@ -44,17 +44,24 @@ So this is a CONFOUNDED A/B — different engines being compared.
 
 ### Attempt 2 — vanilla_fast --pin-hints --extra-hint 161:234:0
 
-vanilla_fast at 60s × 8 threads, with extra hint:
+vanilla_fast 5min × 8 threads with extra hint:
 
 | Hints | Max depth | Score |
 |---|---:|---:|
 | 5 (pin-hints baseline) | 208 | 429 |
-| **6 (pin-hints + 161:234:0)** | **200** | **412** |
+| **6 (pin-hints + 161:234:0)** | **210** | **433** |
 
-**Adding pos 161 HURTS row-major DFS** (-8 depth, -17 score). 5-min A/B
-in flight, expected same direction.
+**At 5min: +2 depth, +4 score.** Modest but real.
 
-## Why pos 161 hint hurts row-major
+At 60s (less compute), the 6-hint version got 200/412 (-8 depth, -17 score
+vs baseline) — the early pin-161 trap couldn't be navigated in 60s of
+bucket-shuffle. By 5min, enough threads find compatible 0-160 prefixes.
+
+**Pos 161 hint IS exploitable at adequate compute.** Operationalising via
+synthetic hint works, just needs ≥5 min × 8 threads to escape the
+early-pin trap.
+
+## Why pos 161 hint hurts SHORT row-major
 
 Row-major visits cells 0, 1, 2, ... in order. Pos 161 is reached at
 step 161. By then, cells 0-160 are placed. Those placements may have
@@ -69,16 +76,18 @@ which is the vast majority.
 
 ## Implication
 
-pos 161 = pid 234 rot 0 is an **invariant of solutions**, not a **search
-shortcut**. It's still useful as:
-1. **Verification check** — any candidate record should satisfy this
-2. **Value-order signal** — bias the search toward pid 234 rot 0 at
-   pos 161 (but allow other choices early)
-3. **Late-stage propagator** — only enforce after depth N if neighbours
-   suggest compatibility
+pos 161 = pid 234 rot 0 is an **invariant of solutions** AND a
+**search-budget-dependent hint**:
+- **Short budget (≤60s × 8t)**: pin hurts (-8 depth, -17 score). The
+  early-pin trap can't be navigated in time.
+- **Long budget (≥5min × 8t)**: pin helps (+2 depth, +4 score). The
+  bucket-shuffle eventually finds 0-160 prefixes compatible with
+  pid 234 at 161, and then the pin guides the remaining search.
 
-The naïve "pin it" approach is REFUTED at the raw-DFS level. The
-correct integration is **value-order ranking**, not pinning.
+Usage:
+1. **Add as pin in adequate-compute runs** (≥5min × 8 cores).
+2. **Skip as pin in low-compute** runs (≤60s).
+3. **Value-order signal** for sub-second/low-budget contexts.
 
 ## Open paths
 
