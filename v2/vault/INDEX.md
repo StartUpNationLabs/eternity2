@@ -46,6 +46,8 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  30 |             457 |       — | ~~[[learned-value-order]] +9 depth lift from LearnedOnTies~~ **REFUTED vol-32** — bug at lib.rs:2550 caused LOT to silently fall through to InsertionOrder; model never called |                               |
 |  31 |             457 |       — | ~~[[learned-value-order]] +10/+8 score lift~~ **MIS-ATTRIBUTED vol-32** — the "depth-174 ML partial" was actually an InsertionOrder partial; real numbers but wrong attribution |                               |
 |  32 |         **458** |       — | **NEW RECORD** via vanilla_fast (125M pp/s, community-class) + ALNS-5min: matched=458/480 (caveat: 2 of 5 canonical hints displaced). Also: vol-30/31 BUG DISCOVERED, [[unsat-clause-propagator]] prototype, blackwood_raw+MRV cold-start tied 457 in 10min |                               |
+|  33 |               — |       — | code refactor: 5 deferred items shipped (eternity2-time, -export, -puzzle-io crates; solver-engine modules split; bin-harness scaffold). solver-engine lib.rs: 5355→3705 lines |  |
+|  34 |             457 |       — | T1 vanilla_fast snapshot infra; T2 unsat-clause-propagator hard-pruner refuted (encoding reconciled); T3 lottery: 2 verified 457s (distinct basins), no 458 break. **2 alns_only bugs found and fixed** (polish_swap over-count + filename collision). User-proposed [[fitness-landscape-mapping]] vol-35 T1. |  |
 
 
 ## Concepts — by category
