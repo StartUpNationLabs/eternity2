@@ -98,12 +98,31 @@ finding that "ALL 8 presets give 456" on basin-locked 456 boards.
 
 ## Implication for vol-34 T3
 
-The full 1h probe is expected to produce ~75 partials at depth 200+.
-T3's planned 100 × 4 × 5min lottery should comfortably produce
-multiple 456-457s. The basin-ceiling-at-461 result suggests 458+
-remains structurally hard from this family of partials — would need
-either a fundamentally different starting partial (bound > 462) or
-a stronger ALNS operator not in `winning5`.
+The full 1h probe was truncated at 30 min (14 partials). T3 with
+14 × 4 × 5min produced **2 verified 457 boards** from distinct
+basins:
+- t01_s001_d208 seed=1 (bound 464, gap +7)
+- t00_s002_d207 seed=1 (bound 464, gap +7)
+
+Plus one 456, one 455, multiple 454s. Max=457.
+
+**Cross-basin bound comparison** (5 known distinct 457 basins):
+
+| Basin | Bound | Gap |
+|---|---:|---:|
+| vol-32 seed7 | 462 | +5 |
+| vol-32 seed10 | 457 | 0 (saturated) |
+| vol-32 seed4-30m | 465 | +8 |
+| vol-34 #1 (t1signal/t00) | 464 | +7 |
+| vol-34 #2 (t01) | 464 | +7 |
+
+Interesting observation: vol-34 #1 and #2 share bound (464) but are
+structurally different basins (1.2% cell overlap). The edge-relaxed
+bound is a coarser metric than full configuration; same bound class
+can host multiple basins.
+
+vol-32 seed10's bound==score=457 means we *cannot* improve from that
+specific basin without changing piece-set (vol-22 finding).
 
 ## Boards saved
 
