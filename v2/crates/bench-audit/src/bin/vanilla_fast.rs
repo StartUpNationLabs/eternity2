@@ -191,6 +191,8 @@ fn main() {
     let mut total_backtracks: u64 = 0;
     let mut max_depth: u32 = 0;
     let mut solved_count: u64 = 0;
+    // Per-depth placement counter for profiling distribution
+    let mut depth_placements: [u64; N_POS + 1] = [0u64; N_POS + 1];
 
     let mut depth: usize = 0;
 
@@ -251,6 +253,7 @@ fn main() {
             used[pid] = true;
             frame_cursor[depth] = cur;
             total_placements += 1;
+            depth_placements[depth] += 1;
             depth += 1;
             if depth as u32 > max_depth {
                 max_depth = depth as u32;
@@ -295,4 +298,14 @@ fn main() {
         placements_per_sec,
         backtracks_per_sec,
     );
+
+    // Depth distribution — group by ranges of 20 for readability
+    eprintln!("[depth-dist] placements at depth-range:");
+    for lo in (0..N_POS as u32).step_by(20) {
+        let hi = (lo + 19).min(N_POS as u32 - 1);
+        let sum: u64 = (lo..=hi).map(|d| depth_placements[d as usize]).sum();
+        if sum > 0 {
+            eprintln!("  d={:>3}-{:>3}: {:>15} ({:>5.1}%)", lo, hi, sum, sum as f64 * 100.0 / total_placements as f64);
+        }
+    }
 }
