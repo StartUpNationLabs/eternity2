@@ -186,6 +186,10 @@ name = "border_lp_perturb_k"
 path = "src/bin/border_lp_perturb_k.rs"
 
 [[bin]]
+name = "color_side_count"
+path = "src/bin/color_side_count.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 
