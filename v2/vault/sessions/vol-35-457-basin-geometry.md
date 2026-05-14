@@ -69,6 +69,30 @@ So at minimum the three vol-32 cold-start blackwood-mrv 457s are
 **not all the same basin** — two are sister-basins, one is more
 distant.
 
+## Consensus-core analysis (confirms vol-20)
+
+Across the 5 distinct cluster representatives (A,B,C,D,E), counted
+how many clusters agree on (piece_id, rotation) at each position.
+
+Full agreement (5/5): **5 cells = canonical hints**
+- pos 34 (r=2,c=2) → piece 207
+- pos 45 (r=2,c=13) → piece 254
+- pos 135 (r=8,c=7) → piece 138
+- pos 210 (r=13,c=2) → piece 180
+- pos 221 (r=13,c=13) → piece 248
+
+3/5 agreement: 4 cells (1.6%)
+2/5 agreement: 95 cells (37.1%)
+1/5 agreement (idiosyncratic): 152 cells (59.4%)
+
+**This is exactly the [[../../../../Users/raphaelanjou/.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2-v2/memory/project_e2_vol20_backbone_correction.md|vol-20 backbone correction]] result on a fresh sample**: only the
+5 canonical hints carry cross-cluster weight; no other cell achieves
+4/5 or 5/5 agreement. Pinning anything beyond the 5 canonical hints
+will over-constrain the search.
+
+No "backbone" beyond hints discovered. Second independent confirmation
+of vol-20.
+
 ## Vol-36 follow-up
 
 - Run K=6, K=8, K=10 operator-lock test on the 5 distinct
