@@ -1,18 +1,15 @@
 // Vol-32+ PoC — vanilla fast backtracker for E2 (no propagators, no ML).
-// Row-major scan, dense arrays, pre-bucketed candidates by (north, west) edge pair.
-// Goal: measure placements/sec; community benchmarks 97M-140M.
+// Row-major scan, dense arrays, pre-bucketed candidates by (pos, north_color, west_color).
+// v2 — optimised hot loop:
+//   - Packed candidate entries (piece_id, S, E) in u32; no piece_rots indirection in inner loop
+//   - Flat bucket storage (bucket_data + bucket_offsets) for cache locality
+//   - Track placed-S and placed-E directly on stacks
+//   - u16::MAX sentinel (no Option<>)
 //
-// Schema:
-//   - rot_edges[piece_id][rot] = (N, E, S, W) in our color encoding
-//   - cell_class[pos] = Corner|Edge|Interior (determines which pieces can go there)
-//   - bucket[(class, N_required, W_required)] = list of (piece_id, rot) candidates
-//   - placed[256] = Option<(piece, rot)>
-//   - used[256] = bool
-//   - At each cell, look up the (class, N_required, W_required) bucket and try each
-//     un-used candidate.
+// Goal: hit community-class throughput (97M-140M placements/sec).
 //
 // Run:
-//   target/release/vanilla-fast --budget-ms 10000 --puzzle ../data/puzzles/size_16_official_eternity.csv
+//   target/release/vanilla_fast --budget-ms 10000 --puzzle ../data/puzzles/size_16_official_eternity.csv
 
 #![forbid(unsafe_code)]
 
@@ -20,60 +17,43 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
-use eternity2_core::{Color, BORDER};
+use eternity2_core::BORDER;
 
 const N: usize = 16;
 const N_POS: usize = N * N;
 const N_PIECES: usize = 256;
 const N_ROT: usize = 4;
 const N_COLORS: usize = 23;  // 0=border, 1..22 interior
+const NW_KEYS: usize = N_COLORS * N_COLORS;  // 529
 
-#[derive(Copy, Clone)]
-struct PieceRot {
-    piece_id: u16,
-    rot: u8,
-    n: u8,  // north edge
-    e: u8,  // east edge
-    s: u8,  // south edge
-    w: u8,  // west edge
-}
-
+// Packed candidate entry: (piece_id : 9 bits | rot : 2 | S : 5 | E : 5) — fits in u32.
+// We don't need N, W in the entry (those are the bucket key).
+// piece_id in 0..256 → 9 bits. rot 0..3 → 2 bits. S, E in 0..22 → 5 bits each.
+// We pack as: (piece_id << 12) | (rot << 10) | (S << 5) | E
 #[inline(always)]
-fn pos_class(pos: usize) -> u8 {
-    let y = pos / N;
-    let x = pos % N;
-    let top = y == 0;
-    let bot = y == N - 1;
-    let left = x == 0;
-    let right = x == N - 1;
-    let on_border = top || bot || left || right;
-    let on_corner = (top || bot) && (left || right);
-    if on_corner { 0 }       // corner
-    else if on_border { 1 }  // edge
-    else { 2 }               // interior
+fn pack_entry(piece_id: u16, rot: u8, s: u8, e: u8) -> u32 {
+    ((piece_id as u32) << 12) | ((rot as u32) << 10) | ((s as u32) << 5) | (e as u32)
 }
+#[inline(always)]
+fn entry_piece_id(p: u32) -> u16 { (p >> 12) as u16 }
+#[inline(always)]
+fn entry_rot(p: u32) -> u8 { ((p >> 10) & 0x3) as u8 }
+#[inline(always)]
+fn entry_s(p: u32) -> u8 { ((p >> 5) & 0x1f) as u8 }
+#[inline(always)]
+fn entry_e(p: u32) -> u8 { (p & 0x1f) as u8 }
 
 #[inline(always)]
-fn need_north_border(pos: usize) -> bool {
-    pos < N
-}
+fn need_north_border(pos: usize) -> bool { pos < N }
 #[inline(always)]
-fn need_west_border(pos: usize) -> bool {
-    pos % N == 0
-}
+fn need_west_border(pos: usize) -> bool { pos % N == 0 }
 #[inline(always)]
-fn need_south_border(pos: usize) -> bool {
-    pos >= N_POS - N
-}
+fn need_south_border(pos: usize) -> bool { pos >= N_POS - N }
 #[inline(always)]
-fn need_east_border(pos: usize) -> bool {
-    pos % N == N - 1
-}
+fn need_east_border(pos: usize) -> bool { pos % N == N - 1 }
 
 fn rotate_edges(e: [u8; 4], r: u8) -> [u8; 4] {
     // CSV stores [top, right, bottom, left]
-    // Rotation r: r=0 unchanged. r=1 turns 90° clockwise; what was top becomes right.
-    // To get the new (top, right, bottom, left), we read the original with offset -r.
     let mut out = [0u8; 4];
     let mut i = 0;
     while i < 4 {
@@ -102,61 +82,46 @@ fn main() {
     assert_eq!(puzzle.width as usize, N);
     assert_eq!(puzzle.height as usize, N);
 
-    // Build per-piece rotation tables.
+    // Build per-piece rotation tables temporarily.
+    #[derive(Copy, Clone)]
+    struct PieceRot {
+        piece_id: u16,
+        rot: u8,
+        n: u8,
+        e: u8,
+        s: u8,
+        w: u8,
+    }
     let mut piece_rots: Vec<PieceRot> = Vec::with_capacity(N_PIECES * N_ROT);
     for pid in 0..N_PIECES as u16 {
         let p = puzzle.piece(pid).expect("piece");
-        let base = p.edges.as_array();  // [top, right, bottom, left]
+        let base = p.edges.as_array();
         for r in 0..N_ROT as u8 {
             let rotated = rotate_edges(base, r);
             piece_rots.push(PieceRot {
-                piece_id: pid,
-                rot: r,
-                n: rotated[0],
-                e: rotated[1],
-                s: rotated[2],
-                w: rotated[3],
+                piece_id: pid, rot: r,
+                n: rotated[0], e: rotated[1], s: rotated[2], w: rotated[3],
             });
         }
     }
 
-    // Bucket: (class, N_required_color, W_required_color) → list of indices into piece_rots
-    // class ∈ {0=corner, 1=edge, 2=interior}
-    // colors 0..22; we use 23 slots.
-    // For corners: both N and W borders required (uniquely determined by class+pos), so bucket key = (0, 0, 0) suffices? No — corner positions can be TR (W not border) or BL (N not border). Use a 4-class scheme: corner-TL, corner-TR, corner-BL, corner-BR. Or compute on the fly.
-    //
-    // Simpler: per position, list of (piece_idx) compatible by class + border-requirements.
-    // For interior cells, the bucket is keyed by (N_color_needed, W_color_needed) where
-    // both come from already-placed neighbours. So bucketing is needed.
-    //
-    // We'll do TWO levels:
-    //  - class_compatible[pos] = candidate piece_rot indices satisfying class+border constraints.
-    //  - bucket_by_NW[(N_color, W_color)] = candidate piece_rot indices (any class).
-    //    Then intersect at runtime by iterating bucket and filtering by class_compatible flag.
-    //
-    // Actually cleanest: build bucket_by_class_N_W: [3][23][23] -> Vec<u16>, where each
-    // bucket contains pre-filtered indices that satisfy the class's border constraints
-    // AND the required N, W edges.
+    // For each pos, group candidates by (N, W) into a contiguous slice.
+    // Layout: bucket_data is one big Vec<u32>. bucket_starts[pos * NW_KEYS + key] gives
+    // start index; bucket_lens stores length. Both indexed by pos * NW_KEYS + key.
+    // Total entries: ~157k (avg 600 candidates/pos × 256 pos / ~600 keys/pos coverage)
+    // But many (pos, key) pairs are empty. We pre-compute per-(pos,key) the candidate slice.
+    let total_keys = N_POS * NW_KEYS;
+    let mut bucket_starts: Vec<u32> = vec![0; total_keys + 1];
+    let mut bucket_lens: Vec<u16> = vec![0; total_keys];
 
-    // class_border_compat[piece_rot_idx][class] = bool
-    // Per class, the (north, west) border requirements:
-    //  class 0 corner: 4 sub-types depending on which 2 borders meet — handled per-pos
-    //  class 1 edge: exactly one side must be BORDER (north for top edge, south for bottom edge, east for right edge, west for left edge)
-    //  class 2 interior: NO side may be BORDER
-    //
-    // For simplicity: bucket per POSITION, not per class — 256 buckets total but each
-    // is shared via key lookup. We'll use a per-position cache instead.
-
-    // Pre-compute per-position the set of (piece_idx) that satisfy the BORDER constraint
-    // (regardless of neighbour matching).
-    let n_prots = piece_rots.len();
-    let mut pos_border_ok: Vec<Vec<u16>> = vec![Vec::new(); N_POS];
+    // First pass: count.
+    let mut counts: Vec<u32> = vec![0; total_keys];
     for pos in 0..N_POS {
         let need_n_border = need_north_border(pos);
         let need_e_border = need_east_border(pos);
         let need_s_border = need_south_border(pos);
         let need_w_border = need_west_border(pos);
-        for (idx, pr) in piece_rots.iter().enumerate() {
+        for pr in piece_rots.iter() {
             let n_is_border = pr.n == BORDER;
             let e_is_border = pr.e == BORDER;
             let s_is_border = pr.s == BORDER;
@@ -165,142 +130,153 @@ fn main() {
             if e_is_border != need_e_border { continue; }
             if s_is_border != need_s_border { continue; }
             if w_is_border != need_w_border { continue; }
-            pos_border_ok[pos].push(idx as u16);
-        }
-    }
-
-    eprintln!("[init] piece_rots: {}, total candidate edges by position:", n_prots);
-    let mut total = 0usize;
-    for pos in 0..N_POS {
-        total += pos_border_ok[pos].len();
-    }
-    let avg = total as f64 / N_POS as f64;
-    eprintln!("[init] avg candidates/pos (border-only): {:.1}, total = {}", avg, total);
-
-    // Pre-bucket: for each pos, group candidates by (N_color, W_color).
-    // bucket[pos][n*N_COLORS + w] = Vec<piece_rot_idx>
-    let mut bucket: Vec<Vec<Vec<u16>>> = (0..N_POS)
-        .map(|_| vec![Vec::new(); N_COLORS * N_COLORS])
-        .collect();
-    for pos in 0..N_POS {
-        for &pr_idx in &pos_border_ok[pos] {
-            let pr = piece_rots[pr_idx as usize];
             let key = (pr.n as usize) * N_COLORS + (pr.w as usize);
-            bucket[pos][key].push(pr_idx);
+            counts[pos * NW_KEYS + key] += 1;
         }
     }
-    let mut total_bucketed = 0usize;
-    let mut max_bucket = 0usize;
+    // Prefix-sum into bucket_starts
+    let mut acc: u32 = 0;
+    for i in 0..total_keys {
+        bucket_starts[i] = acc;
+        acc += counts[i];
+    }
+    bucket_starts[total_keys] = acc;
+    let total_entries = acc as usize;
+
+    // Allocate flat data array
+    let mut bucket_data: Vec<u32> = vec![0u32; total_entries];
+
+    // Second pass: fill, using counts as cursors
+    let mut cursor: Vec<u32> = bucket_starts.clone();
     for pos in 0..N_POS {
-        for b in &bucket[pos] {
-            total_bucketed += b.len();
-            if b.len() > max_bucket { max_bucket = b.len(); }
+        let need_n_border = need_north_border(pos);
+        let need_e_border = need_east_border(pos);
+        let need_s_border = need_south_border(pos);
+        let need_w_border = need_west_border(pos);
+        for pr in piece_rots.iter() {
+            let n_is_border = pr.n == BORDER;
+            let e_is_border = pr.e == BORDER;
+            let s_is_border = pr.s == BORDER;
+            let w_is_border = pr.w == BORDER;
+            if n_is_border != need_n_border { continue; }
+            if e_is_border != need_e_border { continue; }
+            if s_is_border != need_s_border { continue; }
+            if w_is_border != need_w_border { continue; }
+            let key = (pr.n as usize) * N_COLORS + (pr.w as usize);
+            let idx = pos * NW_KEYS + key;
+            let dst = cursor[idx] as usize;
+            bucket_data[dst] = pack_entry(pr.piece_id, pr.rot, pr.s, pr.e);
+            cursor[idx] += 1;
+            bucket_lens[idx] += 1;
         }
     }
-    eprintln!("[init] bucketed entries: {}, max bucket size: {}", total_bucketed, max_bucket);
 
-    // Scan order: row-major (pos 0..N_POS)
-    // At each cell:
-    //   - if cell > 0 and same-row neighbour to left: N_color is from above (pos-N).s, W_color is from (pos-1).e
-    //   - if cell on top row: N_color = BORDER
-    //   - if cell at left edge: W_color = BORDER
+    eprintln!("[init] piece_rots: {}, bucket entries: {}", piece_rots.len(), total_entries);
+    let max_b = bucket_lens.iter().copied().max().unwrap_or(0);
+    let nonempty = bucket_lens.iter().filter(|&&l| l > 0).count();
+    eprintln!("[init] max bucket: {}, non-empty: {}/{}", max_b, nonempty, total_keys);
 
-    // Run depth-counting backtracker until budget expires.
-    let mut placed: [Option<usize>; N_POS] = [None; N_POS];  // stores piece_rot_idx
+    // Search state — keep per-depth packed entry chosen + cursor into that bucket.
+    let mut chosen: Vec<u32> = vec![0u32; N_POS];  // packed entries
+    let mut frame_cursor: Vec<u32> = vec![0u32; N_POS + 1];
+    let mut bucket_start_at_depth: Vec<u32> = vec![0u32; N_POS];
+    let mut bucket_end_at_depth: Vec<u32> = vec![0u32; N_POS];
+    // `used` as plain bool array — faster than bitmask on M1 because single-byte loads.
     let mut used: [bool; N_PIECES] = [false; N_PIECES];
 
     let t0 = Instant::now();
     let deadline = t0 + std::time::Duration::from_millis(budget_ms);
 
-    // Stats
     let mut total_placements: u64 = 0;
     let mut total_backtracks: u64 = 0;
     let mut max_depth: u32 = 0;
     let mut solved_count: u64 = 0;
 
-    // Iterative DFS: stack-tracked state, each frame = (pos, iter index into candidates)
-    // Frames track current candidate cursor at each depth.
-    let mut frame_cursor: [usize; N_POS + 1] = [0; N_POS + 1];
-
     let mut depth: usize = 0;
+
+    // For each depth, when entering, we COMPUTE the bucket once: derive (N, W) from
+    // placed neighbours (which are the chosen entries at depth-N and depth-1).
+    // Stored in bucket_start_at_depth / bucket_end_at_depth and reused on backtrack.
+    // On entry to depth d (fresh): compute and store bucket.
+    // On backtrack to depth d: reuse stored bucket, advance frame_cursor.
+
+    // Helper: enter depth d freshly (compute bucket).
+    macro_rules! enter_fresh {
+        ($d:expr) => {{
+            let d = $d;
+            let pos = d;
+            let n_color = if pos < N {
+                BORDER
+            } else {
+                entry_s(chosen[pos - N])
+            };
+            let w_color = if pos % N == 0 {
+                BORDER
+            } else {
+                entry_e(chosen[pos - 1])
+            };
+            let key = (n_color as usize) * N_COLORS + (w_color as usize);
+            let bkt_idx = pos * NW_KEYS + key;
+            bucket_start_at_depth[d] = bucket_starts[bkt_idx];
+            bucket_end_at_depth[d] = bucket_starts[bkt_idx + 1];
+            frame_cursor[d] = bucket_starts[bkt_idx];
+        }};
+    }
+
+    enter_fresh!(0);
+
     'outer: loop {
-        if depth == N_POS {
-            // Solved!
-            solved_count += 1;
-            if want_solve {
-                eprintln!("[solve] FOUND in {} ms", t0.elapsed().as_millis());
+        // Check budget every 256k placements
+        if (total_placements & 0x3FFFF) == 0 && Instant::now() >= deadline {
+            break;
+        }
+
+        let end = bucket_end_at_depth[depth];
+        let mut cur = frame_cursor[depth];
+        let mut found = u32::MAX;
+        // Hot loop: scan bucket for first un-used piece.
+        while cur < end {
+            let entry = bucket_data[cur as usize];
+            let pid = (entry >> 12) as usize;
+            if !used[pid] {
+                found = entry;
                 break;
             }
-            // Just backtrack and continue counting
-            depth -= 1;
-            let prev_idx = placed[depth].unwrap();
-            used[piece_rots[prev_idx].piece_id as usize] = false;
-            placed[depth] = None;
-            frame_cursor[depth] += 1;
-            continue;
-        }
-        // Check budget
-        if (total_placements & 0xFFFF) == 0 && Instant::now() >= deadline {
-            break;
+            cur += 1;
         }
 
-        let pos = depth;
-        let n_color = if pos < N {
-            BORDER
-        } else {
-            // north neighbour
-            let np = pos - N;
-            let p_idx = placed[np].unwrap();
-            piece_rots[p_idx].s
-        };
-        let w_color = if pos % N == 0 {
-            BORDER
-        } else {
-            let np = pos - 1;
-            let p_idx = placed[np].unwrap();
-            piece_rots[p_idx].e
-        };
-
-        // Direct bucket lookup
-        let key = (n_color as usize) * N_COLORS + (w_color as usize);
-        let candidates = &bucket[pos][key];
-        let mut cur = frame_cursor[depth];
-        let mut found = None;
-        while cur < candidates.len() {
-            let pr_idx = candidates[cur] as usize;
-            let pr = piece_rots[pr_idx];
-            if used[pr.piece_id as usize] {
-                cur += 1;
-                continue;
+        if found != u32::MAX {
+            chosen[depth] = found;
+            let pid = (found >> 12) as usize;
+            used[pid] = true;
+            frame_cursor[depth] = cur;
+            total_placements += 1;
+            depth += 1;
+            if depth as u32 > max_depth {
+                max_depth = depth as u32;
             }
-            found = Some((pr_idx, cur));
-            break;
-        }
-        match found {
-            Some((pr_idx, cur)) => {
-                placed[depth] = Some(pr_idx);
-                used[piece_rots[pr_idx].piece_id as usize] = true;
-                frame_cursor[depth] = cur;
-                total_placements += 1;
-                depth += 1;
-                if (depth as u32) > max_depth {
-                    max_depth = depth as u32;
-                }
-                if depth < N_POS + 1 {
-                    frame_cursor[depth] = 0;
-                }
-            }
-            None => {
-                if depth == 0 {
-                    break 'outer;
+            if depth == N_POS {
+                solved_count += 1;
+                if want_solve {
+                    eprintln!("[solve] FOUND in {} ms", t0.elapsed().as_millis());
+                    break;
                 }
                 depth -= 1;
-                total_backtracks += 1;
-                let prev_idx = placed[depth].unwrap();
-                used[piece_rots[prev_idx].piece_id as usize] = false;
-                placed[depth] = None;
+                let pid = (chosen[depth] >> 12) as usize;
+                used[pid] = false;
                 frame_cursor[depth] += 1;
+                continue;
             }
+            enter_fresh!(depth);
+        } else {
+            if depth == 0 {
+                break 'outer;
+            }
+            depth -= 1;
+            total_backtracks += 1;
+            let pid = (chosen[depth] >> 12) as usize;
+            used[pid] = false;
+            frame_cursor[depth] += 1;
         }
     }
 
