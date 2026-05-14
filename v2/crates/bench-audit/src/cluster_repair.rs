@@ -36,8 +36,14 @@ impl Default for ClusterOptions {
     fn default() -> Self { ClusterOptions { time_limit_secs: 60.0, threads: 4, verbose: false } }
 }
 
-/// Given a board and a cluster of cells K, solve a small MIP that
-/// permutes the existing pieces in K to maximise edges in E_in ∪ E_bdy.
+/// Given a board and a region of cells R, solve a small MIP that permutes
+/// the pieces currently in R (with rotation choice) to maximise matched edges
+/// internal to R and on R's external boundary. All cells outside R are
+/// held fixed.
+///
+/// Setting R = a single mismatch cluster gives "option (a)" — within-cluster
+/// permutation. Setting R = cluster ∪ halo gives "option (b)" — local
+/// neighbourhood swap.
 pub fn repair_cluster(
     puzzle: &Puzzle,
     board: &Board,

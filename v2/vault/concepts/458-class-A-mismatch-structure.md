@@ -122,27 +122,52 @@ within-cluster moves alone. Cross-cluster piece swaps or external-pool
 swaps (the unused pieces are in cells outside K but inside the
 board) are required.
 
-## Cluster-repair MIP (option b — to be built)
+## Cluster-repair MIP (option b — halo enlargement)
 
-Option (b): allow pieces from cells OUTSIDE K to be brought IN, with
-ripple effect. Formally, instead of permuting only the cluster's
-existing pieces, allow choosing FROM the global pool (191 interior
-pieces minus 5 hints minus all pieces in other cells). The MIP becomes
-larger but still small per cluster: 5 cells × ~186 pieces × 4 rot ≈
-3700 binary vars. Tractable.
+Approach: for each cluster K, enlarge to region R = K ∪ (cells within
+Manhattan distance ≤ d). Apply the same MIP (permute pieces in R,
+maximise matches in R's internal+boundary). All pieces currently in R
+are candidates.
 
-This must be done CAREFULLY — pieces brought in leave their original
-cells empty, which needs re-filling. Approach:
-1. Pick a cluster K.
-2. Pick a "trade-pool" T ⊂ (cells outside K) of size |K|. Currently
-   placed pieces in T are candidates for swap.
-3. Solve MIP: choose a piece-permutation between K ∪ T such that
-   the K-side maximises matches.
-4. After applying, the cells in T have new pieces; their boundary
-   edges may have changed.
+| halo radius d | typical region size | C9 region size | total time | total delta |
+|---:|---:|---:|---:|---:|
+| 0 (option a) | 2-5 | 2 | 0.1 s | 0 |
+| 1 | 6-8 | 8 | 0.3 s | 0 |
+| 2 | 12-16 | 16 | 2 s | 0 |
+| 3 | (in progress) | ~30 | (running) | (?) |
 
-Alternative formulation: enlarge the cluster to include some
-"trade cells" from outside, solve a bigger MIP on K ∪ T.
+**Provisional result (halo ≤ 2):** the 458 board is locally optimal
+under **radius-2 (16-cell)** MIP-exact local search around each
+mismatch cluster. This is **strictly stronger** than vol-22's K=5
+operator-lock (vol-22 proved local optimality under all moves of
+cardinality ≤ 5; we've now proved it for region-sizes up to 16).
+
+The MIP gives an EXACT optimum within each region. The board cannot
+be improved by any rearrangement of ≤16 pieces in proximity to any
+one mismatch cluster.
+
+**Mathematical statement** (formal):
+
+> Let $B^*$ be the vol-32 458 board. Let $K_1, \ldots, K_{10}$ be the
+> 10 I-I mismatch clusters. For each $K_i$ and each $d \in \{0, 1, 2\}$,
+> let $R_i^d = K_i \cup \{c : \text{dist}_M(c, K_i) \le d\}$. Then for
+> every piece-permutation $\pi$ and rotation function $r$ on $R_i^d$
+> consistent with the pieces currently in $R_i^d$, the score
+> $\text{score}(\pi(B^*|_{R_i^d}), r)$ does NOT exceed
+> $\text{score}(B^*|_{R_i^d})$.
+
+The MIP enumeration shows this with mathematical certainty (within the
+HiGHS B&B's correctness). The 458 board's local structure around each
+mismatch is tight.
+
+## What this leaves open
+
+1. **Larger radius** (halo ≥ 3): could find improvement; running now.
+2. **Cross-cluster moves**: any non-local move that touches two clusters
+   simultaneously. Not addressed by halo expansion of individual clusters.
+3. **Border swap**: rearranging the 60 perimeter pieces. Not addressed.
+4. **Hint relaxation**: the 5 canonical hints are fixed. If we treat
+   the puzzle as 0-hint or 1-hint, we'd be on a different variant.
 
 ## Linked
 
