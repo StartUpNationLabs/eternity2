@@ -113,6 +113,32 @@ If invariants hold at 4-6-8, predict 16×16 properties:
 
 **Total**: 2-3 day volume.
 
+## Why ALNS, not brute-force (user Q, 2026-05-14)
+
+User asked: "why use ALNS instead of brute-force 120M one?"
+
+Short answer: ALNS and brute-force give DIFFERENT measurements:
+
+- **Brute-force (vanilla_fast)**: enumerates configurations satisfying
+  all edge-color + piece-uniqueness constraints. Yields GLOBAL OPTIMA
+  (score = 60 at 6×6 max). On a Selby-Riordan generated puzzle there's
+  typically 1 global solution.
+- **ALNS-from-random**: enumerates ATTRACTORS of local search. Yields
+  LOCAL OPTIMA (score 40-55 at 6×6). These are the "stuck states" SA
+  reaches and can't escape.
+
+For LO enumeration ALNS is the right primitive — the *basin* concept
+is *defined* by where local search converges. Brute-force gives no
+information about local-search dynamics.
+
+Where brute-force IS complementary:
+- Enumerate ALL boards at score ≥ N (near-global threshold). Compare
+  topology of the near-global set to the LO set.
+- Test the "big-valley" hypothesis: are LOs concentrated near the
+  global solution(s)?
+
+Vol-35 plan: ALNS phase 1, then brute-force-vs-LO comparison phase 2.
+
 ## Linked concepts
 
 - [[trajectory-families]] — already-measured disjoint basin families.
