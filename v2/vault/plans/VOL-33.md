@@ -73,6 +73,48 @@ is now reliable. Concretely:
 The unsat-propagator (T1) is still valuable for CP-depth — but the
 score-axis blocker is operator engineering, not CP depth.
 
+## Priority update at vol-32 close (07:00) — vanilla_fast PoC shipped
+
+A user-driven probe at vol-32 close pushed forward by ~25 hours:
+`target/bench-fast/vanilla_fast` (~250 LOC standalone bin) reaches
+**78.7M placements/sec sustained** on canonical E2 — within community
+range (81% of Yendor's 97M, 56% of Razvan's 140M). Max cold-start
+depth reached 211 in 60s (vs blackwood_raw at 30min = 198 max).
+
+Implications for vol-33 priority ordering:
+
+1. **The vanilla_fast bin is the new performance baseline for cold-
+   start exploration**. At 78M pp/s, propagator overheads finally
+   matter: at 5 placements per 238ns unsat-clause lookup, the
+   capiman/e2 propagator integration is now profitable IF it gives
+   ≥5% pruning ratio.
+
+2. **96% of placements are at depth 140-179**. The deep interior
+   is where time goes. Any operator/propagator that prunes there
+   compounds. The first 120 cells are essentially free.
+
+3. **For score-axis (vol-32's headline 457 record tie)**: vanilla_fast
+   doesn't pin hints or score-target; it's a raw enumerator. To use
+   it for the score axis, vol-33 would need to add hint pinning +
+   matched-edge tracking. ~2 hours of work to get vanilla_fast
+   producing scored partials.
+
+4. **Combine vanilla_fast + unsat-propagator**: 78M pp/s × (1 - prune_rate)
+   compounded over hours could potentially BREAK the 457 record by
+   sampling exponentially more diverse partials than blackwood_raw can.
+
+Revised vol-33 priorities:
+- **T1' (NEW, highest)**: extend vanilla_fast to (a) honor hints
+  (pin the 5 canonical hints in place), (b) track matched edges,
+  (c) periodically save partials. ~1 day. Foundation for everything else.
+- **T1 (was)**: unsat-clause-propagator integration. Now the second
+  priority, but the bigger payoff because it lifts ALL pipelines.
+  Encoding-reconciliation blocker still real.
+- **T2**: operators to push past 457 (Houdayer-on-ALNS, etc.).
+  Lower priority — vanilla_fast + unsat-propagator might break 457
+  through CP-depth alone without new operators.
+- **T3**: joe-iteration-budgeted-prune. Same as before.
+
 ## Binding items (3 max)
 
 ### T1 — Unsat-clause-propagator Rust integration
