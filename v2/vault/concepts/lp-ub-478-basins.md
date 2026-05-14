@@ -51,6 +51,37 @@ This is **structurally different** from previous attacks because the
 LP UB tells us 478 is the theoretical ceiling. We're not chasing an
 unknown — we know the room.
 
+## Within-UB-class structural diversity (measured)
+
+Board-diff between vol-32 458 (basin A) and other LP-UB-478 basin reps:
+
+| Compared to | Same (pos, piece, rot) | Top region piece overlap |
+|---|---:|---|
+| **lo_00001_s457** | 92 / 256 (36%) | **56 / 56 (100%!)** |
+| lo_f150_s454 | 9 / 256 (3.5%) | 11 / 56 (20%) |
+| lo_f452_s455 | 8 / 256 (3%) | ~similar to f150 |
+
+**Two distinct families within LP-UB-478:**
+
+1. **Family A* (vol-32 458, lo_00001 s457):** share the *entire* top
+   4-row piece-set (56/56). Differ in middle/bottom. lo_00001 looks
+   like an "early diverged variant" of the same trajectory.
+
+2. **Family LO (lo_f150, lo_f452, ...):** structurally different
+   piece-set from family A*. Only 3-5% same with vol-32 458.
+
+This says the LP UB 478 is shared by ≥2 STRUCTURALLY DISTINCT
+families. The LP relaxation captures a coarse invariant (perhaps
+total piece-set + adjacency multiset?) that multiple distinct
+piece-position assignments share.
+
+**Implication for ALNS push:**
+
+- lo_00001 → likely converges to 458 quickly (same top, "similar"
+  trajectory).
+- lo_f150, lo_f452 → if they reach 458+, this is more meaningful
+  evidence that LP-UB-478 is a robust ceiling across families.
+
 ## Open questions
 
 - How many distinct LP-UB-478 basins are there in our 4746-board
