@@ -102,6 +102,29 @@ back to the 416 plateau the cold replica found, let alone past 456.
 (MRV-derived and edge_bp-derived) of blackwood_raw cold-start.**
 Total 27 ALNS runs across all setups, 6 reached 456, none beat 456.
 
+## WHY the basin is locked: bound = 458-460
+
+Ran `edge_bound_ascent` from the 456 boards (1000-2000 iter SA):
+
+| Board | Initial bound | Final bound (after SA) | Gap (ceil - score) |
+|---|---:|---:|---:|
+| Seed 2's 456 | 458 | 458 (1000 iter) | +2 |
+| Seed 4's 456 | 460 | 460 (2000 iter) | +4 |
+
+**The blackwood_raw basins have bounds 458-460** — only 2-4 theoretical
+points above 456. Bound-ascent SA can't move to higher-bound configs.
+
+**This is the structural answer**: vol-22's 469-ceiling basins exist
+in a DIFFERENT basin family that bound-ascent CAN reach (vol-22 shipped
+the recipe). The blackwood_raw basins are locked at bound 458-460,
+which caps the basin family at 456 (gap=2-4).
+
+To reach 457+, vol-33 needs to either:
+- Run vol-22's basin-escape recipe FROM these 456 boards (find higher-
+  bound configs via the bound landscape).
+- Find a different starting partial that's in a high-bound basin
+  family from the start.
+
 Breaking 456→457 requires vol-22's basin-escape recipe (bound-ascent
 + Hungarian + multi-hour ALNS), a fundamentally different starting
 partial, or new operator engineering. Vol-33 work.
