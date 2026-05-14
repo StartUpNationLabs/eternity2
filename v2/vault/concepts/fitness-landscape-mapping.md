@@ -137,7 +137,22 @@ Where brute-force IS complementary:
 - Test the "big-valley" hypothesis: are LOs concentrated near the
   global solution(s)?
 
-Vol-35 plan: ALNS phase 1, then brute-force-vs-LO comparison phase 2.
+**Better idea (vol-35 candidate)**: modify vanilla_fast to enumerate
+ALL near-optimal completions (e.g. all boards with score ≥ 55 at 6×6),
+then post-process each by checking single-swap-neighbours — if no
+single swap improves the score, it's a LO. This gives the COMPLETE
+LO set above the threshold, with exact basin radii. At 6×6 this is
+feasible (search tree ~10⁵-10⁶ leaves, single-swap check is ~10⁴
+ops/leaf). At 16×16 it's infeasible — but the 6×6/8×8 results would
+tell us how the LO set scales.
+
+Vol-35 plan:
+- Phase 1: brute-force LO enumeration at 4×4, 6×6 (exact basin set).
+- Phase 2: ALNS-from-random sampling at 8×8 (where brute-force becomes
+  expensive). Cross-check ALNS sample against the 6×6 exact set to
+  measure sampling bias.
+- Phase 3: extrapolate to 16×16 (no enumeration possible; predict
+  from scaling pattern).
 
 ## Linked concepts
 
