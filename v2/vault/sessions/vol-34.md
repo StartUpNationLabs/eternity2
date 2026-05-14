@@ -55,11 +55,26 @@ See [[vol-34-basin-clustering]] for the prefix-clustering analysis.
 ### T3 — mass ALNS lottery from T1 partials
 
 14 partials × 4 ALNS seeds × 5min each = 56 runs in parallel
-batches of 8.
+batches of 8 (~35 min wall-clock on M1's 8 cores).
 
-`ALNS_BUDGET_MS=300_000` × 56 runs ÷ 8 cores = ~35 min wall-clock.
+**Required two restarts** due to two bugs discovered (see "What
+was discovered" below). Post-fix:
+- Batches 1-2 (16 runs): all consistent (rescore == log). One **verified
+  457** (distinct basin from vol-34 T1's first 457).
+- Batches 3-7 (40 more): in flight at vault-write time.
 
-Result: TBD (in flight at vault-write time).
+5 distinct 457 basins now known: vol-18, vol-32-seed7, vol-32-seed10,
+vol-34 T1-signal, vol-34 T3-t01-seed1. None breaks the 458 record.
+
+Score distribution from 16 verified runs:
+- 457: 1 (6%)
+- 454: 2
+- 452-450: 3
+- 449-441: 8
+- 439: 1
+- 433-(below 440): 1
+
+Mean=~448. Confirms vanilla_fast's basin family caps around 454-457.
 
 ## What was measured / kept
 
