@@ -180,3 +180,7 @@ path = "src/bin/cluster_repair_class_b_457.rs"
 [[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
+
+[[bin]]
+name = "border_cluster"
+path = "src/bin/border_cluster.rs"
