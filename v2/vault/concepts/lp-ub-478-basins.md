@@ -82,6 +82,34 @@ piece-position assignments share.
 - lo_f150, lo_f452 → if they reach 458+, this is more meaningful
   evidence that LP-UB-478 is a robust ceiling across families.
 
+## ALNS push on 3 LP-UB-478 basins (results)
+
+Ran 16 ALNS-diverse seeds, 10 min each, with t=0.5 temperature:
+
+| Basin (start score) | Seeds | Best | Lift |
+|---|:---:|:---:|---:|
+| lo_00001 / s457 / family A* | 8 | 457 | **+0** |
+| lo_f452 / s455 / family LO | 4 | 455 | **+0** |
+| lo_f150 / s454 / family LO | 4 | 455 | +1 (2 of 4) |
+
+**Each basin is at or near its ALNS-local-optimum**, regardless of
+the LP-UB-478 ceiling. The 478 cap is genuinely LP relaxation slack
++ piece-uniqueness commitment, not achievable headroom for our
+search style.
+
+## Implication
+
+To break 458 within LP-UB-478, we need either:
+- **Different operators** (mega_mix, kempe chains, etc.) — ALNS-diverse
+  has already been tested.
+- **Longer compute** per basin (30-60 min) on lo_00001 specifically
+  (the closest-related basin to vol-32 458).
+- **Higher LP UB basin** — not yet found, but might exist in our
+  4746-board archive among lower-score classes (need to test).
+
+The vol-32 458 basin is special: only basin sampled where score
+EQUALS the apparent local-opt under our operators.
+
 ## Open questions
 
 - How many distinct LP-UB-478 basins are there in our 4746-board
