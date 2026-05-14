@@ -178,6 +178,10 @@ name = "cluster_repair_class_b_457"
 path = "src/bin/cluster_repair_class_b_457.rs"
 
 [[bin]]
+name = "cluster_repair_lo00001"
+path = "src/bin/cluster_repair_lo00001.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 
