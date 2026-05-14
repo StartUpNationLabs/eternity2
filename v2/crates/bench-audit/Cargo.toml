@@ -109,3 +109,7 @@ path = "src/bin/run_e2_layered_pipeline.rs"
 [[bin]]
 name = "vanilla_fast"
 path = "src/bin/vanilla_fast.rs"
+
+[[bin]]
+name = "vanilla_fastest"
+path = "src/bin/vanilla_fastest.rs"

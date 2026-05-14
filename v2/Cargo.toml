@@ -28,7 +28,11 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# Vol-32: relaxed from forbid → deny so a single bin
+# (crates/bench-audit/src/bin/vanilla_fastest.rs) can opt-in via
+# `#![allow(unsafe_code)]` for hot-loop bounds elision. All OTHER
+# crates and bins still keep their per-crate `#![forbid(unsafe_code)]`.
+unsafe_code = "deny"
 unused_must_use = "deny"
 
 [workspace.lints.clippy]
