@@ -1,12 +1,30 @@
-# vol-34 — T1 signal: new 457 canonical-clue basin (cold-start)
+# vol-34 — T1 signal: 457 cold-start (after fixing alns_only bug)
 
 **Date**: 2026-05-14 (mid-vol)
-**Status**: in-flight finding during vol-34 T1 1h probe
+**Status**: 457 confirmed rescored after bug fix
 
-## Headline
+## Bug discovered + fixed
 
-A **new 457/480** canonical-clue-respecting board, fresh basin family,
-reached in **60s ALNS** from a 207-depth `vanilla_fast` snapshot. 5/5
+The first attempt at this 457 reported `matched=457` in the ALNS log
+but the saved board scored only 453 by `rescore_board`. Investigation
+found a bug in `piece_swap_hillclimb` (vol-34 commit `4474987`):
+local-delta estimator over-counted on certain non-adjacent swap
+topologies that share neighbours; over 200 iterations the cumulative
+`total_gain` ballooned to `+400` while the board actually regressed.
+
+Fix: anchor on `score_board()` between swaps, roll back + break if
+real score regresses, report gain as `final - start`. Re-running the
+same partial × seed now scores **457 confirmed by rescore_board**
+(saved at `output/vol-34/t3_signal/REAL_RECORD_TIE_457_vol34_t1signal_seed1.json`).
+
+The vol-32 records (458 RECORD_BREAK, three 457 RECORD_TIE) all
+verified intact by `rescore_board` post-fix; the bug only fired on
+some partials, not all.
+
+## Original (now-refuted) headline
+
+A new 457/480 canonical-clue-respecting board, fresh basin family,
+reached in 60s ALNS from a 207-depth `vanilla_fast` snapshot. 5/5
 canonical hints honored (verified). Ties vol-18's all-time cold-start
 record.
 
