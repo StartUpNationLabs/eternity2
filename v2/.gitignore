@@ -14,3 +14,6 @@ frontend/tsconfig.tsbuildinfo
 # Profiler symbol bundles (dsymutil) and run artifacts
 output/**/*.dSYM
 *.dSYM
+
+# Claude Code per-project state (scheduled_tasks.lock, etc.)
+/.claude/
