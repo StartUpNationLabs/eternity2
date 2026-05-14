@@ -168,3 +168,7 @@ path = "src/bin/mismatch_map.rs"
 [[bin]]
 name = "cluster_repair_458"
 path = "src/bin/cluster_repair_458.rs"
+
+[[bin]]
+name = "repair_region"
+path = "src/bin/repair_region.rs"

@@ -169,6 +169,60 @@ mismatch is tight.
 4. **Hint relaxation**: the 5 canonical hints are fixed. If we treat
    the puzzle as 0-hint or 1-hint, we'd be on a different variant.
 
+## Cross-cluster MIP — UNION of all 10 mismatch clusters
+
+Tool: `repair_region --all-mismatch-clusters`, run 2026-05-14.
+Region = union of all 28 cells touching any I-I mismatch.
+**MIP solved to optimality in 1.74 s. delta = 0.**
+
+**This proves**: the 458 board's bottom-band 28 cells are at the
+**integer optimum** under any rearrangement of just those 28 pieces
+(boundary edges to the perfect top 9 rows held fixed).
+
+To improve 458 further, we MUST:
+- Bring pieces from OUTSIDE the bottom-band (rows 0-9) INTO the
+  bottom-band (rows 10-14), OR
+- Modify the perimeter, OR
+- Modify the canonical hints (forbidden by puzzle).
+
+Effectively, **the 458 board's top region (rows 0-9) is committed
+to a specific piece-set, and that commitment is what limits the
+bottom region**.
+
+## Mathematical statement (strong form)
+
+> Let $B^*$ = vol-32 458 board, $R$ = the 28 cells touching any I-I
+> mismatch, $\Pi_R$ = pieces currently at $R$. For every assignment
+> $\sigma: R \to \Pi_R$ (bijection) and every rotation function
+> $\rho: R \to \{R_0, R_1, R_2, R_3\}$:
+>
+> $$\text{score}(B^* | \sigma, \rho) \le \text{score}(B^*) = 458$$
+>
+> The bound is achieved by the current placement.
+
+The MIP proves this exactly via HiGHS B&B.
+
+## Where the slack actually lives
+
+LP UB = 478. Integer at R-permutation optimum = 458. The 20-point
+gap consists of:
+- (a) LP relaxation slack — the fractional vars in the LP that don't
+  correspond to integer solutions.
+- (b) Piece-uniqueness commitment — the rest-of-board (rows 0-9 plus
+  perimeter) fixes which 28 pieces are available for the bottom band,
+  and that 28-piece set has score-458 ceiling on this border.
+
+Item (b) is the real constraint. To break it, we need cross-region
+swaps (move a piece from row 0-9 to row 10-14, displacing another
+piece, with the ripple maintained globally).
+
+## Next experiment: cross-region MIP
+
+Take a larger region $R^+ = R \cup \{\text{rows 6-14}\}$ for
+example — a 14×9 = 126 cell rectangle covering the bottom 9 rows.
+MIP would be ~126 × 126 × 4 ≈ 63 000 binary x-vars. Might or might
+not be tractable for HiGHS. Worth trying with 10-min budget.
+
 ## Linked
 
 - [[vol-44]] — session
