@@ -17,6 +17,7 @@ declare -a TARGETS=(
     "457:output/vol-32/RECORD_TIE_457_blackwood_mrv_5min_seed10.json"
     "457:output/vol-32/RECORD_TIE_457_blackwood_mrv_30min_seed4.json"
     "457:output/vol-34/t3_signal/REAL_RECORD_TIE_457_vol34_t1signal_seed1.json"
+    "457:output/vol-34/t3_signal/RECORD_TIE_457_vol34_t3_t01_seed1.json"
 )
 
 PASS=0
