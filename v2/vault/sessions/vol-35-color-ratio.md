@@ -61,3 +61,43 @@ condition differs by scale*:
 The proportional-color probes will give cleaner data but the
 TRIMODAL landscape structure observed at 16×16 from ALNS-from-partial
 may only be observable at canonical scale.
+
+## Update — 8×8/5c result
+
+**8×8/5c (100 restarts × 10s ALNS, single thread)**:
+- Score range 86-98, mean 93.2, max 98 (87% of optimum)
+- Mean Hamming = 63.5 / 64 (essentially max)
+- All 100 LOs distinct (no clustering)
+- **FDC r = 0.000** (literally zero correlation)
+
+The "canonical-ratio" 8×8/5c has WORSE FDC than the off-ratio
+6×6/5c (-0.031) or 12×12/8c (-0.104). The user's color-ratio
+hypothesis is **REFUTED** as the explanation for the rugged
+small-puzzle landscape.
+
+Updated scaling table:
+
+| Size | Pieces/Color | FDC r | Best/Max |
+|---|---:|---:|---:|
+| 4×4/4c | 4.0 | -0.052 | 100% |
+| 6×6/5c | 7.2 | -0.031 | 90% |
+| 8×8/5c | 12.8 | -0.000 | 87% |
+| 12×12/8c | 18.0 | -0.104 | 84% |
+| 16×16/22c (random) | 11.6 | -0.068 | 66% |
+
+FDC isn't monotonic in color-ratio. The 12×12 happens to have
+strongest structure (r=-0.104). Possibly the SIZE matters more
+than ratio for whether ALNS-from-random finds basin structure.
+
+## Implication
+
+Random-init ALNS may simply be the wrong tool for finding
+basin structure at any small scale. The trimodal Hamming we
+observed in vol-34's T3 lottery (record-class LOs) is
+*starting-condition-dependent*: ALNS-from-deep-CP-partial finds
+basins; ALNS-from-random doesn't.
+
+This is the bigger insight than color-ratio. To map structure
+at canonical scale, we need to start from MANY different CP
+partials (vol-35 T1 thread-id sweep) and let ALNS settle them
+into per-basin attractors. NOT from random configurations.
