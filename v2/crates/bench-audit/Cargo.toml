@@ -119,3 +119,7 @@ path = "src/bin/vanilla_fastest.rs"
 [[bin]]
 name = "landscape_explorer"
 path = "src/bin/landscape_explorer.rs"
+
+[[bin]]
+name = "dump_puzzle_csv"
+path = "src/bin/dump_puzzle_csv.rs"
