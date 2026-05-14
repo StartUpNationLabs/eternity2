@@ -74,15 +74,38 @@ Currently-verified records (rescore_board PASS):
 - 457 — output/vol-34/t3_signal/REAL_RECORD_TIE_457_vol34_t1signal_seed1.json
   (5/5 canonical hints honored — cleaner than vol-32 458)
 
-## 📋 Vol-35 plan (drafted at vol-34 close)
+## 📋 Vol-35 direction (vol-34 landscape findings)
 
-User-proposed mid-vol research direction: **fitness/energy landscape mapping
-on small E2 puzzles**. Enumerate local optima at 4×4/6×6/8×8, measure basin
-properties (size, radius, adjacency, saddle-heights), look for transferable
-structural invariants. See [[fitness-landscape-mapping]] for the 5-phase plan.
+User mid-vol-34 proposed: "could we on smaller puzzles map the world of
+minima/maxima, then scale up?"
 
-Promoted to vol-35 T1. Vol-32's vanilla_fast + vol-34's snapshot infrastructure
-serves as the basin-sampling layer; the analysis layer is new.
+**Landscape pilots ran at 4×4 / 6×6 / 12×12 / 16×16 (see
+[[vol-34-landscape-1000]] for full data). Two surprising results**:
+
+1. **Naive ALNS-from-random produces NO clustering at small scales**.
+   At 6×6/5c with 1000 LOs: all distinct, FDC r=-0.031. The "map basins
+   from random starts" plan is REFUTED at small puzzle sizes.
+
+2. **BUT — record-class LOs (vol-34 T3's 56 ALNS-from-CP-partial boards)
+   show TRIMODAL Hamming clustering at canonical 16×16**:
+   - H=45-130: within-basin (60+ pairs)
+   - H=150-175: cross-basin same-family (240 pairs)
+   - H=240-254: cross-family (1216 pairs)
+
+   This IS the basin-family structure (5 families from vol-34 T1's
+   8-thread probe). See [[vol-34-record-class-landscape]] for details.
+
+**Actionable vol-35 T1 idea**: scale basin-family count via
+oversubscribed threads (16-32) + `--snapshot-on-visit` (vol-34
+infrastructure). Currently 5 productive families per 8-thread run.
+With 32 threads → expected ~20-30 families. Vol-22 found families
+with bound 469-471 — never tested with proper ALNS-from-partial.
+
+If a 469-bound family's max-LO matches 469 (matching its bound),
+that's a +12 break from vol-32's 458.
+
+**16-thread oversubscribed probe running at vol-34 close**. Output:
+`output/vol-35/t1_oversub/`.
 
 ## Vol-33 outputs (the refactor volume)
 
