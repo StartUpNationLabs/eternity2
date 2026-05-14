@@ -77,6 +77,30 @@ multiple compact session notes instead: [[vol-35-color-ratio]],
   is a primitive for family discovery; 46 families found vs 5
   default.
 
+## Vol-35 KEY FINDING: σ-cycle family of 458
+
+`oracle_cycle_swap` measured piece-multiset distance between each
+of the 5 distinct 457 clusters and the 458 record. **Clusters A
+and B reach the 458 board EXACTLY via σ-cycle decomposition**
+(A directly, B with 1 rotation fixup). C, D, E are different
+families.
+
+So the 458 family has at least 4 known boards (vol-32 458 +
+clusters A, A'=s10 sister, B = blackwood s4). All blackwood_mrv.
+
+Implication: 32 vol-32 blackwood lottery seeds produced 3 × 457
+in this family (9.4% rate). To break 458 by chance from same
+family, would need ~30+ more seeds.
+
+The deep_458_basin_lottery (48 runs × 5min × 4 ops from the
+vanilla_fast partial = source of 458 record) is the directly-
+targeted test.
+
+ALSO: **escape-457 lottery REFUTED** (20/20 runs from all 5
+clusters with winning5 + 3min budget all stay at 457).
+Current ops cannot escape any 457 attractor. Cross-basin
+moves at 100+ piece coordination scale need oracle guidance.
+
 ## Open at close
 
 1. **Cluster B (bound=465) deep lottery untested**. Family 255 was
