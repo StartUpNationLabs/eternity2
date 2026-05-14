@@ -36,7 +36,7 @@ for seed in $(seq 1 "$N"); do
     fi
     echo "[multi] seed=$seed: vanilla_fast probe..."
     ./target/release/vanilla_fast \
-        --threads 8 \
+        --threads 1 \
         --budget-ms "$BUDGET_MS" \
         --puzzle "$csv" \
         --snapshot-dir "$snap_dir" \

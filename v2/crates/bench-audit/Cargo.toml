@@ -117,10 +117,6 @@ name = "vanilla_fastest"
 path = "src/bin/vanilla_fastest.rs"
 
 [[bin]]
-name = "vanilla_generic"
-path = "src/bin/vanilla_generic.rs"
-
-[[bin]]
 name = "landscape_explorer"
 path = "src/bin/landscape_explorer.rs"
 
