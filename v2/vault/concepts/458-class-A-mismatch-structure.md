@@ -102,6 +102,48 @@ on the same border. Each cluster's MIP has size ~5 cells × 191 pieces
 **This is the next experiment.** Build a cluster-repair tool that
 solves the per-cluster MIP exactly.
 
+## Cluster-repair MIP result (option a — exhausted)
+
+Tool: `crates/bench-audit/src/bin/cluster_repair_458.rs`, run 1 on
+2026-05-14. Per-cluster MIP, permuting only the existing 2-5 pieces
+in each cluster (with rotation choice), preserving boundary matches.
+
+**All 10 clusters returned `delta = 0`.** Solve time per cluster
+< 0.01 s.
+
+**Interpretation**: For each cluster K with its current piece-set,
+the MIP confirms there is NO permutation+rotation of those pieces
+that increases the within-cluster matched edges while preserving the
+boundary edges. The 458 board's within-cluster placements are
+**already locally optimal** under piece-permutation moves.
+
+**Conclusion (proved):** the 458 → 462+ jump cannot be made by
+within-cluster moves alone. Cross-cluster piece swaps or external-pool
+swaps (the unused pieces are in cells outside K but inside the
+board) are required.
+
+## Cluster-repair MIP (option b — to be built)
+
+Option (b): allow pieces from cells OUTSIDE K to be brought IN, with
+ripple effect. Formally, instead of permuting only the cluster's
+existing pieces, allow choosing FROM the global pool (191 interior
+pieces minus 5 hints minus all pieces in other cells). The MIP becomes
+larger but still small per cluster: 5 cells × ~186 pieces × 4 rot ≈
+3700 binary vars. Tractable.
+
+This must be done CAREFULLY — pieces brought in leave their original
+cells empty, which needs re-filling. Approach:
+1. Pick a cluster K.
+2. Pick a "trade-pool" T ⊂ (cells outside K) of size |K|. Currently
+   placed pieces in T are candidates for swap.
+3. Solve MIP: choose a piece-permutation between K ∪ T such that
+   the K-side maximises matches.
+4. After applying, the cells in T have new pieces; their boundary
+   edges may have changed.
+
+Alternative formulation: enlarge the cluster to include some
+"trade cells" from outside, solve a bigger MIP on K ∪ T.
+
 ## Linked
 
 - [[vol-44]] — session

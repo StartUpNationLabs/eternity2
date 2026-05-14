@@ -164,3 +164,7 @@ path = "src/bin/board_anatomy.rs"
 [[bin]]
 name = "mismatch_map"
 path = "src/bin/mismatch_map.rs"
+
+[[bin]]
+name = "cluster_repair_458"
+path = "src/bin/cluster_repair_458.rs"
