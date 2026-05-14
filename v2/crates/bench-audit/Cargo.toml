@@ -18,6 +18,7 @@ eternity2-core = { path = "../core" }
 eternity2-events = { path = "../events" }
 eternity2-export = { path = "../export" }
 eternity2-generator = { path = "../generator" }
+eternity2-puzzle-io = { path = "../puzzle-io" }
 eternity2-localsearch = { path = "../localsearch" }
 eternity2-propagators = { path = "../propagators" }
 eternity2-sat-encoder = { path = "../sat-encoder" }

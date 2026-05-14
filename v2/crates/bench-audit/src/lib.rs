@@ -96,6 +96,45 @@ impl EventSink for ProgressSink {
     }
 }
 
+/// Vol-33 T5 — silent sink. No file, no logging; just captures the
+/// final `FinalStats` and tracks `best_depth`. Several bins (compare,
+/// run_8x8_solve, profile_*) want this when they're batching A/B
+/// configurations and don't need per-config log files.
+#[derive(Default)]
+pub struct QuietSink {
+    pub best_depth: u32,
+    pub final_stats: Option<FinalStats>,
+}
+
+impl QuietSink {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl EventSink for QuietSink {
+    fn emit(&mut self, event: SolverEvent) {
+        if let EventBody::Backtrack { from_depth, .. } = &event.body {
+            if *from_depth > self.best_depth {
+                self.best_depth = *from_depth;
+            }
+        }
+        if event.depth > self.best_depth {
+            self.best_depth = event.depth;
+        }
+        match event.body {
+            EventBody::Solved { final_stats, .. }
+            | EventBody::Exhausted { final_stats, .. }
+            | EventBody::TimedOut { final_stats, .. }
+            | EventBody::Cancelled { final_stats, .. } => {
+                self.final_stats = Some(final_stats);
+            }
+            _ => {}
+        }
+    }
+}
+
 // ---------- Vol-16 Cat-3 — shared harness helpers ----------
 //
 // The bench bins in `src/bin/` share ~80 lines of boilerplate each.
@@ -119,6 +158,182 @@ pub fn score_board_dense(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     let total = internal_edge_count(puzzle);
     let (matched, _) = score_board(puzzle, board);
     (matched, total)
+}
+
+/// Vol-33 T5 — shared bin-harness helpers.
+///
+/// Most bench-audit bins follow the same shape:
+///   1. load puzzle + hints
+///   2. open a ProgressSink
+///   3. build a solver + opts, call solver.solve()
+///   4. pattern-match SolveOutcome → (verdict, best_partial_board)
+///   5. format a human summary (verdict, wall-clock, FinalStats, score)
+///   6. serialize a JSON post-mortem (placement + stats + bucas URL)
+///
+/// Steps 4–6 are the largest copy-paste. The helpers below collapse
+/// them into ~3 calls. The bins remain free-form because every bin
+/// has bespoke headers / extra knobs, so this is a *toolkit*, not a
+/// framework.
+pub mod harness {
+    use eternity2_core::{Board, Puzzle};
+    use eternity2_events::FinalStats;
+    use eternity2_export::{bucas_url, placed_count, score_board};
+    use eternity2_solver_trait::SolveOutcome;
+    use serde_json::{json, Value};
+
+    /// The two things every bin pulls out of a `SolveOutcome` afterwards:
+    /// a human-readable verdict label and the best board (final or partial).
+    pub struct OutcomeView {
+        pub verdict: String,
+        pub board: Option<Board>,
+    }
+
+    /// Reduce any `SolveOutcome` to (verdict, board). The board is the
+    /// solved board on success, the best partial on timeout/cancel, the
+    /// first solution on AllSolutions, or None on Exhausted/Error.
+    #[must_use]
+    pub fn outcome_to_view(outcome: SolveOutcome) -> OutcomeView {
+        match outcome {
+            SolveOutcome::Solved(b) => OutcomeView {
+                verdict: "SOLVED".into(),
+                board: Some(b),
+            },
+            SolveOutcome::TimedOut {
+                best_partial,
+                best_depth,
+            } => OutcomeView {
+                verdict: format!("TIMEOUT (best_depth={best_depth})"),
+                board: Some(best_partial),
+            },
+            SolveOutcome::Cancelled {
+                best_partial,
+                best_depth,
+                ..
+            } => OutcomeView {
+                verdict: format!("CANCELLED (best_depth={best_depth})"),
+                board: Some(best_partial),
+            },
+            SolveOutcome::Exhausted => OutcomeView {
+                verdict: "EXHAUSTED".into(),
+                board: None,
+            },
+            SolveOutcome::AllSolutions(bs) => OutcomeView {
+                verdict: format!("ALL ({})", bs.len()),
+                board: bs.into_iter().next(),
+            },
+            SolveOutcome::Error(e) => OutcomeView {
+                verdict: format!("ERROR: {e}"),
+                board: None,
+            },
+        }
+    }
+
+    /// Append the standard "FINAL RESULT" block to `out`: verdict,
+    /// wall-clock, FinalStats, score+placed, ASCII board, bucas URL.
+    /// If `board` is None, omits the score/board parts.
+    pub fn write_summary(
+        out: &mut String,
+        puzzle: &Puzzle,
+        verdict: &str,
+        elapsed_secs: f64,
+        final_stats: Option<&FinalStats>,
+        board: Option<&Board>,
+        puzzle_name: &str,
+    ) {
+        out.push_str("\n=== FINAL RESULT ===\n");
+        out.push_str(&format!("verdict: {verdict}\n"));
+        out.push_str(&format!("wall_clock: {elapsed_secs:.2} s\n"));
+        if let Some(s) = final_stats {
+            out.push_str(&format!(
+                "nodes: {}\nbacktracks: {}\npropagations: {}\ndomain_wipeouts: {}\nmax_depth_seen: {}\nsolutions_found: {}\nnodes_per_sec: {:.0}\n",
+                s.nodes,
+                s.backtracks,
+                s.propagations,
+                s.domain_wipeouts,
+                s.max_depth_seen,
+                s.solutions_found,
+                s.nodes as f64 / elapsed_secs.max(1e-6)
+            ));
+        }
+        if let Some(b) = board {
+            let (matched, total) = score_board(puzzle, b);
+            let placed = placed_count(b, puzzle);
+            let internal_total = 2 * puzzle.width * puzzle.height - puzzle.width - puzzle.height;
+            out.push_str(&format!(
+                "pieces_placed: {}/{}\nedge_matches: {}/{} (counting only placed-placed joins)\ninternal_total_edges: {}\n",
+                placed,
+                puzzle.cell_count(),
+                matched,
+                total,
+                internal_total
+            ));
+            out.push_str("\nBoard (piece_id:rotation):\n");
+            out.push_str(&eternity2_export::render_board(puzzle, b));
+            let bucas = bucas_url(puzzle, b, puzzle_name);
+            out.push_str(&format!("\nbucas: {bucas}\n"));
+        }
+    }
+
+    /// Serialize the standard postmortem JSON: verdict, elapsed, score,
+    /// stats, per-cell placement, bucas URL. Caller writes it to disk.
+    #[must_use]
+    pub fn build_postmortem_json(
+        puzzle: &Puzzle,
+        verdict: &str,
+        elapsed_secs: f64,
+        final_stats: Option<&FinalStats>,
+        board: Option<&Board>,
+        puzzle_name: &str,
+    ) -> Value {
+        let stats_json = final_stats.map(|s| {
+            json!({
+                "time_ms": s.time_ms,
+                "nodes": s.nodes,
+                "backtracks": s.backtracks,
+                "propagations": s.propagations,
+                "domain_wipeouts": s.domain_wipeouts,
+                "current_depth": s.current_depth,
+                "max_depth_seen": s.max_depth_seen,
+                "solutions_found": s.solutions_found,
+            })
+        });
+        let internal_total = 2 * puzzle.width * puzzle.height - puzzle.width - puzzle.height;
+        if let Some(b) = board {
+            let (matched, total) = score_board(puzzle, b);
+            let placed = placed_count(b, puzzle);
+            let bucas = bucas_url(puzzle, b, puzzle_name);
+            let placement: Vec<Value> = (0..puzzle.cell_count())
+                .map(|pos| match b.get(pos) {
+                    Some((pid, rot)) => json!({
+                        "pos": pos,
+                        "piece_id": u32::from(pid),
+                        "rotation": rot.as_u8(),
+                    }),
+                    None => Value::Null,
+                })
+                .collect();
+            json!({
+                "schema_version": 1,
+                "verdict": verdict,
+                "elapsed_s": elapsed_secs,
+                "pieces_placed": placed,
+                "edge_matches": matched,
+                "edge_total": total,
+                "internal_total_edges": internal_total,
+                "bucas_url": bucas,
+                "placement": placement,
+                "final_stats": stats_json,
+            })
+        } else {
+            json!({
+                "schema_version": 1,
+                "verdict": verdict,
+                "elapsed_s": elapsed_secs,
+                "internal_total_edges": internal_total,
+                "final_stats": stats_json,
+            })
+        }
+    }
 }
 
 // ---------- Workload builders ----------
