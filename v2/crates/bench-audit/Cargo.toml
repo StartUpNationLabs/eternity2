@@ -25,6 +25,7 @@ eternity2-sat-encoder = { path = "../sat-encoder" }
 eternity2-solver-engine = { path = "../solver-engine" }
 eternity2-solver-trait = { path = "../solver-trait" }
 rayon = "1.10"
+good_lp = { version = "1.15", default-features = false, features = ["highs"] }
 
 [dependencies.serde]
 version = "1"
@@ -135,3 +136,15 @@ path = "src/bin/vanilla_path.rs"
 [[bin]]
 name = "run_e2_records_prior_ab"
 path = "src/bin/run_e2_records_prior_ab.rs"
+
+[[bin]]
+name = "lp_smoke"
+path = "src/bin/lp_smoke.rs"
+
+[[bin]]
+name = "border_lp_ub"
+path = "src/bin/border_lp_ub.rs"
+
+[[bin]]
+name = "border_lp_ub_small"
+path = "src/bin/border_lp_ub_small.rs"

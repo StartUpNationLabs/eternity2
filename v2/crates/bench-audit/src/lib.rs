@@ -12,6 +12,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod border_ub;
+
 use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
