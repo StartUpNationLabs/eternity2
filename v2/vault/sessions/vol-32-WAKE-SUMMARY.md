@@ -83,8 +83,17 @@ That covers every operator subset our codebase exposes, including
 the strong ones (k=80 ConflictDriven, full HingeDestroy + ComponentDestroy
 + WorstRow, MegaBand, etc.).
 
-PT high-T (T_max=4.0, 8-rep + Houdayer-every-5 + kick-every-10, 5min)
-was the final attempt — see t12_pt_hot_from_456 logs.
+PT high-T (T_max=4.0, 8-rep, Houdayer-every-5, kick-every-10, 5min):
+**also 456**. Hot replicas only reached 411 — couldn't even climb
+back to the 416 plateau the cold replica found, let alone past 456.
+
+**Comprehensive basin-lock verification (vol-32 close)**:
+- 7 ALNS seeds × 5min, winning5 ops → 7/7 = 456
+- 4 ALNS seeds × 5min, winning5 ops on seed 4's basin → 4/4 = 456
+- 8 distinct ALNS ops presets × 5min × same seed → 8/8 = 456
+- 15min ALNS extension (600 iters) → 456 (0 lifts)
+- PT 5min strong (vol-31 config) → 451 (worse than ALNS)
+- PT 5min hot (T_max=4) → 456 (matches but doesn't escape)
 
 Breaking 456→457 requires vol-22's basin-escape recipe (bound-ascent
 + Hungarian + multi-hour ALNS), a fundamentally different starting
