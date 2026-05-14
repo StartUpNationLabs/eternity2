@@ -156,3 +156,11 @@ path = "src/bin/border_lp_perturb.rs"
 [[bin]]
 name = "border_mip"
 path = "src/bin/border_mip.rs"
+
+[[bin]]
+name = "board_anatomy"
+path = "src/bin/board_anatomy.rs"
+
+[[bin]]
+name = "mismatch_map"
+path = "src/bin/mismatch_map.rs"
