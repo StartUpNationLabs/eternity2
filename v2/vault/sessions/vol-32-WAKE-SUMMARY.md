@@ -28,12 +28,25 @@ this vol-32 457). 247/256 cells differ from vol-21's 457.
 - 4/24 reached 455
 - mean=450.2, median=454, max=457, min=434, stdev=6.86
 
-**Bound-ascent on seed 7's 457**: bound = 462 (gap=+5).
-5000-iter SA bound-ascent: best bound stays 462, score stays 457.
-**462 is the structural ceiling of this basin family** — 457 is the
-operator-reachable max under our current toolkit.
+**Bound-ascent on the 457 boards**:
+- 5min seed 7's 457: bound = 462 (+5)
+- 5min seed 10's 457: bound = 457 (saturated)
+- 30min seed 4's 457: bound = 465 (+8, HIGHEST)
 
-See `vault/sessions/vol-32-457-record-tie.md` for full details.
+5000-10000-iter SA bound-ascent from each: best stays at original bound.
+**The basin family is structurally capped at 457 under ALL our operators.**
+
+**Final cumulative experiment (vol-32 close, 05:50)**:
+57 ALNS lottery runs + 4 PT configs + 10000-iter bound-ascent + 8 ops
+presets — across 3 distinct 457 boards with bounds varying 457-465.
+**0 runs broke 457.** All converge to 457 (or below for non-457 seeds).
+
+Also confirmed at vol-32 close that **joe_depth150_bp at 30min CP
+hits the SAME depth-174 partial as at 60s** — engine is wall-locked
+at depth 174 for that profile regardless of time. blackwood_raw is
+the unique config in our codebase that pushes past 174 to 190+.
+
+See `vault/sessions/vol-32-457-record-tie.md` for full experiment list.
 
 **Saved boards**:
 - `output/vol-32/RECORD_TIE_457_blackwood_mrv_5min_seed7.json` (bound 462)
