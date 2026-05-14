@@ -1,258 +1,127 @@
-# VOL-33 — pivot to engine + community-knowledge tracks
+# VOL-33 — code quality refactor (vol-25 items)
 
-**Opened**: 2026-05-14 (vol-32 close, post-ML-bug discovery).
-**Status**: drafted overnight at vol-32 close.
-**Theme**: vol-32 refuted vol-30/31's ML lift as a one-line bug.
-Per user note "if ML is not that good, move on", vol-33 pivots from
-ML to two BACKLOG items that have been queued since vol-32 open and
-are now top priority: (a) unsat-clause-propagator (capiman/e2 database),
-(b) joe-iteration-budgeted-prune. Also adds (c) InsertionOrder
-investigation as the lightweight follow-up to vol-32's discovery.
+**Opened**: 2026-05-14 (vol-32 close).
+**Status**: drafted at vol-32 close.
+**Theme**: **single focus** — ship the code quality refactors measured
+at vol-25 but never executed (deferred 8 volumes).
+
+User asked for: "do vol-25 we had skipped" — this is the code quality
+items. Splitting vol-33 into pure refactor work makes it easy to
+ship without scope creep.
+
+The companion **vol-34** is the throughput exploitation + record
+chase work.
 
 ## Why this volume exists
 
-1. **ML closed for now**: the canonical 5-clue 16×16 ML lift is real
-   but small (+3 matched edges from imitation, +0 score post-ALNS).
-   The vol-30/31 headline numbers were a bug. RL self-play remains
-   the only direction that could structurally beat the imitation
-   ceiling, but it's a 1-2 week build that hasn't yet shown leverage.
-2. **Community-knowledge propagators are unexplored**: capiman/e2's
-   70M unsat 2-piece clauses are sitting in `output/capiman_e2/`.
-   Vol-32's Python prototype confirms the data loads and parses
-   cleanly (130k literals, 53M clauses in 56s). Rust integration is
-   ~1 day, and this would be the **first time we use community-verified
-   pruning** in the engine. Likely the largest pruning gain since
-   gacolor + AC-3.
-3. **Joe's iteration-budgeted prune is half a day**: reuses existing
-   `mcgavin-prune-restart` plumbing (vol-23) with a different
-   triggering policy (iteration-count rather than CP-depth). msg
-   #11725 reports 30-49% search-space reduction.
-4. **Vol-32 discovered InsertionOrder > EdgeBpMarginals by +9 under
-   joe_depth150_bp**. Worth characterising across profiles before
-   committing engine-level changes.
+Vol-25 measured the code debt landscape but never shipped the
+refactors. Per BACKLOG, deferred since vol-25 (8 vols ago) the items
+must be picked or marked wont-do per audit-at-open discipline.
+We pick them.
+
+## Why a dedicated refactor volume now
+
+- The 76 bins are getting harder to add to (each new bin re-implements
+  ~250 lines of CLI/loader/sink/score boilerplate).
+- Vol-32's vanilla_fast + vanilla_fastest pair already duplicated the
+  bucas URL / scoring code that the export-crate would consolidate.
+- solver-engine/src/lib.rs at 5011 lines is the slowest-to-recompile
+  unit; splitting it speeds every dev cycle.
+- Net effect: vol-34+ work ships faster on a clean base.
 
 ## Audit-at-open
 
-Items aged ≥ 3 vols (vol-33 open, items ≤ vol-30 are old).
+The code-quality items in BACKLOG, deferred since vol-25:
 
-Vol-32 already promoted these to `refuted` or `wont-do`:
-- `learned-on-ties-hybrid` (vol-30) → `refuted`
-- `learned-on-ties-alns-postfill` (vol-31) → `refuted (re-attributed)`
-- `learned-on-ties-basin-escape` → `wont-do (premise refuted)`
-- `learned-on-ties-hyperparam-sweep` → `refuted (no-op)`
+1. `extract-eternity2-time-crate` (1h, since vol-25)
+2. `extract-eternity2-export-crate` (4-6h, since vol-25) — **highest leverage**
+3. `split-solver-engine-lib-into-5-modules` (4h, since vol-25)
+4. `extract-eternity2-puzzle-io-crate` (3-4h, since vol-25, blocked on #2)
+5. `consolidate-bin-harness` (8-10h, since vol-25, blocked on #2)
 
-Remaining aged items:
-- `multi-cell-bound-ascent` (12 vols): defer (ALNS-axis, orthogonal).
-- `bound-floor-alns-with-per-step-check` (12 vols): defer.
-- `diverse-457-search` (13 vols): defer.
-- `learned-16x16-long-train` (RL self-play flavor): defer; ML closed.
+All 5 items are **8 vols deferred**. Per audit-at-open: must be picked.
 
-NEW vol-32 items pickable for vol-33:
-- `unsat-clause-propagator-prototype` (Python prototype shipped) — **PICKED, becomes T1**.
-- `insertion-order-under-joe-depth150-bp` (partial) — **PICKED, becomes T3**.
-- `blackwood-raw-mrv-record-tie` (NEW vol-32 finding) — **PICKED, becomes T2 (priority bumped)**.
+## Binding items (5 sequential refactors)
 
-## Priority update at vol-32 close (05:50)
+Ship in order, each independently committable:
 
-**Vol-32's blackwood_raw + MRV → 457 record tie** changes the priority
-ordering. The original VOL-33 plan put the unsat-propagator first (T1)
-because we hadn't yet discovered the blackwood_raw route. After vol-32:
+### T1 — `extract-eternity2-time-crate` (1h)
 
-- The fastest known route to 457 = 10 min compute (vs vol-18's hours).
-- 3 distinct 457 boards saved, basin family characterised (bounds 457-465).
-- All operator attempts to push past 457 failed (54+ runs).
+Move identical `Clock` impls (solver-engine, solver-naive) to a
+single `eternity2-time` crate. Trivial dedup, ships first to validate
+workflow. Both crates already implement the same wasm32 vs native
+shim.
 
-Vol-33 T2 (NEW priority) should be **building operators that can push
-past the 457 basin family**, since the blackwood_raw_mrv → 457 route
-is now reliable. Concretely:
-- Houdayer-on-ALNS-side (currently only PT has Houdayer cluster moves).
-- Per-step bound-floor ALNS (BACKLOG item, partial).
-- Larger-radius ConflictDriven (k=120+ to escape 457's structure).
-- ALNS warm-restart from bound-ascent-perturbed configs.
+### T2 — `extract-eternity2-export-crate` (4-6h)
 
-The unsat-propagator (T1) is still valuable for CP-depth — but the
-score-axis blocker is operator engineering, not CP depth.
+Consolidate **5 duplicated utilities** into one crate:
+- board scoring (`bench-audit::score_board` + `benchmark::report::score_matched_edges`)
+- bucas URL encoding (currently buried unexported in `benchmark::report`)
+- `DumpedBoard` JSON serialization
+- ASCII board rendering
+- report writing
 
-## Priority update at vol-32 close (07:00) — vanilla_fast PoC shipped
+Replace each duplication call site with `use eternity2_export::*`.
+Test: `cargo test --workspace` passes; existing bins still work.
 
-A user-driven probe at vol-32 close pushed forward by ~25 hours:
-`target/bench-fast/vanilla_fast` (~250 LOC standalone bin) reaches
-**78.7M placements/sec sustained** on canonical E2 — within community
-range (81% of Yendor's 97M, 56% of Razvan's 140M). Max cold-start
-depth reached 211 in 60s (vs blackwood_raw at 30min = 198 max).
+**This is the highest-leverage item**. Unblocks T4 + T5.
 
-Implications for vol-33 priority ordering:
+### T3 — `split-solver-engine-lib-into-5-modules` (4h)
 
-1. **The vanilla_fast bin is the new performance baseline for cold-
-   start exploration**. At 78M pp/s, propagator overheads finally
-   matter: at 5 placements per 238ns unsat-clause lookup, the
-   capiman/e2 propagator integration is now profitable IF it gives
-   ≥5% pruning ratio.
+Internal module split of `solver-engine/src/lib.rs` (5011 lines):
+- `paths.rs` (~330 lines, pure geometry, zero backlinks) — ship first
+- `config.rs` (~200 lines, enums + struct)
+- `schedule_builders.rs` (~410 lines, pure factories)
+- `profiles.rs` (~350 lines, EngineSolver + 40 factories)
+- `lib.rs` keeps SearchState + recurse + propagate_ac3 (~3200 lines, untouched)
 
-2. **96% of placements are at depth 140-179**. The deep interior
-   is where time goes. Any operator/propagator that prunes there
-   compounds. The first 120 cells are essentially free.
+Multi-crate split rejected per vol-25 notes as overkill until a
+downstream consumer wants schedules/paths independently. Internal
+module split is the right scope. Each step independently shippable.
 
-3. **For score-axis (vol-32's headline 457 record tie)**: vanilla_fast
-   doesn't pin hints or score-target; it's a raw enumerator. To use
-   it for the score axis, vol-33 would need to add hint pinning +
-   matched-edge tracking. ~2 hours of work to get vanilla_fast
-   producing scored partials.
+### T4 — `extract-eternity2-puzzle-io-crate` (3-4h, blocked on T2)
 
-4. **Combine vanilla_fast + unsat-propagator**: 78M pp/s × (1 - prune_rate)
-   compounded over hours could potentially BREAK the 457 record by
-   sampling exponentially more diverse partials than blackwood_raw can.
+Hint loading (`benchmark::loader::load_puzzle_with_hints`) and CSV
+parsing belong with the puzzle types, not in the benchmark crate.
+Currently invisible to solvers from naming.
 
-Revised vol-33 priorities:
-- **T1' (NEW, highest)**: extend vanilla_fast to (a) honor hints
-  (pin the 5 canonical hints in place), (b) track matched edges,
-  (c) periodically save partials. ~1 day. Foundation for everything else.
-- **T1 (was)**: unsat-clause-propagator integration. Now the second
-  priority, but the bigger payoff because it lifts ALL pipelines.
-  Encoding-reconciliation blocker still real.
-- **T2**: operators to push past 457 (Houdayer-on-ALNS, etc.).
-  Lower priority — vanilla_fast + unsat-propagator might break 457
-  through CP-depth alone without new operators.
-- **T3**: joe-iteration-budgeted-prune. Same as before.
+### T5 — `consolidate-bin-harness` (8-10h, blocked on T2)
 
-## Binding items (3 max)
+76 bins across `bench-audit` and `benchmark` share ~250 lines of
+boilerplate each (CLI parsing, puzzle load, ProgressSink, solver
+instantiation, report writing). Extract into `bin-common`. **~7K
+lines of copy-paste eliminated**.
 
-### T1 — Unsat-clause-propagator Rust integration
+## Vol-close protocol
 
-**Vol-32 bootstrap shipped** the loader + bench bins:
-- `target/release/unsat-clauses-load --info ... --cnf ... --out forbidden.bin`
-  parses 67.4M pairs from 68 files in <60s, writes 540 MB CSR binary.
-- `target/release/unsat-clauses-bench forbidden_all.bin` measures
-  lookup: **238 ns per placement** (4.2M placements/sec).
-- `output/vol-33/forbidden_all.bin` (540 MB) and `forbidden_round1.bin`
-  (425 MB) ready for vol-33 engine consumption.
-- At ~500K nodes per canonical run, overhead ≈ 120 ms — negligible.
-
-Vol-33 remaining work:
-1. **Encoding reconciliation** (vol-32 discovered the mismatch — see
-   `output/vol-32/unsat_validation_FINDING.md`): 74% of our placements
-   aren't in capiman's encoder, and 21 conflict pairs flagged on
-   placements that ARE encoded (= known-good moves marked forbidden).
-   Need to:
-   a) Parse capiman's piece edge tuples (PatternN/E/S/W columns in
-      `e2_info.c`).
-   b) Build piece-equivalence map: capiman_card_N → our_piece_id_M
-      via edge-tuple match.
-   c) Resolve rotation convention (capiman 1..4 → our 0..3 + offset).
-   d) Re-validate against `edge_bp_165` until 0 conflicts.
-   Half a day of careful Rust work — NOT optional.
-2. **Engine integration**: in `place_and_propagate` (after gacolor +
-   AC-3), compute the placed literal X via the encoder, iterate
-   `forbidden_partners[X]`, decode each Y to `(piece, field, rot)`,
-   and call `remove_from_domain` on that cell's row matching that
-   piece+rotation.
-3. **Lazy load**: OnceCell-protected; only load when a profile that
-   uses it is instantiated.
-4. **Profile registration**: new `joe_depth150_bp_unsat` profile in
-   `EngineConfig`. Falls back to no-op if `forbidden.bin` missing.
-5. **Gate**: depth lift ≥ +5 on canonical 5-clue at 60s; clear
-   measurement that adds to gacolor + AC-3 rather than subsumed by it.
-
-Cost: **1.5-2 days** (loader + bench done; reconciliation is the
-unblock). Estimate revised upward at vol-32 close after the
-validation found the encoding mismatch. Without reconciliation, the
-propagator would prune valid moves — silent correctness bug.
-
-### T2 — Joe iteration-budgeted prune
-
-Port msg #11725's policy on top of existing `mcgavin-prune-restart`
-plumbing (vol-23 shipped):
-- New `SolveOpts.prune_iter_budget: Option<usize>` field.
-- New triggering policy: if `current_depth > 150 && iterations_since_progress > 2000`,
-  trigger prune-to-depth-150 restart.
-- Compare cold-start nodes/depth on canonical 5-clue at fixed budget.
-
-Cost: half a day. The infrastructure exists; this is policy tuning.
-Gate: 30%+ search-space reduction at iso-budget.
-
-### T3 — InsertionOrder generality investigation
-
-Characterise vol-32's surprise finding (InsertionOrder beats
-EdgeBpMarginals by +9 depth under joe_depth150_bp) across the engine
-profile registry:
-- `joe_depth150_bp` (confirmed +9 depth on canonical)
-- `border_first_lcv` (baseline)
-- `blackwood_raw` (Blackwood)
-- `gacolor_ac3_ns1` (NS-1 propagator)
-- `joe_depth150_bp_par` (parallel variant)
-
-For each profile, A/B with `--mode insertion` vs the profile's
-default. Report depth, nodes, matched edges. If InsertionOrder wins
-generally, consider making it the default value-order for
-high-propagator profiles; if it wins only under joe_depth150_bp,
-characterise why (likely propagator-induced ordering interacts with
-BP sort).
-
-Cost: ~half day. ~5 profiles × 60s budget × 2 modes = 10 min compute
-+ analysis writeup.
-
-Combined gate: at least one of T1/T2/T3 produces a measurable improvement
-in depth, score, or characterisation. If all three null-out, vol-34
-pivots to vanilla-fast-backtracker as the remaining BACKLOG item.
+1. Update BACKLOG: all 5 items → `built`. Concept page `code-debt`
+   amended.
+2. Verify: `cargo test --workspace` passes; `vanilla_fast --pin-hints`
+   still hits 95M+ pp/s (no regression).
+3. Write `sessions/vol-33.md`.
+4. Update INDEX (no score row needed — code quality vol doesn't move scores).
 
 ## What this vol explicitly does NOT do
 
-- ❌ More ML training. Imitation ceiling reached; RL is a separate
-  multi-week project; LOT post-fix is +0 score.
-- ❌ Vanilla fast backtracker (BACKLOG vol-34+). Heavy build, lower-EV
-  than unsat-propagator.
-- ❌ Bound-ascent variants (BACKLOG, multi-vol deferral). Score-axis
-  isn't the binding constraint; depth + pruning is.
-- ❌ Re-running T3 PT lottery from `lot_fixed_v4` partial. Vol-32 T6
-  already showed the post-fix LOT gives -2 ALNS — no PT lift
-  expected.
+- ❌ No new algorithms.
+- ❌ No record-chasing (that's vol-34).
+- ❌ No throughput experiments.
+- ❌ No new propagators.
+
+**Pure refactor only.**
 
 ## Honest cost estimate
 
-- T1: 1-2 days build + half day measurement = 2 days.
-- T2: half day build + half day measurement = 1 day.
-- T3: half day total.
-- Vault close: 30 min.
+- T1: 1h
+- T2: 4-6h
+- T3: 4h
+- T4: 3-4h (after T2)
+- T5: 8-10h (after T2)
 
-**Total**: 3.5 days. Comfortably fits a normal volume window (the
-overnight rule applies; estimates 1.5-3× too long, actual likely 2-2.5 days).
-
-## Files / drivers needed
-
-```
-crates/solver-engine/src/unsat_propagator.rs   NEW
-crates/solver-engine/src/lib.rs                MOD (propagator hook, profile)
-crates/ml-export/src/bin/canonical_eval.rs     MOD (--mode unsat or new profile arg)
-ml/unsat_propagator_proto.py                   EXISTS (vol-32)
-output/capiman_e2/                             EXISTS (Git LFS data, vol-32)
-output/vol-32/unsat_propagator/literal_decoder.json   EXISTS (vol-32 Python output)
-ml/measure_insertion_order.sh                  NEW (T3 driver)
-```
+**Total**: 2-3 days. Mechanical work; can interleave with vol-34 if
+the user wants score-chase in parallel.
 
 ## Linked concepts
 
-- [[../concepts/unsat-clause-propagator]] — vol-32 prototype, vol-33 build target.
-- [[../concepts/learned-value-order]] — closed for now post-vol-32 correction.
-- [[../sessions/vol-32]] — direct predecessor with full context.
-
-## Why this is the right shape
-
-- **Highest-EV from BACKLOG**: unsat-propagator is the single largest
-  pruning gain we haven't tried. Community-verified data sitting on disk.
-- **InsertionOrder is the lightweight win**: vol-32 already discovered it;
-  T3 just measures whether it generalises beyond joe_depth150_bp.
-- **Joe's prune policy is half a day with existing infrastructure**.
-- **All three tracks have clean numeric gates**: pass/fail on a single
-  measurement.
-- **Vol-33 negative result is informative**: if none of T1/T2/T3 moves,
-  the remaining engine-axis options are vanilla-fast-backtracker (vol-34)
-  and RL self-play (vol-35+). We'll know where the ceiling really is.
-
-## Vol-32 closeout summary (for context)
-
-Vol-32 was "overnight ML engineering" — discovered the ML lift was a
-bug (lib.rs:2550 cell_side_edge missed LearnedOnTies arm), fixed in
-commit `95978a5`. Real ML signal at canonical is +3 matched edges,
-not the claimed +9 depth / +10 score. The +9 was actually
-InsertionOrder beating EdgeBpMarginals under joe_depth150_bp.
-Unsat-propagator Python prototype shipped as the vol-33 foundation.
+- [[../concepts/code-debt]] — vol-25 measurement + restructure plan.
+- [[../sessions/vol-25]] — original measurement.
