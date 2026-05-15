@@ -100,18 +100,35 @@ depth 135, score 278 in 5min. This is the SAME tier as p12 (lottery
 TR=2) basin space.** This is a structural observation, NOT a
 fundamental basin-quality observation — see below.
 
-## Bound analysis — basin-quality decoupled from search
+## Heuristic "basin matching density" — NOT an upper bound
+
+**⚠️ CORRECTION (2026-05-15)**: An earlier version of this section
+called `relaxed_bound` "an upper bound on edge matches". That was
+WRONG. `relaxed_bound` is a greedy local-search WITH PIECE REUSE.
+It returns scores ABOVE achievable integer scores (e.g., 462 on the
+458 board, which has integer ceiling 458).
+
+The values below are HEURISTIC INDICATORS of matching density, not
+hard ceilings. A true upper bound requires LP relaxation
+(`border_lp_ub.rs`) or MIP (`border_mip.rs` / vol-55 cluster MIP).
+
+Use these tables to RANK perms relatively, NOT to claim "perm X
+can reach score Y".
 
 User question: "they might yield worse scores, but how would we know
 if they are in fact closer to a real solution?"
 
-Answer: measure `relaxed_bound` per partial. Relaxed_bound is a
-greedy piece-uniqueness-relaxed score, an upper bound on edge matches
-given the partial's commitments.
+Honest answer: with `relaxed_bound` alone we DON'T know. We see
+relative matching density, which is suggestive but not authoritative.
+To answer mathematically: run LP UB or cluster-MIP per perm. That's
+the right next experiment.
 
-### Bounds on 9-cell partials (corners + hints only)
+### Heuristic matching density on 9-cell partials (NOT a bound)
 
-| Perm | (TL,TR,BL,BR) | Relaxed bound | Known record |
+Values are `relaxed_bound(9-cell partial)` = greedy local search with
+piece reuse. **Treat as comparative indicator, NOT as score ceiling.**
+
+| Perm | (TL,TR,BL,BR) | greedy-score | Known record |
 |------|---|---:|------|
 | **p10** | (1,3,0,2) | **463** | NEW |
 | **p11** | (1,3,2,0) | **463** | NEW |
@@ -134,7 +151,9 @@ given the partial's commitments.
 **KEY**: p10 and p11 (TL=1, TR=3) have HIGHEST 9-cell bounds (463).
 These are unexplored. FA's perm has 455 — LOWER than 9 other perms.
 
-### Bounds on MERGED partials (corners + hints + CP-filled ~200 cells)
+### Heuristic matching density on MERGED partials (NOT a bound)
+
+Same caveat: greedy local search with piece reuse. Indicator only.
 
 | Perm | Placed | Bound | Note |
 |------|---:|---:|------|
@@ -184,21 +203,26 @@ in match-potential per placed cell.
 **LOW DENSITY (~ 2.2) perms** reach more cells (213) but per-cell
 match-potential is lower. These are the "easy" perms.
 
-## Two competing hypotheses
+## Two hypotheses (with the corrected mathematical caveat)
 
-### H1: HIGH ABSOLUTE BOUND wins
-- Pick p07 (bound 476). It reaches 213 cells via CP and has the most
-  edge-matching potential overall.
-- Predict: ALNS recovery from p07 will produce 458-459+.
+⚠️ Both hypotheses below are based on the greedy-relaxed score, NOT
+a true integer-score ceiling. Treat as conjectures pending LP/MIP
+analysis.
 
-### H2: HIGH DENSITY wins
-- Pick p22 / p23 / p13 (density 3.36-3.39). The partial is sparser
-  (138 cells), but the existing matches are tight.
-- McGavin reached 469 on p22 with the Blackwood algorithm. Our pipeline
-  needs to bridge the 121-cell gap (138 → 256).
-- Predict: ALNS from p22 likely yields ~440-455 (recovery loss from
-  121 unplaced cells is significant), but with longer/different ops
-  the basin's true ceiling is high.
+### H1: HIGH GREEDY-RELAXED SCORE correlates with high record potential
+- Conjecture: p07 (greedy-relaxed 476 on merged partial) reaches more
+  matched edges under our pipeline than perms with lower scores.
+- Predict: ALNS recovery from p07 might produce 458+.
+- Test: ALNS from p07. If yields below 455, conjecture refuted.
+
+### H2: HIGH MATCHING DENSITY indicates dense basins
+- Conjecture: p22 / p23 / p13 (density 3.36-3.39 edges per placed
+  cell) have geometrically denser partial states. Sparser (138 cells)
+  but tightly matched.
+- McGavin reached 469 on p22 with the Blackwood algorithm. Whether
+  this reflects basin density or Blackwood's algorithm is unclear.
+- Test: ALNS from p22 vs ALNS from p07. If p22 underperforms by ≥10
+  points, density isn't predictive of OUR pipeline's reach.
 
 ## What the running ALNS phase will tell us (T7, ETA 17:40 CEST)
 
@@ -243,32 +267,32 @@ via border-first vanilla_path DFS → ALNS pipeline ([[../basins/basin-459-pt]])
 1. **Corner perm matters for record-breaking.** The 459 SOTA uses
    p20 — a corner perm NOT in any of our 9 pre-existing records.
    Different corner perm → different basin → different record
-   potential.
+   potential. **This claim is empirically confirmed by the 459 result
+   itself.**
 
 2. **"Easy" perms (CP-Top tier, depth 210) can yield records.**
    p20's CP-best in our sweep is 433. The CP partial at depth 210
-   IS exploitable by ALNS to reach 459.
+   IS exploitable by ALNS to reach 459. **Confirmed by SOTA.**
 
-3. **Absolute bound matters more than density** for record-breaking
-   under our ALNS pipeline. p20's bound 471 supports 459. McGavin's
-   p22 (denser at 467 but with only 138 cells placed) DIDN'T yield
-   our 459 via the same pipeline — but might via Blackwood's.
+3. **(WEAKER claim, NOT a math statement)**: under our pipeline, perms
+   with high greedy-relaxed score have empirically correlated with
+   high-score basins. p20's greedy-relaxed = 471 → SOTA 459. p04's =
+   471 → 458 (vol-32 record). Whether this correlation holds for p07
+   (greedy 476, untested) or p22 (greedy 467 with sparse partial)
+   requires testing.
 
-4. **There are likely OTHER record-breaking perms in the top-bound
-   list**. Specifically, perms with merged bound ≥ 470 and CP-Top
-   tier (433):
-   - **p07 (bound 476)** — should ALNS-explore aggressively. 
-   - p18 (bound 472)
-   - p19 (bound 472)
-   - p21 (bound 472)
-   - p05 (bound 472, vol-35 used)
-   - **p20 (bound 471) — confirmed 459 SOTA**
-   - p04 (bound 471, FA used to reach 458)
-   - p06, p08, p09 (bound 471, untested)
-   - p11 (bound 470, untested)
+4. **Untested perms with greedy-relaxed score ≥ 470** are reasonable
+   candidates for further investigation — but we cannot claim their
+   integer ceilings without LP UB or MIP analysis:
+   - p07 (greedy 476, untested)
+   - p18 (greedy 472, untested)
+   - p19 (greedy 472, untested)
+   - p21 (greedy 472, untested)
+   - p06, p08, p09 (greedy 471, untested)
+   - p11 (greedy 470, untested)
 
-   p07 is the most promising NEW direction (highest bound). p06, p08,
-   p09, p11 are also untested with bounds ≥ 470.
+   Right next step BEFORE investing more compute: run LP UB on each
+   of these to get a TRUE upper bound on the integer ceiling per perm.
 
 ### Prediction for ALNS phase (now running)
 
