@@ -81,6 +81,29 @@ achievable lift (the +2 may not be integer-feasible).
 To exceed 460 on canonical 5-clue, we need a **different border**
 (different B-I structure).
 
+## Class B 457 comparison (vol-45)
+
+Same per-color analysis run on vol-32 RECORD_TIE_457_blackwood_mrv s7
+(class B, LP UB 477):
+
+| Source | bi_ub | ii_ub | total |
+|---|---:|---:|---:|
+| Class A 458 | 54.02 | 363.98 | **478** |
+| Class B 457 | 54.17 | 362.83 | **477** |
+
+**Class B has higher B-I but lower I-I** than class A. Different
+trade-off: class B's border allows ~0.15 more B-I matches in LP but
+~1.15 fewer I-I matches. Net is 1 point lower than class A.
+
+Per-color differences are diffuse — no single color dominates the
+gap. Colors 14, 18, 20, 22 are tighter in class B; colors 8, 9, 11
+are slightly looser. Diffuse coupling.
+
+**Implication**: each basin has a distinct color-bottleneck
+*fingerprint* but the total LP UB is the global structural property.
+Hitting 480 requires both higher B-I AND higher I-I simultaneously
+— neither basin has both.
+
 ## Tested: bottom-band + perimeter MIP (vol-45)
 
 Region: 14 bottom-perimeter cells (y=15, x=1..14) + 70 bottom-interior
