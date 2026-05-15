@@ -77,8 +77,11 @@
 - **N-row pinning** from McGavin: only N=14 reconstructs his 469;
   other basins don't show this threshold.
 - **Top-row pinning alone**: gives 400/480 in our ALNS.
-- **CAS (Concentric Annular Solving)** greedy: 433/480.
+- **CAS (Concentric Annular Solving)** greedy: 433/480. Bound is
+  piece-availability for inner shells once greedy locks pieces,
+  NOT edge-coverage (full audit: all 480 edges in objective).
 - **CAS-hybrid + ALNS**: 418/480 (worse than CAS alone).
+- **CAS + ALNS-refine**: 437-439 (+4-6 only).
 - **Vol-22 bound-ascent basins**: relaxed_bound not sound; actual
   ALNS-reachable scores 411-442.
 - **Blackwood-then-CSP**: 304/480 (Blackwood-RAW infeasible for joe_csp).
