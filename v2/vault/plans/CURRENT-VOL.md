@@ -1,165 +1,157 @@
-# Current vol — vol-50 (opening) — 2026-05-15
+# Current vol — vol-51 (opening) — 2026-05-15
 
-**Predecessor**: vol-49 closed with adaptive-ES negative result.
-See [[../sessions/vol-49]].
+**Predecessor**: vol-50 closed with net negative result on records (best
+ALNS lift was +4 over vol-23 baseline; blackwood_raw 1h × 4 FAILED due
+to CPU oversubscription). See [[../sessions/vol-50]].
 
-This file rolls forward five drifted volumes (45→50) in one update
-because the previous CURRENT-VOL was last touched at vol-45 open.
-Vols 46–49 produced four documented negative results:
+This page started life as a vol-51 draft written DURING vol-50 to
+ensure the autonomous loop had a next step. Branches A/B/C below
+reflect that. **Branch B is what actually happened**.
 
-- **Vol-46**: per-class LP UB diagnostic — no record lever.
-- **Vol-47**: lifted-LP McCormick formulation — intractable at scale; column-gen variants invalid. [[../sessions/vol-47]].
-- **Vol-48**: vanilla ES (sigma=0.2) — collapsed at 277/480 vs vol-29 imitation baseline 282. [[../sessions/vol-48]].
-- **Vol-49**: adaptive-sigma ES — improved peak to 280, still below baseline. [[../sessions/vol-49]].
+## Vol-51 binding item (locked-in 2026-05-15)
 
-## Vol-50 binding item — PIVOTED (2026-05-15)
+**B1: McGavin's prune-restart bound-trigger** (BACKLOG `mcgavin-prune-restart-bound-trigger`,
+unbuilt since vol-36).
 
-The original Q-learning / REINFORCE plan was pivoted twice:
+Rationale:
+- Vols 23 + 50 explored CP-depth-trigger and node-budget-trigger
+  prune-restart respectively. Bound-stall trigger is structurally
+  different: it uses the [[../concepts/relaxed-bound|relaxed-bound]]
+  diagnostic from vol-21 (a true basin-lock detector) as the restart
+  signal.
+- Build is contained (1-2 days). Engine plumbing already exists.
+- Vol-50's lesson: when running multi-seed experiments, do them
+  SEQUENTIALLY at full CPU. This vol's experiments will follow that.
+- Vol-46 + vol-50 LP-integer-gap analysis: search-side innovation
+  is more leverage than basin diversification.
 
-1. Q-learning → REINFORCE+Plackett-Luce: cleaner gradient.
-2. REINFORCE+PL → engine-side `LearnedStochastic`: ONNX Gumbel probe
-   showed `RandomUniformLike` is deterministic within a session, so
-   the "no engine change" trick is dead. See
-   [[reinforce-plackett-luce-value-order]] "quick probe" section.
+## Branch trail (kept for historical reasoning)
 
-3. **(final) Engine-side `LearnedStochastic` → drop ML for vol-50.**
+### Branch A: (would have applied if vol-50 produced ≥ 458) — DID NOT APPLY
 
-   Honest assessment: ML on E2 value-ordering has produced no
-   record-class lift across vols 26-29 (imitation: best Δ=−1)
-   and vols 48-49 (ES: collapsed below baseline). Vol-50 REINFORCE
-   would be the 6th attempt on the same axis. Records actually broke
-   from search-side innovation (vol-22 basin-escape, vol-32
-   vanilla_fast).
+Record-class result. Vol-51 priorities:
+1. **Reproduce at >1h budget × more seeds**. 1h × 16 seeds in 4
+   batches of 4. Total ~4h. EV: confirm + collect basins.
+2. **ALNS-lottery from the new partial × 16 seeds × 5min**.
+3. **PT lottery from any new ≥457 board × 1h × N seeds**.
 
-   Pivoting vol-50 binding item to a search-side build that's been
-   sitting unbuilt for 14 volumes.
+### Branch B: vol-50 plateaued (HAPPENED) — vol-51 = bound-trigger build
 
-## Vol-50 binding item — Joe's iteration-budgeted prune-restart
+Vol-51 binding item candidates (one max):
 
-**Build**: `joe-iteration-budgeted-prune` (BACKLOG, unbuilt since vol-32 open).
+#### B1. McGavin's prune-restart bound-trigger (BACKLOG vol-36 T2)
 
-Joe's published recipe (msg #11725 in [[../reference/reference-e2-community-corpus|community corpus]]):
-"99% of canonical-E2 cold-start time is spent at depth > 132; with
-150 correctly-placed tiles a solution is found in <1500 iters;
-therefore prune to depth 150 every 2000 iters when depth > 150 has
-consumed > 2000 iters without progress. 30-49% search-space reduction."
+Different trigger than vol-23's CP-depth trigger and vol-50's
+node-budget trigger: **trigger restart when bound-improvement stalls**.
+Bound is computed by `edge_bound_ascent` (already shipped).
+- Build: ~1-2 days. Modify `prune_restart` to call bound-ascent
+  between rounds; if bound at round N == bound at round N-1, restart.
+- EV: bound-improvement stall is a true basin-lock detector
+  (stronger than depth-stall). Restart from stalled bound might find
+  basins of different ceiling.
 
-Vol-23 shipped `mcgavin-prune-restart` with a CP-depth trigger:
-restart whenever current depth ≤ some threshold. Joe's trigger is
-**iteration-count based**: restart when N iters at depth > D haven't
-produced a new-best. Different policy, same engine plumbing.
+#### B2. Per-seed warm-PT recipe at 1h × 16 seeds from vol-32 records
 
-### Concrete build
+vol-22 found 469-ceiling basins via basin-escape from a 457. But
+**we never ran PT for 1h from vol-32's specific 458 record**.
+Vol-32 RECORD_BREAK_458 → PT 1h × 16 seeds is the most basin-
+specific compute we haven't tried.
+- Build: 0 (existing pt_e2).
+- EV: 1h × 16 ≈ 16h compute; vol-22 record-class output would be
+  another saturated 458 or a new 459/460 basin.
+- Risk: comfort-lottery. The vol-32 close memory says "458 basin
+  PROVEN locally optimal under MIP cluster-repair", suggesting PT
+  on the SAME basin returns nothing.
 
-1. Add `SolveOpts.iteration_budget_at_depth: Option<(u32, u32)>` —
-   `Some((depth, iters))` means "if iters at depth > `depth` exceeds
-   `iters` without best-improvement, trigger restart".
-2. Engine: extend the existing prune-restart hook
-   (`crates/solver-engine/src/lib.rs` recurse) to fire on this new
-   condition.
-3. A/B on canonical E2: vanilla_fast cold-start vs joe-IB cold-start
-   at 5min budget × 8 seeds. Measure depth + matched.
-4. If positive: feed best partials into ALNS-5min. Compare records.
+#### B3. McGavin engine parity (vol-25 BACKLOG, multi-week)
 
-### Risk budget
+Community engine = 295M nps; ours = ~75k aggregate (~10k per worker).
+4000× gap. Closing this is multi-week. Quantified expectation: at
+295M nps, our existing algorithms in 60s would search 17B nodes
+(vs current 4.2M aggregate). That's enough to break the depth-27
+wall on cold-start. **Could be the actual record-breaker.**
+- Build: profile the hot paths in BLACKWOOD_RAW and joe_depth150_bp;
+  measure ours vs published McGavin nps; identify the gap.
+- EV: very high if successful.
+- Risk: multi-week, big-build risk.
 
-- **1 day**: engine plumbing + bin + A/B run.
-- **2 day kill-switch**: if A/B at 5min shows < +2 matched on
-  median, mark `wont-do` and pivot vol-51 to another search-side
-  item (`mcgavin-prune-restart-bound-trigger`, vol-36 T2).
+### Branch C: vol-50 blackwood_raw+MRV fails (< 457)
 
-### Why this beats both vol-48 ES and pure Q-learning
+Less likely but possible. The 1h × 4 parallel sharing 170%/worker
+could be slower than vol-32's full-CPU 10min runs.
 
-- **vs ES**: gradient is propagated by backprop through the policy
-  network, not estimated from reward-weighted Gaussian noise. No
-  argmax-invariance collapse.
-- **vs Q-learning**: REINFORCE updates the policy directly toward
-  observed reward; no TD target, no target network, no replay buffer
-  needed for the PoC. Less infrastructure, faster turnaround.
+Then vol-51 = re-run vol-32 recipe EXACTLY (single seed, full CPU,
+5min, ALNS-5min). Validates reproducibility.
 
-### Concrete plan — Gumbel-trick stochastic policy (NO engine change)
+## Recommended pre-commit (vol-51 binding item)
 
-Build insight: the engine sorts by ONNX score. If we inject Gumbel
-noise into the model's output BEFORE the engine sees the scores, the
-engine's deterministic argmax becomes a sample from the Plackett-Luce
-distribution over rotations. The log-probability of the resulting
-order has a closed form. **No engine code change needed.**
+Pending vol-50 close. Best guess: **B1 (McGavin bound-trigger
+prune-restart)** because:
+- Distinct from vols 23/50 (depth-trigger, node-trigger). Genuinely
+  unfetched search-side axis.
+- Build is contained (1-2d), measurement is contained.
+- EV: medium. Probability of record-break ≥ 5%, much higher than
+  another lottery on existing partials.
 
-1. **Python episode runner (~half day)**:
-   - At score time, model outputs raw logits `z_i` per candidate.
-   - Add `g_i ~ Gumbel(0, 1)` to each: `s_i = z_i + T·g_i`.
-   - Export `s_i` to the engine via ONNX. Engine argmax-sorts → samples
-     Plackett-Luce permutation. log P(permutation) is computable
-     from the original `z_i` after-the-fact (PL log-prob = sum of
-     log softmaxes at each step).
+Backup if B1 surprises: **B3 (McGavin engine perf)** scoped to "profile
+and identify the gap" only — research-grade preparation work that
+DOES NOT require multi-week build to be valuable.
 
-2. **Wrap in `ml/reinforce_step.py`** (~half day):
-   - Run N episodes by invoking the existing `run_learned` Rust bin
-     with the Gumbel-perturbed ONNX (re-exported once per episode).
-   - Engine returns `matched_at_close` per episode.
-   - REINFORCE loss: `-mean[log_prob_episode * (R_episode - baseline)]`
-     where `log_prob_episode = sum over steps of log P(chosen rot | scores)`.
-   - Backprop, SGD step, re-export ONNX.
+## VOL-46 LP-UB-479 CONTEXT (critical for vol-51 thinking)
 
-   Open question: we need per-step `(cell, candidates, chosen_rot)`
-   to compute the per-step PL log-prob. Currently `run_learned`
-   doesn't log this. Need to either:
-   - (a) extend the Rust bin to log the trajectory; OR
-   - (b) re-implement the engine's CP loop in Python at small scale
-     for the 6×6 gate (model is so fast at 6×6 that this might be
-     faster than the Rust round-trip).
+Vol-46 found a basin with LP UB = 479 ("class D"). 8 ALNS-diverse
+seeds × 1h: ALL 8 plateau at 457. MIP on 28-cell mismatch union:
+delta=0 in 0.46s — **proven locally optimal at 457**.
 
-3. **Gate at 6×6/5c**. K=10 training rounds × N=32 episodes / round.
-   PASS = mean `matched` STRICTLY ABOVE vol-29 v3 baseline on the
-   same 200-puzzle benchmark.
+Across basin classes A/B/C/D, the LP UB → integer-best gap is
+uniformly ~20 points. **Local search cannot close this gap**.
 
-4. **If 6×6 PASS**, scale to canonical (5 days) or document and stop.
+What this implies for vol-51:
+- More basin diversification (PT, ALNS lotteries) ≈ comfort lottery.
+- The gap is a property of the SEARCH ALGORITHM, not basin choice.
+- Breaking 458 requires: (a) McGavin throughput parity (raw bandwidth
+  closes the gap), (b) no-good CDCL learning in solver-engine, or
+  (c) multi-day MIP on specific basins.
 
-### Risk budget — TIGHT
+This pushes vol-51 strongly toward **algorithm-side innovation**,
+not lottery. B1 (bound-trigger) is still good because it's
+algorithm-shaped; B3 (engine parity) is now the highest-EV
+multi-week direction.
 
-- **1 day kill-switch**: if no infrastructure path to per-step
-  log-prob exists, stop and re-pivot to engine-side
-  `LearnedStochastic` build (the 5-day variant).
-- **2 day kill-switch**: if 6×6 REINFORCE doesn't beat vol-29 v3
-  after 10 rounds, document and close vol-50 as third ML negative
-  result. Pivot to search-side records-of-records (the only axis
-  that has produced post-vol-32 lift signal).
+## Vol-50 CPU-oversubscription lesson
 
-### Wider reflection
+Mid-vol-50 (2026-05-15 11:35) observation: my 4-parallel
+`run_e2_blackwood` runs each got ~170% CPU (rayon auto-throttled
+under contention). Vol-32's 458 record was via vanilla_fast + ALNS
+**at 800% CPU single-seed**. My 4×170% = 680% total spread, so each
+seed effectively runs ~12 min of single-thread-equivalent compute
+over the 1h wall.
 
-After vol-28 (transfer null), vol-29 (imitation ceiling), vol-30/31
-(misattributed bug), vol-48 (ES vanilla collapse), vol-49 (ES adaptive
-collapse), this is the **6th attempt** to lift records via ML on
-value-ordering. Two-day kill-switch is non-negotiable. The records that
-exist (458 vol-32, 457 vol-22) came from SEARCH-side innovation, not
-ML. If vol-50 fails, vol-51 must pivot OFF the ML track.
+**Result**: 1h × 4 parallel = 1h-equivalent per seed, NOT 4× vol-32's
+10min. Same effective budget per seed as vol-32, just diversified
+across 4 seed initializations.
 
-## Audit-at-open compliance
+**Lesson for vol-51 + future big-CPU experiments**: parallel-of-N runs
+of an already-parallel solver gives N× diversification, NOT N× per-seed
+compute. To compete with vol-32's 458 wall-time, must run SEQUENTIALLY
+at full CPU. With 4 seeds × 1h sequential = 4h wall budget needed
+for a clean N=4 lottery.
 
-Aged `unbuilt` items from BACKLOG (≥ 3 vols old; require decision):
+This insight changes vol-51's planning math: for any "more compute on
+existing algorithm" experiment, **either** run sequentially at full
+CPU **or** use a different (low-CPU-cost) inner algorithm.
 
-| Item | Since | Decision |
-|---|---|---|
-| `rl-self-play-value-order` | vol-30 (vol-38 defer) | **picked-up as vol-50** (this binding item is the Q-learning variant of self-play) |
-| `mcgavin-prune-restart-bound-trigger` | vol-36 | defer to vol-51+ (one binding item this vol) |
-| `code-refactor-vol25-batch` | vol-25 | **wont-do**: 10 vols without picking, never a record-mover; ship only if a specific extraction unblocks a record-track item |
-| `unsat-soft-value-order-vol37` | vol-34 | defer to vol-51+ (one binding item) |
-| `joe-iteration-budgeted-prune` | vol-32 | defer to vol-51+ |
-| `learned-on-ties-long-pt` | vol-31 | **wont-do**: post vol-32 bug fix, LOT lift is +3 edges not +9; 1-2h PT lottery on the smaller signal is not record-level |
-| `multi-cell-bound-ascent` | vol-22 | **wont-do**: bound-ascent ALNS-collapse was confirmed vol-21/22; multi-cell variants share the same recovery-collapse mode |
-| `bound-floor-alns-with-per-step-check` | vol-22 | defer (still partial, invasive build, vol-50 scope is ML) |
-| `diverse-457-search` | vol-21 | overnight job, fire-and-forget eligible — not vol-50 scope |
-| `tight-joint-bound-survey` | vol-22 | **wont-do** (blocked on `kissat-rc2-maxsat` which is already wont-do) |
+## Audit-at-open targets (when vol-51 actually opens)
 
-Resolved/promoted from this audit:
-- 1 picked, 4 deferred (one-binding-item discipline), 4 wont-do.
-- BACKLOG.md must be amended with the 4 wont-do decisions when this
-  vol closes.
+Aged ≥ 3 vols (from BACKLOG):
+- `mcgavin-prune-restart-bound-trigger` (since vol-36)
+- `unsat-soft-value-order-vol37` (since vol-34)
+- `joe-iteration-budgeted-prune` (since vol-32 open) — **resolved by vol-50**
+- `multi-cell-bound-ascent` (since vol-22, deferred vol-31, still aged)
+- `bound-floor-alns-with-per-step-check` (since vol-22, deferred vol-27)
+- `restore-or-simd` (since vol-25 perf)
+- `precompute-cell-nb-info` (since vol-25 perf)
+- `vault-validation-of-perf-wins` (since vol-25)
 
-## Linked
-
-- [[../sessions/vol-48]] — vanilla ES result
-- [[../sessions/vol-49]] — adaptive ES result
-- [[../concepts/learned-value-order]] — imitation context
-- [[../concepts/rl-es-pipeline]] — predecessor RL design
-- [[../concepts/rl-self-play-value-order]] — original RL design
+Most are stale. The discipline at vol-51 open: each gets a real
+decision (pick / wont-do / argue).
