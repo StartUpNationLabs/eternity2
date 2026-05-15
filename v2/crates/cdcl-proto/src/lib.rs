@@ -448,17 +448,38 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
+    fn solve_4x4_3c() {
+        run_compare("/tmp/vol58_4x4c3.csv", "4x4/3c");
+    }
+
+    #[test]
+    fn solve_5x5_4c() {
+        run_compare("/tmp/vol58_5x5c4.csv", "5x5/4c");
+    }
+
+    #[test]
+    fn solve_7x7_6c() {
+        run_compare("/tmp/vol58_7x7c6.csv", "7x7/6c");
+    }
+
+    #[test]
+    fn solve_8x8_7c() {
+        run_compare("/tmp/vol58_8x8c7.csv", "8x8/7c");
+    }
+
+    #[test]
     fn solve_6x6_5c() {
-        // First generate a 6x6/5c puzzle via the workspace generator
-        // and solve with + without no-good learning.
-        // We'll load a pre-generated one.
-        let puzzle_path = PathBuf::from("/tmp/vol56_6x6c5.csv");
+        run_compare("/tmp/vol56_6x6c5.csv", "6x6/5c");
+    }
+
+    fn run_compare(_p: &str, label: &str) {
+        let puzzle_path = PathBuf::from(_p);
         if !puzzle_path.exists() {
-            eprintln!("skipping: {puzzle_path:?} not found; run scripts/dump_puzzle_csv.rs first");
+            eprintln!("skipping {label}: {puzzle_path:?} not found");
             return;
         }
         let (puzzle, _) = eternity2_puzzle_io::load_puzzle_with_hints(&puzzle_path).expect("load");
-        println!("Puzzle: {}x{}, {} interior colors", puzzle.width, puzzle.height, puzzle.color_count - 1);
+        println!("== {label}: {}x{}, {} interior colors ==", puzzle.width, puzzle.height, puzzle.color_count - 1);
 
         let cfg_no_learn = Config { use_no_good_learning: false, time_budget_ms: 30_000 };
         let cfg_learn = Config { use_no_good_learning: true, time_budget_ms: 30_000 };
