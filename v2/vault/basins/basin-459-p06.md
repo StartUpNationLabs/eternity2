@@ -1,7 +1,9 @@
-# Basin 459 on p06 — TIED THE SOTA on a different corner perm
+# Basin 459 from p06 corner perm — TIED THE SOTA score
 
-**Status**: TIE of SOTA 459/480. Independently produced on local
-pipeline. Distinct basin from the cross-machine 459 (p20).
+**Status**: 459/480 matched-edge score TIED locally. **Whether this
+is the SAME board as the cross-machine SOTA (σ-permuted display) or
+a different basin is UNVERIFIED**. Resolving requires direct piece-id
+comparison at all 256 cells against the cross-machine JSON.
 **Date**: 2026-05-15 17:01 CEST.
 **Source**: vol-60 T7 ALNS phase, seed=2 from p06's merged partial.
 
@@ -20,8 +22,10 @@ pipeline. Distinct basin from the cross-machine 459 (p20).
 - (TL, TR, BL, BR) = (1, 0, 2, 3)
 - Pieces: TL=piece 1, TR=piece 0, BL=piece 2, BR=piece 3.
 
-This is DIFFERENT from the cross-machine SOTA which used p20 (3,1,0,2).
-**Two distinct corner perms → two distinct 459 basins.**
+My earlier decode of the SOTA bucas URL (without σ correction) showed
+corners that mapped to p20. But the URL uses Joshua's color labeling,
+not pt's. Without applying σ correctly OR seeing the SOTA's JSON,
+**I cannot claim this is a different board from the SOTA**.
 
 ## How it was reached
 
@@ -72,9 +76,9 @@ What we KNOW:
 ## Open questions
 
 - Does the running chain produce ANOTHER 459 or higher? Monitoring.
-- Are p06 and p20 in the same fundamental basin family (different
-  σ-permutation) or genuinely different basins? Cell-by-cell diff
-  TBD.
+- **Is this the same board as the cross-machine SOTA?** Requires direct
+  JSON piece-id comparison. Could be the same 459 viewed through
+  different color labelings, NOT a separate basin.
 
 ## Files
 
