@@ -1,7 +1,14 @@
 # Night session 2026-05-14 → 2026-05-15 — Vanilla DFS color-complexity sweep + ALNS
 
-**Source**: parallel agent session (Raphaël + Claude, night).
+**Source**: parallel agent session (Raphaël + Claude, night, **on a
+different machine: 10 cores vs our 8**).
 **Archived for future work**: 2026-05-15 by main RL agent (vol-48 in flight).
+
+**Reproducibility caveat**: the file paths in this report
+(`runs/color_sweep/`, `data/puzzles/synth/`, etc.) live on the OTHER
+machine. The synthesised C=6..12 puzzles, vanilla logs, ALNS sweep
+outputs, and the reported score-counter bug fix are NOT in our local
+repo. Numbers below are observational from the report only.
 
 This is the **raw report** from the parallel agent. Stored here for future
 reference; the main agent's ongoing work (vol-44..vol-48: LP UB analysis,

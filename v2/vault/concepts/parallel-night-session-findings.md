@@ -1,8 +1,20 @@
 # Parallel-night-session findings (2026-05-14/15)
 
 **Status**: future-work reference page. Not currently active.
-**Origin**: parallel agent session ran overnight while the main agent
+**Origin**: parallel agent session ran overnight on a DIFFERENT MACHINE
+(10 cores; our main session is on 8 cores) while the main agent
 worked vol-44..vol-48. Findings archived for later integration.
+
+**IMPORTANT** — separate machine context:
+- Files referenced in the raw report (`runs/color_sweep/`,
+  `data/puzzles/synth/`) live on that other machine. **They are not in
+  our local repo.**
+- The score-counter bug fix the night session reports as "shipped"
+  may or may not be in our local branch. **Verify before relying on
+  scores from `vanilla_path` / `vanilla_fastest`.**
+- All numbers are observational from that report; cannot be reproduced
+  locally without the puzzles and the other machine's logs.
+
 **Raw**: [[../sessions/archive/raw/NIGHT_2026-05-14-15_color_sweep|raw report]].
 
 ## Headline findings
