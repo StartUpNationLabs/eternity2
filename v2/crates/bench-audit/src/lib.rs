@@ -13,6 +13,7 @@
 #![forbid(unsafe_code)]
 
 pub mod border_ub;
+pub mod border_ub_lifted;
 pub mod cluster_repair;
 
 use std::io::Write;

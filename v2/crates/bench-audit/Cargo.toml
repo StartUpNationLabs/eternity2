@@ -206,6 +206,14 @@ name = "lp_ub_empty_border"
 path = "src/bin/lp_ub_empty_border.rs"
 
 [[bin]]
+name = "border_lp_ub_lifted"
+path = "src/bin/border_lp_ub_lifted.rs"
+
+[[bin]]
+name = "lifted_lp_smoke"
+path = "src/bin/lifted_lp_smoke.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 
