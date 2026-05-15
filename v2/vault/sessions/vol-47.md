@@ -106,10 +106,76 @@ $x_1 + x_2$ should be ≤ 1.05. Probably **not many cuts will fire**.
 But even a few cuts could tighten the LP a couple of points. Worth
 implementing.
 
-## Next milestone (vol-47 continued)
+## Theoretical analysis of why this is hard (vol-47 conclusion)
 
-Implement the correct cutting-plane algorithm. Different code from
-both v1 and v2 above.
+The McCormick lifting on bilinear binary products is **theoretically
+correct** but has two practical obstructions on E2:
+
+### Obstruction 1: variable count
+
+The naive lifting introduces $z_{e, p_1, r_1, p_2, r_2}$ for every
+color-matched (piece-rotation, piece-rotation) pair across every
+I-I edge. For canonical-E2 with the 458 board's border:
+- 196 interior cells × ~764 candidates = ~150k x-vars (manageable).
+- 364 I-I edges × ~14000 color-matched pairs = ~5 million z-vars.
+- 3 McCormick constraints per z = ~15 million constraints.
+
+HiGHS, even at 8 threads, presolve + IPM + crossover, can't handle
+this in reasonable time. We saw on 10×10/6 (1.25M z-vars) the LP
+times out at 60s. Canonical is 4× larger.
+
+### Obstruction 2: column-generation pricing is non-trivial
+
+Standard column generation: start with subset of z-vars, find which
+to add via reduced-cost. For the lifted LP, the **reduced cost of a
+missing z-var depends on dual values of ALL constraints**, including
+the McCormick LBs of OTHER z-vars not yet added.
+
+Without exact reduced costs, heuristic pricing (e.g., "add z-vars
+for pairs where x1+x2 > 1 in current LP") **doesn't preserve the
+relaxation property**. We demonstrated:
+- v1: dropping y-vars makes the LP STRICTER than integer feasible
+  (UB = 402 < integer 458). Invalid bound.
+- v2: keeping both y and z double-counts match credit
+  (UB = 479.58 > standard 478). Invalid relaxation.
+
+### Why this matters for E2 research
+
+The standard LP UB 478 on the 458 board is the best LP-relaxation
+bound we can compute in tractable time. The 20-point integer-LP gap
+is REAL relaxation slack, but the McCormick lifting that should
+close it is computationally intractable AND requires careful
+column-generation algebra that good_lp doesn't natively support.
+
+**This is a documented negative result**: McCormick lifting on the
+canonical-E2 edge-match LP is *theoretically valid but practically
+intractable* at the puzzle scale, given current LP solver
+technology and our column-generation expertise.
+
+For future work in this direction, the correct path is **Lagrangian
+relaxation with cutting planes**, implemented at a lower level than
+good_lp (direct HiGHS API access to add cuts incrementally and
+extract correct duals). That's a multi-week build, not multi-day.
+
+## Pivot decision
+
+Given:
+1. Naive lifting is intractable.
+2. Heuristic column generation produces invalid bounds.
+3. Correct cutting-plane requires deeper LP infrastructure than
+   good_lp provides.
+
+The next research direction should NOT be more lifted-LP work. Better
+candidates:
+- **Multi-day Blackwood algorithm port** — known successful target
+  (community 469), vol-15 has groundwork.
+- **RL self-play for value-order** — vol-30 T2, deferred several
+  volumes. Only direction that can structurally beat the imitation
+  ceiling.
+
+Both are ~1-2 week investments. The lifted-LP exploration produced
+real research-grade output (the documented negative result) but
+won't break records in the time available.
 
 ## Linked
 

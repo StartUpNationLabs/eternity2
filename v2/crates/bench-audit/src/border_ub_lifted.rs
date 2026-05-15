@@ -71,6 +71,34 @@ impl Default for ColumnGenOpts {
 ///
 /// This dramatically reduces z-var count while preserving most of
 /// the lifting's tightening power.
+/// Cutting-plane lifted LP (v3).
+///
+/// Iteratively:
+///   1. Solve current LP (standard at first; with cuts added later).
+///   2. For each pair (p1,r1,p2,r2) where x1+x2 > 1+eps in current LP,
+///      compute the potential z-value if McCormick were added.
+///      Identify the top-K pairs with largest violation.
+///   3. Add z-var + McCormick for those K pairs.
+///   4. Re-solve.
+///   5. Repeat until no more cuts found or max_iters reached.
+///
+/// Returns the final LP UB (always ≤ standard LP UB; should be tighter
+/// if cuts are found that tighten the relaxation).
+pub fn cutting_plane_lifted_lp_ub(
+    puzzle: &Puzzle,
+    board: &Board,
+    opts: ColumnGenOpts,
+) -> Result<LiftedLpUb, String> {
+    // For now this is a stub — actual implementation needs incremental
+    // model rebuilding which good_lp doesn't directly support. The
+    // simpler path: solve once, then identify violations, then build a
+    // NEW LP with added z-vars + McCormick, solve again, etc.
+    //
+    // Each iteration is essentially a fresh column_generated_lifted_lp_ub
+    // call with progressively more z-vars.
+    Err("cutting_plane_lifted_lp_ub: deferred (requires LP rebuild loop)".to_string())
+}
+
 pub fn column_generated_lifted_lp_ub(
     puzzle: &Puzzle,
     board: &Board,
