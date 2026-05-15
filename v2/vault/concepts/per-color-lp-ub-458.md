@@ -81,6 +81,18 @@ achievable lift (the +2 may not be integer-feasible).
 To exceed 460 on canonical 5-clue, we need a **different border**
 (different B-I structure).
 
+## Tested: bottom-band + perimeter MIP (vol-45)
+
+Region: 14 bottom-perimeter cells (y=15, x=1..14) + 70 bottom-interior
+cells (y=10..14, x=1..14) = **84 cells**. Warmstart from current 458.
+
+Result: 30 min MIP, **delta = 0**. No integer improvement found.
+
+The LP's claim "2 B-I edges are fixable" is either not
+integer-feasible, or HiGHS couldn't find the integer solution in
+30 min. Either way, the 458 basin doesn't yield +1 even with
+perimeter pieces free to move.
+
 ## Linked
 
 - [[lp-ub-478-basins]]
