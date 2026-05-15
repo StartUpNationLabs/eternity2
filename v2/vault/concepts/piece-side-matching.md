@@ -172,24 +172,124 @@ piece's rotation. The LP should NOT condition the match on
 pieces with matching color can be matched, provided the joint
 rotation choice is geometrically consistent.
 
-### Correct formulation (vol-65 day 2)
+### Rotation-aware formulation (vol-65 day 2 — built)
+
+Drop the canonical-direction constraint. A piece's 4 sides can be
+arranged in any of 4 rotations relative to the world. The LP just
+asks: can we PAIR UP non-border piece-sides by color?
 
 Variables:
-- `r[p, k] ∈ {0, 1}` for piece `p` and rotation `k ∈ {0, 1, 2, 3}`.
-  Constraint: `Σ_k r[p, k] = 1`.
-- `x_e` for each color-compatible (p1, p2) pair of side-occurrences
-  — note: now there are MORE candidate edges per piece-pair because
-  any side-of-p1 can match any opposing-side-of-p2 after rotations.
+- `x_e ∈ [0, 1]` for each candidate edge e = (piece-side, piece-side)
+  with matching color on DIFFERENT pieces.
 
-Rotation degrees of freedom multiply the candidate edge count by
-roughly 4 (each pair has 4 valid rotation combinations). Expected
-LP cardinality ≈ 480 (the puzzle is "color-feasible" by
-construction — Selby-Riordan guarantees integer-feasibility under
-some piece-placement; relaxed-LP should reach 480 trivially).
+Constraints:
+- **Side-coverage**: `Σ_{e ∋ v} x_e ≤ 1` for each non-border piece-side v.
+- **Piece-budget** (optional): `Σ_{e ∋ any side of p} x_e ≥ required(p)`
+  where `required(corner)=2, edge=3, interior=4`. (Encodes that
+  every piece-side must be matched in a valid assembly.)
 
-The interesting bound is the **rotation-aware** relaxation with the
-ADDITIONAL frame constraint: corners only at corners, border-pieces
-only on perimeter cells.
+Objective: `max Σ x_e`.
+
+### Day-2 LP results (2026-05-15)
+
+Built `scripts/vol65_ps_graph_rotaware.py` + `scripts/vol65_ps_lp_rotaware.py`.
+
+| graph                       | vars  | rows | LP UB    | integer-1 | fractional |
+|-----------------------------|-------|------|----------|-----------|------------|
+| Rotation-aware (baseline)   | 21636 | 1024 | **480.00** | 414       | 132        |
+| Rotation-aware + budget     | 21636 | 1280 | **480.00** | 433       | 94         |
+
+**Both LP relaxations reach 480 exactly.** Rotation absorbs the
+canonical-orientation 307 bound. The relaxation is NOT tight —
+there are fractional vertices.
+
+### What the fractional solution tells us
+
+132 fractional edges in scenario 1. These represent **edges that
+"want" to be in the matching but compete with one another for
+shared piece-sides**. The MIP integer-optimum will be ≤ 480.
+
+### Structural fact — exact piece-side counts
+
+Canonical 16×16 E2 has:
+- 4 corner pieces × 2 non-border sides = 8
+- 56 edge pieces × 3 non-border sides = 168
+- 196 interior pieces × 4 non-border sides = 784
+- **Total non-border sides = 960**
+- 480 interior edges × 2 sides per edge = **960 sides needed**
+
+The puzzle is **EXACTLY non-border-side-balanced**. Selby-Riordan
+generator designed this. The PSM matching has zero slack — every
+non-border side must be matched, NONE can face the frame instead.
+
+### What this means for E2 solvability
+
+The LP-relaxation 480 says color-matchings exist for 480 edges in
+the rotation-aware polytope. But:
+1. The fractional solution can't be rounded directly (132 fractional
+   edges sharing piece-sides).
+2. We haven't added piece-rotation CONSISTENCY: 4 matched sides of
+   one piece must be a permutation of (N,E,S,W) under some rotation.
+3. We haven't added piece-uniqueness in cells (QAP layer).
+4. We haven't added geometric tiling: the matching has to form an
+   actual planar tiling of a 16×16 grid.
+
+### Day-3 LP — added rotation consistency (2026-05-15)
+
+Built `scripts/vol65_ps_lp_rotconsistent.py`. Adds:
+- `r[p, k] ∈ [0,1]` for piece p, rotation k. Σ_k r[p,k] = 1.
+- For each piece-pair (p1, p2), 16 auxiliary `z[p1, k1, p2, k2]`
+  with McCormick `z ≤ r[p1,k1], z ≤ r[p2,k2]`.
+- For each candidate edge e = ((p1,s1),(p2,s2)) with parity
+  `δ = (s1+s2) mod 4`: `x_e ≤ Σ_{(k1,k2): k1+k2 ≡ (2-δ) mod 4} z[p1,k1,p2,k2]`.
+
+LP size: 262,900 vars / 503,076 constraints / ~1.1M nnz.
+LP solve time: **290s** in HiGHS via scipy.linprog.
+
+**Result: LP UB = 480.00 still.** Rotation-consistency alone doesn't
+tighten the bound. Diagnostics:
+- 0 integer-1 edges, 2,218 fractional (all edges blended)
+- 0 pieces with integer rotation; rotation entropies span 0.084-1.962
+
+The LP is using FRACTIONAL rotations to keep 480 feasible. Each
+piece is partially in each rotation. To tighten, we need to FORCE
+piece rotations to be integer-valued, OR add cell-placement
+variables (the QAP layer).
+
+### What's still missing
+
+The PSM polytope after rotation-consistency is STILL a relaxation
+of E2. The remaining gaps:
+- **Piece-uniqueness in cells**: each piece occupies exactly 1 cell.
+  Adding `y[p, c] ∈ [0,1]` with Σ_p y[p,c] = 1 and Σ_c y[p,c] = 1.
+  But linking y to x_e requires identifying which pairs (p1, p2)
+  can be neighbours — depending on cell-pair adjacency, this
+  becomes the full QAP.
+- **Geometric tiling**: the matching graph must be a 4-regular
+  planar graph isomorphic to the 16×16 grid (minus border edges).
+
+Hypothesis: at some level of these added constraints, the LP drops
+below 480. If it drops below 469, we have a NEW BOUND tighter than
+McGavin's empirical ceiling. If it stays at 480 even with full
+QAP, the puzzle is "LP-tight" — all the hardness is in integrality.
+
+### Vol-65 day 4 plan
+
+Add piece-uniqueness via cell-assignment without going full QAP.
+One angle: use the parametric LP `r[p, k]` consistently with the
+known FRAME structure (corner pieces only at 4 corner cells,
+edge pieces only at perimeter, interior pieces only at interior).
+This is a polynomial number of new constraints and significantly
+tightens.
+
+Specifically, add:
+- For each corner-piece p (4 pieces), only 4 candidate placements
+  (one per corner cell). The cell-placement is correlated with
+  rotation.
+- Similar for edge-pieces (56 pieces, 56 perimeter-non-corner cells,
+  each cell has 1 valid rotation per piece given border-direction).
+
+This adds ~256 piece-placement constraints, all polynomial.
 
 ## Concrete plan
 
