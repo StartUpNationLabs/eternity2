@@ -1,6 +1,11 @@
 # Lifted LP via per-piece column-generation — design
 
-**Status**: `unbuilt` (design only) — vol-52 (2026-05-15).
+**Status**: `partially-refuted` — vol-53 worked-example math revealed
+that per-piece column-gen alone does NOT close the gap. The y-side
+linearisation needs branch-and-price-and-cut, not just column-gen.
+See [[per-piece-column-gen-6x6-worked]] for the refutation analysis.
+
+**Status (original)**: `unbuilt` (design only) — vol-52 (2026-05-15).
 **Origin**: vol-52 binding item, building on vol-50 LP-integer gap
 analysis and vol-47's failed McCormick approach.
 
