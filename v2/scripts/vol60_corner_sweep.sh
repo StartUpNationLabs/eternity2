@@ -11,8 +11,14 @@ ALNS_MS="${2:-300000}"     # 5 min ALNS per partial
 PARALLEL="${3:-8}"
 
 cd "$(dirname "$0")/.."
-RES_DIR="output/vol-60/corner_sweep"
+# Timestamped output dir — never overwrite previous runs (per
+# vol-60 user feedback: "scripts do not overwrite their results
+# so that we have history of everything").
+TS="${VOL60_RUN_TAG:-$(date +%Y%m%dT%H%M%S)}"
+RES_DIR="output/vol-60/corner_sweep_${TS}"
 mkdir -p "$RES_DIR"
+echo "Run tag: $TS"
+echo "Output dir: $RES_DIR"
 
 # All 24 permutations of corner pieces {0,1,2,3} to corners {TL=0, TR=15, BL=240, BR=255}.
 # Format: "perm_id TL_pid TL_rot TR_pid TR_rot BL_pid BR_rot BR_pid BR_rot"

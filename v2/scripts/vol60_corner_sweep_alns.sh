@@ -9,9 +9,12 @@ N_SEEDS="${2:-4}"
 PARALLEL="${3:-8}"
 
 cd "$(dirname "$0")/.."
-SWEEP_DIR="output/vol-60/corner_sweep"
-RES_DIR="output/vol-60/corner_sweep_alns"
+SWEEP_DIR="${VOL60_SWEEP_DIR:-output/vol-60/corner_sweep}"
+TS="${VOL60_RUN_TAG:-$(date +%Y%m%dT%H%M%S)}"
+RES_DIR="output/vol-60/corner_sweep_alns_${TS}"
 mkdir -p "$RES_DIR"
+echo "Sweep input: $SWEEP_DIR"
+echo "Output dir: $RES_DIR"
 
 # Find the BEST snapshot per perm (max depth).
 JOBS_FILE="$RES_DIR/jobs.txt"

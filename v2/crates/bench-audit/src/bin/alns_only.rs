@@ -162,6 +162,12 @@ fn main() {
     let mut lex = false;
     let mut repair_step_budget: u64 = 0;
     let mut cp_repair_parallel = true;
+    // Vol-60 — extra-hint support (mirrors vanilla_fast). These are
+    // additional pinned positions beyond canonical hints. Format:
+    // POS:PID:ROT per --extra-hint. Used by the corner-sweep experiment
+    // to pin corner pieces during ALNS so the sweep's distinct
+    // permutations are preserved through recovery.
+    let mut extra_pins: Vec<u32> = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -176,6 +182,17 @@ fn main() {
             // Vol-17 OPTIMIZATION_REPORT phase 0 — determinism knobs.
             "--repair-step-budget" => repair_step_budget = args.next().unwrap().parse().unwrap(),
             "--cp-repair-single" => cp_repair_parallel = false,
+            // Vol-60 — pin additional position(s). Format POS:PID:ROT
+            // (PID:ROT are ignored — the partial's existing placement
+            // at that position is honored; this just adds the position
+            // to the pinned set so ALNS doesn't move that piece).
+            "--extra-hint" => {
+                let val = args.next().unwrap();
+                let parts: Vec<&str> = val.split(':').collect();
+                assert!(parts.len() >= 1, "--extra-hint format: POS[:PID:ROT]");
+                let pos: u32 = parts[0].parse().expect("--extra-hint pos");
+                extra_pins.push(pos);
+            }
             other => panic!("unknown arg {other}"),
         }
     }
@@ -211,7 +228,9 @@ fn main() {
             other => panic!("--repair-kind want sa|cp|ot, got {other}"),
         },
         cp_fallback_to_sa: true,
-        pinned_positions: hints.hints.iter().map(|h| h.position).collect(),
+        pinned_positions: hints.hints.iter().map(|h| h.position)
+            .chain(extra_pins.iter().copied())
+            .collect(),
         iter_budget: 0,
         lex_break_isoscore: lex,
         checkpoint_path: None,
