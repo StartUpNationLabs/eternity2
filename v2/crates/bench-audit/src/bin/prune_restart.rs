@@ -32,7 +32,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use eternity2_bench_audit::{placed_count, score_board_dense as score_board, ProgressSink};
+use eternity2_bench_audit::{placed_count, relaxed_bound, score_board_dense as score_board, ProgressSink};
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_core::{Board, Hint, Hints, Puzzle, Rotation};
 use eternity2_solver_engine::{
@@ -251,6 +251,11 @@ fn main() {
     // fill from a fixed partial (the vol-23 round-2 board) without the
     // confounding mismatch-drop step.
     let mut pin_all_from_start: bool = false;
+    // Vol-51 B1: bound-trigger restart policy. When true, switches to
+    // larger drop_k (drop_k_bound_stall) on rounds where the relaxed
+    // bound did not improve, instead of stopping. Default false.
+    let mut bound_trigger: bool = false;
+    let mut drop_k_bound_stall: usize = 60;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -266,6 +271,9 @@ fn main() {
             "--no-max-score" => max_score = false,
             "--max-score" => max_score = true,
             "--pin-all-from-start" => pin_all_from_start = true,
+            // Vol-51 B1: bound-trigger restart policy.
+            "--bound-trigger" => bound_trigger = true,
+            "--drop-k-bound-stall" => drop_k_bound_stall = args.next().unwrap().parse().unwrap(),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -319,9 +327,17 @@ fn main() {
         .map(|b| score_board(&puzzle, b).0)
         .unwrap_or(0);
     let mut best_depth: u32 = 0;
+    // Vol-51 B1: track relaxed bound across rounds.
+    let mut best_bound: u32 = initial_board.as_ref()
+        .map(|b| relaxed_bound(&puzzle, b))
+        .unwrap_or(0);
+    let mut current_drop_k: usize = drop_k;
 
     eprintln!("\n=== prune-restart loop ===");
-    let mut summary: Vec<String> = vec!["round,n_pinned,depth,score,time_s".to_string()];
+    if bound_trigger {
+        eprintln!("(bound-trigger ON: drop_k_bound_stall={drop_k_bound_stall})");
+    }
+    let mut summary: Vec<String> = vec!["round,n_pinned,depth,score,bound,time_s".to_string()];
 
     for round in 1..=rounds {
         let mut opts = SolveOpts::default();
@@ -399,8 +415,11 @@ fn main() {
         let depth = stats.as_ref().map(|s| s.max_depth_seen).unwrap_or(sink.best_depth);
         let nodes = stats.as_ref().map(|s| s.nodes).unwrap_or(0);
 
+        // Vol-51 B1: relaxed bound on partial.
+        let bound = relaxed_bound(&puzzle, &cp_board);
+
         eprintln!(
-            "ROUND {round}: depth={depth}, placed={n_placed}/{}, score={score}/480, nodes={nodes}, elapsed={:.1}s",
+            "ROUND {round}: depth={depth}, placed={n_placed}/{}, score={score}/480, bound={bound}/480, nodes={nodes}, elapsed={:.1}s",
             puzzle.cell_count(), elapsed.as_secs_f64()
         );
 
@@ -409,7 +428,7 @@ fn main() {
         eprintln!("  saved {}", board_path.display());
 
         summary.push(format!(
-            "{round},{n_pinned},{depth},{score},{:.1}",
+            "{round},{n_pinned},{depth},{score},{bound},{:.1}",
             elapsed.as_secs_f64()
         ));
 
@@ -418,16 +437,31 @@ fn main() {
             eprintln!("  ** ROUND IMPROVED: score {} -> {} (Δ +{})", best_score, score, score - best_score);
             best_score = score;
             best_depth = depth;
+            best_bound = best_bound.max(bound);
             // Update hints for next round: pin everything currently placed.
             current_hints = hints_from_board(&cp_board, &puzzle, &canonical_hints);
+            // Reset drop_k to baseline.
+            current_drop_k = drop_k;
         } else if depth > best_depth + min_depth_growth {
             // No score improvement but the CP went deeper — still useful;
             // pin its placements for the next round.
             eprintln!("  depth grew {}→{} (no score lift); still pinning for next round", best_depth, depth);
             best_depth = depth;
+            best_bound = best_bound.max(bound);
             current_hints = hints_from_board(&cp_board, &puzzle, &canonical_hints);
+            current_drop_k = drop_k;
+        } else if bound_trigger && bound >= best_bound {
+            // Vol-51 B1: bound didn't drop but score stagnated.
+            // Switch to larger drop_k and pin from current board.
+            eprintln!(
+                "  BOUND-TRIGGER: score stagnant (best={best_score}) but bound={bound} (best={best_bound}); \
+                 escalating drop_k {current_drop_k} → {drop_k_bound_stall} and continuing",
+            );
+            current_drop_k = drop_k_bound_stall;
+            best_bound = best_bound.max(bound);
+            current_hints = hints_from_board_with_drops(&cp_board, &puzzle, &canonical_hints, current_drop_k);
         } else {
-            eprintln!("  STAGNATED (no score lift, depth growth < {}); stopping early", min_depth_growth);
+            eprintln!("  STAGNATED (no score lift, depth growth < {}, bound={bound} ≤ best_bound={best_bound}); stopping early", min_depth_growth);
             break;
         }
     }

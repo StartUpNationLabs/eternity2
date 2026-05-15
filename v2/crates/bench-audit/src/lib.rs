@@ -164,6 +164,89 @@ pub fn score_board_dense(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     (matched, total)
 }
 
+/// Vol-51 — extracted from `bin/edge_bound_ascent.rs` so other drivers
+/// can compute the relaxed bound between rounds.
+///
+/// Returns the score achievable by greedy cell-local optimization,
+/// IGNORING piece-uniqueness (relaxed bound = upper bound on basin).
+#[must_use]
+pub fn relaxed_bound(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Board) -> u32 {
+    use eternity2_core::{Rotation, BORDER};
+    let mut b = board.clone();
+    let n_cells = puzzle.cell_count();
+    for _ in 0..20 {
+        let mut changes = 0u32;
+        for pos in 0..n_cells {
+            let cur_local = b.get(pos).map(|(pid, rot)| {
+                let e = puzzle.piece(pid).unwrap().edges.rotated(rot).as_array();
+                cell_local_score_for_edges(puzzle, &b, pos, e)
+            }).unwrap_or(0);
+            let mut best: Option<(u16, Rotation, u32)> = None;
+            let w = puzzle.width;
+            let h = puzzle.height;
+            let x = pos % w;
+            let y = pos / w;
+            for piece in puzzle.pieces() {
+                for rot in Rotation::ALL {
+                    let e = piece.edges.rotated(rot).as_array();
+                    if (e[0] == BORDER) != (y == 0) { continue; }
+                    if (e[1] == BORDER) != (x + 1 == w) { continue; }
+                    if (e[2] == BORDER) != (y + 1 == h) { continue; }
+                    if (e[3] == BORDER) != (x == 0) { continue; }
+                    let s = cell_local_score_for_edges(puzzle, &b, pos, e);
+                    if best.map(|(_, _, b_)| s > b_).unwrap_or(true) {
+                        best = Some((piece.id, rot, s));
+                    }
+                }
+            }
+            if let Some((pid, rot, s)) = best {
+                let cur = b.get(pos);
+                let cur_pid = cur.map(|(p, _)| p).unwrap_or(0);
+                let cur_rot = cur.map(|(_, r)| r).unwrap_or(Rotation::R0);
+                if (pid, rot) != (cur_pid, cur_rot) && s > cur_local {
+                    b.place(pos, pid, rot);
+                    changes += 1;
+                }
+            }
+        }
+        if changes == 0 { break; }
+    }
+    score_board(puzzle, &b).0
+}
+
+fn cell_local_score_for_edges(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Board, pos: u32, edges: [u8; 4]) -> u32 {
+    use eternity2_core::BORDER;
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let x = pos % w;
+    let y = pos / w;
+    let mut s = 0u32;
+    let get_edges = |p: u32| -> Option<[u8; 4]> {
+        board.get(p).map(|(pid, rot)| puzzle.piece(pid).expect("piece").edges.rotated(rot).as_array())
+    };
+    if y > 0 {
+        if let Some(ne) = get_edges(pos - w) {
+            if edges[0] != BORDER && ne[2] != BORDER && edges[0] == ne[2] { s += 1; }
+        }
+    }
+    if x + 1 < w {
+        if let Some(ne) = get_edges(pos + 1) {
+            if edges[1] != BORDER && ne[3] != BORDER && edges[1] == ne[3] { s += 1; }
+        }
+    }
+    if y + 1 < h {
+        if let Some(ne) = get_edges(pos + w) {
+            if edges[2] != BORDER && ne[0] != BORDER && edges[2] == ne[0] { s += 1; }
+        }
+    }
+    if x > 0 {
+        if let Some(ne) = get_edges(pos - 1) {
+            if edges[3] != BORDER && ne[1] != BORDER && edges[3] == ne[1] { s += 1; }
+        }
+    }
+    s
+}
+
 /// Vol-33 T5 — shared bin-harness helpers.
 ///
 /// Most bench-audit bins follow the same shape:
