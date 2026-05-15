@@ -1,200 +1,94 @@
-# Current vol — vol-51 (opening) — 2026-05-15
+# Current vol — vol-52 (opening) — 2026-05-15
 
-**Predecessor**: vol-50 closed with net negative result on records (best
-ALNS lift was +4 over vol-23 baseline; blackwood_raw 1h × 4 FAILED due
-to CPU oversubscription). See [[../sessions/vol-50]].
+**Predecessor**: vol-51 closed with B1 bound-trigger infrastructure
+shipped but the recovery path identified as the bottleneck. Standing
+458 record unchanged. See [[../sessions/vol-51]].
 
-This page started life as a vol-51 draft written DURING vol-50 to
-ensure the autonomous loop had a next step. Branches A/B/C below
-reflect that. **Branch B is what actually happened**.
+## Vol-52 binding item — design document for lifted-LP via per-piece column-generation
 
-## Vol-51 binding item (revised 2026-05-15 mid-session)
+**Mode**: research-grade design document, NO new code shipping this vol.
 
-**B1 was built but the recovery path is broken. Pivoting to B3 (engine
-throughput profiling, scoped only to measurement + write-up).**
+### Why this, why now
 
-### B1 disposition
+After 6 negative-result volumes on record-breaking tracks (vols 46-51),
+the empirical evidence is overwhelming: **local search cannot close
+the ~20-point LP-integer gap that exists in every basin**. Multi-week
+algorithm change is what's actually needed.
 
-Shipped clean infrastructure:
-- `relaxed_bound` extracted to `bench-audit` lib.
-- `prune_restart` accepts `--bound-trigger` flag.
-- Per-round bound logged in summary.csv.
+The vol-50 [[../concepts/lp-integer-gap-anatomy|LP-integer gap anatomy]]
+identified the binding constraint precisely:
+- 33% of the gap is in fractional LP values (closeable by classical cuts).
+- 67% is in integer-valued per-color LP UBs that cannot be jointly
+  achieved due to piece-uniqueness.
 
-The trigger logic CORRECTLY detects full-board + score-stagnant and
-escalates drop_k. But the recovery path is broken: dropping 60 cells
-(actual: 164 with halo) leaves CP unable to refill in 30s budget;
-round 5 score collapses to 188 from 412. **B1 doesn't produce score
-lift as implemented.**
+Vol-47 already ruled out naive McCormick lifting on x-products (intractable
+at canonical scale). But **per-piece decomposition** has not been
+seriously analysed. The math is non-trivial; the design deserves a
+careful write-up before any code investment.
 
-Possible fixes (not pursuing this vol):
-- Increase per-round CP budget for recovery rounds (5+ min each).
-- Drop policy that doesn't expand halo (cap at k=60 strict).
-- LNS-style recovery (re-run CP only on the dropped subset, not
-  whole board).
-- Fresh random seed per recovery round.
+### Scope for vol-52
 
-The original goal of B1 (different trigger than depth/node) is met;
-the new finding is that the recovery is the bottleneck, not the
-trigger.
+1. **Write `vault/concepts/lifted-lp-column-gen-per-piece.md`** —
+   a careful design document covering:
+   - Lagrangian decomposition of the master problem by piece.
+   - Per-piece subproblem structure (a piece is assigned to one cell
+     with one rotation; LP gives fractional placement; we want to
+     resolve piece-uniqueness exactly while relaxing it within
+     subproblems).
+   - Column-generation pricing: which placements to add to the master.
+   - Stability conditions / convergence proof sketch.
+   - Comparison to vol-47's failed lifting.
 
-### B3 — engine throughput profiling (locked in)
+2. **Worked example at small scale**: 6×6/5c canonical-shaped puzzle.
+   Hand-derive the per-piece columns for the first 2-3 generation
+   rounds. Demonstrate the math actually closes a portion of the gap
+   that vol-47's lifting did not.
 
-Community engine ≈ 295M nps, ours ≈ 75k aggregate / ~10k per worker.
-4000× gap. McGavin engine parity would close this gap and let
-existing algorithms break the depth-27 cold-start wall.
+3. **Build cost estimate**: how many weeks of engineering work would
+   the full per-piece column-gen LP solver be? Identify the biggest
+   unknown.
 
-**Scope for vol-51**: PROFILING and ANALYSIS only — not the full
-optimization build (which is multi-week).
+### Out of scope (NOT this vol)
 
-1. Run our hot profiles (`joe_depth150_bp_par`, `BLACKWOOD_RAW_PAR`)
-   under `cargo flamegraph` for representative 60s runs.
-2. Identify top 5 hot functions by self-time.
-3. Compare each to expected McGavin-style implementation patterns
-   (per [[mcgavin-engine]] notes + community E2 commentary).
-4. Write durable per-hot-path notes in `vault/concepts/engine-perf-hot-paths.md`
-   (already exists from vol-25; amend with vol-51 measurements).
-5. Identify the top 1-2 wins that would close ~10× of the gap (not
-   100×).
+- Building the LP solver itself.
+- Running it on canonical E2 (would require weeks of engineering).
+- Comparing measured LP UB to current 478.
 
-This produces durable research output (vault notes + numbers) that
-any future engine-perf volume builds on, even without a record this vol.
+### Risk budget
 
-### Rationale for the pivot
+- Tight: 2 days of careful math + write-up.
+- Kill condition: if the math reveals per-piece decomposition has a
+  fundamental obstruction (e.g., scales worse than McCormick), document
+  the obstruction and stop.
 
-Per CLAUDE.md "Don't stop unilaterally; pivot to a real next
-experiment". B1's trigger axis is exhausted as a record-track path.
-B3 profiling is a real next experiment that:
-- Cannot fail to produce knowledge.
-- Doesn't risk further CPU waste.
-- Sets up future engine-perf work with concrete measurements.
+### What this produces
 
-## Branch trail (kept for historical reasoning)
+A durable vault concept page that:
+- Future agents/researchers can read to understand the LP path.
+- Captures the decision trail (why per-piece, why not McCormick, why
+  not subgradient).
+- Estimates the engineering cost for any future build.
 
-### Branch A: (would have applied if vol-50 produced ≥ 458) — DID NOT APPLY
+## Audit-at-open
 
-Record-class result. Vol-51 priorities:
-1. **Reproduce at >1h budget × more seeds**. 1h × 16 seeds in 4
-   batches of 4. Total ~4h. EV: confirm + collect basins.
-2. **ALNS-lottery from the new partial × 16 seeds × 5min**.
-3. **PT lottery from any new ≥457 board × 1h × N seeds**.
+Aged ≥ 3 vols (from BACKLOG, not picked vol-51):
+- `mcgavin-prune-restart-bound-trigger` (since vol-36) — built vol-51, recovery path identified as bottleneck, DEFER (not picking again)
+- `unsat-soft-value-order-vol37` (since vol-34) — defer to vol-53+
+- `multi-cell-bound-ascent` (since vol-22) — `wont-do` (vol-21/22 collapse mode confirmed)
+- `bound-floor-alns-with-per-step-check` (since vol-22) — defer; invasive ALNS internals work
+- `restore-or-simd` (since vol-25 perf) — engineering not research; defer
+- `precompute-cell-nb-info` (since vol-25 perf) — engineering not research; defer
+- `vault-validation-of-perf-wins` (since vol-25) — engineering; defer
+- `learned-on-ties-long-pt` — already marked wont-do vol-50
 
-### Branch B: vol-50 plateaued (HAPPENED) — vol-51 = bound-trigger build
+Most are engineering work or already wont-do. Vol-52 picks none of them;
+the binding item is design, not picking from this list.
 
-Vol-51 binding item candidates (one max):
+## Linked
 
-#### B1. McGavin's prune-restart bound-trigger (BACKLOG vol-36 T2)
-
-Different trigger than vol-23's CP-depth trigger and vol-50's
-node-budget trigger: **trigger restart when bound-improvement stalls**.
-Bound is computed by `edge_bound_ascent` (already shipped).
-- Build: ~1-2 days. Modify `prune_restart` to call bound-ascent
-  between rounds; if bound at round N == bound at round N-1, restart.
-- EV: bound-improvement stall is a true basin-lock detector
-  (stronger than depth-stall). Restart from stalled bound might find
-  basins of different ceiling.
-
-#### B2. Per-seed warm-PT recipe at 1h × 16 seeds from vol-32 records
-
-vol-22 found 469-ceiling basins via basin-escape from a 457. But
-**we never ran PT for 1h from vol-32's specific 458 record**.
-Vol-32 RECORD_BREAK_458 → PT 1h × 16 seeds is the most basin-
-specific compute we haven't tried.
-- Build: 0 (existing pt_e2).
-- EV: 1h × 16 ≈ 16h compute; vol-22 record-class output would be
-  another saturated 458 or a new 459/460 basin.
-- Risk: comfort-lottery. The vol-32 close memory says "458 basin
-  PROVEN locally optimal under MIP cluster-repair", suggesting PT
-  on the SAME basin returns nothing.
-
-#### B3. McGavin engine parity (vol-25 BACKLOG, multi-week)
-
-Community engine = 295M nps; ours = ~75k aggregate (~10k per worker).
-4000× gap. Closing this is multi-week. Quantified expectation: at
-295M nps, our existing algorithms in 60s would search 17B nodes
-(vs current 4.2M aggregate). That's enough to break the depth-27
-wall on cold-start. **Could be the actual record-breaker.**
-- Build: profile the hot paths in BLACKWOOD_RAW and joe_depth150_bp;
-  measure ours vs published McGavin nps; identify the gap.
-- EV: very high if successful.
-- Risk: multi-week, big-build risk.
-
-### Branch C: vol-50 blackwood_raw+MRV fails (< 457)
-
-Less likely but possible. The 1h × 4 parallel sharing 170%/worker
-could be slower than vol-32's full-CPU 10min runs.
-
-Then vol-51 = re-run vol-32 recipe EXACTLY (single seed, full CPU,
-5min, ALNS-5min). Validates reproducibility.
-
-## Recommended pre-commit (vol-51 binding item)
-
-Pending vol-50 close. Best guess: **B1 (McGavin bound-trigger
-prune-restart)** because:
-- Distinct from vols 23/50 (depth-trigger, node-trigger). Genuinely
-  unfetched search-side axis.
-- Build is contained (1-2d), measurement is contained.
-- EV: medium. Probability of record-break ≥ 5%, much higher than
-  another lottery on existing partials.
-
-Backup if B1 surprises: **B3 (McGavin engine perf)** scoped to "profile
-and identify the gap" only — research-grade preparation work that
-DOES NOT require multi-week build to be valuable.
-
-## VOL-46 LP-UB-479 CONTEXT (critical for vol-51 thinking)
-
-Vol-46 found a basin with LP UB = 479 ("class D"). 8 ALNS-diverse
-seeds × 1h: ALL 8 plateau at 457. MIP on 28-cell mismatch union:
-delta=0 in 0.46s — **proven locally optimal at 457**.
-
-Across basin classes A/B/C/D, the LP UB → integer-best gap is
-uniformly ~20 points. **Local search cannot close this gap**.
-
-What this implies for vol-51:
-- More basin diversification (PT, ALNS lotteries) ≈ comfort lottery.
-- The gap is a property of the SEARCH ALGORITHM, not basin choice.
-- Breaking 458 requires: (a) McGavin throughput parity (raw bandwidth
-  closes the gap), (b) no-good CDCL learning in solver-engine, or
-  (c) multi-day MIP on specific basins.
-
-This pushes vol-51 strongly toward **algorithm-side innovation**,
-not lottery. B1 (bound-trigger) is still good because it's
-algorithm-shaped; B3 (engine parity) is now the highest-EV
-multi-week direction.
-
-## Vol-50 CPU-oversubscription lesson
-
-Mid-vol-50 (2026-05-15 11:35) observation: my 4-parallel
-`run_e2_blackwood` runs each got ~170% CPU (rayon auto-throttled
-under contention). Vol-32's 458 record was via vanilla_fast + ALNS
-**at 800% CPU single-seed**. My 4×170% = 680% total spread, so each
-seed effectively runs ~12 min of single-thread-equivalent compute
-over the 1h wall.
-
-**Result**: 1h × 4 parallel = 1h-equivalent per seed, NOT 4× vol-32's
-10min. Same effective budget per seed as vol-32, just diversified
-across 4 seed initializations.
-
-**Lesson for vol-51 + future big-CPU experiments**: parallel-of-N runs
-of an already-parallel solver gives N× diversification, NOT N× per-seed
-compute. To compete with vol-32's 458 wall-time, must run SEQUENTIALLY
-at full CPU. With 4 seeds × 1h sequential = 4h wall budget needed
-for a clean N=4 lottery.
-
-This insight changes vol-51's planning math: for any "more compute on
-existing algorithm" experiment, **either** run sequentially at full
-CPU **or** use a different (low-CPU-cost) inner algorithm.
-
-## Audit-at-open targets (when vol-51 actually opens)
-
-Aged ≥ 3 vols (from BACKLOG):
-- `mcgavin-prune-restart-bound-trigger` (since vol-36)
-- `unsat-soft-value-order-vol37` (since vol-34)
-- `joe-iteration-budgeted-prune` (since vol-32 open) — **resolved by vol-50**
-- `multi-cell-bound-ascent` (since vol-22, deferred vol-31, still aged)
-- `bound-floor-alns-with-per-step-check` (since vol-22, deferred vol-27)
-- `restore-or-simd` (since vol-25 perf)
-- `precompute-cell-nb-info` (since vol-25 perf)
-- `vault-validation-of-perf-wins` (since vol-25)
-
-Most are stale. The discipline at vol-51 open: each gets a real
-decision (pick / wont-do / argue).
+- [[../sessions/vol-51]] — predecessor
+- [[../concepts/lp-integer-gap-anatomy]] — vol-50 math motivation
+- [[../concepts/lifted-lp-formulation]] — vol-47 design (McCormick)
+- [[../concepts/lifted-lp-column-generation]] — vol-47 column-gen attempt
+- [[../concepts/lp-ub-478-basins]] — vol-44 basin survey
+- [[../concepts/lp-ub-479-basin-found]] — vol-46 class D
