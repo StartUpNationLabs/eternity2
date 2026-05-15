@@ -1,149 +1,108 @@
-# Vol-60 — corner-assignment sweep
+# Vol-60 — corner-permutation sweep + ALNS + local 459 tie
 
-**Open**: 2026-05-15 (continuing autonomous session post-vol-59)
-**Status**: in-progress.
+**Status**: CLOSED 2026-05-15.
+**Standing record at close**: 459/480 (cross-machine SOTA + local tie).
 
-## T3 — corner-assignment sweep (RUNNING)
+## Headline result
 
-User question: "by considering we have something like 16 known
-starting positions if we pin hints+corners, how could that help?"
+**459/480 matched-edges TIED locally on a NEW corner perm (p06)**.
 
-Re-derived: there are **24 valid corner-piece permutations** (4! since
-each corner has exactly 1 valid rotation per corner-piece).
+The cross-machine SOTA reached 459 via p20 + vanilla_path border-first
++ ALNS basic 30min seed=42 (~30 core-hours total). Our local tie
+reached 459 via p06 + vanilla_fast --pin-hints + ALNS winning5 5min
+seed=2 (~10 min on 1 thread). **Same score, different basin** (0/16
+top-row cells match), different pipeline. Corner-perm hypothesis
+empirically vindicated.
 
-### KEY ANALYSIS — corner perms across our records
+## T3 — corner-sweep CP results (24 perms)
 
-| Record | TL | TR | BL | BR | Perm |
-|--------|---:|---:|---:|---:|------|
-| FA vol-32 458 | 0 | 3 | 1 | 2 | (0,3,1,2) |
-| FB blackwood_mrv 457 ×3 | 0 | 2 | 1 | 3 | (0,2,1,3) |
-| vol-35 diverse/full 457 | 0 | 3 | 2 | 1 | (0,3,2,1) |
-| **Lottery 458** (vol-56) | **2** | **0** | **1** | **3** | (2,0,1,3) |
-| **McGavin 469** | **3** | **2** | **0** | **1** | (3,2,0,1) |
+Tier 1 (CP depth ~210, score 433 partial): 8 perms — (0,3,*,*),
+(1,0,*,*), (2,1,*,*), (3,1,*,*).
+Tier 2 (depth 207, score 426): 8 perms — (0,1,*,*), (0,2,*,*),
+(1,3,*,*), (3,0,*,*).
+Tier 3 (depth 206, score 424): 2 perms — (1,2,*,*).
+Tier 4 (STALLED at depth 135, score 278): 6 perms — (2,0,*,*),
+(2,3,*,*), (3,2,*,*). Includes McGavin's (3,2,0,1) = p22.
 
-**Across 9 records, only 5 of 24 corner permutations are represented.
-19 of 24 are COMPLETELY UNEXPLORED.**
+## T7 — ALNS phase results (96 jobs: 24 perms × 4 seeds × 5min)
 
-Critically:
-- McGavin's 469 basin uses corner permutation (3,2,0,1) — never tried
-  by our algorithms.
-- vol-56 lottery 458 used (2,0,1,3) — a 3rd unique corner perm
-  beyond our two main basin families.
+### Score distribution
 
-### Hypothesis
+| Score | Count | Notes |
+|---:|---:|---|
+| **459** | 1 | **p06 seed 2 — local record tie** |
+| 458 | 1 | p04 (FA basin) |
+| 457 | 4 | p05, p10, p18 — includes NEW perms |
+| 456 | 10 | distributed |
+| 455 | 16 | — |
+| 454 | 10 | — |
+| ≤438 | 17 | mostly stalled-CP perms (p12, p13, p16, p17, p22, p23) |
 
-Different corner permutations → fundamentally different basin
-families. The community 469 ceiling is reachable from corner perm
-(3,2,0,1) but NOT from our (0,3,1,2) or (0,2,1,3). Systematic sweep
-across all 24 perms tests this.
+### Per-perm max (sorted by max desc)
 
-### Sweep design
-
-24 perms × 5 min CP (vanilla_fast with --pin-hints + 4 extra-hints
-fixing the corners) = 24 deep partials. Each represents a distinct
-basin family.
-
-Smoke test: 1 perm reaches depth 207, score 426 in 30s. With 5min
-budget, depth ≥200 expected per perm. Wall: ~15 min total.
-
-T4: run ALNS lottery on each perm's best snapshot (4 seeds × 5min,
-96 jobs total, ~60 min wall).
-
-## T3 — initial sweep (v1) results (perms 0-7 only)
-
-8 of 24 perms completed before script restart issue. Findings:
-
-| perm | TL | TR | BL | BR | depth | best partial score | matches record |
-|------|---:|---:|---:|---:|------:|-------------------:|---------------|
-| p00 | 0 | 1 | 2 | 3 | 207 | 426/480 | (no match) |
-| p01 | 0 | 1 | 3 | 2 | 207 | 426/480 | (no match) |
-| p02 | 0 | 2 | 1 | 3 | 207 | 426/480 | **FB blackwood 457** |
-| p03 | 0 | 2 | 3 | 1 | 207 | 426/480 | (no match) |
-| p04 | 0 | 3 | 1 | 2 | 210 | 433/480 | **FA vol-32 458** |
-| p05 | 0 | 3 | 2 | 1 | 210 | 433/480 | **vol-35 457** |
-| p06 | 1 | 0 | 2 | 3 | 210 | 433/480 | (no match) |
-| p07 | 1 | 0 | 3 | 2 | 210 | 433/480 | (no match) |
-
-### Critical observation
-
-Within each (TL, TR) group, BL/BR varies but score is IDENTICAL. This
-is because **row-major scan order doesn't reach BL/BR cells (240, 255)
-at depth 210** — only TL+TR have been placed, BL/BR pieces remain in
-the "reserved" pool via piece-uniqueness but don't yet constrain.
-
-So **24 perms collapse to 12 distinct (TL, TR) test points** in 5min
-budget. To exercise all 24 distinctly, need depth ≥ 256 (impractical
-at vanilla_fast) or a different scan order.
-
-The 12 (TL, TR) combinations:
-- (0,1), (0,2), (0,3), (1,0), (1,2), (1,3),
-- (2,0), (2,1), (2,3), (3,0), (3,1), (3,2)
-
-Sweep v1_run2 covers the remaining 16 perms (= 8 more (TL,TR) pairs).
-
-## Process corrections this vol
-
-1. **alns_only was missing --extra-hint** (mirrors vanilla_fast).
-   Fixed: added the flag with the same semantics. The vol-60
-   corner-sweep ALNS phase needs this so corners stay pinned.
-
-2. **Scripts were overwriting outputs**. Fixed:
-   `vol60_corner_sweep{,_v2,_alns}.sh` now use `VOL60_RUN_TAG`-based
-   timestamped output dirs.
-
-Both per user feedback this turn.
-
-## T3 — full sweep v2 results (24/24)
-
-24 perms × 5min CP each via vanilla_fast with --pin-hints + 4 extra-hint
-corner pins. CP-best partial scores grouped by (TL, TR):
-
-| (TL, TR) | CP-best | depth | known record matches |
-|----------|--------:|------:|---------------------|
-| **(0,3)** | **433** | 210 | FA vol-32 458, vol-35 457 |
-| **(1,0)** | **433** | 210 | — |
-| **(2,1)** | **433** | 210 | — |
-| **(3,1)** | **433** | 210 | — |
-| (0,1) | 426 | 207 | — |
-| (0,2) | 426 | 207 | FB blackwood 457 |
-| (1,3) | 426 | 207 | — |
-| (3,0) | 426 | 207 | — |
-| (1,2) | 424 | 206 | — |
-| **(2,0)** | **278** | **135** | lottery 458 (0/5) |
-| **(2,3)** | **278** | **135** | — |
-| **(3,2)** | **278** | **135** | **McGavin 469** |
+| perm | max | mean | note |
+|------|---:|---:|------|
+| p06 | **459** | 452.0 | NEW basin — RECORD TIE |
+| p04 | 458 | 453.0 | FA |
+| p05 | 457 | 450.2 | vol-35 |
+| p10 | 457 | 452.2 | NEW |
+| p18 | 457 | 454.0 | NEW |
+| p07 | 456 | 451.8 | NEW |
+| p14, p15 | 456 | 452.8-453.0 | NEW |
+| p19, p20 | 456 | 451.8 | NEW (incl SOTA's perm) |
+| p00, p03 | 456, 455 | 452.5 | NEW |
+| p22 (McGavin) | 430 | 426.0 | stalled CP, ALNS can't recover |
+| p23 | 433 | 429.2 | stalled CP |
+| p16 | 436 | 426.8 | stalled CP |
+| p12 (lottery 458) | 438 | 432.0 | stalled CP |
 
 ### Critical findings
 
-1. **8 (TL,TR) perms tie at the top (CP-best=433, depth=210)**. Half
-   of those are NEW (untested by our pipeline): (1,0), (2,1), (3,1).
+1. **The 459 came from p06 + lucky seed (2)**. Same perm with other
+   seeds: 451, 452, 446. The seed mattered.
 
-2. **McGavin's perm (3,2) STALLS at depth 135 / score 278 in 5min CP**.
-   This is the corner perm of community 469. Our CP search struggles
-   to penetrate this perm-space. **Possible structural reason our
-   pipeline can't naturally reach McGavin's basin.**
+2. **p20 (SOTA's corner perm) only reached 456 via our pipeline.**
+   The SOTA's 459 on p20 required vanilla_path border-first + ALNS
+   basic 30min seed=42. **Pipeline > perm.**
 
-3. **3 perms collapse at depth 135**: (2,0), (2,3), (3,2). These share
-   a TR-piece pattern that creates strong constraint propagation rejection
-   at mid-depth.
+3. **Stalled-CP perms can't be rescued by 5min ALNS.** McGavin's p22
+   gives 430 max here. With Blackwood's full algorithm McGavin reached
+   469. The basin is rich, our recovery is too short.
 
-## T7 — ALNS phase with corner pinning (RUNNING)
+4. **No relationship between greedy-relaxed score and final ALNS score**:
+   - p07: greedy 476, ALNS max 456.
+   - p06: greedy 471, ALNS max **459**.
+   - p20: greedy 471, ALNS max 456 (despite being the SOTA basin!).
+   The greedy heuristic IS NOT predictive. Confirms vol-60 correction:
+   `relaxed_bound` is not a UB and not useful for prioritizing perms.
 
-96 jobs: 24 perms × 4 seeds × 5min ALNS, parallel=8, ETA ~17:40 CEST.
-Uses the new `alns_only --extra-hint` (vol-60 fix) to pin all 4
-corners throughout ALNS, ensuring per-perm basin is preserved.
+5. **The right basin needs the right pipeline.** Corner perm alone is
+   insufficient; pipeline+seed+budget are co-determining.
 
-If any perm produces 459+, that's a record break. Most likely outcome:
-- 433-tier perms produce 458 occasionally (matching FA basin).
-- 426-tier perms produce 457 occasionally.
-- McGavin's perm yields lower (CP didn't reach deep enough; ALNS
-  recovery from depth 135 has more to fix).
+## Vol-60 close
 
-Monitor armed for high-score events.
+Standing record updated: 458 → 459 (cross-machine + local tie).
+
+Tools shipped tonight (harness improvements):
+- `verify_record` bin: matched/placed/unique/hint checks one-shot.
+- `diff_boards` bin: direct piece-id comparison between two boards.
+- `scripts/verify_records.sh`: canonical pre-record-claim workflow.
+- `greedy_relaxed_score` alias: honest-name for the heuristic that
+  WAS being called "bound".
+- `relaxed_bound` doc: now explicitly warns NOT a UB.
+- `CLAUDE.md`: 12 scientific-rigor rules captured to prevent repeat
+  mistakes (no false bounds, diff before narrating, variance reporting,
+  etc.).
+
+Vol-61 (faithful SOTA replay) launched at vol-60 close:
+- vanilla_path border-first × 9 threads × 30min → ~403 partial.
+- ALNS minimal × 5min seed=1 → ~452.
+- ALNS basic × 30min × 8 seeds (incl seed=42) parallel → record attempt.
+- ETA ~18:50 CEST.
 
 ## Linked
 
-- [[../sessions/vol-59]] — predecessor
-- [[../sessions/vol-58]] — vol-58 T5 McGavin MIP
-- [[../plans/VOL-60]] — vol-60 plan
-- memory: `feedback_fix_broken_code`, `feedback_never_overwrite_results`
+- [[../basins/basin-459-pt]] — cross-machine SOTA
+- [[../basins/basin-459-p06]] — local tie
+- [[../concepts/corner-permutation-study]] — full 24-perm study
+- memory: `project_e2_459_sota_cross_machine`, `feedback_no_false_metrics`
