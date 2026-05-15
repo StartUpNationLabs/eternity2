@@ -79,6 +79,28 @@ search algorithm. Either alone is insufficient. The 47-component
 ↔ 47-top-row correspondence holds for OUR ALNS. Different
 algorithms find different top-row attractors.
 
+## Ops-sweep follow-up (2026-05-15)
+
+Ran McGavin's top-row partial through all 4 of our standard ops
+presets (60s each):
+
+| ops | score on McGavin top-row |
+|---|---|
+| minimal | 378 |
+| basic | 378 |
+| full | 398 |
+| mega_mix | 393 |
+| winning5 (5min) | 400 |
+
+ALL fall short of our typical 455-459. **Our entire ALNS family is
+fundamentally incompatible with McGavin's top-row.** The destroy-
+repair operators we use can't extend his top-row geometry.
+
+Blackwood's algorithm must do something fundamentally different —
+e.g., schedule relaxations at specific depths (the 10-relaxation
+schedule that defines his 470 algorithm on 1-clue) or strict
+break-index allowance that our search doesn't have.
+
 ## Linked
 
 - [[basin-component-landscape]] (parent — 47 components)
