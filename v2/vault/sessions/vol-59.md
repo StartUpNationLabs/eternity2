@@ -67,6 +67,46 @@ To make CDCL competitive at canonical 16×16:
 This is the next concrete vol-60+ work, with measurable success
 criterion.
 
+### T4 — 1-UIP analysis for E2 (THEORETICAL OBJECTION)
+
+Started designing real 1-UIP. Realized the E2 cause-graph structure
+may make 1-UIP LESS POWERFUL than in SAT:
+
+**Why SAT 1-UIP works well**: clauses are 3-100 literals, propagation
+forms a deep implication graph. 1-UIP finds ONE asserting literal at
+each decision level, dramatically shrinking the conflict clause.
+
+**Why E2 1-UIP may NOT work well**: each AC-3 removal in my code is
+caused by ONE placed cell directly (piece-uniqueness or edge-equality).
+The cause-graph is FLAT: depth ≤ 2 from any literal to wipeout. 1-UIP
+collapses to "union of all single-cell causes," which IS what I already
+compute.
+
+The REAL clause-size problem at canonical is:
+- Wipeout cell loses ~700+ values from initial domain.
+- Each value lost to ONE cell (its cause).
+- Union of single-cell causes = potentially most-placed-cells.
+
+To shrink: need to recognize that many causes are REDUNDANT in
+combination. Standard SAT 1-UIP doesn't do this; **redundant-cause
+elimination** would. That's a different (and harder) analysis.
+
+**Alternative**: instead of 1-UIP, try **subsumption-based learning**:
+when a small clause C1 already exists and we'd learn a larger C2 ⊇ C1,
+skip learning C2. This keeps the DB compact but doesn't shrink
+individual clauses.
+
+**This insight suggests vol-60 should NOT be "implement real 1-UIP"
+but rather "investigate E2-specific clause-size reduction techniques"**:
+- Per-cell forbidden-piece sets (compact representation).
+- Clause subsumption + back-subsumption.
+- Drop "trivial" clauses where one cause-cell's value alone would
+  cause the wipeout (those clauses are implied by piece-uniqueness +
+  edge-equality, no new info).
+
+Reframing the vol-60 problem this way is more honest than chasing
+SAT-style 1-UIP that may not apply.
+
 ## Linked
 
 - [[../sessions/vol-58]] — predecessor with canonical-scale failure
