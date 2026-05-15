@@ -67,6 +67,12 @@ fn main() {
             Ok(r) => {
                 println!("{arg}\tplaced={placed}\tbb={}\tbi_ub={:.4}\tlp_interior={:.4}\ttotal_ub={:.4}\tn_x={}\tn_y={}\tn_constraints={}\ttime={:.2}s",
                     r.bb_matches, r.bi_ub, r.interior_ub, r.total_ub, r.n_x, r.n_y, r.n_constraints, r.solve_secs);
+                if let Some(pc) = &r.per_color_ii_ub {
+                    println!("# per-color I-I LP UB:");
+                    for k in 1..pc.len() {
+                        println!("#   color {k:>2}: {:.4}", pc[k]);
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("{arg}\tERROR: {e}");

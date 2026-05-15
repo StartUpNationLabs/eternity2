@@ -156,6 +156,9 @@ pub struct LpUb {
     pub n_y: usize,
     pub n_constraints: usize,
     pub solve_secs: f64,
+    /// Per-color sum of y_in (interior LP UB broken down by color k=1..max_color).
+    /// Index 0 unused; entries [1..=max_color] valid. None if not collected.
+    pub per_color_ii_ub: Option<Vec<f64>>,
 }
 
 pub fn lp_ub(puzzle: &Puzzle, board: &Board) -> Result<LpUb, String> {
@@ -343,6 +346,16 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
     let bi_matches = bi_ub.round() as u32; // for legacy reporting
     let total = bb as f64 + bi_ub + interior_ub;
 
+    // Per-color y_in breakdown.
+    // y_list indexed: y_list[edge_idx * max_color + (k-1)] for k=1..=max_color.
+    let mut per_color = vec![0.0f64; (max_color as usize) + 1];
+    for (ei, _) in ii_edges.iter().enumerate() {
+        for k in 1..=max_color as usize {
+            let v = y_list[ei * max_color as usize + (k - 1)];
+            per_color[k] += sol.value(v);
+        }
+    }
+
     Ok(LpUb {
         bb_matches: bb,
         bi_matches,
@@ -353,6 +366,7 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
         n_y,
         n_constraints,
         solve_secs,
+        per_color_ii_ub: Some(per_color),
     })
 }
 
