@@ -202,6 +202,10 @@ name = "bi_forced_analysis"
 path = "src/bin/bi_forced_analysis.rs"
 
 [[bin]]
+name = "lp_ub_empty_border"
+path = "src/bin/lp_ub_empty_border.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 

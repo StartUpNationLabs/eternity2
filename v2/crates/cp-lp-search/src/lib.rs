@@ -53,18 +53,41 @@ pub struct CpLpResult {
     pub elapsed_secs: f64,
 }
 
-/// Placeholder: not yet implemented.
-pub fn run_cp_lp_search(_puzzle: &Puzzle, _opts: &CpLpSearchOpts) -> Result<CpLpResult, String> {
-    Err("cp-lp-search: implementation in progress".to_string())
+/// Compute the canonical perimeter positions in placement order
+/// (clockwise from top-left corner).
+pub fn perimeter_placement_order(puzzle: &Puzzle) -> Vec<Position> {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut out = Vec::with_capacity((2 * (w + h) - 4) as usize);
+    // Top row L→R
+    for x in 0..w { out.push(x); }
+    // Right column top→bottom (skip top-right corner)
+    for y in 1..h { out.push(y * w + (w - 1)); }
+    // Bottom row R→L (skip bottom-right corner)
+    for x in (0..w-1).rev() { out.push((h - 1) * w + x); }
+    // Left column bottom→top (skip both bottom-left and top-left)
+    for y in (1..h-1).rev() { out.push(y * w); }
+    out
 }
 
-/// Compute a *partial* LP UB given a partially-placed border board.
-/// `placed` is the cells already committed. Empty cells are allowed.
-/// Returns the LP optimum value (sum over y vars) given the partial state.
-pub fn partial_lp_ub(_puzzle: &Puzzle, _board: &Board, _placed: &[Position])
-    -> Result<f64, String>
-{
-    Err("partial_lp_ub: not yet implemented".to_string())
+/// Check if a position is a corner.
+pub fn is_corner(puzzle: &Puzzle, pos: Position) -> bool {
+    let (x, y) = puzzle.xy(pos);
+    (x == 0 || x == puzzle.width - 1) && (y == 0 || y == puzzle.height - 1)
+}
+
+/// Which "outward" side of a perimeter cell faces the grid edge?
+/// Returns the side index 0=top, 1=right, 2=bottom, 3=left.
+/// For corners, returns Some(side1) — the first outward side.
+/// (Corner has 2 outward sides; caller must check both.)
+fn outward_sides(puzzle: &Puzzle, pos: Position) -> Vec<u8> {
+    let (x, y) = puzzle.xy(pos);
+    let mut out = Vec::new();
+    if y == 0 { out.push(0); }
+    if x == puzzle.width - 1 { out.push(1); }
+    if y == puzzle.height - 1 { out.push(2); }
+    if x == 0 { out.push(3); }
+    out
 }
 
 /// Helper: is `pos` on the puzzle perimeter (border ring)?
@@ -86,7 +109,6 @@ fn b_i_demands_from_partial(puzzle: &Puzzle, board: &Board) -> Vec<(Position, u8
         let Some(p) = puzzle.piece(pid) else { continue; };
         let edges = p.edges.rotated(rot).as_array();
         let (x, y) = puzzle.xy(pos);
-        // For each direction, if the neighbor is interior (not perimeter), record demand.
         if y > 0 {
             let n = (y - 1) * w + x;
             if !is_perimeter(puzzle, n) {
@@ -115,21 +137,81 @@ fn b_i_demands_from_partial(puzzle: &Puzzle, board: &Board) -> Vec<(Position, u8
     out
 }
 
+/// Compute B-B match count for placed perimeter cells.
+pub fn b_b_matches(puzzle: &Puzzle, board: &Board) -> u32 {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut matched = 0u32;
+    for pos in 0..puzzle.cell_count() {
+        if !is_perimeter(puzzle, pos) { continue; }
+        let (x, y) = puzzle.xy(pos);
+        let Some((pid, rot)) = board.get(pos) else { continue; };
+        let Some(p) = puzzle.piece(pid) else { continue; };
+        let e = p.edges.rotated(rot).as_array();
+        if x + 1 < w {
+            let n = y * w + (x + 1);
+            if is_perimeter(puzzle, n) {
+                if let Some((npid, nrot)) = board.get(n) {
+                    if let Some(np) = puzzle.piece(npid) {
+                        let ne = np.edges.rotated(nrot).as_array();
+                        if e[1] == ne[3] { matched += 1; }
+                    }
+                }
+            }
+        }
+        if y + 1 < h {
+            let n = (y + 1) * w + x;
+            if is_perimeter(puzzle, n) {
+                if let Some((npid, nrot)) = board.get(n) {
+                    if let Some(np) = puzzle.piece(npid) {
+                        let ne = np.edges.rotated(nrot).as_array();
+                        if e[2] == ne[0] { matched += 1; }
+                    }
+                }
+            }
+        }
+    }
+    matched
+}
+
+/// For each unplaced perimeter cell, list valid (piece, rotation) candidates
+/// (a border-class piece — corner or edge — with BORDER faces outward
+/// matching the cell's geometry).
+pub fn valid_border_candidates(
+    puzzle: &Puzzle,
+    pos: Position,
+    pinned: &HashSet<PieceId>,
+) -> Vec<(PieceId, Rotation)> {
+    let outward = outward_sides(puzzle, pos);
+    let mut out = Vec::new();
+    for piece in puzzle.pieces() {
+        if pinned.contains(&piece.id) { continue; }
+        // Only border-class pieces (edge or corner) can be at perim.
+        let is_corner_piece = piece.is_corner();
+        let is_edge_piece = piece.is_edge();
+        if !is_corner_piece && !is_edge_piece { continue; }
+        // For corners, only place at corner positions.
+        let is_corner_pos = is_corner(puzzle, pos);
+        if is_corner_piece && !is_corner_pos { continue; }
+        if is_edge_piece && is_corner_pos { continue; }
+        // Try each rotation; the outward sides must be BORDER.
+        for &r in &Rotation::ALL {
+            let e = piece.edges.rotated(r).as_array();
+            let ok = outward.iter().all(|&s| e[s as usize] == BORDER);
+            if ok {
+                out.push((piece.id, r));
+            }
+        }
+    }
+    out
+}
+
 /// Cheap lower-bound check: returns false if it can prove LP UB < threshold.
 ///
 /// Current implementation: Hall-condition check on (side, color) bipartite.
-/// For each (side, color) pair, count demand from placed border cells and
-/// supply from remaining INTERIOR pieces. If demand > supply for any
-/// (side, color), the partial board cannot be completed without
-/// unmatched B-I edges — which lowers the LP UB.
-///
-/// NB: this is a STRUCTURAL feasibility check, not a numerical UB bound.
-/// It returns true (pass) for most reasonable partial borders. False
-/// (prune) when the partial border has clearly violated single-slot supply.
 pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool {
     let max_color = puzzle.color_count.saturating_sub(1) as u8;
 
-    // Collect B-I demands induced by placed perimeter cells.
     let demands = b_i_demands_from_partial(puzzle, board);
     let mut demand_by_side_color: HashMap<(u8, u8), u32> = HashMap::new();
     for &(_cell, side, color) in &demands {
@@ -138,7 +220,6 @@ pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool 
         }
     }
 
-    // Identify pinned pieces (any placed cell in board).
     let mut pinned: HashSet<PieceId> = HashSet::new();
     for pos in 0..puzzle.cell_count() {
         if let Some((pid, _)) = board.get(pos) {
@@ -146,7 +227,6 @@ pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool 
         }
     }
 
-    // Supply: (side, color) -> # (interior_piece, rotation) pairs.
     let mut supply_by_side_color: HashMap<(u8, u8), u32> = HashMap::new();
     for piece in puzzle.pieces() {
         if !piece.is_inner() { continue; }
@@ -161,7 +241,6 @@ pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool 
         }
     }
 
-    // Check Hall condition: every (side, color) with demand must have supply >= demand.
     for s in 0u8..4 {
         for k in 1..=max_color {
             let d = *demand_by_side_color.get(&(s, k)).unwrap_or(&0);
@@ -173,6 +252,17 @@ pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool 
     }
 
     true
+}
+
+/// Run the CP search. Currently stub.
+pub fn run_cp_lp_search(_puzzle: &Puzzle, _opts: &CpLpSearchOpts) -> Result<CpLpResult, String> {
+    Err("cp-lp-search driver: implementation in progress".to_string())
+}
+
+pub fn partial_lp_ub(_puzzle: &Puzzle, _board: &Board, _placed: &[Position])
+    -> Result<f64, String>
+{
+    Err("partial_lp_ub: not yet implemented (requires LP refactor for empty-perim cells)".to_string())
 }
 
 #[cfg(test)]
@@ -187,12 +277,35 @@ mod tests {
     }
 
     #[test]
+    fn perimeter_order_is_60_cells_on_16x16() {
+        let path = PathBuf::from("../../data/puzzles/size_16_official_eternity.csv");
+        if !path.exists() { return; }
+        let Ok((puzzle, _)) = load_puzzle_with_hints(&path) else { return };
+        let order = perimeter_placement_order(&puzzle);
+        assert_eq!(order.len(), 60);
+        // Must contain all 4 corners
+        let corners: Vec<Position> = order.iter().copied().filter(|&p| is_corner(&puzzle, p)).collect();
+        assert_eq!(corners.len(), 4);
+    }
+
+    #[test]
     fn cheap_lb_passes_on_empty_board() {
-        let path = PathBuf::from("../../v2/../data/puzzles/size_16_official_eternity.csv");
-        // Best-effort path; if missing, skip.
+        let path = PathBuf::from("../../data/puzzles/size_16_official_eternity.csv");
         if !path.exists() { return; }
         let Ok((puzzle, _)) = load_puzzle_with_hints(&path) else { return };
         let board = Board::empty(&puzzle);
         assert!(cheap_lb_passes(&puzzle, &board, 478.0));
+    }
+
+    #[test]
+    fn valid_border_candidates_for_corner() {
+        let path = PathBuf::from("../../data/puzzles/size_16_official_eternity.csv");
+        if !path.exists() { return; }
+        let Ok((puzzle, _)) = load_puzzle_with_hints(&path) else { return };
+        let pinned = HashSet::new();
+        // Top-left corner = position 0
+        let cands = valid_border_candidates(&puzzle, 0, &pinned);
+        // Should be 4 corner pieces, each with 1 valid rotation (BORDER on top+left)
+        assert_eq!(cands.len(), 4);
     }
 }
