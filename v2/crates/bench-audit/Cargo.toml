@@ -190,6 +190,14 @@ name = "color_side_count"
 path = "src/bin/color_side_count.rs"
 
 [[bin]]
+name = "run_cp_seeded"
+path = "src/bin/run_cp_seeded.rs"
+
+[[bin]]
+name = "hall_condition"
+path = "src/bin/hall_condition.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 
