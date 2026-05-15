@@ -102,6 +102,29 @@ not lottery. B1 (bound-trigger) is still good because it's
 algorithm-shaped; B3 (engine parity) is now the highest-EV
 multi-week direction.
 
+## Vol-50 CPU-oversubscription lesson
+
+Mid-vol-50 (2026-05-15 11:35) observation: my 4-parallel
+`run_e2_blackwood` runs each got ~170% CPU (rayon auto-throttled
+under contention). Vol-32's 458 record was via vanilla_fast + ALNS
+**at 800% CPU single-seed**. My 4×170% = 680% total spread, so each
+seed effectively runs ~12 min of single-thread-equivalent compute
+over the 1h wall.
+
+**Result**: 1h × 4 parallel = 1h-equivalent per seed, NOT 4× vol-32's
+10min. Same effective budget per seed as vol-32, just diversified
+across 4 seed initializations.
+
+**Lesson for vol-51 + future big-CPU experiments**: parallel-of-N runs
+of an already-parallel solver gives N× diversification, NOT N× per-seed
+compute. To compete with vol-32's 458 wall-time, must run SEQUENTIALLY
+at full CPU. With 4 seeds × 1h sequential = 4h wall budget needed
+for a clean N=4 lottery.
+
+This insight changes vol-51's planning math: for any "more compute on
+existing algorithm" experiment, **either** run sequentially at full
+CPU **or** use a different (low-CPU-cost) inner algorithm.
+
 ## Audit-at-open targets (when vol-51 actually opens)
 
 Aged ≥ 3 vols (from BACKLOG):

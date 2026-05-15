@@ -5,7 +5,8 @@
 axis for the engine. A/B-tested Joe's "iteration-budgeted prune-restart"
 policy against the existing time-budgeted single-round baseline.
 
-**Status**: in-progress.
+**Status**: CLOSED 2026-05-15 — net negative result, useful infrastructure
+and one math-write-up shipped.
 
 ## What was shipped
 
@@ -81,16 +82,48 @@ After re-evaluation: PT-from-428 is the comfort-lottery anti-pattern
 (CLAUDE.md). Killed at ~10 s wall-clock. Realistic ceiling from 428
 in 1h PT ≈ 440-445; standing record is 458. EV too low.
 
-### F5. Pivot — blackwood_raw + MRV at 1h × 4 seeds (record-track)
+### F5. blackwood_raw + MRV 1h × 4 seeds — REFUTED + LESSON
 
 Vol-32 458 came from vanilla_fast + ALNS. Vol-32 also TIED 457 in
-10min via blackwood_raw + MRV. **Never tried at >30min budget**.
-At 1h × 4 seeds (4× parallel sharing ~170% CPU each), running.
-Expected completion ~11:35 CEST.
+10min via blackwood_raw + MRV. Hypothesis: 1h × 4 parallel seeds reaches
+better partials. Refuted.
 
-Hypothesis: blackwood_raw + MRV at 1h reaches a deeper-than-vol-32
-partial that gives a higher-ceiling basin under ALNS. If best ALNS
-score > 458, NEW RECORD.
+| Seed | CP depth | CP score | Placed |
+|---:|---:|---:|---:|
+| 1 | 90 | 162 | 95 |
+| 2 | 87 | 156 | 92 |
+| 3 | 85 | 152 | 90 |
+| 4 | 87 | 156 | 92 |
+
+**Disastrously bad**: all 4 stuck at depth 85-90 (vs vol-32 5-min depth
+~190). Two root causes:
+1. **CPU oversubscription**: 4 parallel rayon-internal-parallelism
+   solvers each got ~170% CPU instead of vol-32's 800% single-seed.
+   Compounded with Blackwood's schedule-check contention.
+2. **Shared output directory**: all 4 instances wrote to
+   `run_1778834093/` (epoch-second-based dir name). Only seed-3's
+   board JSON survived; seeds 1/2/4 partial boards are LOST. The
+   stdout logs preserved the final score telemetry but not the
+   reproducible board state.
+
+**Lesson for vol-51+**: parallel runs of already-parallel solvers
+need either (a) sequential scheduling at full CPU, or (b) explicit
+per-instance output dirs. Both filed in [[../plans/VOL-51-DRAFT]].
+
+### F6. LP-integer gap anatomy (math write-up shipped)
+
+While blackwood ran, analysed `output/vol-44_border_lp_ub/per_color_458.log`:
+- 18-point I-I LP-integer gap on the 458 board.
+- Only 5.96 points (33%) of the gap is in fractional LP values.
+- 12.04 points (67%) is in **integer-valued per-color LP UBs that
+  cannot be jointly achieved** due to piece-uniqueness.
+
+Implication: classical y-edge LP cuts can close at most 33% of the gap.
+The binding constraint is x-piece-uniqueness; **lifted LP variants on x
+products are the only LP-cut approach with potential**, but vol-47 proved
+the naive McCormick lifting intractable at 16×16.
+
+See [[../concepts/lp-integer-gap-anatomy]] for the full math.
 
 ### F4. Q-learning + ONNX-Gumbel-trick are dead ends
 
