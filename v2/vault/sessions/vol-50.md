@@ -75,9 +75,22 @@ ALNS-5min × 4 seeds from the time-budget round-3 partial (score 412):
 vs vol-23's published prune_restart + ALNS = 424. **+4 best, +0 median**.
 Modest positive signal; not record-class.
 
-### F3. PT-1h from 428 reached 437 in 10 seconds, then …
+### F3. PT-1h from 428 reached 437 in 10 seconds — KILLED as comfort-lottery
 
-(filled when PT-1h completes)
+After re-evaluation: PT-from-428 is the comfort-lottery anti-pattern
+(CLAUDE.md). Killed at ~10 s wall-clock. Realistic ceiling from 428
+in 1h PT ≈ 440-445; standing record is 458. EV too low.
+
+### F5. Pivot — blackwood_raw + MRV at 1h × 4 seeds (record-track)
+
+Vol-32 458 came from vanilla_fast + ALNS. Vol-32 also TIED 457 in
+10min via blackwood_raw + MRV. **Never tried at >30min budget**.
+At 1h × 4 seeds (4× parallel sharing ~170% CPU each), running.
+Expected completion ~11:35 CEST.
+
+Hypothesis: blackwood_raw + MRV at 1h reaches a deeper-than-vol-32
+partial that gives a higher-ceiling basin under ALNS. If best ALNS
+score > 458, NEW RECORD.
 
 ### F4. Q-learning + ONNX-Gumbel-trick are dead ends
 
