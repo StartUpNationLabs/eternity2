@@ -1047,6 +1047,10 @@ impl<'a> SearchState<'a> {
             && self.elapsed_us() / 1000 >= self.opts.time_budget_ms
     }
 
+    fn node_budget_exhausted(&self) -> bool {
+        self.opts.node_budget != 0 && self.node_id >= self.opts.node_budget
+    }
+
     /// Domain size for `pos`, computed from `domain_bits`.
     #[inline]
     fn domain_size(&self, pos: usize) -> u32 {
@@ -2251,6 +2255,7 @@ impl<'a> SearchState<'a> {
         if self.node_id & 0xf == 0 {
             if !sink.should_continue() { return RecurseResult::Cancelled; }
             if self.timed_out() { return RecurseResult::TimedOut; }
+            if self.node_budget_exhausted() { return RecurseResult::TimedOut; }
         }
 
         self.stats.current_depth = depth;

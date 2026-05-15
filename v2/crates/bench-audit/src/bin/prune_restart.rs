@@ -234,6 +234,7 @@ fn save_board(path: &std::path::Path, puzzle: &Puzzle, board: &Board, score: u32
 fn main() {
     let mut start_board_path: Option<PathBuf> = None;
     let mut cp_budget_ms: u64 = 60_000;
+    let mut node_budget: u64 = 0;
     let mut rounds: u32 = 5;
     let mut seed: u64 = 1;
     let mut out_dir = PathBuf::from("output/v23_prune_restart");
@@ -255,6 +256,8 @@ fn main() {
         match a.as_str() {
             "--start" => start_board_path = Some(PathBuf::from(args.next().unwrap())),
             "--cp-budget-ms" => cp_budget_ms = args.next().unwrap().parse().unwrap(),
+            // Vol-50 — Joe-style node-count cap per round. 0 = unlimited.
+            "--node-budget" => node_budget = args.next().unwrap().parse().unwrap(),
             "--rounds" => rounds = args.next().unwrap().parse().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--out-dir" => out_dir = PathBuf::from(args.next().unwrap()),
@@ -272,7 +275,7 @@ fn main() {
     let (puzzle, canonical_hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     let canonical_count = canonical_hints.hints.len();
     eprintln!(
-        "prune_restart: canonical_hints={canonical_count}, cp_budget={cp_budget_ms}ms, rounds={rounds}, seed={seed}"
+        "prune_restart: canonical_hints={canonical_count}, cp_budget={cp_budget_ms}ms, node_budget={node_budget}, rounds={rounds}, seed={seed}"
     );
 
     // Build the v17a Blackwood schedule once and reuse across rounds.
@@ -323,6 +326,7 @@ fn main() {
     for round in 1..=rounds {
         let mut opts = SolveOpts::default();
         opts.time_budget_ms = cp_budget_ms;
+        opts.node_budget = node_budget;
         opts.seed = seed;
         opts.hints = current_hints.clone();
         let n_pinned = current_hints.hints.len();

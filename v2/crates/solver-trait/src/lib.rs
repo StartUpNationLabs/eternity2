@@ -98,6 +98,12 @@ pub struct SolveOpts {
     /// Produced by `ml/structural_scan.py` (output/vol-37_revised/cell_value_order.json).
     /// Wrapped in `Arc` so it is cheap to share across rayon workers.
     pub records_prior_map: Option<Arc<Vec<Vec<(u16, u8, u32)>>>>,
+    /// Vol-50 — hard cap on engine node count (matching Joe's
+    /// iteration-budgeted prune-restart triggering policy, msg
+    /// #11725 in community corpus). 0 = unlimited (preserves
+    /// existing behaviour). Engine honours this in the same
+    /// check site as `time_budget_ms`.
+    pub node_budget: u64,
 }
 
 impl Default for SolveOpts {
@@ -117,6 +123,7 @@ impl Default for SolveOpts {
             batch_hint_application: false,
             objective: None,
             records_prior_map: None,
+            node_budget: 0,
         }
     }
 }
