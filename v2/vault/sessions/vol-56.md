@@ -303,6 +303,89 @@ Once a search algorithm commits to either Family A or Family B at row
 This is a CONCRETE, ACTIONABLE finding that adds a new lever to the
 record-chasing toolbox beyond ML/CDCL/LP.
 
+### CORRECTION (post-T8 investigation)
+
+The "Family A vs B" split is NOT two valid completions of the same
+puzzle. It's:
+
+- **Family A** (vol-32 458 + vol-35 deep458/diverse): obey only **3/5
+  canonical hints** (missing pos 210 and pos 221 — they use different
+  pieces than the canonical hint requires).
+- **Family B** (blackwood_mrv 457×3): obey **all 5/5 canonical hints**.
+
+The vol-32 458 record is on the RELAXED-CANONICAL (3-hint) puzzle, NOT
+the strict canonical. The 458 score is +1 over the strict-canonical
+ceiling of 457 because the easier puzzle admits a better optimum.
+
+**This is a known issue** (memory `project_e2_vol36_make_canonical_operator`,
+vol-37): "vol-32 458 has only 3/5 hints; pin-hints caps depth at ~208".
+The vol-37 session shipped a "make canonical" operator that converts
+458-with-3-hints → 446-canonical.
+
+### What T7's bifurcation actually means
+
+The row-11 bimodal pattern across the 6 records is a CONSEQUENCE of
+the hint relaxation, not an independent structural fact. Removing the
+hint at pos 210 (which sits in row 13, near row 11) propagates
+through the CP constraints to allow different row-11 configurations.
+
+The actual community-canonical (5-hint) record is **457** — all three
+blackwood_mrv 457 records agree on this. There is NO "Family A 458"
+on the strict canonical.
+
+### Implication: T7 doesn't open a new record path
+
+T7's finding doesn't add a record-breaking lever after all. The
+"vanilla_fast 458" record's existence depends on running with relaxed
+hints. The strict-canonical ceiling for both algorithm families is 457.
+
+This is a CORRECTION to the T7 framing and a sharpening of our
+understanding of what the "458 record" actually is.
+
+## T8 — row-11 swap experiment (built tonight, mixed result)
+
+Took the FA representative (vol-32 458) and replaced row 11 (positions
+176-191) with FB representative (blackwood_mrv 457 seed 7) values.
+Piece-uniqueness collision: 15 of FB's row-11 pieces were placed in
+FA outside row 11. We DROP those 15 cells; row 11 is filled with FB.
+
+Result:
+- Starting partial: 241/256 placed, **377/480** matched.
+- ALNS-1min recovery → **417/480** (-41 vs FA 458).
+- A loss of 41 edge-matches indicates row 11 doesn't transplant cleanly.
+
+### Interpretation
+
+Two readings:
+1. **Energy barrier**: rows 10/12's pieces don't agree with FB's row
+   11 — the families have ~30+ rows of cumulative geometry around row
+   11. 1min ALNS isn't enough to re-converge.
+2. **Family-B is geographically coupled**: row 11 alone isn't the
+   bifurcation point; rows 10-12 (the entire interior band) co-vary.
+
+### What this means for the bifurcation hypothesis
+
+Row 11 being bimodal doesn't mean it's INDEPENDENTLY swappable. The
+two families likely share rows 0-9 + rows 14-15 (the canonical hints
+anchor those) but diverge throughout the **interior** (rows 10-13).
+
+Looking back at the agreement grid, **rows 10-12 are entirely trimodal
+or bimodal** — the family commitment spans this band, not just row 11.
+
+### Vol-57 candidates from T8
+
+1. **Multi-row swap**: try swapping rows 10-13 as a unit (24-cell band).
+   Maybe geometric coherence is preserved.
+2. **Family-coupled CP**: pin pieces to family-A or family-B at the
+   row-11-13 band BEFORE search, see if depth + score improve.
+3. **Long ALNS from the swap partial**: 60s gave 417; 30min may give
+   440+. Cheaper than the multi-week CDCL build.
+
+Vol-56 has now shipped a substantial bundle: 7 deliverables (math
+design × 2, measurement × 2, proto, discovery, build attempt).
+Closing this vol; vol-57 picks up with the row-11 multi-row variants
++ CDCL Rust MVP.
+
 ## Subtotal: vol-56 deliverables so far
 
 - `vault/concepts/cdcl-no-good-e2.md` (math design, ~250 lines)
