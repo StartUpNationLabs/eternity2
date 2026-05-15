@@ -322,3 +322,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# === POSTMORTEM 2 (2026-05-15) ===
+#
+# This LP was started on the full E2 placement polytope:
+#   167,376 variables, 21,632 rows, ~960k nnz
+#
+# Ran for 48 min CPU in HiGHS via scipy.linprog and did not return.
+# Killed after sunk-cost calculus showed expected output (LP UB = 480
+# in fractional relaxation) wouldn't add information beyond what
+# rotation-aware PS-LP already gave.
+#
+# Lesson: Python's scipy.linprog calls HiGHS via interior-point with
+# default settings that don't converge fast on 167k-var problems
+# even when sparse. For E2-scale full-board LPs, switch to:
+#   - Rust good_lp + HiGHS direct API (like cluster_repair.rs)
+#   - Or use simplex method (method="highs-ds") which is sometimes
+#     faster on these problems
+#   - Or split the LP into smaller per-row LPs
+#
+# The vol-62 cluster_repair MIP (which solves 50-70 cell joint MIPs
+# in ~3min) is the right scale for HiGHS via Python.
