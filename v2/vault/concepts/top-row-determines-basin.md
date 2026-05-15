@@ -58,6 +58,27 @@ Concretely: take McGavin's top row + sample N other top-rows from
 the 10⁷-strip space (with diversity bias), and run ALNS from each.
 The ALNS-from-McGavin-top experiment is the proof-of-concept.
 
+## Refutation experiment (2026-05-15)
+
+Pinned McGavin's exact 16-piece top-row and ran our standard ALNS
+pipeline (winning5, 5min, seed=1). Result: **400/480**.
+
+This REFUTES the strong hypothesis that top-row choice determines
+basin. If it did, ALNS from McGavin's top-row would reach 458+;
+actually got 400, BELOW our typical 455-459 range.
+
+Conclusion: McGavin's top-row is NOT easy for our ALNS to extend.
+His Blackwood algorithm's specific search order unlocks the
+high-score interior under that top-row. Our ALNS extends it
+poorly.
+
+## Revised understanding
+
+The basin attractor is determined by BOTH the top-row AND the
+search algorithm. Either alone is insufficient. The 47-component
+↔ 47-top-row correspondence holds for OUR ALNS. Different
+algorithms find different top-row attractors.
+
 ## Linked
 
 - [[basin-component-landscape]] (parent — 47 components)
