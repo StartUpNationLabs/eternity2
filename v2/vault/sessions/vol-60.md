@@ -49,8 +49,53 @@ budget, depth ≥200 expected per perm. Wall: ~15 min total.
 T4: run ALNS lottery on each perm's best snapshot (4 seeds × 5min,
 96 jobs total, ~60 min wall).
 
+## T3 — initial sweep (v1) results (perms 0-7 only)
+
+8 of 24 perms completed before script restart issue. Findings:
+
+| perm | TL | TR | BL | BR | depth | best partial score | matches record |
+|------|---:|---:|---:|---:|------:|-------------------:|---------------|
+| p00 | 0 | 1 | 2 | 3 | 207 | 426/480 | (no match) |
+| p01 | 0 | 1 | 3 | 2 | 207 | 426/480 | (no match) |
+| p02 | 0 | 2 | 1 | 3 | 207 | 426/480 | **FB blackwood 457** |
+| p03 | 0 | 2 | 3 | 1 | 207 | 426/480 | (no match) |
+| p04 | 0 | 3 | 1 | 2 | 210 | 433/480 | **FA vol-32 458** |
+| p05 | 0 | 3 | 2 | 1 | 210 | 433/480 | **vol-35 457** |
+| p06 | 1 | 0 | 2 | 3 | 210 | 433/480 | (no match) |
+| p07 | 1 | 0 | 3 | 2 | 210 | 433/480 | (no match) |
+
+### Critical observation
+
+Within each (TL, TR) group, BL/BR varies but score is IDENTICAL. This
+is because **row-major scan order doesn't reach BL/BR cells (240, 255)
+at depth 210** — only TL+TR have been placed, BL/BR pieces remain in
+the "reserved" pool via piece-uniqueness but don't yet constrain.
+
+So **24 perms collapse to 12 distinct (TL, TR) test points** in 5min
+budget. To exercise all 24 distinctly, need depth ≥ 256 (impractical
+at vanilla_fast) or a different scan order.
+
+The 12 (TL, TR) combinations:
+- (0,1), (0,2), (0,3), (1,0), (1,2), (1,3),
+- (2,0), (2,1), (2,3), (3,0), (3,1), (3,2)
+
+Sweep v1_run2 covers the remaining 16 perms (= 8 more (TL,TR) pairs).
+
+## Process corrections this vol
+
+1. **alns_only was missing --extra-hint** (mirrors vanilla_fast).
+   Fixed: added the flag with the same semantics. The vol-60
+   corner-sweep ALNS phase needs this so corners stay pinned.
+
+2. **Scripts were overwriting outputs**. Fixed:
+   `vol60_corner_sweep{,_v2,_alns}.sh` now use `VOL60_RUN_TAG`-based
+   timestamped output dirs.
+
+Both per user feedback this turn.
+
 ## Linked
 
 - [[../sessions/vol-59]] — predecessor
 - [[../sessions/vol-58]] — vol-58 T5 McGavin MIP
 - [[../plans/VOL-60]] — vol-60 plan
+- memory: `feedback_fix_broken_code`, `feedback_never_overwrite_results`
