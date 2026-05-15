@@ -43,7 +43,45 @@ of the previous round (pinning) without getting stuck.
 
 ## Findings
 
-(filled when A/B completes)
+### F1. Node-budget produces non-stationary round durations (real, modest)
+
+A/B on canonical-E2 cold-start, seed=1, 5 rounds:
+
+| Variant | R1 (s, depth, score) | R2 | R3 | Total wall |
+|---|---|---|---|---:|
+| time-budget 60s/round | 60s/d27/23 | 60s/d147/284 | 60s/d77/**412** | ~3 min |
+| node-budget 525k/worker | 76s/d27/23 | **488s**/d163/**319** | 17s/d61/410 | ~10 min |
+
+Joe-IB node-budget round 2 ran 488 seconds (8× longer than time-budget)
+and reached depth 163 vs 147 (+16 depth) / score 319 vs 284 (+35). But
+the deeper round-2 partial led to a slightly LOWER round-3 score
+(410 vs 412). Net result: similar final partial, 3× more wall-clock.
+
+**Interpretation**: node-budget is a real distinct trigger axis. It
+exposes the engine's effective node-rate variation across depths (round
+2 has small domains → low nps → long wall). On this specific cold-start
+trajectory, the differential doesn't translate to higher final score.
+
+### F2. ALNS-5min from prune_restart-multi-round partial reaches 428
+
+ALNS-5min × 4 seeds from the time-budget round-3 partial (score 412):
+| Seed | Final |
+|---:|---:|
+| 1 | 421 |
+| 2 | 426 |
+| **3** | **428** |
+| 4 | 418 |
+
+vs vol-23's published prune_restart + ALNS = 424. **+4 best, +0 median**.
+Modest positive signal; not record-class.
+
+### F3. PT-1h from 428 reached 437 in 10 seconds, then …
+
+(filled when PT-1h completes)
+
+### F4. Q-learning + ONNX-Gumbel-trick are dead ends
+
+(see vol-50-pivot-trail)
 
 ## Vol-50 also documented two prior dead-ends
 
