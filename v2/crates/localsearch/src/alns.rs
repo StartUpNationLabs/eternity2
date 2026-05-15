@@ -727,6 +727,96 @@ impl DestroyOp for ComponentPlusHaloDestroy {
     }
 }
 
+/// Vol-62 NOVEL — destroy the spatial CLUSTER of all defect cells
+/// within an L∞ window of given radius, plus a halo. Motivated by the
+/// vol-62 measurement that at score ≥ 458, defect graphs decompose
+/// into many SMALL components (size ≤ 5, mostly pair-defects) that
+/// are spatially co-located in a tight region (e.g. rows 11-15 on
+/// our 459 boards).
+///
+/// Existing ops in this regime:
+///   - ComponentDestroy{min_size: 6}: never fires (largest comp ≤ 5).
+///   - WorstBand{4}: destroys 64 cells (4 × 16) ignoring component
+///     structure; over-destroys harmless cells outside the cluster.
+///   - MwpmDefectPair: pairs defects but treats each pair separately;
+///     misses the joint refill opportunity.
+///
+/// This op respects (a) the component structure (only defect cells
+/// + their halo are destroyed) and (b) the spatial concentration
+/// (all defects within `cluster_radius` of the densest mismatch are
+/// included as one destroy-set).
+///
+/// Algorithm:
+///   1. Find the cell with the most incident mismatched edges (the
+///      "core"). If none exist, fall back to RandomRegion.
+///   2. Collect ALL defect cells within L∞-distance ≤ cluster_radius
+///      of the core. This unions multiple small components if they
+///      lie in a compact area.
+///   3. Add a halo of L∞-distance ≤ halo cells around the collected
+///      defect set.
+///
+/// On our 459 board the densest core is in rows 11-13 cols 3-5;
+/// cluster_radius=4 + halo=1 yields ~25-35 cells = tractable CP
+/// refill problem covering ~7-10 small components jointly.
+pub struct ComponentClusterDestroy {
+    /// L∞ radius from the densest mismatch cell to gather other
+    /// defects. 3-5 covers our 459-regime cluster geometry.
+    pub cluster_radius: u32,
+    /// Additional halo (in L∞) around the gathered defects.
+    pub halo: u32,
+}
+
+impl DestroyOp for ComponentClusterDestroy {
+    fn name(&self) -> &str { "component_cluster" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        if mismatches.is_empty() {
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+        // Step 1: per-cell mismatch incidence; pick the max.
+        let mut incidence: std::collections::HashMap<Position, u32> = std::collections::HashMap::new();
+        for m in &mismatches {
+            *incidence.entry(m.cell_a).or_insert(0) += 1;
+            *incidence.entry(m.cell_b).or_insert(0) += 1;
+        }
+        let core = *incidence.iter().max_by_key(|(_, &v)| v).map(|(p, _)| p).unwrap();
+        let core_x = (core % w) as i32;
+        let core_y = (core / w) as i32;
+        let r = self.cluster_radius as i32;
+        // Step 2: collect every cell that touches a mismatch AND lies
+        // within L∞ ≤ r of the core.
+        let mut cluster: BTreeSet<Position> = BTreeSet::new();
+        for (&p, _) in &incidence {
+            let x = (p % w) as i32;
+            let y = (p / w) as i32;
+            if (x - core_x).abs() <= r && (y - core_y).abs() <= r {
+                cluster.insert(p);
+            }
+        }
+        // Step 3: add halo.
+        let halo = self.halo as i32;
+        let mut out = cluster.clone();
+        if halo > 0 {
+            for &p in &cluster {
+                let x = (p % w) as i32;
+                let y = (p / w) as i32;
+                for dy in -halo..=halo {
+                    for dx in -halo..=halo {
+                        let nx = x + dx;
+                        let ny = y + dy;
+                        if nx >= 0 && nx < w as i32 && ny >= 0 && ny < h as i32 {
+                            out.insert((ny as u32) * w + nx as u32);
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
 /// Vol-17 NOVEL — destroy a RANDOM band of k_rows rows from the
 /// bottom half of the board (rows 8-15 by default on 16×16). Unlike
 /// WorstBand which targets mismatch density (always rows 0-4 on

@@ -27,7 +27,7 @@ use eternity2_benchmark::report::bucas_url;
 use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
-    BottomBandDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
+    BottomBandDestroy, ComponentClusterDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
     HalfBoardDestroy, HingeDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
     RepairKind, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
@@ -86,6 +86,36 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
         "wbonly" => vec![Box::new(WorstBand { k_rows: 4 })],
         "cdonly" => vec![Box::new(ConflictDriven { max_size: 80 })],
         "componentonly" => vec![Box::new(ComponentDestroy { max_size: 100, min_size: 4 })],
+        "componentonly2" => vec![
+            Box::new(ComponentDestroy { max_size: 100, min_size: 2 }),
+            Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 2 }),
+        ],
+        "winning5_smallcomp" => vec![
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(ComponentDestroy { max_size: 100, min_size: 2 }),
+            Box::new(ComponentPlusHaloDestroy { max_size: 100, min_size: 2 }),
+        ],
+        "cluster_only" => vec![
+            Box::new(ComponentClusterDestroy { cluster_radius: 4, halo: 1 }),
+        ],
+        "winning5_cluster" => vec![
+            // Vol-62 invented op: ComponentClusterDestroy joins many small
+            // co-located defect components into one destroy region. Tested
+            // against winning5 on local 459 board.
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(ConflictDriven { max_size: 80 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(ComponentClusterDestroy { cluster_radius: 3, halo: 1 }),
+            Box::new(ComponentClusterDestroy { cluster_radius: 5, halo: 1 }),
+        ],
         "hingeonly" => vec![Box::new(HingeDestroy { halo: 1 })],
         // Vol-18 — escape 457 operator-lock with fundamentally different
         // proposals. MegaBand{8,10,12} destroys 128-192 cells; WorstColumn
@@ -122,7 +152,7 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
             Box::new(HalfBoardDestroy { which: 2 }),
             Box::new(HalfBoardDestroy { which: 3 }),
         ],
-        other => panic!("unknown --ops preset {other}; want minimal|basic|winning5|full|mega|mega_mix|halfboard|wbonly|cdonly|componentonly|hingeonly"),
+        other => panic!("unknown --ops preset {other}; want minimal|basic|winning5|full|mega|mega_mix|halfboard|wbonly|cdonly|componentonly|componentonly2|winning5_smallcomp|cluster_only|winning5_cluster|hingeonly"),
     }
 }
 

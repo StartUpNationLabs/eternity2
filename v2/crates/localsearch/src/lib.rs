@@ -42,7 +42,8 @@ pub use alns::{run_alns, run_alns_portfolio, run_alns_pt, run_alns_pt_multi_init
                polish_rotations, piece_swap_hillclimb, find_mismatches, Mismatch, AlnsConfig,
                AlnsStats, PtAlnsConfig, PtAlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
                RandomRegion, WorstWindow, WorstBand, WorstRow, BottomBandDestroy, ConflictDriven,
-               MwpmDefectPair, ComponentDestroy, ComponentPlusHaloDestroy, HingeDestroy,
+               MwpmDefectPair, ComponentDestroy, ComponentPlusHaloDestroy,
+               ComponentClusterDestroy, HingeDestroy,
                MegaBand, WorstColumn, WorstColumnBand, HalfBoardDestroy, RandomScatter,
                RepairKind};
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,

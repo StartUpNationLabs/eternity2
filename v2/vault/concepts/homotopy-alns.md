@@ -1,8 +1,37 @@
 # Homotopy-ALNS — β₁-targeted defect-cycle destroy operator
 
-**Status**: `design` — vol-62 (2026-05-15).
-**Type**: INVENTED ALGORITHM (per user directive vols 61-70).
+**Status**: `refuted` — vol-62 (2026-05-15) — see `## Refutation` below.
+**Type**: INVENTED ALGORITHM (per user directive vols 61-70) — proposed,
+empirically refuted before implementation.
 **Inventor**: this autonomous run.
+**Replaced by**: [[component-quotient-destroy]] (vol-62 pivot).
+
+## Refutation
+
+Empirical measurement on 2,293 saved boards (vol-62 day 1 prototype
+`scripts/vol62_homotopy_alns.py` + sweep):
+
+| score range | n boards | β₁ = 0 | β₁ ≥ 1 |
+|---|---|---|---|
+| 459 | 3 | 3 | 0 |
+| 458 | 30 | 30 | 0 |
+| 457 | 185 | 185 | 0 |
+| 456 | 113 | 111 | 2 |
+| 433-455 | ~880 | ~96% | ~4% (always β₁=1) |
+
+**On every known E2 record, the defect graph is a forest (β₁ = 0).**
+The algorithm has zero generator cycles to use as destroy targets.
+
+In hindsight this is the correct prediction: a 1-cycle in the defect
+graph means 4+ mismatched edges going around an "interior pocket".
+Near-perfect boards have eliminated those long ago. β₁ > 0 only
+appears at scores so low (< 440) that the algorithm wouldn't help us
+break records anyway.
+
+The retained insight: the defect-graph DECOMPOSITION matters; it's
+just that the right primitive is the connected COMPONENT (forest of
+small trees), not the cycle. See [[component-quotient-destroy]] for
+the vol-62 algorithm built on this finding.
 
 ## Motivation
 
