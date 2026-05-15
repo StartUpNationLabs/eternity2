@@ -34,15 +34,30 @@ This is DIFFERENT from the cross-machine SOTA which used p20 (3,1,0,2).
 
 ## Significance
 
-This is the SECOND independent 459-class basin we know of:
-- Cross-machine SOTA (`vault/basins/basin-459-pt.md`): p20 = (3,1,0,2),
-  reached via border-first DFS + 30min ALNS basic seed=42.
-- Local replication (this page): p06 = (1,0,2,3), reached via
-  vanilla_fast with corner pinning + 5min ALNS seed=2.
+**Status: ambiguous pending direct JSON comparison.**
 
-**The corner-perm hypothesis is empirically VINDICATED**: there are
-multiple distinct corner choices that admit 459-class basins, and
-they're reachable by different pipelines.
+This 459 was produced locally on corner perm p06 = (1,0,2,3) via
+vanilla_fast pin-hints + ALNS seed=2. The cross-machine SOTA bucas
+URL appears to encode corner perm p20 = (3,1,0,2), but the URL uses
+a color labeling possibly σ-permuted from our pt space, making the
+decode unreliable.
+
+**Possible interpretations**:
+- (a) Different 459 boards (independent basins). Likely if our
+  decode of the SOTA's corners is correct.
+- (b) Same 459 board viewed through different color labelings.
+  Possible if σ is what makes the URL look different.
+
+**To resolve**: compare piece_id at corners (pos 0, 15, 240, 255)
+between our JSON and the SOTA's JSON. Piece IDs are unambiguous; if
+they match, same board; if they differ, distinct basins.
+
+What we KNOW:
+- Our local pipeline (5min × 4 seeds × 24 perms with corner pinning)
+  reached 459 in compute equivalent to about 10 min on 1 core for the
+  winning job (p06 seed 2). The cross-machine SOTA took 30 min for the
+  record-breaking job + ~30 core-hours of pipeline. Our shortcut may
+  be replicating their result rather than finding a different basin.
 
 ## What this implies
 
