@@ -209,6 +209,34 @@ Critically, **no-good learning preserves soundness** by construction.
 Any record found by an engine with no-good learning is provably valid
 (unlike ML where train-distribution drift can corrupt outputs).
 
+## Vol-59 update — E2 may not be 1-UIP-friendly
+
+The vol-59 T4 analysis suggests CDCL no-good learning may have limited
+benefit at canonical E2 scale due to structural differences from SAT:
+
+- **SAT 1-UIP works** because implication graphs are deep (many
+  rounds of unit-prop between decisions), and the UIP cut shrinks
+  large initial conflicts to small asserting clauses.
+
+- **E2 cause-graph is FLAT**: each AC-3 removal traces to ONE placed
+  cell directly. SAT-style 1-UIP collapses to the union of all
+  single-cell causes, which IS what naive cause-tracking already
+  computes.
+
+- **Wipeouts happen DEEP at canonical**: 0 wipeouts at depth<51 in
+  vol-56 measurements; median 134. Deep wipeouts have many "single-
+  cell causes" → large unfixable clauses.
+
+This is a NEGATIVE finding for the original vol-56 design. CDCL may
+still help at small puzzles (where it works empirically per vol-58
+T6), but canonical-scale benefit is uncertain.
+
+Vol-60+ might explore:
+- E2-specific compact clause representations (per-cell forbidden-pid
+  sets).
+- Subsumption-based DB cleanup.
+- Whether the "0 unit-props at canonical" observation is fixable at all.
+
 ## Subtlety — soft no-good "minimality" is not trivial
 
 After writing the design above, I realised the soft no-good case
