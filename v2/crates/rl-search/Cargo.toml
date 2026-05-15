@@ -12,6 +12,10 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
+[[bin]]
+name = "run_learned"
+path = "src/bin/run_learned.rs"
+
 [dependencies]
 eternity2-core = { path = "../core", features = ["serde"] }
 eternity2-puzzle-io = { path = "../puzzle-io" }
