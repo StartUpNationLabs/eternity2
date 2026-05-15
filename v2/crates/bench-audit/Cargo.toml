@@ -214,6 +214,10 @@ name = "lifted_lp_smoke"
 path = "src/bin/lifted_lp_smoke.rs"
 
 [[bin]]
+name = "border_lp_ub_lifted_cg"
+path = "src/bin/border_lp_ub_lifted_cg.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 

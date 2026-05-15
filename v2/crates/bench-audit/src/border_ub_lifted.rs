@@ -42,6 +42,337 @@ pub struct LiftedLpUb {
     pub solve_secs: f64,
 }
 
+/// Options for column-generation lifted LP.
+#[derive(Debug, Clone)]
+pub struct ColumnGenOpts {
+    pub base_lp_opts: LpOptions,
+    /// Threshold for "active" candidates (x value > this triggers inclusion).
+    pub x_active_threshold: f64,
+    /// Max number of column-gen iterations.
+    pub max_iters: u32,
+}
+
+impl Default for ColumnGenOpts {
+    fn default() -> Self {
+        Self {
+            base_lp_opts: LpOptions::default(),
+            x_active_threshold: 0.05,
+            max_iters: 5,
+        }
+    }
+}
+
+/// Run the column-generated lifted LP.
+///
+/// Phase 1: standard LP (x + y) gives an upper bound and identifies
+/// candidates with positive fractional x values.
+/// Phase 2: lifted LP with z-vars ONLY for "active" candidates
+/// (x value > opts.x_active_threshold in phase 1).
+///
+/// This dramatically reduces z-var count while preserving most of
+/// the lifting's tightening power.
+pub fn column_generated_lifted_lp_ub(
+    puzzle: &Puzzle,
+    board: &Board,
+    opts: ColumnGenOpts,
+) -> Result<LiftedLpUb, String> {
+    let w = puzzle.width;
+    let h = puzzle.height;
+
+    let bb = b_b_match_count(puzzle, board);
+    let bi = b_i_constraints(puzzle, board);
+
+    // Interior cells, hints, pinned pieces.
+    let mut interior_cells: Vec<Position> = Vec::new();
+    let mut pinned_pieces: Vec<PieceId> = Vec::new();
+    let mut hint_at: HashMap<Position, (PieceId, Rotation)> = HashMap::new();
+    for pos in 0..puzzle.cell_count() {
+        if is_perimeter_pos(puzzle, pos) {
+            if let Some((pid, _)) = board.get(pos) {
+                pinned_pieces.push(pid);
+            }
+            continue;
+        }
+        if let Some((pid, rot)) = board.get(pos) {
+            pinned_pieces.push(pid);
+            hint_at.insert(pos, (pid, rot));
+        }
+        interior_cells.push(pos);
+    }
+
+    let mut cell_cands: HashMap<Position, Vec<(PieceId, Rotation, [u8; 4])>> = HashMap::new();
+    for &c in &interior_cells {
+        if let Some(&(pid, rot)) = hint_at.get(&c) {
+            let p = puzzle.piece(pid).ok_or_else(|| format!("hint pid {pid}"))?;
+            let e = p.edges.rotated(rot).as_array();
+            cell_cands.insert(c, vec![(pid, rot, e)]);
+        } else {
+            let cands = cell_candidates(puzzle, &pinned_pieces);
+            if cands.is_empty() {
+                return Err(format!("infeasible: cell {c} has 0 candidates"));
+            }
+            cell_cands.insert(c, cands);
+        }
+    }
+
+    let mut ii_edges: Vec<(Position, Position, u8)> = Vec::new();
+    for &c1 in &interior_cells {
+        let (x1, y1) = puzzle.xy(c1);
+        if x1 + 1 < w {
+            let c2 = y1 * w + (x1 + 1);
+            if !is_perimeter_pos(puzzle, c2) {
+                ii_edges.push((c1, c2, 0));
+            }
+        }
+        if y1 + 1 < h {
+            let c2 = (y1 + 1) * w + x1;
+            if !is_perimeter_pos(puzzle, c2) {
+                ii_edges.push((c1, c2, 1));
+            }
+        }
+    }
+
+    // ============ PHASE 1: standard LP to get x-values ============
+    eprintln!("[col-gen] Phase 1: standard LP to extract x-values");
+    let t1 = std::time::Instant::now();
+    let mut problem1 = ProblemVariables::new();
+    let mut x_var1: HashMap<(Position, PieceId, Rotation), Variable> = HashMap::new();
+    let mut x_per_cell1: HashMap<Position, Vec<(Variable, [u8; 4])>> = HashMap::new();
+    let mut x_per_piece1: HashMap<PieceId, Vec<Variable>> = HashMap::new();
+    for &c in &interior_cells {
+        let cands = &cell_cands[&c];
+        let mut cell_vars = Vec::with_capacity(cands.len());
+        for &(pid, rot, e) in cands {
+            let v = problem1.add(variable().min(0.0).max(1.0));
+            x_var1.insert((c, pid, rot), v);
+            cell_vars.push((v, e));
+            x_per_piece1.entry(pid).or_default().push(v);
+        }
+        x_per_cell1.insert(c, cell_vars);
+    }
+    let max_color = (puzzle.color_count.saturating_sub(1)) as u8;
+    let n_y1 = ii_edges.len() * max_color as usize;
+    let y_list1: Vec<Variable> = problem1.add_vector(variable().min(0.0).max(1.0), n_y1);
+    let n_y_bi1 = bi.len();
+    let y_bi_list1: Vec<Variable> = problem1.add_vector(variable().min(0.0).max(1.0), n_y_bi1);
+
+    let obj1: Expression = y_list1.iter().copied().sum::<Expression>()
+        + y_bi_list1.iter().copied().sum::<Expression>();
+    let mut hp1 = problem1.maximise(obj1).using(highs);
+    hp1.set_verbose(false);
+    let mut hp1 = hp1.set_time_limit(opts.base_lp_opts.time_limit_secs);
+    if opts.base_lp_opts.threads > 1 {
+        hp1 = hp1.set_threads(opts.base_lp_opts.threads);
+        hp1 = hp1.set_parallel(good_lp::solvers::highs::HighsParallelType::On);
+    }
+    if opts.base_lp_opts.use_ipm { hp1 = hp1.set_solver(HighsSolverType::Ipm); }
+    hp1 = hp1.set_presolve(good_lp::solvers::highs::HighsPresolveType::On);
+    let mut model1 = hp1;
+
+    // Constraints (same as standard LP).
+    for &c in &interior_cells {
+        let sum: Expression = x_per_cell1[&c].iter().map(|&(v,_)| v).sum();
+        model1 = model1.with(constraint!(sum == 1.0));
+    }
+    for (_pid, vars) in &x_per_piece1 {
+        let sum: Expression = vars.iter().copied().sum();
+        model1 = model1.with(constraint!(sum == 1.0));
+    }
+    for (&c, &(pid, rot)) in &hint_at {
+        let v = x_var1[&(c, pid, rot)];
+        model1 = model1.with(constraint!(v == 1.0));
+    }
+    for (i, &(cell, side, color)) in bi.iter().enumerate() {
+        let y_bi_v = y_bi_list1[i];
+        let supply: Expression = x_per_cell1[&cell].iter()
+            .filter(|(_, e)| e[side as usize] == color)
+            .map(|&(v, _)| v).sum();
+        model1 = model1.with(constraint!(y_bi_v <= supply));
+    }
+    for (i, &(c1, c2, dir)) in ii_edges.iter().enumerate() {
+        let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
+        let mut a_b: Vec<Vec<Variable>> = vec![Vec::new(); (max_color as usize) + 1];
+        let mut b_b: Vec<Vec<Variable>> = vec![Vec::new(); (max_color as usize) + 1];
+        for &(v, e) in &x_per_cell1[&c1] {
+            let k = e[s1 as usize] as usize;
+            if k > 0 { a_b[k].push(v); }
+        }
+        for &(v, e) in &x_per_cell1[&c2] {
+            let k = e[s2 as usize] as usize;
+            if k > 0 { b_b[k].push(v); }
+        }
+        for k in 1..=max_color as usize {
+            let yv = y_list1[i * max_color as usize + (k - 1)];
+            let a: Expression = a_b[k].iter().copied().sum();
+            let b: Expression = b_b[k].iter().copied().sum();
+            model1 = model1.with(constraint!(yv <= a));
+            model1 = model1.with(constraint!(yv <= b));
+        }
+    }
+    let sol1 = model1.solve().map_err(|e| format!("phase-1 LP: {e:?}"))?;
+    let phase1_secs = t1.elapsed().as_secs_f64();
+    eprintln!("[col-gen] Phase 1 LP solved in {:.1}s", phase1_secs);
+
+    // Extract x-values per cell for "active" candidates.
+    let thresh = opts.x_active_threshold;
+    let mut active_cands: HashMap<Position, Vec<(PieceId, Rotation, [u8; 4])>> = HashMap::new();
+    let mut total_active = 0usize;
+    for &c in &interior_cells {
+        let cands = &cell_cands[&c];
+        let mut active = Vec::new();
+        for &(pid, rot, e) in cands {
+            let v = x_var1[&(c, pid, rot)];
+            let val = sol1.value(v);
+            if val > thresh {
+                active.push((pid, rot, e));
+            }
+        }
+        if active.is_empty() {
+            // Fall back: include all candidates (shouldn't happen for hints).
+            active = cands.clone();
+        }
+        total_active += active.len();
+        active_cands.insert(c, active);
+    }
+    let avg_active = total_active as f64 / interior_cells.len() as f64;
+    eprintln!("[col-gen] {} active candidates total, avg {:.1} per cell (threshold {})",
+              total_active, avg_active, thresh);
+
+    // ============ PHASE 2: lifted LP with z-vars only for active candidates ============
+    eprintln!("[col-gen] Phase 2: lifted LP with restricted z-vars");
+    let t2 = std::time::Instant::now();
+    let mut problem2 = ProblemVariables::new();
+    let mut x_var2: HashMap<(Position, PieceId, Rotation), Variable> = HashMap::new();
+    let mut x_per_cell2: HashMap<Position, Vec<(Variable, [u8; 4])>> = HashMap::new();
+    let mut x_per_piece2: HashMap<PieceId, Vec<Variable>> = HashMap::new();
+    let mut total_x2 = 0usize;
+    // KEEP ALL x-vars (not just active) for correctness — only z-vars are restricted.
+    for &c in &interior_cells {
+        let cands = &cell_cands[&c];
+        let mut cell_vars = Vec::with_capacity(cands.len());
+        for &(pid, rot, e) in cands {
+            let v = problem2.add(variable().min(0.0).max(1.0));
+            x_var2.insert((c, pid, rot), v);
+            cell_vars.push((v, e));
+            x_per_piece2.entry(pid).or_default().push(v);
+            total_x2 += 1;
+        }
+        x_per_cell2.insert(c, cell_vars);
+    }
+
+    // Now z-vars: only for (active1, active2) pairs that are color-matched.
+    let mut z_var2: HashMap<(usize, PieceId, Rotation, PieceId, Rotation), Variable> = HashMap::new();
+    let mut z_per_edge2: Vec<Vec<Variable>> = vec![Vec::new(); ii_edges.len()];
+    let mut z_count = 0usize;
+    for (ei, &(c1, c2, dir)) in ii_edges.iter().enumerate() {
+        let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
+        let a1 = &active_cands[&c1];
+        let a2 = &active_cands[&c2];
+        for &(pid1, rot1, e1) in a1 {
+            let color1 = e1[s1 as usize];
+            if color1 == 0 { continue; }
+            for &(pid2, rot2, e2) in a2 {
+                let color2 = e2[s2 as usize];
+                if color1 != color2 { continue; }
+                if pid1 == pid2 { continue; }
+                let z = problem2.add(variable().min(0.0).max(1.0));
+                z_var2.insert((ei, pid1, rot1, pid2, rot2), z);
+                z_per_edge2[ei].push(z);
+                z_count += 1;
+            }
+        }
+    }
+    let avg_z = if ii_edges.is_empty() { 0.0 } else { z_count as f64 / ii_edges.len() as f64 };
+    eprintln!("[col-gen] Phase 2: {} z-vars total, avg {:.1} per edge", z_count, avg_z);
+
+    let n_y_bi2 = bi.len();
+    let y_bi_list2: Vec<Variable> = problem2.add_vector(variable().min(0.0).max(1.0), n_y_bi2);
+
+    let obj2: Expression = z_var2.values().copied().sum::<Expression>()
+        + y_bi_list2.iter().copied().sum::<Expression>();
+    let mut hp2 = problem2.maximise(obj2).using(highs);
+    hp2.set_verbose(opts.base_lp_opts.verbose);
+    let mut hp2 = hp2.set_time_limit(opts.base_lp_opts.time_limit_secs);
+    if opts.base_lp_opts.threads > 1 {
+        hp2 = hp2.set_threads(opts.base_lp_opts.threads);
+        hp2 = hp2.set_parallel(good_lp::solvers::highs::HighsParallelType::On);
+    }
+    if opts.base_lp_opts.use_ipm { hp2 = hp2.set_solver(HighsSolverType::Ipm); }
+    hp2 = hp2.set_presolve(good_lp::solvers::highs::HighsPresolveType::On);
+    let mut model2 = hp2;
+
+    // Constraints in phase 2.
+    for &c in &interior_cells {
+        let sum: Expression = x_per_cell2[&c].iter().map(|&(v,_)| v).sum();
+        model2 = model2.with(constraint!(sum == 1.0));
+    }
+    for (_pid, vars) in &x_per_piece2 {
+        let sum: Expression = vars.iter().copied().sum();
+        model2 = model2.with(constraint!(sum == 1.0));
+    }
+    for (&c, &(pid, rot)) in &hint_at {
+        let v = x_var2[&(c, pid, rot)];
+        model2 = model2.with(constraint!(v == 1.0));
+    }
+    for (i, &(cell, side, color)) in bi.iter().enumerate() {
+        let y_bi_v = y_bi_list2[i];
+        let supply: Expression = x_per_cell2[&cell].iter()
+            .filter(|(_, e)| e[side as usize] == color)
+            .map(|&(v, _)| v).sum();
+        model2 = model2.with(constraint!(y_bi_v <= supply));
+    }
+    // McCormick + per-edge cuts for each z-var.
+    let mut n_mc = 0usize;
+    for (ei, &(c1, c2, dir)) in ii_edges.iter().enumerate() {
+        let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
+        let a1 = &active_cands[&c1];
+        let a2 = &active_cands[&c2];
+        for &(pid1, rot1, e1) in a1 {
+            let color1 = e1[s1 as usize];
+            if color1 == 0 { continue; }
+            for &(pid2, rot2, e2) in a2 {
+                let color2 = e2[s2 as usize];
+                if color1 != color2 { continue; }
+                if pid1 == pid2 { continue; }
+                let z = z_var2[&(ei, pid1, rot1, pid2, rot2)];
+                let x1 = x_var2[&(c1, pid1, rot1)];
+                let x2 = x_var2[&(c2, pid2, rot2)];
+                model2 = model2.with(constraint!(z <= x1));
+                model2 = model2.with(constraint!(z <= x2));
+                model2 = model2.with(constraint!(z >= x1 + x2 - 1.0));
+                n_mc += 3;
+            }
+        }
+    }
+    for ei in 0..ii_edges.len() {
+        if z_per_edge2[ei].is_empty() { continue; }
+        let sum: Expression = z_per_edge2[ei].iter().copied().sum();
+        model2 = model2.with(constraint!(sum <= 1.0));
+    }
+
+    let sol2 = model2.solve().map_err(|e| format!("phase-2 LP: {e:?}"))?;
+    let phase2_secs = t2.elapsed().as_secs_f64();
+    eprintln!("[col-gen] Phase 2 LP solved in {:.1}s", phase2_secs);
+
+    let interior_ub: f64 = z_var2.values().map(|v| sol2.value(*v)).sum();
+    let bi_ub: f64 = y_bi_list2.iter().map(|v| sol2.value(*v)).sum();
+    let total = bb as f64 + bi_ub + interior_ub;
+
+    Ok(LiftedLpUb {
+        bb_matches: bb,
+        bi_ub,
+        interior_ub,
+        total_ub: total,
+        n_x: total_x2,
+        n_z: z_count,
+        n_y_bi: n_y_bi2,
+        n_constraints: interior_cells.len() + x_per_piece2.len() + hint_at.len()
+            + n_y_bi2 + n_mc + ii_edges.len(),
+        n_z_per_edge_avg: avg_z,
+        solve_secs: phase1_secs + phase2_secs,
+    })
+}
+
 /// Same `cell_candidates` logic as `border_ub` (private there). Recomputed here.
 fn cell_candidates(
     puzzle: &Puzzle,
