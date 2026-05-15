@@ -582,6 +582,16 @@ mod tests {
     }
 
     #[test]
+    fn solve_10x10_9c() {
+        run_compare("/tmp/vol59_10x10c9.csv", "10x10/9c");
+    }
+
+    #[test]
+    fn solve_12x12_12c() {
+        run_compare("/tmp/vol59_12x12c12.csv", "12x12/12c");
+    }
+
+    #[test]
     #[ignore]  // canonical scale; very slow Python-style HashMap-based code
     fn solve_canonical_16x16() {
         run_compare(
