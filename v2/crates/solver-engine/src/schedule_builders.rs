@@ -30,6 +30,25 @@ pub fn compute_heuristic_sides(
     puzzle: &Puzzle,
     hints: &eternity2_core::Hints,
 ) -> Vec<Color> {
+    // Vol-79 — allow explicit override via env var, e.g.
+    //   E2_HEURISTIC_SIDES_OVERRIDE="15,16,17"
+    // Used to sweep alternative triples among the 11 frequency-tied
+    // canonical colors {12..22}. Per docs/community-mining/09: Blackwood's
+    // 470-attempt used a different triple than his 469 solver.
+    if let Ok(s) = std::env::var("E2_HEURISTIC_SIDES_OVERRIDE") {
+        let parsed: Vec<Color> = s
+            .split(',')
+            .filter_map(|t| t.trim().parse::<Color>().ok())
+            .collect();
+        if parsed.len() == 3 {
+            eprintln!("[heuristic-sides] OVERRIDE active: {:?}", parsed);
+            return parsed;
+        }
+        eprintln!(
+            "[heuristic-sides] WARNING: E2_HEURISTIC_SIDES_OVERRIDE set to {:?} but parsed to {} colors (need 3) — falling back to auto-select",
+            s, parsed.len()
+        );
+    }
     let pieces = puzzle.pieces();
 
     // Corner pieces: exactly two BORDER edges.
