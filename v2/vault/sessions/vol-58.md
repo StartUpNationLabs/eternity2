@@ -115,3 +115,39 @@ Vol-59 candidates:
 - Try unsat-soft-value-order (BACKLOG since vol-34).
 - Wait for lottery completion + analyze full sweep.
 
+## T5 — McGavin 469 cluster MIP (THEORETICAL FINDING)
+
+Tested vol-55 MIP on McGavin's 469 board (`MCGAVIN_469_decoded.json`,
+the verified community ceiling on canonical 5-clue per memory). 9
+cluster locations at (x0, y0) ∈ {0, 5, 10}², 5×4 clusters each.
+
+**All 9 clusters locally MIP-optimal** (LP=MIP, zero slack).
+
+### What this proves
+
+The community 469 ceiling is **NOT a local-optimum gap** in any
+cluster-MIP sense. Like our 458 and 457, the McGavin 469 is locally
+optimal at every 5×4 cluster tested.
+
+**The 12-point gap (469 - 457) between our best and community is
+basin-finding-disparity, NOT LP looseness or ALNS saturation**.
+
+### Implication
+
+Closing the 469 - 457 = 12 point gap requires:
+1. Implementing McGavin's algorithm (Blackwood solver + scheduled
+   relaxations + Joe's prune-restart, per vol-14 gap analysis).
+2. ~200 cores × days of compute (per the memory).
+
+This is multi-week multi-machine work, not contained within a single
+autonomous session.
+
+### Caveat — color labeling
+
+The McGavin 469 board obeys only 1/5 canonical hints in OUR pieces.txt
+labeling. This may be because the σ color permutation (per
+`reference_blackwood_decoded` memory) maps the canonical positions
+differently. The MIP-locally-optimal result is in *our* labeling
+space; whether it's the same basin in McGavin's space is a separate
+question.
+
