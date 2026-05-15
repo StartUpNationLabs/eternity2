@@ -34,3 +34,54 @@ The LP-tightening / MIP arc is now fully closed:
 - Vol-58: 2 cluster MIPs on family B, also locally optimal.
 
 This is a major STRENGTHENING of the standing record's claim.
+
+## T2 — partial 2WL optimization
+
+Vol-58 T2 made unit_prop_from_clauses take the just-assigned literal
+as hint, so it only walks clauses watching that one literal (vs
+walking all clauses with any assigned literal). Single pass, no
+fixpoint loop.
+
+Test result on 6×6/5c:
+- vanilla: 287k nodes, 4.35s.
+- cdcl: 73k nodes (3.9× fewer), still 30s timeout.
+- 28k clauses, avg 6.7 literals.
+
+Per-node cost is still high (28k clauses × per-clause linear walk).
+Real 2WL with watch advancement is multi-day Rust work; defer.
+
+## T3 (incidental) — lottery 458 found, 0/5 hints
+
+Vol-56's basin lottery (still running) has at 40/156 produced:
+- 1 board with matched=458
+- 2 boards with matched=457
+- Plus ~30 boards at 446-456 range
+
+The 458 lottery board: `result_t601_s002_d207_seed4.json`:
+- 256 placed, all 256 pieces unique ✓
+- matched=458/480 ✓
+- **0/5 canonical hints obeyed** ✗
+- Cell-by-cell agreement with vol-32 458 record: **3/256** (different
+  basin entirely).
+
+This is a "free-458" — a board that achieves matched=458 with full
+piece-uniqueness but ignores ALL canonical hints. Same matched-count
+as the standing record, on a completely different (0-hint) puzzle.
+
+### Implication
+
+- **Not record-breaking** under any canonical interpretation: vol-32
+  458 had 3/5 hints, this has 0/5. Strict-canonical record stands at
+  457.
+- **Demonstrates basin diversity**: the lottery found a 3rd-distinct
+  basin family achieving 458, beyond Family A and Family B.
+- **The vanilla_fast pipeline without --pin-hints has multiple basins
+  at the 458 ceiling**, all locally optimal but mutually disjoint.
+
+### What this lottery proves
+
+The lottery (basin-diversity test) does what we asked of it: finds
+multiple distinct 457-458 basins. None exceed 458 in literal
+matched-edges. The score-458 ceiling persists across all explored
+basins.
+
