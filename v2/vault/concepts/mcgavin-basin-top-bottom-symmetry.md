@@ -7,7 +7,7 @@ metadata:
 
 # McGavin basin top/bottom symmetry test (vol-82, pre-registered)
 
-**Status**: `unbuilt` (vol-82 currently running, results pending).
+**Status**: `built` — **H2b CONFIRMED** (asymmetric basin, top-determining).
 **Origin**: vol-68 found top-N=14 → 469 reconstruction; never tested bottom-N.
 
 ## Pre-registered hypothesis (write-before-result, 2026-05-16 00:24)
@@ -92,9 +92,49 @@ Sharpened prediction:
 - This is a stronger version of H2b: the basin is asymmetric AND
   the asymmetry is explained by mismatch geometry.
 
+## Results (vol-82 completed 00:28)
+
+Single seed=1, 60s ALNS budget per N. ops=winning5, T=1.0.
+
+| N | pins | bottom-N | top-N (historical) | Δ |
+|---:|---:|---:|---:|---:|
+| 11 | 176 | 443 | — | — |
+| 12 | 192 | 453 | — | — |
+| 13 | 208 | 454 | 455 | -1 |
+| 14 | 224 | **462** | **469** | **-7** |
+| 15 | 240 | 460 | ~469 | -9 |
+
+## Verdict: H2b CONFIRMED
+
+- **Bottom-N=14 → 462, top-N=14 → 469.** Pre-registered prediction
+  CORRECT: bottom-pinning gives substantially lower scores at the
+  same N.
+- **No sharp threshold for bottom-N.** Unlike top-N (sharp jump
+  455→469 at N=14), bottom-N rises gradually 443→454→462.
+- **N=15 gives 460, LOWER than N=14 (462).** Pinning MORE pieces
+  gives a WORSE score under bottom-pinning. Mechanism: pinning row
+  1 locks the EASIER side of the hard band; under N=14 row 1 is
+  free and can absorb some adjustment for the difficult row 0.
+- **The basin is asymmetric and TOP-DETERMINING.** This confirms
+  H2b: McGavin's structural work was concentrated in the top 5
+  rows; that's the choice that defines his basin.
+
+## Reverse implication for breaking 469
+
+To find a 470 or higher, the experimenter needs to:
+1. Solve the HARD TOP REGION (rows 0-4) independently. This is the
+   missing piece. McGavin's algorithm did this with Blackwood's
+   break-index schedule + heuristic-side exhaustion.
+2. Once top-5 is solved, ALNS-fill the bottom 11 rows is easy
+   (per vol-82 N=11 result: even with NO McGavin info, our ALNS
+   reaches 443; with bottom-11 pinned it's filling the easy half).
+
+So the gap to 469+ is **fundamentally a top-5-rows problem.**
+
 ## Linked
 
 - [[mcgavin-469-basin]]
+- [[mcgavin-469-mismatch-geometry]] (parent: top-concentrated)
 - [[n-row-pinning-scaling]] (vol-68 parent)
 - Memory: `project_e2_vol68_mcgavin_rigidity.md`
 - Memory: `project_e2_vol68_n_row_scaling.md`
