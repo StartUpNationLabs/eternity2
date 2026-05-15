@@ -91,6 +91,26 @@ After this session, the available record-breaking levers are:
 - **Standard search-space pruning** (vols 12-25): incremental wins,
   no record break.
 
+## External context — our 458 matches Schaus & Deville 2008
+
+Web search at vol-58 close revealed that **Schaus & Deville (2008,
+JFPC'08) achieved 458/480** with "Hybridization of CP and VLNS for
+Eternity II". This is the same score we achieved with vanilla_fast +
+ALNS (a CP-then-ALNS pipeline that's structurally similar to CP+VLNS).
+
+**Our 458 matches the published 2008 academic ceiling for CP-based
+methods.** The community went beyond (Blackwood 470 on 1-clue,
+McGavin 469 on 5-clue) using scheduled-relaxation algorithms +
+significantly more compute.
+
+This contextualizes the 458 ceiling: it's the natural CP+ALNS limit,
+been the published academic state-of-the-art for ~18 years for this
+class of algorithms. Breaking it requires:
+- Scheduled relaxations (Blackwood: 10 specific late-depth allowed
+  mismatches; jb471.py exists but unverified).
+- Or fundamentally different search (no-good learning at canonical
+  scale, etc.).
+
 ## Process notes
 
 This vol-54-58 session demonstrated:
