@@ -271,28 +271,26 @@ impl<'a> SearchState<'a> {
     /// but one literal is satisfied by the current assignment, remove
     /// the one unassigned literal's value from its cell's domain.
     /// Returns (success, undo_log, wipe_cell_opt).
-    /// "success=false" indicates a wipeout caused by clause propagation.
     ///
-    /// Optimization (vol-57 T2 simple): use the `watches` index. When
-    /// a literal `(pos, pid, rot)` is in the current assignment, walk
-    /// only the clauses watching it. This is a precursor to real 2WL.
-    fn unit_prop_from_clauses(&mut self)
+    /// Optimization (vol-58 T2): take the literal that was JUST assigned
+    /// as a hint. Only check clauses watching that literal (the only
+    /// clauses whose state could have changed). Drastically smaller
+    /// candidate set per call.
+    fn unit_prop_from_clauses(&mut self, just_assigned: Option<Lit>)
         -> (bool, Vec<(u32, (PieceId, Rotation))>, Option<u32>)
     {
         let mut undo = Vec::new();
-        // Build set of currently-assigned literals.
-        let assigned_lits: HashSet<Lit> = self.assigned.iter()
-            .map(|(pos, &(pid, rot))| Lit::new(*pos, pid, rot))
-            .collect();
-        // Candidate clauses: those whose watch list contains any assigned literal.
-        let mut candidates: HashSet<usize> = HashSet::new();
-        for lit in &assigned_lits {
-            if let Some(cls) = self.watches.get(lit) {
-                for c in cls { candidates.insert(*c); }
-            }
-        }
-        // Iterate over candidate clauses (orders of magnitude fewer than full DB).
-        loop {
+        // Candidate clauses: only those watching the just-assigned literal.
+        // If no hint, fallback to all clauses (used at root or special cases).
+        let candidates: Vec<usize> = if let Some(lit) = just_assigned {
+            self.watches.get(&lit).cloned().unwrap_or_default()
+        } else {
+            (0..self.clauses.len()).collect()
+        };
+        // Single pass, no fixpoint loop (saves time; future unit-prop
+        // will fire when those new assignments happen).
+        {
+            #[allow(unused_assignments)]
             let mut new_props = 0;
             for &cid in &candidates {
                 let clause = &self.clauses[cid];
@@ -336,7 +334,7 @@ impl<'a> SearchState<'a> {
                 // We don't handle this explicitly here; if it happens we
                 // should have detected it via check_satisfied earlier.
             }
-            if new_props == 0 { break; }
+            let _ = new_props;
         }
         (true, undo, None)
     }
@@ -381,9 +379,11 @@ impl<'a> SearchState<'a> {
             self.pieces_used.insert(val.0);
             let (ok, undo, wipe_cell) = self.propagate(pos, val.0, val.1);
             if ok {
-                // After AC-3 propagation succeeded, run unit-prop from clauses
+                // After AC-3 propagation succeeded, run unit-prop from clauses.
+                // Pass the just-assigned literal as hint — only walks its watch list.
+                let just_assigned = Lit::new(pos, val.0, val.1);
                 let (clause_ok, clause_undo, clause_wipe) = if self.cfg.use_no_good_learning {
-                    self.unit_prop_from_clauses()
+                    self.unit_prop_from_clauses(Some(just_assigned))
                 } else {
                     (true, Vec::new(), None)
                 };
