@@ -81,6 +81,27 @@ alone (CLAUDE.md rule 4: variance reporting mandatory).**
 - OR: prove a structural correspondence between Blackwood's color
   labels and ours, so "overlap" can be computed in the same frame.
 
+## Long-budget follow-up (2026-05-16 00:09)
+
+Re-ran the winning sweep triple (14, 15, 19) at 5min CP + 5min
+ALNS, same seed=1, same schedule. Result: **446/480** — IDENTICAL
+to the 60s × 60s result.
+
+5× more compute on CP and 5× more on ALNS produced ZERO additional
+score. The 446 is a basin ceiling for this triple under
+calibrated_v17a at seed=1, not a search-budget-limited score.
+
+Implication: **the triple choice determines the basin reached, but
+the basin's intrinsic ceiling is around 446 for this triple.** No
+amount of additional compute on the same (triple, seed, schedule)
+extracts more. To break 446 with this triple, need either:
+- different seed (variance check)
+- different schedule (e.g., v17b, v17c, v17e)
+- different ALNS ops/temperature
+- different break-index allowance
+
+Thread closed: triple-choice alone doesn't break 459.
+
 ## Linked
 
 - [[blackwood-algorithm]] (parent)
