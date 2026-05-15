@@ -26,6 +26,8 @@ pub struct CpLpSearchOpts {
     pub time_budget_secs: f64,
     pub threads: u32,
     pub save_dir: PathBuf,
+    /// Minimum B-B match count at leaf time to save the border. Default 60.
+    pub leaf_min_bb: u32,
 }
 
 impl Default for CpLpSearchOpts {
@@ -37,6 +39,7 @@ impl Default for CpLpSearchOpts {
             time_budget_secs: 3600.0,
             threads: 8,
             save_dir: PathBuf::from("output/cp_lp_search"),
+            leaf_min_bb: 60,
         }
     }
 }
@@ -254,9 +257,156 @@ pub fn cheap_lb_passes(puzzle: &Puzzle, board: &Board, _threshold: f64) -> bool 
     true
 }
 
-/// Run the CP search. Currently stub.
-pub fn run_cp_lp_search(_puzzle: &Puzzle, _opts: &CpLpSearchOpts) -> Result<CpLpResult, String> {
-    Err("cp-lp-search driver: implementation in progress".to_string())
+/// Filter candidates at `pos` by neighbor-B-B compatibility with already-placed cells.
+/// For each already-placed neighbor of `pos`, the side facing them must match their
+/// outward-facing color.
+fn neighbor_b_b_compatible(
+    puzzle: &Puzzle,
+    board: &Board,
+    pos: Position,
+    pid: PieceId,
+    rot: Rotation,
+) -> bool {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let (x, y) = puzzle.xy(pos);
+    let p = match puzzle.piece(pid) { Some(p) => p, None => return false };
+    let e = p.edges.rotated(rot).as_array();
+    // For each adjacent perimeter cell that's PLACED, check edge color compatibility.
+    let nbrs: [(i64, i64, u8, u8); 4] = [
+        (x as i64,     y as i64 - 1, 0, 2), // top
+        (x as i64 + 1, y as i64,     1, 3), // right
+        (x as i64,     y as i64 + 1, 2, 0), // bottom
+        (x as i64 - 1, y as i64,     3, 1), // left
+    ];
+    for &(nx, ny, our_side, their_side) in &nbrs {
+        if nx < 0 || ny < 0 || nx >= w as i64 || ny >= h as i64 { continue; }
+        let n = (ny as u32) * w + (nx as u32);
+        if !is_perimeter(puzzle, n) { continue; }
+        if let Some((npid, nrot)) = board.get(n) {
+            let Some(np) = puzzle.piece(npid) else { return false; };
+            let ne = np.edges.rotated(nrot).as_array();
+            if e[our_side as usize] != ne[their_side as usize] {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Statistics tracked during DFS.
+#[derive(Debug, Default)]
+struct SearchStats {
+    n_explored: u64,
+    n_pruned_neighbor: u64,
+    n_pruned_cheap: u64,
+    n_leaves_kept: u64,
+    deepest_depth: u32,
+}
+
+/// Recursive depth-first search.
+fn dfs(
+    puzzle: &Puzzle,
+    board: &mut Board,
+    used: &mut HashSet<PieceId>,
+    order: &[Position],
+    depth: usize,
+    opts: &CpLpSearchOpts,
+    stats: &mut SearchStats,
+    start_time: std::time::Instant,
+    on_full_border: &mut dyn FnMut(&Board),
+) -> bool {
+    if start_time.elapsed().as_secs_f64() > opts.time_budget_secs {
+        return false; // time-limited stop
+    }
+    stats.n_explored += 1;
+    if (depth as u32) > stats.deepest_depth { stats.deepest_depth = depth as u32; }
+
+    if depth == order.len() {
+        // Full border. Call leaf handler.
+        stats.n_leaves_kept += 1;
+        on_full_border(board);
+        return true;
+    }
+
+    // Cheap prune (skip on shallow depths where Hall is trivially passing)
+    if depth >= 4 && !cheap_lb_passes(puzzle, board, opts.threshold_ub) {
+        stats.n_pruned_cheap += 1;
+        return true;
+    }
+
+    let pos = order[depth];
+    let cands = valid_border_candidates(puzzle, pos, used);
+    for (pid, rot) in cands {
+        if !neighbor_b_b_compatible(puzzle, board, pos, pid, rot) {
+            stats.n_pruned_neighbor += 1;
+            continue;
+        }
+        board.place(pos, pid, rot);
+        used.insert(pid);
+        if !dfs(puzzle, board, used, order, depth + 1, opts, stats, start_time, on_full_border) {
+            // time stop
+            return false;
+        }
+        // Undo
+        used.remove(&pid);
+        board.clear(pos);
+    }
+    true
+}
+
+/// Run the CP search.
+pub fn run_cp_lp_search(
+    puzzle: &Puzzle,
+    hints: &eternity2_core::Hints,
+    opts: &CpLpSearchOpts,
+) -> Result<CpLpResult, String> {
+    let order = perimeter_placement_order(puzzle);
+    let mut board = Board::empty(puzzle);
+    let mut used: HashSet<PieceId> = HashSet::new();
+    // Pin hints (interior, fixed).
+    for h in &hints.hints {
+        board.place(h.position, h.piece_id, h.rotation);
+        used.insert(h.piece_id);
+    }
+    let mut stats = SearchStats::default();
+    let start = std::time::Instant::now();
+    std::fs::create_dir_all(&opts.save_dir).ok();
+    let mut save_idx: u64 = 0;
+    let save_dir = opts.save_dir.clone();
+    let leaf_min_bb = opts.leaf_min_bb;
+    let puzzle_ref = puzzle;
+    let mut handler = |b: &Board| {
+        // Quick B-B match count filter.
+        let bb = b_b_matches(puzzle_ref, b);
+        if bb < leaf_min_bb { return; }
+        // Save the full-border placement as JSON.
+        let placement: Vec<_> = (0..puzzle_ref.cell_count()).filter_map(|p| {
+            b.get(p).map(|(pid, rot)| serde_json::json!({
+                "pos": p, "piece_id": pid, "rotation": rot.as_u8()
+            }))
+        }).collect();
+        let out = serde_json::json!({
+            "border_index": save_idx,
+            "bb_matches": bb,
+            "placement": placement,
+        });
+        let path = save_dir.join(format!("border_{save_idx:08}_bb{bb}.json"));
+        if let Ok(s) = serde_json::to_string(&out) {
+            let _ = std::fs::write(&path, s);
+        }
+        save_idx += 1;
+    };
+    let _ = dfs(puzzle, &mut board, &mut used, &order, 0, opts, &mut stats, start, &mut handler);
+    Ok(CpLpResult {
+        n_explored: stats.n_explored,
+        n_pruned_cheap: stats.n_pruned_cheap,
+        n_pruned_reduced_lp: 0,
+        n_pruned_full_lp: 0,
+        n_leaves_kept: stats.n_leaves_kept,
+        best_lp_ub_seen: 0.0,
+        elapsed_secs: start.elapsed().as_secs_f64(),
+    })
 }
 
 pub fn partial_lp_ub(_puzzle: &Puzzle, _board: &Board, _placed: &[Position])

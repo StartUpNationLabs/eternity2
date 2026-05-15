@@ -12,9 +12,14 @@ workspace = true
 [lib]
 path = "src/lib.rs"
 
+[[bin]]
+name = "cp_search"
+path = "src/bin/cp_search.rs"
+
 [dependencies]
-eternity2-core = { path = "../core" }
+eternity2-core = { path = "../core", features = ["serde"] }
 eternity2-puzzle-io = { path = "../puzzle-io" }
+serde_json = "1"
 
 [dev-dependencies]
 eternity2-bench-audit = { path = "../bench-audit" }

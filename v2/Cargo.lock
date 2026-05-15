@@ -591,6 +591,7 @@ dependencies = [
  "eternity2-bench-audit",
  "eternity2-core",
  "eternity2-puzzle-io",
+ "serde_json",
 ]
 
 [[package]]
