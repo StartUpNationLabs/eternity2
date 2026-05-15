@@ -15,4 +15,6 @@ path = "src/lib.rs"
 [dependencies]
 eternity2-core = { path = "../core" }
 eternity2-puzzle-io = { path = "../puzzle-io" }
+
+[dev-dependencies]
 eternity2-bench-audit = { path = "../bench-audit" }
