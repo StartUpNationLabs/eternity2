@@ -1,16 +1,17 @@
 {
+  "bucas_url": "https://e2.bucas.name/#puzzle=vol12_5min&board_w=16&board_h=16&board_edges=abdaabgbabjbacsbabhcaepbaboeaeqbabveafhbafgfacnfaepcafoeaelfaabedsdagvgsjgwvsjwghhwjptwhopstqgmpvvlghunvgolunpmopskpoqwslvmqbacvdpcagnkpwlmnwvvlwvkvwkrvsiukmhgilsnhnnnslktnmttkkuvtwswumtrscadtcidakkgimnrkvijnklqirqwluiwqgmkiniomngritnpgtovnvmjowuhmrhoudadhdgcagkogrphkjijpqoriwuiowovukqmoovjqrkhvpllkvhnljqphhwmqoiqwdadickfaounkhlsujmllrgtmiwtgaaaamulwaaaaaaaaaaaaaaaaaaaamorhqnqodaenfjbanmpjsommlnkoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqwteacqbjfaprsjmorrknvoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawhtrcafhfubasgrurtrgvphtaaaaaaaaaaaaijjmaaaaaaaaaaaaaaaaaaaaaaaatrkgfacrbtfarqrtrluqhwqlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakvkocafvftdarvmtulkvqttlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakqjsfafqdweamsowknhstkknaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasutmjosufadoeibaommihjumkgrjaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaspgmdaepbpcammupujvmronjiisojjliuhsjwushqlhuthjlaaaaaaaaaaaaqvprgtqveabtcocauvgovitvnjmisiujliwisouisnqohhunjnthplsnomnliwpmpkrwqhmkbachcdaagdadteadmfaeufafwdafufadqeafueaeteaeseaencaepcacrbacmdabcaad",
   "edge_matches": 303,
   "edge_total": 303,
-  "elapsed_s": 300.209501292,
+  "elapsed_s": 300.117196958,
   "final_stats": {
-    "backtracks": 976363,
+    "backtracks": 5877525,
     "current_depth": 0,
-    "domain_wipeouts": 976363,
+    "domain_wipeouts": 5877525,
     "max_depth_seen": 174,
-    "nodes": 4243749,
-    "propagations": 2922387013,
+    "nodes": 20211712,
+    "propagations": 13315746850,
     "solutions_found": 0,
-    "time_ms": 300238
+    "time_ms": 300112
   },
   "internal_total_edges": 480,
   "pieces_placed": 179,
@@ -989,6 +990,5 @@
     }
   ],
   "schema_version": 1,
-  "verdict": "TIMEOUT (best_depth=174)",
-  "bucas_url": "https://e2.bucas.name/#puzzle=vol12_5min&board_w=16&board_h=16&board_edges=abdaabgbabjbacsbabhcaepbaboeaeqbabveafhbafgfacnfaepcafoeaelfaabedsdagvgsjgwvsjwghhwjptwhopstqgmpvvlghunvgolunpmopskpoqwslvmqbacvdpcagnkpwlmnwvvlwvkvwkrvsiukmhgilsnhnnnslktnmttkkuvtwswumtrscadtcidakkgimnrkvijnklqirqwluiwqgmkiniomngritnpgtovnvmjowuhmrhoudadhdgcagkogrphkjijpqoriwuiowovukqmoovjqrkhvpllkvhnljqphhwmqoiqwdadickfaounkhlsujmllrgtmiwtgaaaamulwaaaaaaaaaaaaaaaaaaaamorhqnqodaenfjbanmpjsommlnkoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqwteacqbjfaprsjmorrknvoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawhtrcafhfubasgrurtrgvphtaaaaaaaaaaaaijjmaaaaaaaaaaaaaaaaaaaaaaaatrkgfacrbtfarqrtrluqhwqlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakvkocafvftdarvmtulkvqttlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakqjsfafqdweamsowknhstkknaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasutmjosufadoeibaommihjumkgrjaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaspgmdaepbpcammupujvmronjiisojjliuhsjwushqlhuthjlaaaaaaaaaaaaqvprgtqveabtcocauvgovitvnjmisiujliwisouisnqohhunjnthplsnomnliwpmpkrwqhmkbachcdaagdadteadmfaeufafwdafufadqeafueaeteaeseaencaepcacrbacmdabcaad"
+  "verdict": "TIMEOUT (best_depth=174)"
 }

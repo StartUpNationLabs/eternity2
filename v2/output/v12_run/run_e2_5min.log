@@ -42,3 +42,60 @@ budget: 300_000 ms (5 min)
 [ 180071 ms]  depth=  68  best_depth= 175  node_id=3498604
 [ 185076 ms]  depth= 144  best_depth= 175  node_id=1833986
 [ 190076 ms]  depth=  66  best_depth= 175  node_id=4203067
+[ 195079 ms]  depth=  57  best_depth= 175  node_id=4299255
+[ 200081 ms]  depth=  61  best_depth= 175  node_id=4821888
+[ 205082 ms]  depth=  54  best_depth= 175  node_id=4504057
+[ 210083 ms]  depth= 126  best_depth= 175  node_id=1981922
+[ 215083 ms]  depth=  57  best_depth= 175  node_id=5158827
+[ 220083 ms]  depth=  40  best_depth= 175  node_id=9745420
+[ 225085 ms]  depth=  41  best_depth= 175  node_id=9951433
+[ 230091 ms]  depth=  59  best_depth= 175  node_id=4988419
+[ 235091 ms]  depth= 143  best_depth= 175  node_id=2260898
+[ 240099 ms]  depth=  63  best_depth= 175  node_id=5165540
+[ 245107 ms]  depth=  70  best_depth= 175  node_id=5259113
+[ 250107 ms]  depth=  58  best_depth= 175  node_id=4654859
+[ 255108 ms]  depth= 136  best_depth= 175  node_id=2334693
+[ 260108 ms]  depth=  43  best_depth= 175  node_id=11032819
+[ 265108 ms]  depth=  63  best_depth= 175  node_id=5608518
+[ 270117 ms]  depth=  58  best_depth= 175  node_id=6183618
+[ 275126 ms]  depth=  39  best_depth= 175  node_id=11552498
+[ 280135 ms]  depth=  60  best_depth= 175  node_id=6350042
+[ 285135 ms]  depth=  56  best_depth= 175  node_id=5926157
+[ 290140 ms]  depth=  65  best_depth= 175  node_id=5976439
+[ 295148 ms]  depth=  61  best_depth= 175  node_id=6606736
+=== terminal event at 300117ms: nodes=20211712 backtracks=5877525 max_depth_seen=174 ===
+
+=== FINAL RESULT ===
+verdict: TIMEOUT (best_depth=174)
+wall_clock: 300.12 s
+nodes: 20211712
+backtracks: 5877525
+propagations: 13315746850
+domain_wipeouts: 5877525
+max_depth_seen: 174
+solutions_found: 0
+nodes_per_sec: 67346
+pieces_placed: 179/256
+edge_matches: 303/303 (counting only placed-placed joins)
+internal_total_edges: 480
+
+Board (piece_id:rotation):
+   0:3    4:0    6:0   23:0    5:0   41:0    9:0   44:0   13:0   49:0   48:0   17:0   42:0   52:0   37:0    1:0 
+  31:3   87:2   98:1   88:3  103:0  119:3  243:0   72:1   95:3  127:0   77:0  225:2  191:2  244:0  218:0   24:1 
+  30:3   75:0  207:1  220:3  205:2  194:1  161:1   66:2  111:3  232:0  199:1  185:3  200:0  254:1  230:0   32:1 
+  15:3   65:2  184:3  140:1  144:3  214:3  163:1   71:0  152:1   83:1   91:3  240:3  171:2  116:2  118:1   27:1 
+  25:3   61:3  110:2  141:1  155:3  153:2  245:1  192:0  174:2  131:2  190:3  117:1  107:3  133:0  156:1   28:1 
+  16:3  189:3  112:0  166:0   90:1   68:3 ----:-  219:2 ----:- ----:- ----:- ----:- ----:-  114:3  234:1   40:1 
+  51:3  167:3  223:2  188:2 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  250:0   20:1 
+   7:3  173:3  226:0  186:0 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  124:1   50:1 
+  56:3   86:1   85:3  125:2 ----:- ----:- ----:-  138:0 ----:- ----:- ----:- ----:- ----:- ----:-   94:3   22:1 
+  12:3  251:1  217:1  134:0 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  187:2   58:1 
+  55:3  231:2  204:2  212:3 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  176:2   54:1 
+  35:3  228:0  122:2  182:1 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-  229:3  170:0   29:1 
+  36:3  151:3  108:0   84:1 ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:- ----:-   73:2   43:1 
+  10:3  224:0  180:1  175:3  136:0  137:3  121:1  135:3  128:2  105:1 ----:- ----:- ----:-  248:2   93:0   11:1 
+  18:3   79:2  159:1  149:3  160:1  146:3  157:3  235:1  102:0  106:3  216:1  209:3  162:0  195:1  113:1   14:1 
+   2:2   26:2   33:2   38:2   57:2   59:2   34:2   53:2   47:2   46:2   45:2   39:2   19:2   21:2    8:2    3:1 
+
+bucas: https://e2.bucas.name/#puzzle=vol12_5min&board_w=16&board_h=16&board_edges=abdaabgbabjbacsbabhcaepbaboeaeqbabveafhbafgfacnfaepcafoeaelfaabedsdagvgsjgwvsjwghhwjptwhopstqgmpvvlghunvgolunpmopskpoqwslvmqbacvdpcagnkpwlmnwvvlwvkvwkrvsiukmhgilsnhnnnslktnmttkkuvtwswumtrscadtcidakkgimnrkvijnklqirqwluiwqgmkiniomngritnpgtovnvmjowuhmrhoudadhdgcagkogrphkjijpqoriwuiowovukqmoovjqrkhvpllkvhnljqphhwmqoiqwdadickfaounkhlsujmllrgtmiwtgaaaamulwaaaaaaaaaaaaaaaaaaaamorhqnqodaenfjbanmpjsommlnkoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaqqwteacqbjfaprsjmorrknvoaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawhtrcafhfubasgrurtrgvphtaaaaaaaaaaaaijjmaaaaaaaaaaaaaaaaaaaaaaaatrkgfacrbtfarqrtrluqhwqlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakvkocafvftdarvmtulkvqttlaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaakqjsfafqdweamsowknhstkknaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasutmjosufadoeibaommihjumkgrjaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaspgmdaepbpcammupujvmronjiisojjliuhsjwushqlhuthjlaaaaaaaaaaaaqvprgtqveabtcocauvgovitvnjmisiujliwisouisnqohhunjnthplsnomnliwpmpkrwqhmkbachcdaagdadteadmfaeufafwdafufadqeafueaeteaeseaencaepcacrbacmdabcaad
+
