@@ -93,6 +93,54 @@ Sweep v1_run2 covers the remaining 16 perms (= 8 more (TL,TR) pairs).
 
 Both per user feedback this turn.
 
+## T3 — full sweep v2 results (24/24)
+
+24 perms × 5min CP each via vanilla_fast with --pin-hints + 4 extra-hint
+corner pins. CP-best partial scores grouped by (TL, TR):
+
+| (TL, TR) | CP-best | depth | known record matches |
+|----------|--------:|------:|---------------------|
+| **(0,3)** | **433** | 210 | FA vol-32 458, vol-35 457 |
+| **(1,0)** | **433** | 210 | — |
+| **(2,1)** | **433** | 210 | — |
+| **(3,1)** | **433** | 210 | — |
+| (0,1) | 426 | 207 | — |
+| (0,2) | 426 | 207 | FB blackwood 457 |
+| (1,3) | 426 | 207 | — |
+| (3,0) | 426 | 207 | — |
+| (1,2) | 424 | 206 | — |
+| **(2,0)** | **278** | **135** | lottery 458 (0/5) |
+| **(2,3)** | **278** | **135** | — |
+| **(3,2)** | **278** | **135** | **McGavin 469** |
+
+### Critical findings
+
+1. **8 (TL,TR) perms tie at the top (CP-best=433, depth=210)**. Half
+   of those are NEW (untested by our pipeline): (1,0), (2,1), (3,1).
+
+2. **McGavin's perm (3,2) STALLS at depth 135 / score 278 in 5min CP**.
+   This is the corner perm of community 469. Our CP search struggles
+   to penetrate this perm-space. **Possible structural reason our
+   pipeline can't naturally reach McGavin's basin.**
+
+3. **3 perms collapse at depth 135**: (2,0), (2,3), (3,2). These share
+   a TR-piece pattern that creates strong constraint propagation rejection
+   at mid-depth.
+
+## T7 — ALNS phase with corner pinning (RUNNING)
+
+96 jobs: 24 perms × 4 seeds × 5min ALNS, parallel=8, ETA ~17:40 CEST.
+Uses the new `alns_only --extra-hint` (vol-60 fix) to pin all 4
+corners throughout ALNS, ensuring per-perm basin is preserved.
+
+If any perm produces 459+, that's a record break. Most likely outcome:
+- 433-tier perms produce 458 occasionally (matching FA basin).
+- 426-tier perms produce 457 occasionally.
+- McGavin's perm yields lower (CP didn't reach deep enough; ALNS
+  recovery from depth 135 has more to fix).
+
+Monitor armed for high-score events.
+
 ## Linked
 
 - [[../sessions/vol-59]] — predecessor

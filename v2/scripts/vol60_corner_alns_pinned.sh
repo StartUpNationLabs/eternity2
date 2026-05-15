@@ -20,9 +20,10 @@ JOBS_FILE="$RES_DIR/jobs.txt"
 : > "$JOBS_FILE"
 
 # Read each perm's best snapshot + the corner pin pieces from the snapshot itself.
-for partial in "$SWEEP_DIR"/p*_best.json; do
+# Accept either *_best.json (raw sweep output) or *_merged.json (merged-with-corners)
+for partial in "$SWEEP_DIR"/p*_best.json "$SWEEP_DIR"/p*_merged.json; do
     [ -f "$partial" ] || continue
-    pid=$(basename "$partial" _best.json)
+    pid=$(basename "$partial" | sed -E 's/_(best|merged)\.json$//')
     # Extract corner piece IDs from the partial (which has the corners placed at pos 0/15/240/255)
     TL_P=$(/tmp/vol53_venv/bin/python3 -c "import json; d=json.load(open('$partial')); print(d['placement'][0]['piece_id'])" 2>/dev/null || echo "")
     TR_P=$(/tmp/vol53_venv/bin/python3 -c "import json; d=json.load(open('$partial')); print(d['placement'][15]['piece_id'])" 2>/dev/null || echo "")
