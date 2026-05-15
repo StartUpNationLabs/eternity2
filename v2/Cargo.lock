@@ -585,6 +585,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-cp-lp-search"
+version = "0.1.0"
+dependencies = [
+ "eternity2-bench-audit",
+ "eternity2-core",
+ "eternity2-puzzle-io",
+]
+
+[[package]]
 name = "eternity2-edge-solver"
 version = "0.1.0"
 dependencies = [

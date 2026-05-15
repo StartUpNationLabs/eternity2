@@ -1,0 +1,18 @@
+[package]
+name = "eternity2-cp-lp-search"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-puzzle-io = { path = "../puzzle-io" }
+eternity2-bench-audit = { path = "../bench-audit" }

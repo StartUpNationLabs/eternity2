@@ -4,6 +4,7 @@ members = [
     "crates/bench-audit",
     "crates/benchmark",
     "crates/core",
+    "crates/cp-lp-search",
     "crates/edge-solver",
     "crates/events",
     "crates/export",
