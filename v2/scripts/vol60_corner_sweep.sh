@@ -72,15 +72,16 @@ done
 N=$(wc -l < "$JOBS_FILE" | tr -d ' ')
 echo "$(date +%H:%M:%S) Queued $N perms (parallel=$PARALLEL, cp=${BUDGET_MS}ms)"
 
+export RES_DIR  # so the xargs subshell sees it
 cat "$JOBS_FILE" | xargs -L 1 -P "$PARALLEL" bash -c '
     PID="$0"
     TL_P="$1"; TL_R="$2"
     TR_P="$3"; TR_R="$4"
     BL_P="$5"; BL_R="$6"
     BR_P="$7"; BR_R="$8"
-    SNAP_DIR="output/vol-60/corner_sweep/snaps_${PID}"
-    SAVE_BEST="output/vol-60/corner_sweep/${PID}_best.json"
-    LOG="output/vol-60/corner_sweep/${PID}.log"
+    SNAP_DIR="${RES_DIR}/snaps_${PID}"
+    SAVE_BEST="${RES_DIR}/${PID}_best.json"
+    LOG="${RES_DIR}/${PID}.log"
     target/release/vanilla_fast \
         --budget-ms '"$BUDGET_MS"' \
         --threads 1 \
