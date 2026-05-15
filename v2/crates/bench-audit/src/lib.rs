@@ -165,10 +165,27 @@ pub fn score_board_dense(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
 }
 
 /// Vol-51 — extracted from `bin/edge_bound_ascent.rs` so other drivers
-/// can compute the relaxed bound between rounds.
+/// can compute the greedy-relaxed score between rounds.
+///
+/// **⚠️ NOT AN UPPER BOUND ON INTEGER SCORE ⚠️**
 ///
 /// Returns the score achievable by greedy cell-local optimization,
-/// IGNORING piece-uniqueness (relaxed bound = upper bound on basin).
+/// IGNORING piece-uniqueness (so pieces CAN be reused). Because piece
+/// reuse fakes matches that real integer assignments cannot achieve,
+/// **the return value is OFTEN HIGHER than the true integer ceiling**.
+/// On the vol-32 458 board this function returns 462 — 4 above the
+/// true integer optimum confirmed by vol-44 MIP.
+///
+/// This is a HEURISTIC INDICATOR of matching density, useful for
+/// COMPARATIVE ranking of basins. It is NOT a valid mathematical
+/// upper bound. Do not write "X has bound Y" using this value.
+///
+/// For TRUE upper bounds on integer score, use:
+/// - `border_lp_ub.rs` (LP relaxation; sound UB)
+/// - `border_mip.rs` or vol-55 cluster MIP (sound integer ceiling)
+///
+/// Per `feedback_no_false_metrics` memory: cheapness is not an
+/// excuse for falsehood. Use the right tool for the claim.
 #[must_use]
 pub fn relaxed_bound(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Board) -> u32 {
     use eternity2_core::{Rotation, BORDER};
@@ -212,6 +229,15 @@ pub fn relaxed_bound(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Bo
         if changes == 0 { break; }
     }
     score_board(puzzle, &b).0
+}
+
+/// Vol-60 — alias for `relaxed_bound` with a name that doesn't lie.
+/// This function does NOT compute an upper bound. It runs greedy
+/// local search ignoring piece-uniqueness. Use this name in new code
+/// to avoid the documentation hazard of `relaxed_bound`.
+#[must_use]
+pub fn greedy_relaxed_score(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Board) -> u32 {
+    relaxed_bound(puzzle, board)
 }
 
 fn cell_local_score_for_edges(puzzle: &eternity2_core::Puzzle, board: &eternity2_core::Board, pos: u32, edges: [u8; 4]) -> u32 {

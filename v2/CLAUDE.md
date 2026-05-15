@@ -49,6 +49,155 @@ report number". The senior-researcher mode is:
 This role is the single most important behavioural rule for this
 project. Anything else in this file is secondary if it conflicts.
 
+## Scientific rigor — anti-patterns to never repeat
+
+These are mistakes I have made repeatedly in this project. They are
+load-bearing rules; treat them as hard requirements.
+
+### 1. Never call a non-bound a "bound"
+
+`relaxed_bound` (in `bench-audit/src/lib.rs`) is a greedy local
+search WITH PIECE REUSE. It produces scores ABOVE achievable integer
+scores. **Never** describe it as a "bound" or "upper bound" without
+qualifying as "greedy-relaxed score (NOT a UB)".
+
+For TRUE upper bounds on integer score, use:
+- `border_lp_ub.rs` — LP relaxation (sound UB)
+- `border_mip.rs` / vol-55 cluster-MIP (sound integer ceiling)
+
+If you catch yourself writing "bound" in vault, stop and check: is this
+LP/MIP-derived or just a greedy heuristic? If greedy, rename to
+"greedy-relaxed score" or "matching-density indicator". Cheapness is
+NEVER an excuse for falsehood.
+
+### 2. Before narrating about two boards, DIFF them
+
+When two artifacts (records, partials, basins) claim related properties,
+the FIRST action is direct piece-id comparison at corners or full board.
+Discussion of color permutations, Bucas labelings, σ inverses, etc.
+comes AFTER the diff confirms whether they're the same or different.
+
+Bin to use: `diff_boards` (if it doesn't exist, write it; it's
+trivial — just compare `placement[i]` between two JSONs).
+
+### 3. "Refuted" requires ablation, not single-point negative
+
+If an experiment with ONE config didn't work, write
+"not-yet-validated" or "config X failed", NOT "refuted". A refutation
+requires testing the search space of configs, not one point.
+
+Pattern to avoid: "vol-15 Blackwood with one schedule hit depth-wall 80,
+therefore Blackwood is refuted". Reality: only that specific schedule +
+profile pairing was tested. Other Blackwood configs may work.
+
+Vols 15, 26-29, 48-49 contain incorrect "refuted" labels. Cite them
+as "this specific variant failed", not generalize.
+
+### 4. Variance reporting is mandatory
+
+Every quantitative experiment must report at least min/median/max
+across seeds, or run a sweep. **Single-seed point estimates are not
+scientific results.**
+
+The cross-machine 459 required seed=42 specifically. Seed=4 got 458.
+If we'd reported "seed=4 yields 458, experiment over", we'd never
+have known seed=42 exists. Pattern: ≥ 8 seeds per experiment, report
+distribution.
+
+### 5. Define your record convention before claiming records
+
+Eternity II records can mean:
+- **Matched-edges** (Bucas leaderboard convention): just total matched.
+- **Strict-canonical-matched**: matched-edges AND all 5 canonical hints
+  obeyed.
+- **Bucas-validates-as-puzzle**: passes Bucas's "v17_alns_only" check.
+
+When claiming a record, state explicitly which convention. The 459
+is a matched-edges record. The strict-canonical record is 457.
+Don't conflate.
+
+### 6. Output paths must always be timestamped
+
+Scripts that write to `output/some_name/` overwrite previous runs.
+**This destroys history.** Every script must default to
+`output/some_name_$(date +%Y%m%dT%H%M%S)/` or use `VOL_RUN_TAG`
+envvar. The `vol60_corner_sweep.sh` pattern is the template.
+
+Re-runnable scripts must skip-if-exists per-job, but the parent
+output dir must always be new.
+
+### 7. Don't claim global optimality from local-cluster MIPs
+
+Vol-44/55/58 cluster MIPs prove LOCAL optimality (no improvement
+within the cluster, neighbors frozen). They do NOT prove global
+optimality. A board-spanning ALNS move (e.g., WorstBand-4 across
+multiple rows) can find a better board even if every cluster is
+"locally optimal".
+
+The cross-machine 459 demonstrated this: vol-44/55/58 had concluded
+458 was "ultra-locally-optimal across 22 clusters", but a different
+ALNS preset (basic ops, board-spanning destroy) found 459. The
+locality measure was too narrow.
+
+### 8. Path order is a first-class search hyperparameter
+
+Across 29 row-major restarts, vanilla DFS plateaued at 392.
+Switching scan order to border-first reached 403 (a +11 free).
+Path order should be in every record-track experiment's
+hyperparameter sweep, alongside seed/ops/budget.
+
+### 9. ALNS preset is not interchangeable
+
+`winning5` is one specific ops bundle. The cross-machine 459 used
+`minimal` then `basic` (different ops, different aggressiveness).
+"basic" = "minimal" + `WorstBand{4}` — a small escalation, but it
+broke 458→459.
+
+Don't single-source ALNS preset. For record-track work, sweep at
+least {minimal, basic, winning5} × multiple seeds.
+
+### 10. "Compute exhausted" is a soft conclusion, not hard
+
+If we ran 5min ALNS × N seeds and got 458, that's "458 reachable
+in 5min × N seeds with config C". It is NOT "this basin's ceiling".
+Longer compute (30min, 1h) on the SAME setup may yield higher.
+Different setups absolutely may.
+
+Vol-59 lottery declared "P(458) = 0.64%, basin saturated" after 156
+× 5min trials. The 459 was reached with 30min ALNS basic seed=42.
+"Saturated under our setup" ≠ "saturated period".
+
+### 11. Direct piece-id JSON comparison BEFORE bucas-URL analysis
+
+When asking "are these two boards the same?", the cheap answer is
+to compare piece_id at corner positions in the two JSONs. Color
+codes in bucas URLs can be σ-permuted between labelings. Piece_ids
+0..255 are unambiguous. Always diff piece_ids first.
+
+### 12. When the user asks a probing question, treat it as data
+
+User questions like "isn't it the same?", "why do we use something
+that's false?", "but what about hard-to-fill basins?" frequently
+unlock blind spots. These prompts are the highest-leverage research
+input. When asked, the first move is to actually answer with data
+(run the diff, check the metric definition), not narrate.
+
+## Code-level harness conventions
+
+The codebase has accumulated several conventions that prevent bugs.
+Follow them:
+
+- **`rescore_board <path>`** before claiming any record. Independent
+  re-scoring catches piece-uniqueness bugs (vol-35 found 200 fake
+  records this way).
+- **`verify_records.sh`** is the canonical sanity check across a
+  directory of records. Use it.
+- **Indexed placement format** (no `pos` field, position = array
+  index) vs **sparse format** (`pos` field present): some bins
+  accept both, some only one. Check `load_cp_board` and
+  `load_partial` signatures. When in doubt, write with explicit
+  `pos` field — universally accepted.
+
 ## Scope
 
 All v2 work lives inside `v2/`. The sibling directories of `v2/` (`solvers/`, `frontend/`, `api/`, `docker-compose/`, `envoy/`, `nix/`, etc.) are the legacy C++/JS/Nix stack — **read-only reference material**. Do not modify them.
