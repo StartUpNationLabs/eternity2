@@ -285,10 +285,17 @@ pub fn column_generated_lifted_lp_ub(
     let avg_z = if ii_edges.is_empty() { 0.0 } else { z_count as f64 / ii_edges.len() as f64 };
     eprintln!("[col-gen] Phase 2: {} z-vars total, avg {:.1} per edge", z_count, avg_z);
 
+    // ALSO add y-vars (standard LP per-edge, per-color) as fallback for inactive pairs.
+    let n_y2 = ii_edges.len() * max_color as usize;
+    let y_list2: Vec<Variable> = problem2.add_vector(variable().min(0.0).max(1.0), n_y2);
+
     let n_y_bi2 = bi.len();
     let y_bi_list2: Vec<Variable> = problem2.add_vector(variable().min(0.0).max(1.0), n_y_bi2);
 
+    // Objective: z-credit + y-fallback (with per-edge cap = 1) + B-I.
+    // Per-edge cap below ensures total ≤ 1 = correctness.
     let obj2: Expression = z_var2.values().copied().sum::<Expression>()
+        + y_list2.iter().copied().sum::<Expression>()
         + y_bi_list2.iter().copied().sum::<Expression>();
     let mut hp2 = problem2.maximise(obj2).using(highs);
     hp2.set_verbose(opts.base_lp_opts.verbose);
@@ -344,9 +351,37 @@ pub fn column_generated_lifted_lp_ub(
             }
         }
     }
-    for ei in 0..ii_edges.len() {
-        if z_per_edge2[ei].is_empty() { continue; }
-        let sum: Expression = z_per_edge2[ei].iter().copied().sum();
+    // Add y-var standard LP constraints (per edge × per color, y ≤ side mass).
+    for (i, &(c1, c2, dir)) in ii_edges.iter().enumerate() {
+        let (s1, s2) = if dir == 0 { (1u8, 3u8) } else { (2u8, 0u8) };
+        let mut a_b: Vec<Vec<Variable>> = vec![Vec::new(); (max_color as usize) + 1];
+        let mut b_b: Vec<Vec<Variable>> = vec![Vec::new(); (max_color as usize) + 1];
+        for &(v, e) in &x_per_cell2[&c1] {
+            let k = e[s1 as usize] as usize;
+            if k > 0 { a_b[k].push(v); }
+        }
+        for &(v, e) in &x_per_cell2[&c2] {
+            let k = e[s2 as usize] as usize;
+            if k > 0 { b_b[k].push(v); }
+        }
+        for k in 1..=max_color as usize {
+            let yv = y_list2[i * max_color as usize + (k - 1)];
+            let a: Expression = a_b[k].iter().copied().sum();
+            let b: Expression = b_b[k].iter().copied().sum();
+            model2 = model2.with(constraint!(yv <= a));
+            model2 = model2.with(constraint!(yv <= b));
+        }
+    }
+
+    // Per-edge cap: sum(z over this edge) + sum(y over this edge) ≤ 1
+    // Ensures total match credit ≤ 1 per edge (correctness).
+    for (ei, _) in ii_edges.iter().enumerate() {
+        let mut terms: Vec<Variable> = z_per_edge2[ei].clone();
+        for k in 1..=max_color as usize {
+            terms.push(y_list2[ei * max_color as usize + (k - 1)]);
+        }
+        if terms.is_empty() { continue; }
+        let sum: Expression = terms.into_iter().sum();
         model2 = model2.with(constraint!(sum <= 1.0));
     }
 
@@ -354,9 +389,13 @@ pub fn column_generated_lifted_lp_ub(
     let phase2_secs = t2.elapsed().as_secs_f64();
     eprintln!("[col-gen] Phase 2 LP solved in {:.1}s", phase2_secs);
 
-    let interior_ub: f64 = z_var2.values().map(|v| sol2.value(*v)).sum();
+    let z_sum: f64 = z_var2.values().map(|v| sol2.value(*v)).sum();
+    let y_sum: f64 = y_list2.iter().map(|v| sol2.value(*v)).sum();
+    let interior_ub = z_sum + y_sum;
     let bi_ub: f64 = y_bi_list2.iter().map(|v| sol2.value(*v)).sum();
     let total = bb as f64 + bi_ub + interior_ub;
+    eprintln!("[col-gen] Phase 2: z_sum={:.3}, y_sum={:.3}, bi_ub={:.3}, total={:.3}",
+              z_sum, y_sum, bi_ub, total);
 
     Ok(LiftedLpUb {
         bb_matches: bb,
