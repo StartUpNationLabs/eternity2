@@ -64,6 +64,34 @@ Compare scores to vol-68's top-N values: top-N=13 → 455, top-N=14
 - H2b invalidated if bottom-N=14 reaches 469.
 - H3 alone cannot be tested in vol-82 — needs scan-order variant.
 
+## Theoretical refinement (added 00:25 before vol-82 results)
+
+McGavin's 469 mismatch geometry: all 11 mismatches concentrate in
+rows 0-4 (top 5 rows). Rows 5-15 are LOCALLY PERFECT.
+
+Concrete distribution (by row of the mismatched edge's upper cell):
+- row 0: 1
+- rows 1-2: 4
+- rows 3-4: 6
+
+This means:
+- Bottom-N pinning for N ≤ 11 keeps a LOCALLY-PERFECT region pinned
+  and frees the HARD region (rows 0-4) for ALNS to solve.
+- Top-N pinning keeps the HARD region pinned (rows 0..N-1 for
+  small N) and lets ALNS solve an easy region.
+
+So **the basin is asymmetric by construction** — the hard region
+IS the top, and McGavin's algorithm has already done the heavy
+lifting up there. Our ALNS reconstructing the bottom (easy) is
+the trivial task; reconstructing the top (hard) is the test.
+
+Sharpened prediction:
+- bottom-N=14 will likely give a SUBSTANTIALLY LOWER score than
+  top-N=14 (which gives 469). Likely range: 450-460.
+- The basin's rigidity is asymmetric and TOP-DETERMINING.
+- This is a stronger version of H2b: the basin is asymmetric AND
+  the asymmetry is explained by mismatch geometry.
+
 ## Linked
 
 - [[mcgavin-469-basin]]
