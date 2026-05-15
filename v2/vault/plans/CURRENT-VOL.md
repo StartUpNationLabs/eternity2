@@ -8,22 +8,65 @@ This page started life as a vol-51 draft written DURING vol-50 to
 ensure the autonomous loop had a next step. Branches A/B/C below
 reflect that. **Branch B is what actually happened**.
 
-## Vol-51 binding item (locked-in 2026-05-15)
+## Vol-51 binding item (revised 2026-05-15 mid-session)
 
-**B1: McGavin's prune-restart bound-trigger** (BACKLOG `mcgavin-prune-restart-bound-trigger`,
-unbuilt since vol-36).
+**B1 was built but the recovery path is broken. Pivoting to B3 (engine
+throughput profiling, scoped only to measurement + write-up).**
 
-Rationale:
-- Vols 23 + 50 explored CP-depth-trigger and node-budget-trigger
-  prune-restart respectively. Bound-stall trigger is structurally
-  different: it uses the [[../concepts/relaxed-bound|relaxed-bound]]
-  diagnostic from vol-21 (a true basin-lock detector) as the restart
-  signal.
-- Build is contained (1-2 days). Engine plumbing already exists.
-- Vol-50's lesson: when running multi-seed experiments, do them
-  SEQUENTIALLY at full CPU. This vol's experiments will follow that.
-- Vol-46 + vol-50 LP-integer-gap analysis: search-side innovation
-  is more leverage than basin diversification.
+### B1 disposition
+
+Shipped clean infrastructure:
+- `relaxed_bound` extracted to `bench-audit` lib.
+- `prune_restart` accepts `--bound-trigger` flag.
+- Per-round bound logged in summary.csv.
+
+The trigger logic CORRECTLY detects full-board + score-stagnant and
+escalates drop_k. But the recovery path is broken: dropping 60 cells
+(actual: 164 with halo) leaves CP unable to refill in 30s budget;
+round 5 score collapses to 188 from 412. **B1 doesn't produce score
+lift as implemented.**
+
+Possible fixes (not pursuing this vol):
+- Increase per-round CP budget for recovery rounds (5+ min each).
+- Drop policy that doesn't expand halo (cap at k=60 strict).
+- LNS-style recovery (re-run CP only on the dropped subset, not
+  whole board).
+- Fresh random seed per recovery round.
+
+The original goal of B1 (different trigger than depth/node) is met;
+the new finding is that the recovery is the bottleneck, not the
+trigger.
+
+### B3 — engine throughput profiling (locked in)
+
+Community engine ≈ 295M nps, ours ≈ 75k aggregate / ~10k per worker.
+4000× gap. McGavin engine parity would close this gap and let
+existing algorithms break the depth-27 cold-start wall.
+
+**Scope for vol-51**: PROFILING and ANALYSIS only — not the full
+optimization build (which is multi-week).
+
+1. Run our hot profiles (`joe_depth150_bp_par`, `BLACKWOOD_RAW_PAR`)
+   under `cargo flamegraph` for representative 60s runs.
+2. Identify top 5 hot functions by self-time.
+3. Compare each to expected McGavin-style implementation patterns
+   (per [[mcgavin-engine]] notes + community E2 commentary).
+4. Write durable per-hot-path notes in `vault/concepts/engine-perf-hot-paths.md`
+   (already exists from vol-25; amend with vol-51 measurements).
+5. Identify the top 1-2 wins that would close ~10× of the gap (not
+   100×).
+
+This produces durable research output (vault notes + numbers) that
+any future engine-perf volume builds on, even without a record this vol.
+
+### Rationale for the pivot
+
+Per CLAUDE.md "Don't stop unilaterally; pivot to a real next
+experiment". B1's trigger axis is exhausted as a record-track path.
+B3 profiling is a real next experiment that:
+- Cannot fail to produce knowledge.
+- Doesn't risk further CPU waste.
+- Sets up future engine-perf work with concrete measurements.
 
 ## Branch trail (kept for historical reasoning)
 

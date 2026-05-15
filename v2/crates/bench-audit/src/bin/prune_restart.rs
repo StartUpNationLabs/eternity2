@@ -450,11 +450,12 @@ fn main() {
             best_bound = best_bound.max(bound);
             current_hints = hints_from_board(&cp_board, &puzzle, &canonical_hints);
             current_drop_k = drop_k;
-        } else if bound_trigger && bound >= best_bound {
-            // Vol-51 B1: bound didn't drop but score stagnated.
-            // Switch to larger drop_k and pin from current board.
+        } else if bound_trigger && (n_placed as u32) >= puzzle.cell_count() {
+            // Vol-51 B1: full board, score stagnant. Bound != score, so
+            // there's still room to climb if we escape this basin. Drop
+            // a larger window of mismatch cells and re-fill.
             eprintln!(
-                "  BOUND-TRIGGER: score stagnant (best={best_score}) but bound={bound} (best={best_bound}); \
+                "  BOUND-TRIGGER: full board, score={score} stagnant (best={best_score}), bound={bound}; \
                  escalating drop_k {current_drop_k} → {drop_k_bound_stall} and continuing",
             );
             current_drop_k = drop_k_bound_stall;
