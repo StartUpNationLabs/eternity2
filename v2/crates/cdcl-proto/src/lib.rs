@@ -272,15 +272,29 @@ impl<'a> SearchState<'a> {
     /// the one unassigned literal's value from its cell's domain.
     /// Returns (success, undo_log, wipe_cell_opt).
     /// "success=false" indicates a wipeout caused by clause propagation.
+    ///
+    /// Optimization (vol-57 T2 simple): use the `watches` index. When
+    /// a literal `(pos, pid, rot)` is in the current assignment, walk
+    /// only the clauses watching it. This is a precursor to real 2WL.
     fn unit_prop_from_clauses(&mut self)
         -> (bool, Vec<(u32, (PieceId, Rotation))>, Option<u32>)
     {
         let mut undo = Vec::new();
-        // We loop until no more propagations happen (fixpoint).
+        // Build set of currently-assigned literals.
+        let assigned_lits: HashSet<Lit> = self.assigned.iter()
+            .map(|(pos, &(pid, rot))| Lit::new(*pos, pid, rot))
+            .collect();
+        // Candidate clauses: those whose watch list contains any assigned literal.
+        let mut candidates: HashSet<usize> = HashSet::new();
+        for lit in &assigned_lits {
+            if let Some(cls) = self.watches.get(lit) {
+                for c in cls { candidates.insert(*c); }
+            }
+        }
+        // Iterate over candidate clauses (orders of magnitude fewer than full DB).
         loop {
             let mut new_props = 0;
-            // Iterate over clauses by index (allow mutation).
-            for cid in 0..self.clauses.len() {
+            for &cid in &candidates {
                 let clause = &self.clauses[cid];
                 let mut unsatisfied = Vec::with_capacity(2);
                 let mut blocked = false;
