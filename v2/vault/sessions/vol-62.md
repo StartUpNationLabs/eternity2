@@ -120,6 +120,10 @@ proof at halo ≤ 1.
   [[../concepts/temporal-rewind-search]] with codebase audit
   up-front (lesson learned from vol-62).
 
+## NOTE: this is the vol-62 session; vol-65 is its own session
+
+See [[vol-65]] for the substantial vol-65 work that came after.
+
 ## Linked memory
 
 - `feedback_vols_61_to_70_invented_algos` — directive
