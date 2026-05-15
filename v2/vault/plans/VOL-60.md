@@ -68,6 +68,30 @@ have run.
 - If T2a doesn't break record: T2b+T2c full Blackwood replication or
   pivot to CDCL compact clauses.
 
+## T3 — corner-assignment sweep (RUNNING, replaces T1)
+
+User question prompted this pivot: "by considering that we have
+something like 16 known starting positions if we pin hints+corners,
+how could that help?"
+
+Answer: 9 pins (5 canonical + 4 corners) BUT 24 valid corner-piece
+permutations. Vol-32 458 and blackwood_mrv 457 use ONLY 2 of the 24.
+Systematic sweep = 24 distinct basin starting points.
+
+Sweep launched 16:02 CEST. 24 perms × 5min CP each, parallel=8.
+- Pinning: `--pin-hints` (canonical) + 4 × `--extra-hint` (corners)
+- Snapshots saved per perm at depth ≥100
+- Wall: ~15 min for 24 perms
+
+Smoke test confirmed: 1 perm reaches depth 207 in 30s, score 426/480.
+Likely all 24 perms reach depth ≥200 in 5min.
+
+T4: ALNS lottery on each perm's best snapshot (4 seeds × 5min,
+24 × 4 = 96 jobs ≈ 60 min wall on 8 cores).
+
+Vol-60 T1 (long-ALNS lottery) was killed — it was testing only one
+corner assignment. T3+T4 is strictly more diverse.
+
 ## Linked
 
 - [[../sessions/vol-59]] — predecessor
