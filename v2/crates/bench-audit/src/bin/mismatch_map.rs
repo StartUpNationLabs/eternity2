@@ -145,6 +145,20 @@ fn main() {
                 println!("--- {} ---", arg);
                 println!("Mismatches: BB={n_bb}  BI={n_bi}  II={n_ii}  total={}", edges.len());
 
+                let bi_edges: Vec<_> = edges.iter().filter(|(_, _, t)| *t == 1).collect();
+                println!("B-I mismatched edges:");
+                for (a, b, _) in &bi_edges {
+                    let (ax, ay) = puzzle.xy(*a);
+                    let (bx, by) = puzzle.xy(*b);
+                    let a_per = eternity2_bench_audit::border_ub::is_perimeter_pos(&puzzle, *a);
+                    let b_per = eternity2_bench_audit::border_ub::is_perimeter_pos(&puzzle, *b);
+                    let perim_pos = if a_per { *a } else { *b };
+                    let int_pos = if a_per { *b } else { *a };
+                    let (px, py) = puzzle.xy(perim_pos);
+                    let (ix, iy) = puzzle.xy(int_pos);
+                    println!("  perim {perim_pos}=({px},{py}) — interior {int_pos}=({ix},{iy})");
+                }
+
                 // I-I edges by (row, col)
                 let ii_edges: Vec<_> = edges.iter().filter(|(_, _, t)| *t == 2).collect();
                 println!("I-I mismatched edges (x,y of each endpoint):");
