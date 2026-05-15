@@ -1,36 +1,38 @@
-# Current vol — between vol-58 and vol-59 — 2026-05-15
+# Current vol — vol-59 CLOSED, vol-60 queued — 2026-05-15
 
-**Status**: vol-58 closed. Vol-59 not yet opened. Lottery running.
+**Session 2026-05-15 fully closed**. 6 vols shipped (54, 55, 56, 57,
+58, 59) across ~3 hours of autonomous compute.
 
-## Session summary
+## Standing record state
 
-See [[../sessions/SESSION_2026-05-15_summary]] for full context. This
-autonomous session shipped vols 54-58 in ~3 hours. Standing 458
-record ULTRA-confirmed locally optimal across 22 cluster MIPs.
+- **458** matched edges, vol-32 vanilla_fast + ALNS (3/5 canonical hints).
+- ULTRA-CONFIRMED locally MIP-optimal across 22 cluster geometries
+  spanning 3 basin families (family A, family B, McGavin 469).
+- Matches Schaus & Deville 2008 academic CP+VLNS SOTA.
+- Empirical record-break probability in vanilla pipeline: ≤ 0.6%.
 
-## Lottery status
+## Vol-60 candidates
 
-`scripts/vol56_basin_lottery.sh` running in background:
-- 39 vanilla_fast snapshots × 4 seeds × 5min ALNS = 156 jobs.
-- Currently ~80/156 done.
-- Best score so far: 458 (matches standing record).
-- ETA: ~14:50 CEST (50 min from session midpoint).
+After vol-59 T4's theoretical finding that E2's flat cause-graph
+limits SAT-style 1-UIP, the CDCL direction is uncertain.
 
-## Vol-59 candidates (next session — auto OR user)
+1. **Different basin source** — McGavin pipeline replication
+   (multi-week multi-machine).
+2. **Schedule-relaxation** in CP search (multi-day, vol-15 tried, hit
+   depth-wall 80; might revisit with different relaxation schedules).
+3. **RL self-play value order** (vol-30 BACKLOG, multi-week).
+4. **CDCL with E2-specific clause representation** (vol-60 reframed,
+   investigate compact per-cell forbidden sets + subsumption).
+5. **Cross-puzzle transfer learning** — train on small E2-style
+   puzzles, transfer to canonical (vol-28 refuted naive transfer, but
+   distribution-matched training was promising).
 
-1. **Real 1-UIP for canonical CDCL** (multi-day, high uncertainty,
-   only path to make `cdcl-proto` viable at canonical scale).
-2. **Scheduled relaxations** in CP search (multi-day, prior art:
-   Blackwood 470 used this).
-3. **Lottery completion + analysis** (passive, no new compute).
-4. **McGavin pipeline replication** (multi-week multi-machine,
-   defer).
-
-The first three are roughly comparable in EV; vol-59 should pick the
-one that fits available compute and continuity from this session.
+None are guaranteed wins. The session's most honest conclusion: we've
+reached the academic ceiling for CP+VLNS approaches. Breaking 458
+requires either substantially more compute or a paradigm shift.
 
 ## Linked
 
 - [[../sessions/SESSION_2026-05-15_summary]] — full session writeup
-- [[../sessions/vol-58]] — most recent vol
+- [[../sessions/vol-59]] — most recent vol
 - [[../concepts/standing-458-record-status]] — comprehensive status

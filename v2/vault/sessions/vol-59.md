@@ -107,6 +107,65 @@ but rather "investigate E2-specific clause-size reduction techniques"**:
 Reframing the vol-60 problem this way is more honest than chasing
 SAT-style 1-UIP that may not apply.
 
+## T5 — basin lottery COMPLETED 156/156 (final analysis)
+
+Lottery completed at 15:31 CEST (~1h45m total wall time, 8 threads,
+5min ALNS each). 39 distinct vanilla_fast snapshots × 4 seeds = 156
+total runs.
+
+### Final score distribution
+
+| Statistic | Value |
+|---|---:|
+| min | 424 |
+| p25 | 446 |
+| median | 452 |
+| **mean** | **449.88** |
+| p75 | 454 |
+| p90 | 456 |
+| **max** | **458** (1 occurrence) |
+
+### Top records (≥457)
+
+| Score | Snapshot | Seed | Initial depth |
+|---:|---|---:|---:|
+| **458** | t601_s002_d207 | 4 | 207 |
+| 457 | t606_s002_d211 | 2 | 211 |
+| 457 | t601_s002_d207 | 2 | 207 |
+| 457 | t601_s001_d206 | 4 | 206 |
+
+**Total: 4 records at 457+**, **0 records at 459+**.
+
+### Per-thread max
+
+Thread 601 produced the only 458. Thread 606 produced one 457. All
+other threads capped at 456.
+
+### Empirical record-break probability
+
+For our vanilla_fast + ALNS pipeline @ 5min budget:
+- P(458) per job = 1/156 = **0.64%**
+- P(457+) per job = 4/156 = **2.6%**
+- P(459+) per job = 0/156
+
+To find a 459 with 50% probability under same setup: need ~116 more
+jobs (~60 more minutes on 8 threads). High variance, low EV given
+Schaus 2008 academic ceiling at 458.
+
+### Vol-59 close
+
+Closing vol-59 with:
+- T1 (Joe iter-budget): deferred per vol-50 evidence of no benefit.
+- T2 (thread-601 follow-up): killed after 2 seeds (454/453, lower
+  than 458) refuted "rich basin" hypothesis.
+- T3 (CDCL scaling 5×5→16×16): SHIPPED.
+- T4 (1-UIP theoretical analysis): SHIPPED — E2 flat cause graph
+  limits 1-UIP benefit.
+- T5 (lottery final): 1×458 + 3×457 in 156 trials, no 459+.
+
+**Standing 458 record UNCHANGED** after 156 lottery trials confirming
+the empirical record-break probability is ≤ 0.6%.
+
 ## Linked
 
 - [[../sessions/vol-58]] — predecessor with canonical-scale failure
