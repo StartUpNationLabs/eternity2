@@ -49,12 +49,35 @@ its I-I is 0.48 short. Spread evenly.
 To find a 480 basin: need bi_ub=56 AND ii_ub=364 simultaneously.
 The 479 basin shows it's not unreachable.
 
-## Status
+## ALNS push result (vol-46)
 
-8 ALNS-diverse seeds × 1h running. Monitor armed.
+8 ALNS-diverse seeds × 1h on this basin:
+- All 8 seeds plateau at 457 (no lift)
 
-If ALNS plateaus at 457-458, the basin is locked like the others.
-If it lifts to 459+, RECORD BREAK.
+The 479-UB basin is locked at 457 under ALNS-diverse, same pattern
+as our class A 458 basin locked at 458.
+
+## MIP cluster-repair result (vol-46)
+
+28-cell MIP on union of all 10 mismatch clusters: **delta=0 in 0.46s**.
+
+**Proven locally optimal at 457.** Same proof pattern as vol-32 458.
+
+## Conclusion
+
+The LP UB 479 cap doesn't translate to integer lift in this basin.
+The 22-point LP-integer gap is consistent across all sampled basins:
+- Class A: LP 478, integer 458, gap 20
+- Class B: LP 477, integer 457, gap 20
+- 479 basin (D): LP 479, integer 457, gap 22
+
+**LP UB is a basin signature but not a predictor of integer ceiling.**
+Each basin has a ~20-point gap that local-search cannot close.
+
+To actually break 458 requires either:
+- A basin where the LP-integer gap is smaller (none found in 18 LP UB
+  tests across diverse basins).
+- Multi-day MIP / RL / custom propagator work.
 
 ## Linked
 
