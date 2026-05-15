@@ -89,7 +89,7 @@ fn main() {
         .filter(|&p| !is_corner_pos(&puzzle, p))
         .collect();
 
-    let opts = LpOptions { verbose: false, threads: 8, time_limit_secs: 600.0, use_ipm: true, presolve: true, integer: false };
+    let opts = LpOptions { verbose: false, threads: 8, time_limit_secs: 600.0, use_ipm: true, presolve: true, integer: false, force_bi_match: Vec::new() };
     eprintln!("Computing baseline LP UB on {} (k={k} trials={trials} seed={seed_arg})...", path_arg);
     let baseline = lp_ub_with(&puzzle, &border_board, opts.clone()).expect("baseline LP");
     println!("baseline\ttotal_ub={:.4}\ttime={:.1}s",

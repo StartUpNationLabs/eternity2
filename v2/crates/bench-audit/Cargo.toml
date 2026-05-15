@@ -198,6 +198,10 @@ name = "hall_condition"
 path = "src/bin/hall_condition.rs"
 
 [[bin]]
+name = "bi_forced_analysis"
+path = "src/bin/bi_forced_analysis.rs"
+
+[[bin]]
 name = "board_diff"
 path = "src/bin/board_diff.rs"
 

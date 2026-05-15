@@ -10,7 +10,7 @@ use good_lp::{
     Expression, ProblemVariables, Solution, SolverModel, Variable, variable,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct LpOptions {
     pub verbose: bool,
     pub threads: u32,
@@ -18,6 +18,9 @@ pub struct LpOptions {
     pub use_ipm: bool,
     pub presolve: bool,
     pub integer: bool,         // make x[c,p,r] and y[edge,k] binary (MIP mode)
+    /// Force these B-I edges to match (their y_bdy = 1). Each entry is
+    /// (interior_cell, side, required_color) — must match an actual B-I edge.
+    pub force_bi_match: Vec<(Position, u8, u8)>,
 }
 
 impl Default for LpOptions {
@@ -29,6 +32,7 @@ impl Default for LpOptions {
             use_ipm: true,
             presolve: true,
             integer: false,
+            force_bi_match: Vec::new(),
         }
     }
 }
@@ -306,6 +310,10 @@ pub fn lp_ub_with(puzzle: &Puzzle, board: &Board, opts: LpOptions) -> Result<LpU
             .map(|&(v, _)| v)
             .sum();
         model = model.with(constraint!(y_bi_v <= supply));
+        // Force this B-I edge to match if requested.
+        if opts.force_bi_match.contains(&(cell, side, color)) {
+            model = model.with(constraint!(y_bi_v == 1.0));
+        }
     }
 
     let mut n_y_constraints = bi.len();

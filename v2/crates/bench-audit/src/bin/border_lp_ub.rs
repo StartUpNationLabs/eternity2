@@ -62,6 +62,7 @@ fn main() {
             use_ipm: true,
             presolve: true,
             integer: false,
+            force_bi_match: Vec::new(),
         };
         match lp_ub_with(&puzzle, &border_board, opts) {
             Ok(r) => {

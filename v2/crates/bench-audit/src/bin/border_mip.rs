@@ -67,6 +67,7 @@ fn main() {
         use_ipm: false, // MIP uses simplex for relaxations
         presolve: true,
         integer: true,
+        force_bi_match: Vec::new(),
     };
     eprintln!("Running MIP on {path_arg} with time_limit={time_limit_secs}s threads={threads}");
     match lp_ub_with(&puzzle, &border_board, opts) {
