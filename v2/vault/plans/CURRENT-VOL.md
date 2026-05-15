@@ -1,51 +1,53 @@
-# SESSION CLOSED — 2026-05-14 19:30 CEST
+# Current vol — vol-45 (opening) — 2026-05-15
 
-**Autonomous session vol-36 → vol-42 complete. Awaiting user.**
+**Predecessor**: vol-44 closed with rich research output (8 findings,
+14 tools) but no record break. See [[../sessions/vol-44]].
 
-## Headline
+## Vol-44 summary (carried forward)
 
-7 volumes of autonomous work. Real tools shipped, real measurements,
-**3 new verified canonical records (454, 455 ×2)**, **1 positive engine
-signal (RecordsPrior +8 mean ALNS score)**, **no record-break**.
+- LP UB tool ships. 3 border-classes identified (A 478, B 477, C 476).
+- vol-32 458 basin is locally optimal under MIP at 28-cell rearrangement
+  PROVEN exact. Locked under ALNS-diverse (24 seeds, vol-40), ALNS-mega_mix
+  (8 seeds × 1h, vol-44), MIP cluster-repair (halo ≤ 2, vol-44), and
+  196-cell whole-interior MIP (1h, no improvement, vol-44 final).
+- 458 border is LP-UB locally maximal under k≤3 random perturbations
+  (13/13 trials decrease UB).
+- Combinatorial color UB = 480 (no parity waste); LP UB 478 captures
+  spatial obstruction.
+- McGavin 469 canonical-projected gives LP UB 477 < 478. McGavin's
+  border is NOT a route past 458 on canonical 5-clue.
 
-Best canonical record: 457 (×3, unchanged).
-Best absolute record: 458 (×2, unchanged, 3/5 hints).
+**Conclusion**: 458 is firm in this basin. Record break needs a
+*different* basin (LP UB ≥ 479) or fundamentally different search.
 
-## Why session closed (not continuing)
+## Vol-45 candidates (1 binding item per audit-at-open rule)
 
-Three user re-evaluation prompts during the session indicated the same
-problem: I kept defaulting to lottery work that didn't break records.
-After 7 volumes and ~40 ALNS lottery runs, the empirical ceiling under
-our current operators is firm:
-- canonical 454 → 455 (25% via ALNS-diverse)
-- canonical 455 → 456 (untested but expected ~10%)
-- canonical 457 → 458 (0% across 24 runs, confirmed ALNS-locked)
+1. **CP search with LP UB objective**: build a CSP propagator that at
+   each border placement step prunes by a partial-LP UB lower bound.
+   Goal: directly generate borders with LP UB ≥ 479. Cost: ~2-3 days
+   if LP at every CSP node is too slow; can use cheap proxies (color
+   count, edge-supply Hall conditions). **Selected for vol-45.**
 
-To break 458 needs either community-class compute or a new algorithm
-class (RL/MaxSAT/LP — each multi-day build).
+2. **Per-color LP UB diagnostic**: extend `border_ub.rs` to report
+   sum(y) per color k. Identify which colors are LP-spatially-bottle-
+   necked on class A. Cheap. Backup if (1) too big.
 
-The valuable contribution is the toolkit + honest measurements, which
-are now documented and shipped. Continuing to launch lotteries would
-produce more honest nulls without changing this picture.
+3. **Multi-trajectory CP exploration**: run CP with 16+ distinct
+   value-order seeds, save partials, compute LP UB on each. Find
+   basins with UB > 478. Cost: ~hours. Mid-effort alternative.
 
-## Next vol (vol-43+) — for user when returning
+## Audit-at-open compliance
 
-Three real directions remain unbuilt (each is a multi-day project):
+Aged unbuilt from BACKLOG:
+- RL self-play (T1 vol-30) — `unbuilt`, since vol-30 (3 vols ago). 
+  Multi-week build; not picking up vol-45. Status: deferred again
+  with reason "vol-44 measurements suggest the 458 basin is too
+  locally locked for value-order improvements to help; need basin-
+  changing moves not value-order moves."
 
-1. **No-good CDCL learning** in solver-engine (~2-3d). Standard SAT
-   technique not yet applied to E2. May give 5-15% search reduction.
-2. **RL self-play for value-order** (~1-2 weeks). Vol-29 imitation
-   ceiling identified RL as the only structural path past it. 1-week
-   build + days training.
-3. **LP relaxation B&B** (~1 week). Standard OR. Would need HiGHS or
-   commercial solver (scipy too slow at this scale).
+## Linked
 
-None of these guarantee a record-break, but each is a real frontier.
-
-## Wake summary
-
-See `vault/sessions/WAKE_SUMMARY_2026-05-14.md` for the full status
-report covering vol-36-40.
-
-For vol-41 (RecordsPrior) see `vault/sessions/vol-41.md`.
-For vol-42 (McGavin canonical) see `vault/sessions/vol-42.md`.
+- [[../sessions/vol-44]] — predecessor session
+- [[../concepts/lp-ub-478-basins]]
+- [[../concepts/458-class-A-mismatch-structure]]
+- [[../concepts/color-multiset-bound]]
