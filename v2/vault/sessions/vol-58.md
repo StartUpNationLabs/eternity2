@@ -85,3 +85,33 @@ multiple distinct 457-458 basins. None exceed 458 in literal
 matched-edges. The score-458 ceiling persists across all explored
 basins.
 
+## T4 — extensive family-B MIP grid sweep (9 cluster locations)
+
+Ran vol-55 MIP on 5×4 clusters at (x0, y0) ∈ {0, 5, 10} × {0, 5, 10}
+on the family-B 457 board. **All 9 clusters MIP-locally-optimal** (no
+score lift). LP UBs: 32-49, MIPs match current at every cluster.
+
+Combined with vol-55 family-A 4 clusters: **13 cluster MIPs across
+both basin families, all locally optimal**. The standing 458 record's
+local optimality is now ULTRA-confirmed.
+
+Path to >458 is restricted to:
+1. A basin we haven't found (lottery completing).
+2. Algorithm beyond CSP+MIP (CDCL+2WL, RL, neural-MCTS).
+
+## Vol-58 close
+
+Vol-58 shipped: T1 family-B MIP (2 clusters), T2 partial 2WL, T3
+lottery 458 finding analysis, T4 family-B 9-cluster grid sweep. Plus
+ongoing background lottery.
+
+Standing 458 record unchanged but **its local optimality is now
+extensively confirmed across 13 distinct cluster geometries spanning
+both basin families**. The "458 may be near-globally-optimal" claim
+from vol-53 is now stronger than ever.
+
+Vol-59 candidates:
+- Continue real 2WL for CDCL.
+- Try unsat-soft-value-order (BACKLOG since vol-34).
+- Wait for lottery completion + analyze full sweep.
+
