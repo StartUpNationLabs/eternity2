@@ -578,6 +578,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-cdcl-proto"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-puzzle-io",
+]
+
+[[package]]
 name = "eternity2-core"
 version = "0.1.0"
 dependencies = [

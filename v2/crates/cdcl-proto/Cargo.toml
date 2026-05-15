@@ -1,0 +1,11 @@
+[package]
+name = "eternity2-cdcl-proto"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-puzzle-io = { path = "../puzzle-io" }
+
+[lints]
+workspace = true

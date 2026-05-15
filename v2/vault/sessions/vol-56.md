@@ -1,8 +1,9 @@
 # Vol-56 — dual-track: basin lottery (bg) + CDCL no-good math (fg)
 
 **Open**: 2026-05-15
+**Close**: 2026-05-15 (same session, autonomous mandate active)
 **Theme**: First autonomous-vol-after-explicit-don't-wait directive.
-**Status**: in-progress.
+**Status**: CLOSED. 8 deliverables shipped + 1 background lottery still running.
 
 ## T1 — basin lottery (background)
 
