@@ -67,6 +67,8 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  51 |             — |       — | **Vol-51 closed (modest infrastructure, no record)**: B1 bound-trigger prune-restart built and shipped — extracted `relaxed_bound` to bench-audit lib, added `--bound-trigger` and `--drop-k-bound-stall` flags to prune_restart, per-round bound logged. Empirical: trigger CORRECTLY fires when board is full + score stagnant; **recovery is the bottleneck** — drop k=60 + halo = 164 cells dropped, CP-MaxScore refills only 140 in 30s, score collapses to 188 from 412. Pivot to B3 engine profiling found vol-25 already did this comprehensively (7 fixes shipped, joe +22%, BLACKWOOD_RAW +27%); no further research-grade profiling work remains. Apples-to-apples: our vanilla_fast 125M nps single-thread vs McGavin 295M — only ~2.4× gap, not the "4000×" suggested by mismatched comparison. Standing 458 record unchanged. [[vol-51]] |  |
 |  52 |             — |       — | **Vol-52 closed (design doc only)**: 400-line concept page on lifted-LP via per-piece column-generation. Structural alternative to vol-47's failed McCormick: keeps same LP variables, decomposes via Lagrangian per piece. Each subproblem ≤ 800 placements; master is LP. Expected to close 12 of 20 LP-integer-gap points (piece-uniqueness joint-infeasibility). Wouldn't directly break 458 (which vol-44 proved integer-optimal under MIP) but provides optimality certificates per basin + tighter CSP-search bound. Engineering: 7-10 days; flagged as candidate for vol-53+. No code shipped this vol; design-only per CLAUDE.md senior-researcher mode. [[vol-52]] |  |
 |  53 |             — |       — | **Vol-53 closed (PARTIAL REFUTATION of vol-52)**: Python+highspy worked example on toy 2-3 cell LP instances. All toy cases LP=Integer (zero gap). Reveals the canonical-E2 20-point LP-integer gap doesn't come from piece-uniqueness fractionality alone — it comes from y-linearisation interacting with piece-uniqueness at scale. Per-piece column-gen alone won't close the gap; needs full branch-and-price-and-cut (revised estimate: 3-4 weeks, not 7-10 days). Standing 458 may be near-globally-optimal under search algorithms we have. [[vol-53]] |  |
+|  54 |             — |       — | **Vol-54 closed (math resolution of vol-50 vs vol-53)**: built `per_color_integer` bin, filled the INTEGER column of vol-50's anatomy table. Confirms 5.96 fractional + 12 rounding = 17.96 II gap numerically. **BUT**: color 8 has INT=21 > floor(LP_UB)=20, proving `floor(LP_UB[k])` is NOT a per-color integer bound; vol-50's "12 from piece-uniqueness joint-infeasibility" interpretation refuted. Minimal 2-cell, 2-piece worked example (HiGHS verified) gives LP=1.0, INT=0, gap=1.0 — the actual mechanism is **cell-fractional x**, not rotation-fractional or piece-uniqueness slack. Vol-52 design now `refuted`: per-piece column-gen tightens rotations but doesn't restrict cell-level fractionality. Vol-44 MIP (1h) remains the cheapest tight bound. [[vol-54]] [[y-linearisation-cell-fractional-gap]] |  |
+|  55 |             — |       — | **Vol-55 closed (MVP success: B&P-and-cut on canonical-E2)**: 3-hr build (per user "limiting thoughts" challenge), shipped `dump_cluster_for_lp` Rust bin + Python+highspy LP/MIP solver. Measured LP UB vs MIP optimum vs current-458 on 6 real canonical-E2 clusters. **LP-MIP gap is real**: 5×4 cluster has gap=3.31, 6×3 has gap=3.41 (confirms vol-54 mechanism on canonical data). **458 record is LOCALLY OPTIMAL on every cluster tested** (MIP=current for all 6, including the gap-3 clusters). The cell-fractional gap is LP looseness, NOT 458-suboptimality. Sharpens vol-44's single-cluster local-optimality to multi-cluster local-optimality. Standing 458 confidence substantially raised; remaining question is whether a higher-MIP basin exists. MIP runtime scales ~2× per added cell — full canonical-scale needs Rust + column-gen (vol-44 already did this in different form). [[vol-55]] |  |
 
 
 ## Concepts — by category
@@ -123,6 +125,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[operator-lock]] — K ≤ 5 lock test (vol-20)
 - [[inner-k-optimality]] — EvalMaxSAT proof for sub-regions
 - [[exact-joint-bound]] — MaxSAT for joint optimum (z3 failed, kissat-RC2 unbuilt)
+- [[lp-integer-gap-anatomy]] — vol-50 anatomy; vol-54 filled INT column + sharpened interpretation
+- [[y-linearisation-cell-fractional-gap]] — **vol-54** precise gap mechanism (cell-fractional x, NOT rotation-fractional)
+- [[lifted-lp-column-gen-per-piece]] — vol-52 design, **refuted at vol-54** (column-gen alone doesn't close cell-fractional gap)
 
 ### Pipelines / infrastructure
 - [[basin-escape-recipe]] — vol-22 composite
@@ -167,7 +172,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 
 ## Sessions
 
-- [[sessions/vol-01]] through [[sessions/vol-25]] — per-volume journals
+- [[sessions/vol-01]] through [[sessions/vol-54]] — per-volume journals
 - [[sessions/night-05]], [[sessions/night-07]] — preprint + closeout distillations
 - `sessions/archive/raw/` — original RESEARCH_NOTES_*.md, NIGHT*.md, V15_BLACKWOOD_SPEC.md
 

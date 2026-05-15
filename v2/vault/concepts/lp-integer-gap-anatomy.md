@@ -87,17 +87,59 @@ underlying `x` (piece assignments to cells with rotations) is fractional.
    constraints. The MaxSAT route was BACKLOG'd ([[exact-joint-bound]])
    but considered intractable at 16×16.
 
-## Open question — needs measurement
+## Vol-54 measurement — integer per-color column FILLED
 
-The "integer best" column above is UNKNOWN per-color. The LP gave
-us per-color UB; the integer best per-color (sum = 346 known) is
-distributed somehow. Knowing this distribution would tell us:
-- Which colors are jointly-infeasible at LP UB (those with biggest
-  LP-int gap per color).
-- Whether the gap is concentrated on 1-2 colors or spread evenly.
+Built `bin/per_color_integer.rs` and measured on vol-32 458 board:
 
-To compute: enumerate matched edges per-color in the integer 458 board.
-Fast (Python script over the placement JSON). Worth doing for vol-51.
+| color | LP_UB  | INT |  Δ_to_LP |
+|------:|------:|----:|---------:|
+|     6 |19.9419|  19 |   0.9419 |
+|     7 |19.0000|  18 |   1.0000 |
+|     8 |20.8874|  21 |  -0.1126 |
+|     9 |20.8686|  20 |   0.8686 |
+|    10 |22.8289|  22 |   0.8289 |
+|    11 |23.6234|  22 |   1.6234 |
+|    12 |23.0000|  22 |   1.0000 |
+|    13 |22.0000|  21 |   1.0000 |
+|    14 |21.1476|  20 |   1.1476 |
+|    15 |19.0000|  17 |   2.0000 |
+|    16 |20.9401|  20 |   0.9401 |
+|    17 |23.0000|  22 |   1.0000 |
+|    18 |22.2440|  20 |   2.2440 |
+|    19 |19.0000|  19 |   0.0000 |
+|    20 |21.4818|  20 |   1.4818 |
+|    21 |22.0000|  22 |   0.0000 |
+|    22 |23.0000|  21 |   2.0000 |
+| **Σ** |363.96 | 346 |  17.9637 |
+
+**Note color 8: INT=21 > floor(LP_UB)=20.** The LP allocates 20.88 to
+color 8 at its joint optimum; integer achieves 21. This proves
+**`floor(LP_UB[k])` is NOT a per-color integer upper bound** — it's
+just where the LP joint optimum happened to land for that color.
+
+### Interpretation correction (vol-54)
+
+The "12 points integer-rounding loss" framing in this page is
+numerically correct (5.96 fractional + 12 rounding = 17.96 ≈ 18) but
+**conceptually misleading**.
+
+The 12 isn't "loss from piece-uniqueness joint-infeasibility". It's
+"the LP allocates colors differently than integer can replicate" —
+specifically, the LP exploits cell-fractional x to lift y, while
+integer x is forced to commit each piece to one cell.
+
+See [[y-linearisation-cell-fractional-gap]] for the precise gap
+mechanism (minimal worked example: 2 cells, 2 pieces, LP=1.0,
+integer=0). Vol-53's intuition was right but worded loosely;
+vol-54 made it tight.
+
+### What the table now tells us
+
+- Color 15 and color 18 carry the largest integer-LP gaps (2 each).
+  Worth checking their geometric distribution in future work (which
+  cells, are they clustered, etc.).
+- Color 8's INT > LP shows LP UB is not a per-color isolated bound;
+  joint reallocation can let a color exceed its solo LP attainability.
 
 ## Linked
 - [[lp-ub-478-basins]] — basin class data
@@ -106,3 +148,5 @@ Fast (Python script over the placement JSON). Worth doing for vol-51.
 - [[lifted-lp-formulation]] — vol-47 attempt
 - [[exact-joint-bound]] — kissat path (wont-do)
 - [[per-color-lp-ub-458]] — the existing measurement that this analyses
+- [[y-linearisation-cell-fractional-gap]] — **vol-54 successor: precise mechanism**
+- [[../sessions/vol-54]] — vol-54 session producing this table

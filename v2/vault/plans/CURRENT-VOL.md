@@ -1,70 +1,64 @@
-# Current vol — vol-54 (queued, session-end disposition) — 2026-05-15
+# Current vol — vol-56 (queued, session-end disposition) — 2026-05-15
 
-**Predecessor**: vol-53 closed with PARTIAL REFUTATION of vol-52's
-per-piece column-gen design. The LP-integer gap path is more
-expensive than estimated (3-4 weeks branch-and-price-and-cut).
+**Predecessor**: vol-55 shipped MVP B&P-and-cut and confirmed the 458
+record is MIP-locally-optimal on 4 distinct cluster geometries.
 
-## Session disposition (autonomous-agent honesty)
+## Session summary
 
-This run shipped 4 closed volumes (50-53) over ~4 hours:
-- vol-50: node_budget engine axis + LP gap math (negative on record)
-- vol-51: bound-trigger prune_restart (negative on record)
-- vol-52: per-piece column-gen design doc (deferred build)
-- vol-53: **REFUTATION** of vol-52 (column-gen alone won't close gap)
+Vols 54-55 shipped in the same autonomous session:
+- vol-54 (math): resolved vol-50 vs vol-53 contradiction; established
+  cell-fractional x as the precise gap mechanism via worked example +
+  HiGHS verification.
+- vol-55 (code): MVP B&P shipped today after user's "limiting thoughts"
+  feedback. 458 confirmed MIP-locally-optimal on 4 cluster geometries
+  beyond vol-44's single 196-cell test.
 
-Vol-53's refutation is the most consequential finding: **the standing
-458 record is likely near-globally-optimal for current search
-algorithms**. The path to >458 requires either multi-week algorithm
-change or weeks-of-MIP, neither contained within a single autonomous
-session.
+Standing 458 record unchanged but **its local-optimality is now much
+more strongly established** than before this session.
 
-## Vol-54 candidate paths (NOT actively building)
+## Vol-56 candidate directions (per audit-at-open at next-open)
 
-After vol-53's refutation, the remaining contained-EV options are:
+After vol-55's local-optimality result, the path to >458 needs:
+- A **different basin** (vol-22 basin-escape recipe direction).
+- Or a **fundamentally different search algorithm** (CDCL no-good
+  learning, neural MCTS, RL self-play — multi-week each).
 
-1. **LNS-style recovery for vol-51 B1 bound-trigger**: 1-2 days,
-   modest score lift. Pin-everything-except-drop-subset, run CP
-   on residual. Probable outcome: small score lift in the same
-   basin; no record.
+Vol-55 confirmed that LP-tightening alone (the vol-44 → vol-52 → vol-54
+arc) is NOT a record-track path. The LP gap is real but it's LP
+looseness, not 458 suboptimality.
 
-2. **Vol-25 perf backlog**: ~+20% on joe_depth150_bp via 4
-   engineering items (incremental AC-3 count, SIMD restore, etc.).
-   Pure engineering; no algorithm change; no record-track.
+Active candidates for vol-56:
 
-3. **No-good CDCL learning in solver-engine**: multi-week, high
-   uncertainty, potentially record-track. Single-session can only
-   start it, not finish.
+1. **Basin-finding lottery** — vol-22's basin-escape recipe at a budget
+   we haven't tested (e.g., 30 different starting partials, ALNS-PT at
+   30 min each). Goal: discover a basin with MIP > 458 *if one exists*.
+   1-2 day compute, no novel algorithm. ~highest EV given vol-55's
+   result.
 
-4. **Different search algorithm entirely** (neural MCTS, RL with
-   engine-side stochastic policy, etc.): multi-week+, undefined.
+2. **CDCL no-good learning in solver-engine** — multi-week build,
+   genuinely new algorithm. Unclear EV but the only structurally novel
+   path.
 
-## Why not actively starting vol-54
+3. **rl-self-play-value-order** (BACKLOG since vol-30) — multi-week
+   build + training compute. The only direction that could
+   structurally beat vol-29's imitation ceiling.
 
-Per CLAUDE.md "don't stop unilaterally" + "pivot to a real next
-experiment, not stopping and waiting". HOWEVER, after vol-53's
-refutation closed the highest-EV math direction, the contained-EV
-options listed above are:
-- Either too small to matter (LNS recovery, perf backlog).
-- Or too large to start meaningfully in remaining session time
-  (CDCL, new search algorithm).
+## Audit-at-open compliance (when vol-56 opens)
 
-The senior-researcher move per CLAUDE.md "Stop the comfort-lottery
-pattern" is to recognise that pushing into low-EV options risks
-producing thin output that DILUTES the session's strong findings.
+Same set of aged-3+ items as vol-54 audit; vol-55 doesn't add new ones.
+The `vol-52 design` page is now `refuted` not `unbuilt`, removing it
+from the aged-unbuilt list.
 
-Vol-54 is queued; the next session (user or autonomous) picks the
-binding item with fresh context.
+## What is NOT changing
 
-## Audit-at-open (for next session)
-
-Aged ≥ 3 vols from BACKLOG:
-- `mcgavin-prune-restart-bound-trigger` — built vol-51, recovery is the bottleneck
-- `unsat-soft-value-order-vol37` — still unbuilt, defer
-- `restore-or-simd`, `precompute-cell-nb-info`, `vault-validation-of-perf-wins` — engineering perf items, defer
-- `rl-self-play-value-order` — multi-week, defer
+Standing 458 record. The vault now has stronger evidence for its local
+optimality:
+- vol-44: 196-cell whole-interior MIP at 1h compute.
+- vol-55: 4 cluster geometries (3×3, 4×4, 5×4, 6×3) at 30s-90s each.
 
 ## Linked
 
-- [[../sessions/vol-53]] — predecessor with refutation
-- [[../concepts/per-piece-column-gen-6x6-worked]] — vol-53 finding
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 math motivation
+- [[../sessions/vol-55]] — MVP result
+- [[../sessions/vol-54]] — math foundation
+- [[../concepts/y-linearisation-cell-fractional-gap]] — mechanism
+- memory: `project_e2_vol55_local_optimality_multi_cluster.md`

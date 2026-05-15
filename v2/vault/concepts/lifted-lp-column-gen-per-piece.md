@@ -1,9 +1,17 @@
 # Lifted LP via per-piece column-generation — design
 
-**Status**: `partially-refuted` — vol-53 worked-example math revealed
-that per-piece column-gen alone does NOT close the gap. The y-side
-linearisation needs branch-and-price-and-cut, not just column-gen.
-See [[per-piece-column-gen-6x6-worked]] for the refutation analysis.
+**Status**: `refuted` — vol-54 worked-example (minimal 2-cell, 2-piece
+instance with HiGHS verification) shows the gap mechanism is **cell-
+fractional x**, NOT rotation-fractional x. Per-piece column-gen
+tightens the rotation-level convex hull but does NOT close the cell-
+fractional gap. See [[y-linearisation-cell-fractional-gap]] for the
+precise mechanism and [[../sessions/vol-54]] for the proof.
+
+**Status (vol-53)**: `partially-refuted` — vol-53 worked-example math
+revealed that per-piece column-gen alone does NOT close the gap. The
+y-side linearisation needs branch-and-price-and-cut, not just column-
+gen. See [[per-piece-column-gen-6x6-worked]] for the original
+refutation analysis. **Vol-54 made this refutation precise.**
 
 **Status (original)**: `unbuilt` (design only) — vol-52 (2026-05-15).
 **Origin**: vol-52 binding item, building on vol-50 LP-integer gap
