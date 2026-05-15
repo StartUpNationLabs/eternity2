@@ -5,6 +5,7 @@ members = [
     "crates/benchmark",
     "crates/core",
     "crates/cp-lp-search",
+    "crates/rl-search",
     "crates/edge-solver",
     "crates/events",
     "crates/export",

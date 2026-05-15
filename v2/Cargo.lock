@@ -673,6 +673,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-rl-search"
+version = "0.1.0"
+dependencies = [
+ "eternity2-benchmark",
+ "eternity2-core",
+ "eternity2-events",
+ "eternity2-export",
+ "eternity2-puzzle-io",
+ "eternity2-solver-engine",
+ "eternity2-solver-trait",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "eternity2-sat-encoder"
 version = "0.1.0"
 dependencies = [

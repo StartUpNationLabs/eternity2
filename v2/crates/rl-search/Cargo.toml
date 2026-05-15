@@ -1,0 +1,24 @@
+[package]
+name = "eternity2-rl-search"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+eternity2-core = { path = "../core", features = ["serde"] }
+eternity2-puzzle-io = { path = "../puzzle-io" }
+eternity2-events = { path = "../events" }
+eternity2-export = { path = "../export" }
+eternity2-solver-engine = { path = "../solver-engine" }
+eternity2-solver-trait = { path = "../solver-trait" }
+eternity2-benchmark = { path = "../benchmark" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
