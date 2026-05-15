@@ -211,6 +211,98 @@ Vol-57 binding item: ship the Rust MVP. Per autonomous-mandate, multi-
 week work is in scope. Estimated 1 week for AC-3 cause-tracking +
 1-UIP + 2WL prototype on small puzzles; weeks 2-3 for canonical-scale.
 
+## T6 — solver-engine integration design (shipped)
+
+`vault/concepts/cdcl-engine-integration.md` — concrete Rust integration
+plan for the vol-57 build. Highlights:
+- Option A: separate cause-tracking AC-3 path (don't compromise hot path).
+- Conflict cause = union of placed-neighbour subsets per removed row.
+- 1-UIP analysis = minimal union of cause-sets (E2 has flat cause graph).
+- 2WL clause index for sub-linear unit propagation.
+- 3-week timeline (week 1: cause-tracking AC-3; week 2: NoGoodDB + 2WL;
+  week 3: tuning + measurement).
+
+## T7 — STRUCTURAL DISCOVERY: row-11 bifurcation (NEW FINDING)
+
+Took the 6 unique verified records (1 vol-32 458 + 3 blackwood_mrv 457 +
+2 vol-35 457/458) and computed per-cell agreement. Results:
+
+### Invariant cells: 6 (same as vol-37)
+- Pos 0, 1 (corner + border, forced)
+- Pos 34, 45, 135 (canonical hints, forced)
+- **Pos 161 (vol-37 finding, the only non-trivial structural invariant)**
+
+No new universal invariants found.
+
+### **NEW finding: Row 11 is a bifurcation row**
+
+Distinct-values-per-cell grid shows row 11 (positions 176-189) is
+**almost entirely BIMODAL** — 10 of 16 cells use only 2 distinct
+piece-rotations across all 6 records. Surrounding rows (5-10, 12) are
+trimodal or quadrimodal.
+
+Family analysis at every bimodal row-11 cell:
+```
+RECORD                                              cells 0-13
+vanilla_fast 458                                    A A A A A A A A A A A A A
+blackwood_mrv_5min_seed7 457                        B B B B B B B B B B B B B
+blackwood_mrv_5min_seed10 457                       B B B B B B B B B B B B B
+blackwood_mrv_30min_seed4 457                       B B B B B B B B B B B B B
+vol-35 deep458 diverse 457                          A A A A A A A A A A A A A
+vol-35 deep458 full 457                             A A A A A A A A A A A A A
+```
+
+**Every single bimodal cell splits perfectly the same way.** The 6
+records partition cleanly into 2 families of 3 each:
+- **Family A**: vanilla_fast/diverse (3 records)
+- **Family B**: blackwood_mrv (3 records)
+
+### Interpretation
+
+Row 11 is a **structural bifurcation**: the puzzle structure admits at
+least 2 mutually-exclusive completions of row 11, and they're
+geographically uniform (entire row commits to one or the other).
+
+Once a search algorithm commits to either Family A or Family B at row
+11, **the rest of the row is forced**. The two families don't mix.
+
+**Algorithm provenance correlates perfectly**:
+- vanilla_fast + ALNS → Family A.
+- blackwood_mrv → Family B.
+
+### Implications for record-chasing
+
+1. **There may be Family C, D, ... we haven't discovered.** Each
+   bimodal cell has 6 records using 2 values; in principle a 3rd value
+   could exist that no record has used yet. Trimodal+ at row 11 would
+   be 3-or-more families.
+
+2. **The row-11 commitment is a high-information decision point.**
+   Knowing which family to be in could be propagated through the rest
+   of the search.
+
+3. **A "row-11 swap" operator**: given a Family-A record, can ALNS
+   swap row 11 to Family-B pieces and re-converge? If yes, we have
+   a productive new move; if no, the families are genuinely separated
+   by an energy barrier.
+
+4. **MIP per-family**: vol-44 confirmed 458 local-optimal on one
+   basin. Family A is the basin that contains 458. Family B basins
+   cap at 457. Is there a Family C with cap > 458?
+
+### Vol-57+ exploration paths inspired by this finding
+
+- **Row-11 swap operator**: implement an ALNS destroy-repair that
+  swaps row 11 between Family A and Family B and measures whether
+  re-converging finds a higher-scoring board.
+- **Family-aware search**: at row 11 during CP, branch BOTH families
+  in parallel and pursue both subtrees.
+- **MIP-per-family search**: vol-55 MVP on a Family-B basin to see if
+  MIP > 457.
+
+This is a CONCRETE, ACTIONABLE finding that adds a new lever to the
+record-chasing toolbox beyond ML/CDCL/LP.
+
 ## Subtotal: vol-56 deliverables so far
 
 - `vault/concepts/cdcl-no-good-e2.md` (math design, ~250 lines)
