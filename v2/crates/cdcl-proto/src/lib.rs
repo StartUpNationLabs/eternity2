@@ -468,6 +468,15 @@ mod tests {
     }
 
     #[test]
+    #[ignore]  // canonical scale; very slow Python-style HashMap-based code
+    fn solve_canonical_16x16() {
+        run_compare(
+            "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/../data/puzzles/size_16_official_eternity.csv",
+            "canonical 16x16/22c",
+        );
+    }
+
+    #[test]
     fn solve_6x6_5c() {
         run_compare("/tmp/vol56_6x6c5.csv", "6x6/5c");
     }

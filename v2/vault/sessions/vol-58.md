@@ -185,3 +185,52 @@ validated as a real speedup at 7×7+ scales. The remaining record-
 breaking lever (CDCL + 2WL + canonical scale) is multi-week
 engineering with clear empirical justification.
 
+## T7 — CDCL canonical 16×16 test (PARTIAL JUSTIFICATION)
+
+Tested cdcl-proto on canonical 16×16/22c (`--ignored` test).
+
+Results:
+- vanilla: 113k nodes, 0 wipeouts/sec timeout at 30s, not found.
+- cdcl: 9k nodes (**12× fewer**), 0 propagations(!), avg clause size **96** (max 130), not found.
+
+### Key finding
+
+At canonical scale, my cause-tracking gives **huge clauses (avg 96
+literals, max 130)** because AC-3 wipeouts happen at deep levels and
+my naive cause tracking includes ALL placed cells touching the
+failing position. The 5-9 literal compact clauses we got at 6×6/5c
+do NOT transfer.
+
+**0 unit-propagations**: with 96-literal clauses and only ~50-130 cells
+placed at wipeout, the chance of K-1 of those 96 literals being
+simultaneously assigned is essentially nil.
+
+### What this means
+
+- **CDCL nodes/wipeouts metric is 12× better** — the algorithm DOES
+  learn from failure, in some sense.
+- **CDCL practical-prop is 0** — the clauses are too big to fire.
+- **Real 1-UIP minimization is critical at canonical scale.** My
+  naive cause = "all placed cells incident to wipeout" is the right
+  over-approximation for soundness, but real 1-UIP would extract
+  MINIMAL subsets via implication graph walking.
+
+### Engineering implication
+
+The vol-57 design `cdcl-engine-integration.md` already flagged this:
+"1-UIP minimisation may be expensive". The canonical test shows it's
+not just expensive but **essential** — without aggressive
+minimization, no-good learning has zero impact at canonical scale.
+
+Vol-58 closing now. Vol-59 (next autonomous session or user-initiated)
+should focus on:
+1. Real 1-UIP implementation (implication graph walking) to shrink
+   clauses from 96 to 10-20 at canonical scale.
+2. Real 2WL for sub-linear unit propagation.
+3. Both are necessary; neither alone is sufficient.
+
+## Vol-58 lottery final
+
+Lottery still running. Final results will be analyzed in vol-59 open
+or future autonomous session.
+
