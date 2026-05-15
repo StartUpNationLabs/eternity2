@@ -1,9 +1,16 @@
-# Basin 459 from p06 corner perm — TIED THE SOTA score
+# Basin 459 from p06 corner perm — INDEPENDENT 459 BASIN (Bucas-validated)
 
-**Status**: 459/480 matched-edge score TIED locally. **Whether this
-is the SAME board as the cross-machine SOTA (σ-permuted display) or
-a different basin is UNVERIFIED**. Resolving requires direct piece-id
-comparison at all 256 cells against the cross-machine JSON.
+**Status**: 459/480 matched-edge TIED locally. **VERIFIED DIFFERENT
+from the cross-machine SOTA** by direct piece-id comparison at top
+row (pos 0-15): 0/16 cells match. The corners are also different
+(SOTA: p20 = 3,1,0,2; ours: p06 = 1,0,2,3).
+
+**Bucas validation**: this 459 compiles correctly as a "v17_alns_only"
+puzzle in Bucas. The cross-machine SOTA URL does NOT compile in Bucas
+(its color labeling appears to be σ-permuted/Joshua's, not pt's).
+So this may be the first publicly-visualizable 459 in canonical pt
+color labeling.
+
 **Date**: 2026-05-15 17:01 CEST.
 **Source**: vol-60 T7 ALNS phase, seed=2 from p06's merged partial.
 
