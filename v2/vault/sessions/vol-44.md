@@ -115,19 +115,32 @@ all in rows 10-14. Top 9 interior rows perfect.
 Total ~2 hours wall. Multiple research-grade findings, all
 committed and documented.
 
-## Last experiment (mega_mix push)
+## Final experiments
 
-8 ALNS-mega_mix seeds × 1h each on vol-32 458 board. ALL 8 ended
-at 458 (no lift, no drop).
+### 8 × ALNS-mega_mix 1h on 458
 
-Combined locked-at-458 evidence for vol-32 458 basin:
-- ALNS-diverse, 10 min × 24 seeds (vol-40): 0/24 ≥ 458.
-- ALNS-mega_mix, 60 min × 8 seeds (vol-44): 8/8 = 458 exactly.
-- MIP cluster-repair, halo ≤ 2, all 10 clusters: delta = 0.
-- MIP on union of all mismatch clusters (28 cells): delta = 0.
+All 8 ended at 458 (no lift, no drop).
+
+### 196-cell whole-interior MIP with warmstart, 1h
+
+obj_new = 398 (= current), delta = 0, no improvement found.
+LP relaxation bound stayed at 6244 (very loose; HiGHS couldn't
+tighten under 1h).
+
+### Locked-at-458 evidence summary for vol-32 458 basin
+
+| Test | Operator / Budget | Result |
+|---|---|---|
+| ALNS-diverse | 10min × 24 seeds (vol-40) | 0/24 ≥ 458 |
+| ALNS-mega_mix | 60min × 8 seeds (vol-44) | 8/8 = 458 exactly |
+| MIP cluster-repair halo=0 | 10 clusters, 28 cells total | delta=0 |
+| MIP cluster-repair halo=2 | regions up to 16 cells | delta=0 |
+| MIP union of all mismatches | 28 cells, 1.74 s | delta=0 (proven optimal) |
+| **MIP whole-interior** | 196 cells, 1h warmstart | **delta=0 (not proven optimal, but no improvement)** |
 
 The 458 basin is fully locked under all tested operators and
-exact MIP within ≤ 30-cell rearrangements.
+exact MIP within ≤ 30-cell rearrangements PROVEN; under 196-cell
+MIP for 1h not proven but empirically.
 
 ## Unfinished frontiers
 
