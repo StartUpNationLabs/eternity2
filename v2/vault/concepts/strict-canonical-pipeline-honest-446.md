@@ -1,6 +1,6 @@
 ---
 name: strict-canonical-pipeline-honest-446
-description: "Vol-118 — HONEST strict-canonical pipeline ceiling after vol-118 bf-bucket bug fix: max 446, median 443.5 across 8 trials (vs pre-fix claimed 452, median 449). The pre-fix 452 was a real LEGAL_COMPLETE board, but the path to it relied on the buggy partial having 8 illegal edge-piece anchors that gave ALNS denser initial seeding. With the bug fixed, the same pipeline reaches 446 max. `basic` preset beats `winning5` 8/8 in paired comparisons."
+description: "Vol-118 — HONEST strict-canonical pipeline ceiling after vol-118 bf-bucket bug fix. Initial sample (n=8): max 446. EXTENDED sample (T6 restart, more trials before kill): max 452, median ~447. The 452 board is LEGAL_COMPLETE with 5/5 hints AND zero border violations — so the pre-fix 452 wasn't entirely a contamination artifact, it's reachable with the fixed engine too (just rarely). `basic` preset beats `winning5` uniformly in paired comparisons."
 metadata:
   type: project
 ---
@@ -55,12 +55,32 @@ escalation; mega/full are wrong" — and adds that winning5 (which is
 basic + ConflictDriven{80}) is similarly too aggressive in this
 strict-canonical regime.
 
+## Update from T6 restart sweep
+
+The vol-118 T6 RESTART (UB-filter sweep with fixed engine) produced
+TWO higher-score boards before being killed:
+
+| file                                              | score | hints | borders |
+|---------------------------------------------------|------:|------:|--------:|
+| basic_sa_t1_s1_1778949025_249677000_p57166.json   |  **452** | 5/5   | 0       |
+| basic_sa_t1_s7_1778949145_285163000_p58430.json   |  451  | 5/5   | 0       |
+
+Both LEGAL_COMPLETE. So the post-fix ceiling is actually at least 452.
+
+Bucas (452): https://e2.bucas.name/#puzzle=vol118_partial&board_w=16&board_h=16&board_edges=abdaacrbaepcafoeabjfa...
+
+The original 8-trial sweep that maxed 446 was undersampled. The T6
+restart's broader sample found higher-tail values. This means the
+honest-ceiling concept's "452 is contamination" claim was WRONG —
+the 452 IS reachable with the fixed engine, just rarely (1-2 in ~15
+trials).
+
 ## Implication
 
-Honest strict-canonical hint-preserving pipeline ceiling = **446**.
+Honest strict-canonical hint-preserving pipeline ceiling = **at least 452**.
 
 Strict-canonical record (per memory blackwood_mrv): 457.
-**Gap: 11 points**, larger than thought.
+**Gap: 5 points**, smaller than I claimed in initial concept.
 
 The vol-118 T5 conflict-prop fix unblocked the schedule path from
 wedging, and the vol-118 T5b parallel diversification provided
