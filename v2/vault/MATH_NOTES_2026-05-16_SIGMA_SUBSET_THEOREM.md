@@ -117,6 +117,34 @@ empirical refutations (vol-110, 112, 114, 117 T4).
   unknown but bounded below by isoperimetric inequality on the 16×16 grid:
   $B(S) \geq 2\sqrt{\pi |S|}$ (for disk-like subsets).
 
+### Isoperimetric gap
+
+For a k-cell SUBSET of the 16×16 grid (with no σ-cycle constraint),
+the isoperimetric inequality gives:
+$$B_{\min}(k) \geq 2 \sqrt{\pi k}$$
+
+(achieved by approximately-circular subsets).
+
+Comparison at k=42:
+- Compact 6×7 block: B = 26
+- Isoperimetric optimum: B ≥ $2\sqrt{42\pi} \approx 23$
+- Our σ-cycle greedy at k=42: B = 64
+
+**σ-cycle subsets have ~2.5× larger boundary than ideal compact
+subsets.** This quantifies the "geometric spaghetti-ness" of the
+σ-cycle's layout in the grid.
+
+For σ-subset application to lift score: the σ-cycle would need to be
+"GEOMETRIC THIN" — that is, B(S)/|S| ≈ isoperimetric optimum. We do
+not observe this in any measured σ-cycle. The geometric-spaghetti
+property is an empirical feature of E2 σ-cycles that emerges from
+the algorithmic generation method.
+
+**Open question**: are there σ-cycle PAIRS where one cycle is
+nearly contiguous (e.g., a row swap of pieces)? If yes, that cycle
+might admit subset lift. None observed in our 7-board × 7-board
+matrix.
+
 - Does the bound generalize to multi-σ-cycle subsets (cells from
   multiple cycles)? Probably yes — each cycle contributes additively.
 
