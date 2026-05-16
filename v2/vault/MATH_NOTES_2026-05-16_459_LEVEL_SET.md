@@ -173,7 +173,34 @@ In order of effort vs payoff:
 4. **Piece-set blend** (path B) on $b_{60}, b_{110}$: sample 1000
    blends, score each. Cheap (~minutes).
 
-I'll attempt #4 next — it's a CHEAP experiment with clear outcome.
+## Path B + Path A simple form: EMPIRICALLY REFUTED (2026-05-16)
+
+Tested both in their simplest forms:
+
+**Path B test**: enumerated all $2^n$ σ-cycle subsets between 4
+distinct 459 basins (6 pairs total). **No subset gives score > 459.**
+Best non-trivial = 451-455. (See [[concepts/multiple-459-basins-rigid]].)
+
+**Path A test (small cycles)**: applied a single σ-cycle subset (size
+2-11) between two 459 basins, then ALNS-recovered. Results:
+
+| pair / cycle | intermediate score | post-ALNS |
+|---|---:|---:|
+| pipeline ↔ pipeline, size 3-11 | 445-456 | 458-459 |
+| vol-60 ↔ pipeline, size 2     | 452-455 | **459** |
+
+**All ALNS-recovered scores ≤ 459.** ALNS recovers the lost edges
+but does not exceed 459.
+
+**Generalised empirical claim**: across direct ALNS, pipeline
+(bound-ascent + Hungarian + ALNS), σ-subset + ALNS (within cluster),
+and σ-subset + ALNS (cross cluster), the score CEILING is 459. The
+459-level set is an absorbing region for these algorithmic operators.
+
+Path A's full version (subset σ-cycle + compensating local fix via
+CP, not ALNS) might still work — it'd need to explicitly construct
+the +1 move via constraint programming, not rely on ALNS's local
+search. **Multi-day formulation; defer to vol-111+.**
 
 ## Linked
 
