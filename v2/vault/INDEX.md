@@ -18,6 +18,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 - **Project guide**: `v2/CLAUDE.md`.
 - **2026-05-16 PAPER**: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem|Local Rigidity Theorem]] (13+ MIP-proven local-optimal regions, sound UB ≤ 123 on McGavin top-4, universal σ-cycle indecomposability). **Caveat (vol-105)**: the "first sound UB below 480" claim is a SUBSET-bound, not unconditional. See [[concepts/board-wide-ub-derivation]].
 - **2026-05-16 DIRECTIVE (vols 106-115)**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] — pivot to blank-puzzle speedup + NEW algorithm classes (paper-publishable inventions). User-invented [[concepts/relax-and-cross-cvc|Relax-and-Cross (CVC)]].
+- **2026-05-16 LAB NOTES (vols 106-109)**: [[LAB_NOTES_2026-05-16]] — consolidated summary of one autonomous day. **Engine: 84-85 M nps single-thread, 232× over solver-engine BLACKWOOD_RAW**. Pipeline reaches 450-451 stably in 7 min. 10+ documented negative results.
 
 ## Plans + discipline
 
