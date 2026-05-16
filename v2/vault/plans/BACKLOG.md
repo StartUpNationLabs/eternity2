@@ -261,16 +261,40 @@ Vol-25 shipped dirty-list scoping (fix-4, commit `fd5b615`) which captured only 
 ### `vault-validation-of-perf-wins` — status: `unbuilt` — since: vol-25
 The vol-25 fixes were validated against raw nps on synthetic 60 s probes. The meaningful metric for the research project is matched-edge score on real solves (multi-thread joe_depth150_bp_par for 5–30 min on canonical E2). Per the [[../../../../.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/project_e2_vol14_bp_null|Vol-14 BP-as-value-order REVERSAL]] memory, raw-nps wins don't always translate to score wins (CP-partial metric mid-pipeline can be misleading). Worth a one-shot validation before declaring victory. Effort: 30 min runtime + 5 min analysis.
 
-### `blackwood-fast-per-depth-unrolling` — status: `unbuilt` — since: vol-106 (user-flagged 2026-05-16)
+### `blackwood-fast-per-depth-unrolling` — status: `partial` — since: vol-106 (user-flagged 2026-05-16)
 **Biggest remaining nps lever for blackwood-fast.** The current `solve_blackwood_sized` is one generic loop body that runs 256 times. libblackwood (Bucas's C engine) generates 256 distinct goto-labelled depth blocks with each block's constants (post_depth, schedule target, conflicts_allowed, is_top_row, is_left_col, depth_tbl) inlined at compile time — eliminating per-node table lookups for those.
 
 Rust path: const-generic + per-depth specialised functions that tail-call into each other (or — equivalently — proc-macro that generates the unrolled body, similar to libblackwood's `build.rs`-style codegen).
 
 User note 2026-05-16: "I feel like manual unrolling might be a huge gain as it was for blackwood algorithm". EV: 1.5-3× nps (extrapolating from libblackwood's 295M nps vs our 68M).
 
-Effort: 1-2 days if done via proc-macro; 2-4 hours if done via per-depth const-generic instantiations capped at 16 (one per row, sharing within-row code).
+**Vol-106 T11 partial**: shipped compile-time-W depth-meta unrolling
+(canonical 16×16 computes `is_top_row`, `is_left_col`, `is_right_col`,
+`is_bottom_row`, `tbl` inline from `depth & 0xF` and `depth >> 4`
+instead of 3 LUT reads). Measured +5% pre-PGO; PGO subsumes via
+branch profiles to the same 72 M nps as PGO-only. Commit `05fbbce`.
 
-This is the path to closing the remaining gap to libblackwood's 295M nps.
+**Full per-depth function-body unrolling REMAINS UNBUILT.** Estimated
+effort: 1-2 days via proc-macro that emits 256 specialised depth-block
+bodies (each with `post_depth`, `target`, `allowed_here`, etc. as
+compile-time constants). The Rust compiler's existing const-generic
+machinery is NOT sufficient because the depth advances dynamically;
+true per-depth specialisation requires either (a) a `match depth {...}`
+on 256 arms (LLVM will struggle to inline 256 distinct function
+bodies), or (b) a proc-macro that lays out the bodies contiguously
+in source.
+
+The PGO-driven branch reordering already captures most of the
+straightforwardly-inlinable wins (PGO + depth-meta unroll = 72 M nps
+single-thread). The remaining 4× gap to libblackwood's 295 M nps is
+split across:
+- Proc-macro-generated 256-block unrolling (~1.5-2× expected)
+- Inner-loop bucket-walk improvements (probably ~1.5×)
+- BOLT post-link reordering (~1.1×)
+
+Not "complete quickly" by the agent in ≤1 hour — the proc-macro
+work alone is multi-day given the depth-conditional logic for
+schedule, break-index, and supply tracking.
 
 ---
 
