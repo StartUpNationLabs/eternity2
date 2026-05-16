@@ -26,20 +26,9 @@ use eternity2_bench_audit::score_board_dense as score_board;
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_core::{Board, Puzzle, Rotation, BORDER};
 
+// Vol-118 T9: thin wrapper around canonical load_board for backward-compat.
 fn load_board(path: &std::path::Path, puzzle: &Puzzle) -> Board {
-    let raw = std::fs::read_to_string(path).expect("read");
-    let v: serde_json::Value = serde_json::from_str(&raw).expect("parse");
-    let mut b = Board::empty(puzzle);
-    if let Some(arr) = v.get("placement").and_then(|x| x.as_array()) {
-        for p in arr {
-            if p.is_null() { continue; }
-            let pos = p["pos"].as_u64().unwrap() as u32;
-            let pid = p["piece_id"].as_u64().unwrap() as u16;
-            let rot = Rotation::from_u8(p["rotation"].as_u64().unwrap() as u8).unwrap();
-            b.place(pos, pid, rot);
-        }
-    }
-    b
+    eternity2_export::load_board(path, puzzle).expect("load_board")
 }
 
 fn cell_edges(puzzle: &Puzzle, board: &Board, pos: u32) -> Option<[u8; 4]> {

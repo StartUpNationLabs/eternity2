@@ -15,23 +15,9 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_core::{Board, BORDER, PieceId, Position, Puzzle, Rotation};
 use serde_json::Value;
 
-fn load_board(path: &Path, puzzle: &Puzzle) -> Result<Board, String> {
-    let bytes = std::fs::read(path).map_err(|e| format!("read {path:?}: {e}"))?;
-    let v: Value = serde_json::from_slice(&bytes).map_err(|e| format!("parse: {e}"))?;
-    let arr = v.get("placement").and_then(|x| x.as_array())
-        .or_else(|| v.get("board").and_then(|b| b.get("placement")).and_then(|x| x.as_array()))
-        .ok_or("missing placement[]")?;
-    let mut board = Board::empty(puzzle);
-    for item in arr {
-        if item.is_null() { continue; }
-        let pos = item.get("pos").and_then(|x| x.as_u64()).ok_or("pos")?;
-        let pid = item.get("piece_id").and_then(|x| x.as_u64()).ok_or("pid")?;
-        let rot = item.get("rotation").and_then(|x| x.as_u64()).ok_or("rot")?;
-        let piece_id = PieceId::try_from(pid as u32).map_err(|e| format!("{e}"))?;
-        let rotation = Rotation::from_u8(rot as u8).ok_or("bad rot")?;
-        board.place(pos as u32, piece_id, rotation);
-    }
-    Ok(board)
+// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+fn load_board(path: &std::path::Path, puzzle: &eternity2_core::Puzzle) -> Result<eternity2_core::Board, String> {
+    eternity2_export::load_board(path, puzzle).map_err(|e| format!("{e}"))
 }
 
 fn is_corner_pos(puzzle: &Puzzle, pos: Position) -> bool {
