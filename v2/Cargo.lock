@@ -590,6 +590,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-blackwood-fast-codegen"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "eternity2-cdcl-proto"
 version = "0.1.0"
 dependencies = [

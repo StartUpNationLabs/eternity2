@@ -14,6 +14,7 @@ eternity2-core = { path = "../core" }
 eternity2-time = { path = "../time" }
 eternity2-generator = { path = "../generator" }
 eternity2-puzzle-io = { path = "../puzzle-io" }
+eternity2-blackwood-fast-codegen = { path = "../blackwood-fast-codegen" }
 rayon = "1.10"
 serde_json = "1"
 

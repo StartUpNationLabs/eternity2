@@ -4,6 +4,7 @@ members = [
     "crates/bench-audit",
     "crates/benchmark",
     "crates/blackwood-fast",
+    "crates/blackwood-fast-codegen",
     "crates/cdcl-proto",
     "crates/core",
     "crates/cp-lp-search",
