@@ -3,7 +3,9 @@
 // Usage: bf_bw [--puzzle path] [--budget-ms ms]
 // Defaults: canonical Selby-Riordan 16x16, 5000 ms.
 
-use eternity2_blackwood_fast::{blackwood_schedule_469, blackwood_schedule_calibrated_v17a, solve_blackwood};
+use eternity2_blackwood_fast::{
+    blackwood_schedule_469, blackwood_schedule_calibrated_v17a, score_board, solve_blackwood,
+};
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
 
@@ -52,11 +54,12 @@ fn main() {
     eprintln!("[bf_bw] exhaustion_targets={:?}", schedule.exhaustion_targets);
 
     let t0 = std::time::Instant::now();
-    let (stats, _board) = solve_blackwood(&puzzle, &schedule, budget_ms * 1000);
+    let (stats, board) = solve_blackwood(&puzzle, &schedule, budget_ms * 1000);
     let elapsed = t0.elapsed();
     let nps = (stats.nodes as f64) / elapsed.as_secs_f64();
+    let score = score_board(&puzzle, &board);
     println!(
-        "{{\"profile\":\"blackwood_fast\",\"budget_ms\":{},\"elapsed_ms\":{},\"nodes\":{},\"max_depth\":{},\"solved\":{},\"nps\":{:.0}}}",
-        budget_ms, elapsed.as_millis(), stats.nodes, stats.max_depth, stats.solved, nps
+        "{{\"profile\":\"blackwood_fast\",\"budget_ms\":{},\"elapsed_ms\":{},\"nodes\":{},\"max_depth\":{},\"solved\":{},\"best_score\":{},\"nps\":{:.0}}}",
+        budget_ms, elapsed.as_millis(), stats.nodes, stats.max_depth, stats.solved, score, nps
     );
 }

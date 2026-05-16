@@ -410,6 +410,51 @@ pub struct SearchStats {
     pub nodes: u64,
     pub max_depth: u32,
     pub solved: bool,
+    /// Matched edges of the deepest (best-seen) board, if recovered.
+    /// 0 when not computed.
+    pub best_score: u32,
+}
+
+/// Score a (PieceId, Rotation) board by counting adjacent edge matches
+/// across all internal edges. Uses the puzzle to look up each piece's
+/// rotated edges. Border edges are not counted as matches (BORDER
+/// is reserved color 0).
+pub fn score_board(puzzle: &Puzzle, board: &[(PieceId, Rotation)]) -> u32 {
+    let w = puzzle.width as usize;
+    let h = puzzle.height as usize;
+    let wh = w * h;
+    debug_assert_eq!(board.len(), wh);
+    // Cache rotated edges per cell.
+    let mut edges_at: Vec<[Color; 4]> = Vec::with_capacity(wh);
+    for &(id, rot) in board {
+        if let Some(p) = puzzle.piece(id) {
+            edges_at.push(p.edges.rotated(rot).as_array());
+        } else {
+            edges_at.push([0; 4]);
+        }
+    }
+    let mut matched: u32 = 0;
+    for y in 0..h {
+        for x in 0..w {
+            let p = y * w + x;
+            let e = edges_at[p];
+            // Right edge
+            if x + 1 < w {
+                let er = edges_at[p + 1];
+                if e[1] != BORDER && e[1] == er[3] {
+                    matched += 1;
+                }
+            }
+            // Bottom edge
+            if y + 1 < h {
+                let eb = edges_at[p + w];
+                if e[2] != BORDER && e[2] == eb[0] {
+                    matched += 1;
+                }
+            }
+        }
+    }
+    matched
 }
 
 /// Run the raw row-major Blackwood-style backtracker. The puzzle must
@@ -446,6 +491,7 @@ fn solve_raw_generic(
     let mut pieces_used: Vec<u64> = vec![0; bitset_words];
 
     let mut board: Vec<PieceRot> = vec![PieceRot::NONE; wh];
+    let mut best_board: Vec<PieceRot> = vec![PieceRot::NONE; wh];
     let mut cursor: Vec<u32> = vec![0; wh];
     let mut depth_meta: Vec<(u8, u8, u8, bool, bool)> = Vec::with_capacity(wh);
     for d in 0..wh {
@@ -506,6 +552,7 @@ fn solve_raw_generic(
             stats.nodes += 1;
             if (depth as u32 + 1) > stats.max_depth {
                 stats.max_depth = depth as u32 + 1;
+                best_board.copy_from_slice(&board);
             }
             depth += 1;
             if depth < wh {
@@ -528,7 +575,7 @@ fn solve_raw_generic(
         }
     }
 
-    let out = board_to_out(index, &board);
+    let out = board_to_out(index, &best_board);
     (stats, out)
 }
 
@@ -731,6 +778,7 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
 
     let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
     let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
+    let mut best_board: [PieceRot; WH] = [PieceRot::NONE; WH];
     let mut cursor: [u32; WH] = [0; WH];
     let mut cum: [u32; WH] = [0; WH];
     // Cumulative conflicts (mismatches placed) at each depth.
@@ -872,6 +920,8 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
             stats.nodes += 1;
             if (depth as u32 + 1) > stats.max_depth {
                 stats.max_depth = depth as u32 + 1;
+                // Snapshot the deepest board seen so we can report its score.
+                best_board.copy_from_slice(&board);
             }
             depth += 1;
             if depth < WH {
@@ -896,7 +946,7 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
         }
     }
 
-    let out = board_to_out(index, &board);
+    let out = board_to_out(index, &best_board);
     (stats, out)
 }
 
