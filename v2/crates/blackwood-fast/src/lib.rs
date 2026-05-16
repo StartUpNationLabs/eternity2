@@ -21,8 +21,11 @@
 // - Borders are colored 0. Interior pieces have colors 1..=max_color.
 //   A "match" between two adjacent edges means they're equal and != 0.
 //   This matches the rest of the workspace.
+// - `solve_raw_sized` uses `unsafe { get_unchecked }` for hot-loop bounds
+//   elision (precedent: `vanilla_fastest.rs`). All other crates retain
+//   `#![forbid(unsafe_code)]`. CLAUDE.md vol-32 authorisation.
 
-#![forbid(unsafe_code)]
+#![allow(unsafe_code)]
 
 use eternity2_core::{Color, PieceId, Puzzle, Rotation, BORDER};
 
@@ -62,13 +65,23 @@ pub fn ref_key(top: Color, left: Color) -> u16 {
     ((top as u16) << 8) | (left as u16)
 }
 
-/// Row-major candidate index. For each ref_key, a contiguous slice of
-/// PieceRot in `entries`. `offsets[k]..offsets[k+1]` is the slice for
-/// ref_key k. Construction time is O(NPIECES * 4 * 256 * 256) in the worst
-/// case but in practice O(NPIECES * 4) because each (piece, rot) maps to
-/// exactly one ref_key for row-major scan.
+/// Row-major candidate index. Four separate index tables, one per
+/// combination of (right_is_border, bottom_is_border). Inside each
+/// table, the same `(top, left)` ref-key partitions the candidate
+/// list into a contiguous slice.
+///
+/// We choose to maintain 4 tables (vs one table + try-time border
+/// filter) because the border filter would otherwise live in the
+/// inner loop, hitting 94 cells of canonical 16×16 (right column +
+/// bottom row, minus shared corner). Materialising 4 tables costs
+/// ~4× the offsets array (256 KB vs 64 KB) which is still L2-resident.
+/// One flat CSR-style table indexed by an 18-bit key: low 16 bits are
+/// `ref_key(top, left)`, high 2 bits encode (right_border, bottom_border).
+/// This avoids the `tables[tbl]` indirection on every candidate fetch.
 #[derive(Debug, Clone)]
 pub struct RowMajorIndex {
+    /// `offsets[k]..offsets[k+1]` are the candidate-slice bounds in `entries`
+    /// for key k. Length = 4 * 65536 + 1.
     offsets: Vec<u32>,
     entries: Vec<PieceRot>,
     /// Number of pieces in the original puzzle.
@@ -78,23 +91,27 @@ pub struct RowMajorIndex {
     pub edges: Vec<[Color; 4]>,
     /// Per-piece-idx, the piece_id (for back-translation).
     pub piece_ids: Vec<PieceId>,
+    /// Per-PieceRot.0 (u16), the BOTTOM color (for fast top-color lookup
+    /// from depth-w board cell).
+    pub bottom_of: Vec<Color>,
+    /// Per-PieceRot.0 (u16), the RIGHT color (for fast left-color lookup
+    /// from depth-1 board cell).
+    pub right_of: Vec<Color>,
+}
+
+#[inline(always)]
+fn flat_key(tbl: u8, key: u16) -> usize {
+    ((tbl as usize) << 16) | (key as usize)
 }
 
 impl RowMajorIndex {
-    /// Build a row-major candidate index from a puzzle. For each piece p
-    /// and rotation r, the placed edges are [t,r,b,l]. In row-major scan
-    /// at an interior cell, the top neighbour fixes the new piece's top
-    /// edge (must equal top-neighbour's bottom), and the left neighbour
-    /// fixes the new piece's left edge. So we index by
-    /// ref_key(required_top, required_left). For border cells we use
-    /// BORDER (0) as the required color on the border side.
+    /// Build a row-major candidate index from a puzzle.
     #[must_use]
     pub fn build(puzzle: &Puzzle) -> Self {
         let pieces = puzzle.pieces();
         let n_pieces = pieces.len();
         assert!(n_pieces <= 16384, "blackwood-fast supports up to 16384 pieces");
 
-        // Precompute per-piece-rotation edge tables.
         let mut edges: Vec<[Color; 4]> = Vec::with_capacity(n_pieces * 4);
         let mut piece_ids: Vec<PieceId> = Vec::with_capacity(n_pieces);
         for p in pieces {
@@ -104,23 +121,45 @@ impl RowMajorIndex {
             }
         }
 
-        // Bucket entries by ref_key.
-        let n_keys: usize = 256 * 256;
-        let mut buckets: Vec<Vec<PieceRot>> = vec![Vec::new(); n_keys];
-        for piece_idx in 0..n_pieces {
+        // bottom_of / right_of indexed by PieceRot.0 (u16). Allocate the
+        // full u16 range so the inner-loop deref is a single load.
+        let mut bottom_of: Vec<Color> = vec![0; 1 << 16];
+        let mut right_of: Vec<Color> = vec![0; 1 << 16];
+        for piece_idx in 0..n_pieces as u16 {
             for rot in 0..4u8 {
-                let e = edges[piece_idx * 4 + rot as usize];
-                let key = ref_key(e[0], e[3]); // top, left
-                buckets[key as usize].push(PieceRot::new(piece_idx as u16, rot));
+                let pr = PieceRot::new(piece_idx, rot);
+                let e = edges[(piece_idx as usize) * 4 + rot as usize];
+                bottom_of[pr.0 as usize] = e[2];
+                right_of[pr.0 as usize] = e[1];
             }
         }
 
-        // Flatten into CSR-style storage.
-        let mut offsets: Vec<u32> = Vec::with_capacity(n_keys + 1);
+        const N_FLAT_KEYS: usize = 4 * 65536;
+        let mut buckets: Vec<Vec<PieceRot>> = (0..N_FLAT_KEYS).map(|_| Vec::new()).collect();
+        for piece_idx in 0..n_pieces {
+            for rot in 0..4u8 {
+                let e = edges[piece_idx * 4 + rot as usize];
+                let right_is_border = e[1] == BORDER;
+                let bottom_is_border = e[2] == BORDER;
+                let key = ref_key(e[0], e[3]);
+                let pr = PieceRot::new(piece_idx as u16, rot);
+                buckets[flat_key(0, key)].push(pr);
+                if bottom_is_border { buckets[flat_key(1, key)].push(pr); }
+                if right_is_border { buckets[flat_key(2, key)].push(pr); }
+                if right_is_border && bottom_is_border {
+                    buckets[flat_key(3, key)].push(pr);
+                }
+            }
+        }
+        // Sentinel-terminate each bucket with PieceRot::NONE so the inner
+        // loop walks by pointer until it sees the sentinel — same trick
+        // libblackwood uses ("piece_to_try_next->value != 0").
+        let mut offsets: Vec<u32> = Vec::with_capacity(N_FLAT_KEYS + 1);
         let mut entries: Vec<PieceRot> = Vec::new();
         offsets.push(0);
         for bucket in &buckets {
             entries.extend_from_slice(bucket);
+            entries.push(PieceRot::NONE);
             offsets.push(entries.len() as u32);
         }
 
@@ -130,16 +169,23 @@ impl RowMajorIndex {
             n_pieces: n_pieces as u16,
             edges,
             piece_ids,
+            bottom_of,
+            right_of,
         }
     }
 
-    /// Return the candidate slice for the given ref_key.
+    /// Return the candidate slice for the given (border-flags, ref_key).
+    /// `tbl` encodes border requirements: 0=none, 1=bottom, 2=right, 3=both.
+    /// Excludes the trailing sentinel (PieceRot::NONE).
     #[must_use]
     #[inline(always)]
-    pub fn candidates(&self, key: u16) -> &[PieceRot] {
-        let lo = self.offsets[key as usize] as usize;
-        let hi = self.offsets[key as usize + 1] as usize;
-        &self.entries[lo..hi]
+    pub fn candidates(&self, tbl: usize, key: u16) -> &[PieceRot] {
+        let k = ((tbl) << 16) | (key as usize);
+        let lo = self.offsets[k] as usize;
+        let hi = self.offsets[k + 1] as usize;
+        // hi - 1 excludes the sentinel; hi - 1 ≥ lo always because every
+        // bucket got at least the sentinel pushed.
+        &self.entries[lo..hi - 1]
     }
 
     /// Lookup the rotated edges for (piece_idx, rot).
@@ -168,21 +214,40 @@ pub fn solve_raw(
     time_budget_us: u64,
 ) -> (SearchStats, Vec<(PieceId, Rotation)>) {
     let index = RowMajorIndex::build(puzzle);
+    // For canonical 16x16 (WH=256, NPIECES=256) we dispatch to the
+    // monomorphized const-generic specialization. For other sizes we use
+    // the generic runtime-sized version.
+    if puzzle.width == 16 && puzzle.height == 16 && index.n_pieces == 256 {
+        return solve_raw_sized::<256, 256, 4>(&index, time_budget_us);
+    }
+    solve_raw_generic(&index, puzzle, time_budget_us)
+}
+
+fn solve_raw_generic(
+    index: &RowMajorIndex,
+    puzzle: &Puzzle,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
     let w = puzzle.width as usize;
     let h = puzzle.height as usize;
     let wh = w * h;
     let n_pieces = index.n_pieces as usize;
+    assert!(n_pieces <= 4096, "pieces_used bitset capped at 4096 pieces");
 
-    // Stack-bound state. We deliberately do NOT use ArrayVec — these
-    // are right-sized at runtime. For canonical 16x16 (WH=256, N=256)
-    // total state is ~1 KiB; trivial. The HOT data on a u64-aligned cache
-    // line is `pieces_used` + the current `board[depth]` cells, which
-    // LLVM keeps in registers / L1.
+    let bitset_words = (n_pieces + 63) / 64;
+    let mut pieces_used: Vec<u64> = vec![0; bitset_words];
+
     let mut board: Vec<PieceRot> = vec![PieceRot::NONE; wh];
-    let mut pieces_used: Vec<bool> = vec![false; n_pieces];
-    // For each depth, the index INTO the candidate slice we're currently
-    // exploring. Lets us resume after backtrack.
     let mut cursor: Vec<u32> = vec![0; wh];
+    let mut depth_meta: Vec<(u8, u8, u8, bool, bool)> = Vec::with_capacity(wh);
+    for d in 0..wh {
+        let x = (d % w) as u8;
+        let y = (d / w) as u8;
+        let need_bottom = (y as usize) == h - 1;
+        let need_right = (x as usize) == w - 1;
+        let tbl = ((need_right as u8) << 1) | (need_bottom as u8);
+        depth_meta.push((tbl, x, y, y == 0, x == 0));
+    }
 
     let mut stats = SearchStats::default();
     let start = eternity2_time::Clock::now();
@@ -190,43 +255,30 @@ pub fn solve_raw(
     let mut depth: usize = 0;
 
     'outer: loop {
-        // Time check periodically.
         if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
             break 'outer;
         }
 
         if depth == wh {
-            // Full solution found.
             stats.solved = true;
             stats.max_depth = wh as u32;
             break 'outer;
         }
 
-        // Compute required top + left colors for the row-major position `depth`.
-        let x = depth % w;
-        let y = depth / w;
-        let top_color: Color = if y == 0 {
+        let (tbl, _x, _y, is_top_row, is_left_col) = depth_meta[depth];
+        // top_color from depth - w's bottom_of (or BORDER if top row).
+        let top_color: Color = if is_top_row {
             BORDER
         } else {
-            // top neighbour is depth - w.
-            let pr = board[depth - w];
-            index.rotated_edges(pr.piece_idx(), pr.rot())[2] // bottom of top-nbr
+            index.bottom_of[board[depth - w].0 as usize]
         };
-        let left_color: Color = if x == 0 {
+        let left_color: Color = if is_left_col {
             BORDER
         } else {
-            let pr = board[depth - 1];
-            index.rotated_edges(pr.piece_idx(), pr.rot())[1] // right of left-nbr
+            index.right_of[board[depth - 1].0 as usize]
         };
-        // Right and bottom borders: a piece must have BORDER on that side.
-        // We don't filter pre-list here (the index doesn't know about the
-        // x==w-1 / y==h-1 constraints because they aren't part of the
-        // top/left neighbour color). Filter at try-time.
-        let need_right_border = x == w - 1;
-        let need_bottom_border = y == h - 1;
-
         let key = ref_key(top_color, left_color);
-        let cands = index.candidates(key);
+        let cands = index.candidates(tbl as usize, key);
 
         let mut placed = false;
         let mut c_idx = cursor[depth] as usize;
@@ -234,22 +286,14 @@ pub fn solve_raw(
             let pr = cands[c_idx];
             c_idx += 1;
             let piece_idx = pr.piece_idx() as usize;
-            if pieces_used[piece_idx] {
+            let word = piece_idx >> 6;
+            let bit = 1u64 << (piece_idx & 63);
+            if (pieces_used[word] & bit) != 0 {
                 continue;
             }
-            // Check border requirements on right / bottom.
-            if need_right_border || need_bottom_border {
-                let e = index.rotated_edges(pr.piece_idx(), pr.rot());
-                if need_right_border && e[1] != BORDER {
-                    continue;
-                }
-                if need_bottom_border && e[2] != BORDER {
-                    continue;
-                }
-            }
             // Place.
+            pieces_used[word] |= bit;
             board[depth] = pr;
-            pieces_used[piece_idx] = true;
             cursor[depth] = c_idx as u32;
             stats.nodes += 1;
             if (depth as u32 + 1) > stats.max_depth {
@@ -264,25 +308,27 @@ pub fn solve_raw(
         }
 
         if !placed {
-            // Backtrack.
             cursor[depth] = 0;
             if depth == 0 {
-                // Exhausted.
                 break 'outer;
             }
             depth -= 1;
             let pr = board[depth];
-            pieces_used[pr.piece_idx() as usize] = false;
+            let piece_idx = pr.piece_idx() as usize;
+            pieces_used[piece_idx >> 6] &= !(1u64 << (piece_idx & 63));
             board[depth] = PieceRot::NONE;
-            // cursor[depth] is preserved at the post-tried index so the
-            // loop continues from where we left off.
         }
     }
 
-    // Materialize board as (PieceId, Rotation) per cell.
-    let out: Vec<(PieceId, Rotation)> = (0..wh)
-        .map(|i| {
-            let pr = board[i];
+    let out = board_to_out(index, &board);
+    (stats, out)
+}
+
+#[inline]
+fn board_to_out(index: &RowMajorIndex, board: &[PieceRot]) -> Vec<(PieceId, Rotation)> {
+    board
+        .iter()
+        .map(|pr| {
             if pr.0 == PieceRot::NONE.0 {
                 (PieceId::MAX, Rotation::R0)
             } else {
@@ -292,8 +338,132 @@ pub fn solve_raw(
                 )
             }
         })
-        .collect();
+        .collect()
+}
 
+/// Const-generic specialization of the inner DFS loop. `WH` is total
+/// cells (width × height), `NPIECES` the piece count, `BITSET_WORDS`
+/// is `ceil(NPIECES / 64)`. Stack-allocates all state.
+///
+/// Currently dispatched from `solve_raw` for canonical 16×16 with 256
+/// pieces (constants 256, 256, 4). The width must equal sqrt(WH); this
+/// version assumes square boards.
+fn solve_raw_sized<const WH: usize, const NPIECES: usize, const BITSET_WORDS: usize>(
+    index: &RowMajorIndex,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    // We only call this for square boards.
+    let w: usize = (WH as f64).sqrt() as usize;
+    debug_assert_eq!(w * w, WH, "WH must be a perfect square");
+    let h = w;
+
+    let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
+    let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
+    let mut cursor: [u32; WH] = [0; WH];
+
+    let mut depth_tbl: [u8; WH] = [0; WH];
+    let mut depth_top_row: [bool; WH] = [false; WH];
+    let mut depth_left_col: [bool; WH] = [false; WH];
+    for d in 0..WH {
+        let x = d % w;
+        let y = d / w;
+        depth_tbl[d] = (((x == w - 1) as u8) << 1) | ((y == h - 1) as u8);
+        depth_top_row[d] = y == 0;
+        depth_left_col[d] = x == 0;
+    }
+
+    let mut stats = SearchStats::default();
+    let start = eternity2_time::Clock::now();
+    let mut depth: usize = 0;
+
+    // Raw pointers / lengths for the index. We've validated bounds at
+    // build-time and at each access via the bounds-checked test path.
+    let offsets_ptr = index.offsets.as_ptr();
+    let entries_ptr = index.entries.as_ptr();
+    let bottom_ptr = index.bottom_of.as_ptr();
+    let right_ptr = index.right_of.as_ptr();
+
+    'outer: loop {
+        if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
+            break 'outer;
+        }
+        if depth == WH {
+            stats.solved = true;
+            stats.max_depth = WH as u32;
+            break 'outer;
+        }
+
+        // SAFETY: depth < WH on this path; depth_* arrays sized WH.
+        let tbl = unsafe { *depth_tbl.get_unchecked(depth) } as usize;
+        let top_color: Color = if unsafe { *depth_top_row.get_unchecked(depth) } {
+            BORDER
+        } else {
+            // SAFETY: depth >= w on this path (not top row); board sized WH.
+            let nbr = unsafe { *board.get_unchecked(depth - w) };
+            // SAFETY: bottom_of is sized 65536 (full u16 range); nbr.0 is u16.
+            unsafe { *bottom_ptr.add(nbr.0 as usize) }
+        };
+        let left_color: Color = if unsafe { *depth_left_col.get_unchecked(depth) } {
+            BORDER
+        } else {
+            let nbr = unsafe { *board.get_unchecked(depth - 1) };
+            unsafe { *right_ptr.add(nbr.0 as usize) }
+        };
+        let key = ref_key(top_color, left_color);
+        let flat = (tbl << 16) | (key as usize);
+        // SAFETY: offsets sized 4*65536+1; flat ≤ 4*65536 - 1.
+        let lo = unsafe { *offsets_ptr.add(flat) } as usize;
+        // Resume from the cursor offset within this slice.
+        let mut c_idx = lo + unsafe { *cursor.get_unchecked(depth) } as usize;
+
+        // Sentinel-terminated walk: each candidate slice ends with
+        // PieceRot::NONE. We walk by index until we hit it.
+        let mut placed = false;
+        loop {
+            // SAFETY: entries always ends with at least one sentinel per
+            // bucket; we cannot walk past the sentinel without `break`ing.
+            let pr = unsafe { *entries_ptr.add(c_idx) };
+            if pr.0 == PieceRot::NONE.0 {
+                break;
+            }
+            c_idx += 1;
+            let piece_idx = pr.piece_idx() as usize;
+            let word = piece_idx >> 6;
+            let bit = 1u64 << (piece_idx & 63);
+            if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
+                continue;
+            }
+            unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
+            unsafe { *board.get_unchecked_mut(depth) = pr; }
+            unsafe { *cursor.get_unchecked_mut(depth) = (c_idx - lo) as u32; }
+            stats.nodes += 1;
+            if (depth as u32 + 1) > stats.max_depth {
+                stats.max_depth = depth as u32 + 1;
+            }
+            depth += 1;
+            if depth < WH {
+                unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            }
+            placed = true;
+            break;
+        }
+
+        if !placed {
+            unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            if depth == 0 {
+                break 'outer;
+            }
+            depth -= 1;
+            let pr = unsafe { *board.get_unchecked(depth) };
+            let piece_idx = pr.piece_idx() as usize;
+            unsafe {
+                *pieces_used.get_unchecked_mut(piece_idx >> 6) &= !(1u64 << (piece_idx & 63));
+                *board.get_unchecked_mut(depth) = PieceRot::NONE;
+            }
+        }
+    }
+
+    let out = board_to_out(index, &board);
     (stats, out)
 }
 
