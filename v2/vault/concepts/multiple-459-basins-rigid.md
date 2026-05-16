@@ -104,6 +104,31 @@ non-trivial blends are 451-455. Strong empirical refutation of
 Generalises vol-99's σ-cycle indecomposability from "459 → 469
 cycles don't decompose" to "459 ↔ 459 cycles also don't decompose."
 
+### σ-distance to McGavin 469 (vol-111 finding)
+
+For each of our 4 basins, compute σ-cycles to McGavin 469
+(decoded from corpus). Max cycle size varies:
+
+| basin                          | max σ-cycle to McGavin 469 |
+|--------------------------------|---------------------------:|
+| vol-60 RECORD_TIE_459_p06      |                         154 |
+| pipeline orig (offset=100)     |                       **89** |
+| pipeline bseed1                |                         116 |
+| pipeline bseed6                |                         149 |
+
+**Key**: the pipeline-orig basin has max σ-cycle **89** to McGavin —
+significantly closer than vol-60's 154. This matches vol-99's
+"~80-cell σ-cycle from local-459 to McGavin" within rounding —
+the pipeline-orig basin is structurally similar to vol-99's
+"local-459."
+
+**Implication**: any Path A formulation should use the
+pipeline-orig basin as the starting point, not vol-60. The
+smaller σ-distance means smaller cycle subsets to manipulate,
+making CP formulation tractable.
+
+Decoded McGavin 469 saved at: `output/vol-110/mcgavin_469.placement.json`.
+
 ## Linked
 
 - [[new-459-from-bf-pipeline]] — origin of the new 459.
