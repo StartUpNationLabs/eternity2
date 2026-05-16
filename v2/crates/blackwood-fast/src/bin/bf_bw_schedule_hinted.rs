@@ -7,7 +7,8 @@
 
 use eternity2_blackwood_fast::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
-    blackwood_schedule_calibrated_v17a_hint_aware, score_board, solve_blackwood_with_hints,
+    blackwood_schedule_calibrated_v17a_hint_aware, score_board, solve_blackwood_par_with_hints,
+    solve_blackwood_with_hints,
 };
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
@@ -20,6 +21,8 @@ fn main() {
     let mut budget_ms: u64 = 10_000;
     let mut dump_partial: Option<PathBuf> = None;
     let mut schedule_name = "v17a".to_string();
+    let mut threads: usize = 1;
+    let mut seed_offset: u64 = 0;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -27,6 +30,8 @@ fn main() {
             "--budget-ms" => { budget_ms = args[i + 1].parse().expect("budget"); i += 2; }
             "--dump-partial" => { dump_partial = Some(PathBuf::from(&args[i + 1])); i += 2; }
             "--schedule" => { schedule_name = args[i + 1].clone(); i += 2; }
+            "--threads" => { threads = args[i + 1].parse().expect("threads"); i += 2; }
+            "--seed-offset" => { seed_offset = args[i + 1].parse().expect("seed-offset"); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
     }
@@ -53,8 +58,13 @@ fn main() {
         schedule.max_heuristic_index, schedule.break_indexes_allowed.len()
     );
 
+    eprintln!("threads={} seed_offset={}", threads, seed_offset);
     let t0 = std::time::Instant::now();
-    let (stats, board) = solve_blackwood_with_hints(&puzzle, &hints, &schedule, budget_ms * 1000);
+    let (stats, board) = if threads > 1 {
+        solve_blackwood_par_with_hints(&puzzle, &hints, &schedule, threads, seed_offset, budget_ms * 1000)
+    } else {
+        solve_blackwood_with_hints(&puzzle, &hints, &schedule, budget_ms * 1000)
+    };
     let elapsed = t0.elapsed();
     let nps = (stats.nodes as f64) / elapsed.as_secs_f64();
     let score = score_board(&puzzle, &board);

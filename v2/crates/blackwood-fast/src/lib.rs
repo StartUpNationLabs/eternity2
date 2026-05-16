@@ -1671,6 +1671,74 @@ pub fn solve_blackwood_with_hints(
     solve_raw_generic(&index, puzzle, time_budget_us)
 }
 
+/// Vol-118 T5 — parallel hint-preserving Blackwood schedule + break.
+/// Spawns n_threads workers, each with a different candidate-list shuffle.
+/// Returns the deepest (best) result.
+pub fn solve_blackwood_par_with_hints(
+    puzzle: &Puzzle,
+    hints: &Hints,
+    schedule: &BlackwoodSchedule,
+    n_threads: usize,
+    seed_offset: u64,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    use rayon::prelude::*;
+    let mut base_index = RowMajorIndex::build(puzzle);
+    base_index.set_heuristic_sides(&schedule.heuristic_sides);
+    if !schedule.break_indexes_allowed.is_empty() {
+        base_index.build_relaxed_index(puzzle.color_count);
+    }
+    if !(puzzle.width == 16 && puzzle.height == 16 && base_index.n_pieces == 256) {
+        return solve_raw_generic(&base_index, puzzle, time_budget_us);
+    }
+    let targets = schedule.target_table(256);
+    let wh = 256usize;
+    let mut conflicts_allowed: Vec<u32> = vec![0; wh];
+    let mut budget = 0u32;
+    let break_set: std::collections::HashSet<u32> =
+        schedule.break_indexes_allowed.iter().copied().collect();
+    for d in 0..wh as u32 {
+        if break_set.contains(&d) {
+            budget += 1;
+        }
+        conflicts_allowed[d as usize] = budget;
+    }
+    // Build pinning state once (shared).
+    let mut board: [PieceRot; 256] = [PieceRot::NONE; 256];
+    let mut is_pinned: [bool; 256] = [false; 256];
+    let mut pieces_used: [u64; 4] = [0; 4];
+    for hint in &hints.hints {
+        let piece_idx = (0..base_index.n_pieces)
+            .find(|&i| base_index.piece_ids[i as usize] == hint.piece_id)
+            .expect("hint piece not in puzzle") as u16;
+        let pr = PieceRot::new(piece_idx, hint.rotation.as_u8());
+        board[hint.position as usize] = pr;
+        is_pinned[hint.position as usize] = true;
+        pieces_used[(piece_idx as usize) >> 6] |= 1u64 << (piece_idx & 63);
+    }
+
+    let results: Vec<(SearchStats, Vec<(PieceId, Rotation)>)> = (0..n_threads)
+        .into_par_iter()
+        .map(|tid| {
+            let mut idx = base_index.clone();
+            idx.shuffle_buckets(seed_offset + tid as u64);
+            solve_blackwood_sized_pinned::<256, 256, 4>(
+                &idx,
+                board,
+                is_pinned,
+                pieces_used,
+                &targets,
+                schedule.max_heuristic_index,
+                &conflicts_allowed,
+                time_budget_us,
+            )
+        })
+        .collect();
+
+    let best = results.into_iter().max_by_key(|(s, _)| s.max_depth).unwrap();
+    best
+}
+
 /// Vol-106 T12 — proc-macro-unrolled variant of `solve_blackwood_sized`
 /// for canonical 16×16. Uses `depth_dispatch_256!` from the codegen
 /// crate to emit 256 distinct per-depth match arms with the literal
