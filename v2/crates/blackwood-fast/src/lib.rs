@@ -230,11 +230,27 @@ impl RowMajorIndex {
                 let bottom_is_border = e[2] == BORDER;
                 let key = ref_key(e[0], e[3]);
                 let pr = PieceRot::new(piece_idx as u16, rot);
-                buckets[flat_key(0, key)].push(pr);
-                if bottom_is_border { buckets[flat_key(1, key)].push(pr); }
-                if right_is_border { buckets[flat_key(2, key)].push(pr); }
-                if right_is_border && bottom_is_border {
-                    buckets[flat_key(3, key)].push(pr);
+                // Vol-118 BUG FIX: a piece-rotation goes ONLY in the bucket
+                // matching its actual border-edge pattern. Previously
+                // EVERY (piece, rot) was pushed into tbl=0, so edge pieces
+                // with BORDER on bottom or right could be placed at
+                // interior cells (illegal, inflated scores via spurious
+                // BORDER-BORDER "matches").
+                //
+                // tbl=0: no right border, no bottom border (true interior fit)
+                // tbl=1: bottom border only
+                // tbl=2: right border only
+                // tbl=3: both bottom and right border (bottom-right corner)
+                //
+                // Note: top/left border requirements are handled implicitly
+                // by ref_key(top, left) — at top-row cells top_color=BORDER,
+                // so candidates with non-BORDER top edge filter out via key
+                // mismatch.
+                match (right_is_border, bottom_is_border) {
+                    (false, false) => buckets[flat_key(0, key)].push(pr),
+                    (false, true) => buckets[flat_key(1, key)].push(pr),
+                    (true, false) => buckets[flat_key(2, key)].push(pr),
+                    (true, true) => buckets[flat_key(3, key)].push(pr),
                 }
             }
         }
@@ -303,34 +319,32 @@ impl RowMajorIndex {
                 let p_top = e[0];
                 let p_left = e[3];
 
+                // Vol-118 BUG FIX: same fix as build() — a piece-rotation
+                // goes ONLY in the bucket matching its actual right/bottom
+                // border-edge pattern, not into every tbl.
+                let tbl: u8 = match (right_is_border, bottom_is_border) {
+                    (false, false) => 0,
+                    (false, true) => 1,
+                    (true, false) => 2,
+                    (true, true) => 3,
+                };
+
                 // (a) Strict match.
                 {
                     let key = ref_key(p_top, p_left);
-                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
-                    push_into(0);
-                    if bottom_is_border { push_into(1); }
-                    if right_is_border { push_into(2); }
-                    if right_is_border && bottom_is_border { push_into(3); }
+                    buckets[flat_key(tbl, key)].push(pr);
                 }
                 // (b) 1 mismatch on top.
                 for required_top in 0..=n_colors {
                     if required_top == p_top { continue; }
                     let key = ref_key(required_top, p_left);
-                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
-                    push_into(0);
-                    if bottom_is_border { push_into(1); }
-                    if right_is_border { push_into(2); }
-                    if right_is_border && bottom_is_border { push_into(3); }
+                    buckets[flat_key(tbl, key)].push(pr);
                 }
                 // (c) 1 mismatch on left.
                 for required_left in 0..=n_colors {
                     if required_left == p_left { continue; }
                     let key = ref_key(p_top, required_left);
-                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
-                    push_into(0);
-                    if bottom_is_border { push_into(1); }
-                    if right_is_border { push_into(2); }
-                    if right_is_border && bottom_is_border { push_into(3); }
+                    buckets[flat_key(tbl, key)].push(pr);
                 }
             }
         }
