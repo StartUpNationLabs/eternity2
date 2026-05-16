@@ -31,7 +31,8 @@ vol-117 T3/T4 and vol-118 T1.
 
 ## Bound
 
-**Claim**: $\Delta(S) \leq -p \cdot B(S) + \delta \cdot \frac{|S|}{N}$.
+**Claim (empirical)**: $\Delta(S) \approx -B(S) \cdot p$
+where $p \in [0.7, 1.0]$ is the boundary-break realization rate.
 
 ### Heuristic argument
 
@@ -41,12 +42,16 @@ vol-117 T3/T4 and vol-118 T1.
    facing $q$ generally changes; the edge MAY mismatch. Average rate $p$.
    Loss ≤ $p \cdot B(S)$.
 
-2. **Internal gain**: edges fully inside $S$ (both endpoints in $S$) get
-   permuted but the score among them depends only on $b_b$'s structure at
-   those positions. On average, the gain is $\delta \cdot |S|/N$ (proportional
-   share of the total $\delta$).
+2. **Internal-edge contribution under partial σ**: edges fully inside $S$
+   (both endpoints in $S$) are evaluated using $b_b$'s pieces at those
+   positions. The contribution depends on the specific internal subgraph;
+   no simple closed-form bound. For our measured cycles, this contribution
+   is approximately 0 (internal-edge matched count under partial σ is
+   similar to internal-edge matched count under no σ).
 
 3. **Edges fully outside $S$**: unchanged.
+
+The dominant term is $-B(S) \cdot p$.
 
 ### Special cases
 
@@ -64,35 +69,40 @@ vol-117 T3/T4 and vol-118 T1.
 
 For 459 → McGavin-469 ($\delta = 10$, $N = 154$):
 
-| $|S|$ | $B(S)$ (greedy) | Predicted $\Delta_{\max}$ | Empirical $\Delta$ |
-|------:|---------------:|-------------------------:|-------------------:|
-|    10 |             24 | $-0.7 \cdot 24 + 0.65 = -16.2$ |             -22  |
-|    20 |             38 | $-0.7 \cdot 38 + 1.30 = -25.3$ |             -38  |
-|    40 |             64 | $-0.7 \cdot 64 + 2.60 = -42.2$ |             -63  |
+| $|S|$ | $B(S)$ (greedy) | Empirical $\Delta$ | $p = -\Delta / B$ |
+|------:|---------------:|-------------------:|------------------:|
+|    10 |             24 |             -22  |              0.92 |
+|    20 |             38 |             -38  |              1.00 |
+|    40 |             64 |             -63  |              0.98 |
 
-Empirical $\Delta$ matches predicted with $p \approx 0.92-1.0$ rather than
-$0.7$. So almost EVERY boundary edge breaks; the bound is even tighter
-than expected.
+The boundary-break rate is essentially 1.0 — every boundary edge that
+CAN break, does break. The δ "internal gain" term is negligible
+relative to the boundary loss.
 
 ## Consequence
 
-For $\Delta(S) > 0$, we need:
-$$\delta \cdot \frac{|S|}{N} > p \cdot B(S)$$
-$$\frac{|S|}{N} > \frac{p \cdot B(S)}{\delta}$$
+For $\Delta(S) > 0$, we need internal-edge gain to overcome boundary
+loss. With the empirical observation that internal gain is negligible
+and $p \approx 1$:
+$$\Delta(S) > 0 \implies \text{internal gain} > B(S)$$
 
-For $\delta = 10$, $p = 0.92$, this requires $|S|/N > 0.092 \cdot B(S)$.
+The internal-edge contribution under partial σ would only exceed $B(S)$
+if the σ-permutation HAPPENS TO match internal edges within $S$ at a
+rate much higher than chance. For our measured cycles this doesn't
+occur — internal-edge matched count is approximately preserved (not
+increased) under partial σ.
 
-The min-boundary trajectory has $B(S) \approx 1.5 \cdot |S|$ for greedy
-selection (vol-117 T4 data), so:
-$$|S|/N > 0.092 \cdot 1.5 |S| \implies 1/N > 0.138$$
-$$N < 7.2$$
+**Result**: σ-cycle subset application is bounded by
+$\Delta(S) \approx -B(S)$, which is always negative for proper subsets
+(since $B(S) > 0$ for any non-cycle and non-empty subset).
 
-**Result**: For $\delta = 10$ (459→469), σ-cycle subset application yields
-$\Delta > 0$ ONLY for cycles of length $< 7.2$. The 154-cycle cannot lift.
-Smaller cycles (size 5-7) MIGHT lift if their structure permits.
+To exceed 459 via σ-subset, we'd need:
+- A cycle where partial σ HAPPENS to align internal edges so favorably
+  that $\text{internal gain} > B(S)$, OR
+- A cycle with $B(S) = 0$ for a proper subset (impossible in connected
+  cycles on the grid).
 
-But the smaller cycles (within Cluster A, sizes 2-25) have $\delta = 0$
-(both endpoints at score 459). So they cannot lift either.
+Neither has been observed across 7 boards × pairwise comparison.
 
 ## Implication for record breaking
 
