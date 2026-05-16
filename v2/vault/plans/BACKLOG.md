@@ -6,6 +6,22 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ---
 
+## Vol-109 open candidates (highest-priority)
+
+### `oracle-aware-alns-repair` — status: `unbuilt` — vol-109 candidate
+**Continuation of vol-108 T1 (SigmaCycleDestroy refuted).** The σ-cycle's structural lock comes from halo edge-colour constraints, not the cycle cells themselves. Fix: modify `repair_cells` to accept "oracle pins" — positions where the repair is forced to use a specific (piece, rotation) from a reference good basin. Then SigmaCycleDestroy + halo-oracle-pin should unlock the basin.
+
+Effort: 1-2 days. Requires modifying the repair API + ALNS framework + variance testing.
+
+EV: could lift offset=100-style locked basins past 446 (current ALNS ceiling). High prior if implemented correctly.
+
+### `cross-machine-bf-bench` — status: `partial` — vol-109 T3
+x86_64-unknown-linux-gnu target installed; cross-compile builds but link fails (no Linux linker on macOS host). Needs either cross-toolchain (x-tools, multi-hour install) or actual Linux machine access. Deferred.
+
+Once unblocked: also unlocks BOLT post-link reordering on Linux ELF binaries (~5-10% extra).
+
+---
+
 ## Algorithm builds (engine-level)
 
 ### `learned-value-order-gate` (vol-26 T1) — status: `built` — vol-26 (2026-05-13)
