@@ -20,6 +20,10 @@ The Obsidian landing page. Click any wikilink to navigate.
 - **2026-05-16 DIRECTIVE (vols 106-115)**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] — pivot to blank-puzzle speedup + NEW algorithm classes (paper-publishable inventions). User-invented [[concepts/relax-and-cross-cvc|Relax-and-Cross (CVC)]].
 - **2026-05-16 LAB NOTES (vols 106-109)**: [[LAB_NOTES_2026-05-16]] — partial summary mid-session.
 - **2026-05-16 SYNTHESIS (vols 106-115)**: [[SYNTHESIS_VOLS_106-115_2026-05-16]] — **full 10-vol directive close.** Engine: 232× speedup. Vanilla DFS: +33%. Full Blackwood port. ~16 documented refutations. Mathematical framework for the 459-level set. Hint-preserving DFS prototype. Standing record 459 unchanged.
+- **2026-05-16 PAPER (vols 117-118)**: [[PAPER_2026-05-16_459_indecomposability_synthesis]] — unified 3-layer characterization of 459 ceiling: empirical (8 refutations), structural (2-cluster decomposition), quantitative (boundary bound Δ ≈ -B(S)). σ-subset theorem [[MATH_NOTES_2026-05-16_SIGMA_SUBSET_THEOREM]].
+- **Vol-116**: hint-preserving Hungarian SHIPPED — full pipeline 5/5 canonical compliant. Score ceiling 435 on strict-canonical (raw DFS limited).
+- **Vol-117**: hint-preserving schedule path + 3 σ-cycle math findings: schedule×hint destructive interaction; rotation-locally-optimal across 12 boards; σ-cycle boundary growth (quantitative indecomposability); greedy min-boundary subset bridge REFUTED.
+- **Vol-118**: two-cluster 459-level set CONFIRMED via rigidity matrix; pipeline corner-perm specificity (McGavin perm only reaches 396); σ-subset score-lift theorem.
 
 ## Plans + discipline
 
