@@ -176,7 +176,8 @@ fn main() {
     );
 
     // Search state — all stack-allocated.
-    let mut used: [u64; 4] = [0; 4]; // 256-bit bitset.
+    // 256-bit bitset as [u64; 4]; LLVM keeps it in L1 (32 bytes).
+    let mut used: [u64; 4] = [0; 4];
     let mut chosen: [u32; N_POS] = [0; N_POS];
     let mut frame_cursor: [u32; N_POS] = [0; N_POS];
 
@@ -192,8 +193,6 @@ fn main() {
     let mut max_depth: u32 = 0;
     let mut depth: usize = 0;
 
-    // Initialize cursor at depth 0.
-    // need_n=true (row 0), need_w=true (col 0), so n_color=BORDER, w_color=BORDER.
     let init_key = (BORDER as usize) * N_COLORS + (BORDER as usize);
     frame_cursor[0] = unsafe { *bucket_starts_ptr.add(init_key) };
 
@@ -208,7 +207,7 @@ fn main() {
         loop {
             let entry = unsafe { *entries_ptr.add(cur as usize) };
             if entry == SENTINEL { break; }
-            let pid = entry_pid(entry) as usize;
+            let pid = ((entry >> 12) & 0x1FF) as usize;
             let word = pid >> 6;
             let bit = 1u64 << (pid & 63);
             if (unsafe { *used.get_unchecked(word) } & bit) != 0 {
@@ -232,11 +231,9 @@ fn main() {
                 max_depth = depth as u32;
             }
             if depth == N_POS {
-                // Solved. For benchmarking, treat as full solution
-                // and backtrack to continue counting.
                 depth -= 1;
+                let pid = entry_pid(unsafe { *chosen.get_unchecked(depth) }) as usize;
                 unsafe {
-                    let pid = entry_pid(*chosen.get_unchecked(depth)) as usize;
                     *used.get_unchecked_mut(pid >> 6) &= !(1u64 << (pid & 63));
                 }
                 continue;
