@@ -10,11 +10,13 @@ The Obsidian landing page. Click any wikilink to navigate.
 
 - **Goal**: solve canonical 5-clue Eternity II (16×16 Monckton piece set) — score 480/480.
 - **Community ceiling**: 469/480 ([[basin-mcgavin-469|McGavin 2020]] via Blackwood algorithm).
-- **Our current cold-start record**: 458/480 (vol-32 vanilla_fast + ALNS).
-- **Our current warm-start record**: 454/480 ([[basin-454-vol6]], historic vol-6).
-- **Gap to community**: 12 points; characterised in [[mcgavin-blackwood-gap-analysis]].
+- **Our current record (vol-60)**: **459/480** (vanilla_fast + ALNS, p06 corner perm).
+- **Cold-start record (vol-32)**: 458/480.
+- **Warm-start record (vol-6)**: 454/480.
+- **Gap to community**: 10 points; the 459 ↔ 469 gap is **rigorously characterised** as a board-spanning σ-cycle problem (vols 65-101 PAPER).
 - **Spec contract**: `v2/V2_DESIGN.md`.
 - **Project guide**: `v2/CLAUDE.md`.
+- **2026-05-16 PAPER**: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem|Local Rigidity Theorem]] (13+ MIP-proven local-optimal regions, sound UB ≤ 123 on McGavin top-4, universal σ-cycle indecomposability).
 
 ## Plans + discipline
 
@@ -73,6 +75,12 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  57 |             — |       — | **Vol-57 closed (CDCL Rust prototype)**: `crates/cdcl-proto` standalone crate. AC-3 with cause tracking + 1-UIP-equivalent + watch-filtered unit-prop. Algorithm validated; clauses median 8-9 lits on 6×6/5c. Wall-clock 2WL deferred to vol-58+. [[vol-57]] |  |
 |  58 |             — |       — | **Vol-58 closed (extensive validation + canonical-scale failure)**: family-B 457 basin MIP-verified on 11 clusters, McGavin 469 basin verified on 9 clusters. Total **22 cluster MIPs across 3 basin families** all locally optimal. CDCL scaling 5×5→16×16: 7×7 PASS (3.4× wall-clock + finds where vanilla can't), canonical 16×16 FAIL (avg clause 96 lits, 0 unit-props). Our 458 matches Schaus & Deville 2008 academic SOTA. [[vol-58]] |  |
 |  59 |             — |       — | **Vol-59 closed (lottery + CDCL scaling + theoretical 1-UIP analysis)**: basin lottery 156/156 jobs: 1×458 + 3×457, **no 459+ found, P(458)=0.64%**. CDCL scaling test confirms unit-prop hit rate crashes at 12×12+ due to clause-size growth. **THEORETICAL FINDING**: E2's cause-graph is FLAT (depth ≤ 2), so SAT-style 1-UIP collapses to what my naive code already does. Real fix isn't 1-UIP but redundant-cause elimination — a different (and possibly harder) analysis. Path to >458 narrowed: McGavin/Blackwood-class algorithm or fundamentally different paradigm. [[vol-59]] |  |
+|  60 |         **459** |       — | **NEW LOCAL RECORD**: cross-machine SOTA replay produced 459/480 from p06 corner-perm + vanilla_fast + ALNS basic seed=42 30min. p06 partial = corner perm (1,0,2,3). All vol-32 458 + vol-44 458 + 2 sister basins now MIP-locally optimal (halo-1). |  |
+|  61 |             459 |       — | Vol-61 SOTA replay calibration on vol-60 459 basin. ALNS lottery rich diagnostics; no 460. |  |
+|  62-79 |       459 |       — | Vols 62-79: 8+ invented algorithms (Homotopy-ALNS, ComponentClusterDestroy, BLGS, FCD, OA-ALNS, RGS, CAS) all bounded ≤ 459. McGavin 469 fully decoded. New 469 board found (near-twin swap). σ-cycle indecomposability 459→469 (vol-65). Basin asymmetry (vol-68 top-row pinning). |  |
+|  80 |             459 |       — | **Blackwood "lots of overlap" rationale REFUTED at single-seed**: 7-triple sweep, top-overlap triples scored worst (436-437), bottom-overlap best (446). 1-seed result; needs variance check. [[blackwood-triple-sweep]] |  |
+|  82 |             459 |       — | **McGavin basin TOP-DETERMINING**: bottom-N pinning gives 443-462 vs top-N=14 → 469. Mismatch geometry: McGavin 11 mismatches concentrate in rows 0-4 (top 5). [[mcgavin-basin-top-bottom-symmetry]] [[mcgavin-469-mismatch-geometry]] |  |
+|  83-101 |       459 |       — | **Local Rigidity Theorem proven**: 13+ MIP-PROVEN local-optimal regions across 3 basins. McGavin halo-1 (vol-83, 37 cells, 895s) → halo-2 per-comp (vol-92) → halo-3 per-comp (vol-94) → halo-4 comp 0 (vol-96, 57 cells = LARGEST). Local 459 halo-1 joint (vol-90, 59 cells, 1800s) + halo-2 per-comp (vol-93) + halo-4 per-comp (vol-100, comp 0 = 56 cells PROVEN). Vol-32 458 halo-2 per-comp (vol-95). First sound UB below 480 (vol-86: top-4 ≤ 123). σ-cycle indecomposability UNIVERSAL across 3 basin-pairs (vols 65/99/101). σ-cycles board-spanning (rows 1-14 × cols 1-14). McGavin near-twin orbit = exactly 2 boards (6555 perturbations tested, 0 give 470). Corner perm (3,2,0,1) UNIQUE 469 host across 1156-board corpus. PAPER: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem]]. Standing 459 unchanged after 10h autonomous. |  |
 
 
 ## Concepts — by category
