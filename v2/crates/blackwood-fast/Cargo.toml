@@ -13,7 +13,12 @@ workspace = true
 eternity2-core = { path = "../core" }
 eternity2-time = { path = "../time" }
 eternity2-generator = { path = "../generator" }
+eternity2-puzzle-io = { path = "../puzzle-io" }
 
 [[bin]]
 name = "bf_bench"
 path = "src/bin/bench.rs"
+
+[[bin]]
+name = "vanilla_v2"
+path = "src/bin/vanilla_v2.rs"
