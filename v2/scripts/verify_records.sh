@@ -2,11 +2,18 @@
 # Canonical record verification — run this on any board claimed as a record.
 # Per CLAUDE.md rule #5: every record claim must pass these checks.
 #
+# Vol-118 T7: rewritten to use the consolidated `verify_board` bin which
+# replaces both `rescore_board` and `verify_record` (those still exist but
+# are now legacy; their checks are subsets of verify_board's).
+#
 # Usage: verify_records.sh <board.json> [board.json ...]
 #
-# Runs:
-#   1. rescore_board — independent score recomputation
-#   2. verify_record — piece-uniqueness + hint compliance
+# verify_board checks:
+#   - piece-uniqueness (no duplicate pieces placed)
+#   - border-consistency (no edge pieces at interior, no interior pieces
+#     with BORDER edges facing outward) -- catches vol-118 bf-bucket-bug class
+#   - hint-compliance (canonical hints in pinned positions+rotations)
+#   - edge-match score (matched/total adjacencies)
 
 set -uo pipefail
 
@@ -19,8 +26,4 @@ if [ $# -eq 0 ]; then
     exit 2
 fi
 
-echo "=== rescore_board (independent score) ==="
-./target/release/rescore_board "$@"
-echo ""
-echo "=== verify_record (piece-uniqueness + hint compliance) ==="
-./target/release/verify_record "$@"
+./target/release/verify_board "$@"

@@ -13,8 +13,13 @@ mod board_io;
 mod bucas;
 mod report;
 mod score;
+mod verify;
 
 pub use board_io::{read_dump, write_dump, DumpedBoard};
 pub use bucas::{board_to_bucas_edges, bucas_url};
 pub use report::{puzzle_name_from_path, write_report, RunReport};
 pub use score::{internal_edge_count, placed_count, render_board, score_board};
+pub use verify::{
+    verify, BorderSide, BorderViolation, ExpectedKind, HintCompliance, HintMismatch,
+    VerifyReport,
+};
