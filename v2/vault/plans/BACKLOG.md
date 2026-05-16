@@ -261,7 +261,40 @@ Vol-25 shipped dirty-list scoping (fix-4, commit `fd5b615`) which captured only 
 ### `vault-validation-of-perf-wins` — status: `unbuilt` — since: vol-25
 The vol-25 fixes were validated against raw nps on synthetic 60 s probes. The meaningful metric for the research project is matched-edge score on real solves (multi-thread joe_depth150_bp_par for 5–30 min on canonical E2). Per the [[../../../../.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/project_e2_vol14_bp_null|Vol-14 BP-as-value-order REVERSAL]] memory, raw-nps wins don't always translate to score wins (CP-partial metric mid-pipeline can be misleading). Worth a one-shot validation before declaring victory. Effort: 30 min runtime + 5 min analysis.
 
-### `blackwood-fast-per-depth-unrolling` — status: `partial` — since: vol-106 (user-flagged 2026-05-16)
+### `blackwood-fast-per-depth-unrolling` — status: `analysis complete, low EV` — since: vol-106 (user-flagged 2026-05-16, analysed 2026-05-16)
+
+**Analysis update 2026-05-16 ~10:00 CEST**: after building the
+proc-macro scaffold (`depth_dispatch_256!`) and confirming it works,
+the honest read of which per-D values are foldable to compile-time
+constants:
+
+- **Foldable** (already done in T11 via bitmask inlining):
+  `is_top_row`, `is_left_col`, `is_right_col`, `is_bottom_row`, `tbl`.
+- **Not foldable without further infrastructure**:
+  `targets[D]`, `conflicts_allowed[D]` are per-puzzle runtime arrays.
+  To fold them would require per-schedule const tables (one set per
+  schedule variant) + monomorphization on the schedule choice.
+- **Cannot fold**: anything in the inner trial loop (cursor, cum,
+  conf, board, pieces_used) — all runtime-mutable.
+
+Net per-D specialisation saves ~1 L1 load per node (~3 cycles) on
+top of T11. **Probably ~5-10% extra over PGO+T11.** This is much
+smaller than the initially-estimated 1.5-3× from per-depth unrolling
+because the bottleneck isn't depth-meta lookups, it's the inner trial
+loop (which already runs at the 9-instruction per-cycle ceiling per
+T7 asm inspection).
+
+The libblackwood C engine's 295M nps vs our 72M PGO gap (4×) is
+likely NOT primarily from per-depth unrolling. Other factors:
+- libblackwood ships per-depth UPDATE rules baked in (different
+  per-depth conflict-allowed and schedule logic) that LLVM cannot
+  see in our runtime-table design.
+- C's `goto` chain vs Rust's `loop` may produce different basic-block
+  layouts that the apple-m1 branch predictor handles differently.
+
+**Decision**: defer the full per-depth unrolling integration. Track
+the proc-macro scaffold + macro_test sanity-check as `built`. The
+EV/effort ratio is poor compared to other vol-107 candidates.
 **Biggest remaining nps lever for blackwood-fast.** The current `solve_blackwood_sized` is one generic loop body that runs 256 times. libblackwood (Bucas's C engine) generates 256 distinct goto-labelled depth blocks with each block's constants (post_depth, schedule target, conflicts_allowed, is_top_row, is_left_col, depth_tbl) inlined at compile time — eliminating per-node table lookups for those.
 
 Rust path: const-generic + per-depth specialised functions that tail-call into each other (or — equivalently — proc-macro that generates the unrolled body, similar to libblackwood's `build.rs`-style codegen).
