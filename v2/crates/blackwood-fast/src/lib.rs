@@ -939,6 +939,14 @@ pub fn solve_blackwood(
             }
             conflicts_allowed[d as usize] = budget;
         }
+        // Vol-107 T1 — fully-const v17a path. Set E2_BF_UNROLLED_V17A_CONST=1
+        // to use. Only valid for the v17a schedule (which we can detect by
+        // checking max_heuristic_index = 255).
+        if std::env::var("E2_BF_UNROLLED_V17A_CONST").as_deref() == Ok("1")
+            && schedule.max_heuristic_index == 255
+        {
+            return solve_blackwood_unrolled_256_v17a_const(&index, time_budget_us);
+        }
         // Vol-106 T12 — env var to opt into the proc-macro-unrolled
         // variant. Set E2_BF_UNROLLED=1 to use.
         if std::env::var("E2_BF_UNROLLED").as_deref() == Ok("1") {
@@ -1324,6 +1332,181 @@ fn solve_blackwood_unrolled_256(
                 const POST_PLUS_1: u32 = (__D__ + 1) as u32;
                 if POST_PLUS_1 > stats.max_depth {
                     stats.max_depth = POST_PLUS_1;
+                    best_board.copy_from_slice(&board);
+                }
+                depth = __D__ + 1;
+                if depth < WH {
+                    unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+                }
+                placed = true;
+                break;
+            }
+
+            if !placed {
+                unsafe { *cursor.get_unchecked_mut(__D__) = 0; }
+                if __D__ == 0 {
+                    break 'outer;
+                }
+                depth = __D__.wrapping_sub(1);
+                let pr = unsafe { *board.get_unchecked(depth) };
+                let piece_idx = pr.piece_idx() as usize;
+                unsafe {
+                    *pieces_used.get_unchecked_mut(piece_idx >> 6) &= !(1u64 << (piece_idx & 63));
+                    *board.get_unchecked_mut(depth) = PieceRot::NONE;
+                }
+            }
+        }
+    }
+
+    let out = board_to_out(index, &best_board);
+    (stats, out)
+}
+
+/// Vol-107 T1 — like solve_blackwood_unrolled_256 but with per-D
+/// const tables for the v17a schedule. `targets[D]` and
+/// `conflicts_allowed[D]` are looked up in the CANONICAL const
+/// arrays defined in `schedule.rs`, eliminating one L1 load per
+/// node when the v17a schedule is in use.
+///
+/// Only valid for the v17a schedule (max_heuristic_index = 255).
+fn solve_blackwood_unrolled_256_v17a_const(
+    index: &RowMajorIndex,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    use eternity2_blackwood_fast_codegen::depth_dispatch_256;
+    use crate::schedule::{CONFLICTS_V17A_CANONICAL, TARGETS_V17A_CANONICAL};
+    const WH: usize = 256;
+    const W: usize = 16;
+    const BITSET_WORDS: usize = 4;
+    // v17a max_heuristic_index = 255 (last target's depth).
+    const MAX_HEURISTIC_INDEX: u32 = 255;
+
+    let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
+    let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
+    let mut best_board: [PieceRot; WH] = [PieceRot::NONE; WH];
+    let mut cursor: [u32; WH] = [0; WH];
+    let mut cum: [u32; WH] = [0; WH];
+    let mut conf: [u32; WH] = [0; WH];
+
+    let mut stats = SearchStats::default();
+    let start = eternity2_time::Clock::now();
+    let mut depth: usize = 0;
+
+    let strict_offsets_ptr = index.offsets.as_ptr();
+    let strict_entries_ptr = index.entries.as_ptr();
+    let relaxed_offsets_ptr = if index.relaxed_offsets.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_offsets.as_ptr()
+    };
+    let relaxed_entries_ptr = if index.relaxed_entries.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_entries.as_ptr()
+    };
+    let top_ptr = index.top_of.as_ptr();
+    let bottom_ptr = index.bottom_of.as_ptr();
+    let left_ptr = index.left_of.as_ptr();
+    let right_ptr = index.right_of.as_ptr();
+    let heur_ptr = index.heur_count_of.as_ptr();
+
+    'outer: loop {
+        if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
+            break 'outer;
+        }
+        if depth == WH {
+            stats.solved = true;
+            stats.max_depth = WH as u32;
+            break 'outer;
+        }
+
+        depth_dispatch_256! {
+            const D_ROW: usize = __D__ / 16;
+            const D_COL: usize = __D__ % 16;
+            const IS_TOP_ROW: bool = D_ROW == 0;
+            const IS_BOTTOM_ROW: bool = D_ROW == 15;
+            const IS_LEFT_COL: bool = D_COL == 0;
+            const IS_RIGHT_COL: bool = D_COL == 15;
+            const TBL: usize = ((IS_RIGHT_COL as usize) << 1) | (IS_BOTTOM_ROW as usize);
+
+            let top_color: Color = if IS_TOP_ROW {
+                BORDER
+            } else {
+                let nbr = unsafe { *board.get_unchecked(__D__.wrapping_sub(W)) };
+                unsafe { *bottom_ptr.add(nbr.0 as usize) }
+            };
+            let left_color: Color = if IS_LEFT_COL {
+                BORDER
+            } else {
+                let nbr = unsafe { *board.get_unchecked(__D__.wrapping_sub(1)) };
+                unsafe { *right_ptr.add(nbr.0 as usize) }
+            };
+            let key = ref_key(top_color, left_color);
+            let flat = (TBL << 16) | (key as usize);
+
+            // Vol-107 T1 — const lookup, folds to immediate at -O3.
+            const ALLOWED_HERE: u32 = CONFLICTS_V17A_CANONICAL[__D__];
+            let prev_conf = if __D__ == 0 { 0 } else { unsafe { *conf.get_unchecked(__D__.wrapping_sub(1)) } };
+            let use_relaxed = !relaxed_offsets_ptr.is_null()
+                && ALLOWED_HERE > 0
+                && prev_conf < ALLOWED_HERE;
+            let (lo, list_ptr) = if use_relaxed {
+                let lo = unsafe { *relaxed_offsets_ptr.add(flat) } as usize;
+                (lo, relaxed_entries_ptr)
+            } else {
+                let lo = unsafe { *strict_offsets_ptr.add(flat) } as usize;
+                (lo, strict_entries_ptr)
+            };
+            let mut c_idx = lo + unsafe { *cursor.get_unchecked(__D__) } as usize;
+
+            const POST_DEPTH: u32 = (__D__ + 1) as u32;
+            const SCHEDULE_ACTIVE: bool = POST_DEPTH <= MAX_HEURISTIC_INDEX;
+            // Vol-107 T1 — const lookup, folds to immediate.
+            const TARGET: u32 = if SCHEDULE_ACTIVE { TARGETS_V17A_CANONICAL[POST_DEPTH as usize - 1] } else { 0 };
+            let prev_cum = if __D__ == 0 { 0 } else { unsafe { *cum.get_unchecked(__D__.wrapping_sub(1)) } };
+
+            let mut placed = false;
+            loop {
+                let pr = unsafe { *list_ptr.add(c_idx) };
+                if pr.0 == PieceRot::NONE.0 {
+                    break;
+                }
+                c_idx += 1;
+                let piece_idx = pr.piece_idx() as usize;
+                let word = piece_idx >> 6;
+                let bit = 1u64 << (piece_idx & 63);
+                if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
+                    continue;
+                }
+
+                let candidate_conf = if use_relaxed {
+                    let p_top = unsafe { *top_ptr.add(pr.0 as usize) };
+                    let p_left = unsafe { *left_ptr.add(pr.0 as usize) };
+                    ((p_top != top_color) as u32) + ((p_left != left_color) as u32)
+                } else {
+                    0
+                };
+                let new_conf = prev_conf + candidate_conf;
+                if new_conf > ALLOWED_HERE {
+                    continue;
+                }
+
+                if SCHEDULE_ACTIVE {
+                    let new_cum = prev_cum + unsafe { *heur_ptr.add(pr.0 as usize) } as u32;
+                    if new_cum < TARGET {
+                        continue;
+                    }
+                    unsafe { *cum.get_unchecked_mut(__D__) = new_cum; }
+                } else {
+                    unsafe { *cum.get_unchecked_mut(__D__) = prev_cum; }
+                }
+                unsafe { *conf.get_unchecked_mut(__D__) = new_conf; }
+                unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
+                unsafe { *board.get_unchecked_mut(__D__) = pr; }
+                unsafe { *cursor.get_unchecked_mut(__D__) = (c_idx - lo) as u32; }
+                stats.nodes += 1;
+                if POST_DEPTH > stats.max_depth {
+                    stats.max_depth = POST_DEPTH;
                     best_board.copy_from_slice(&board);
                 }
                 depth = __D__ + 1;

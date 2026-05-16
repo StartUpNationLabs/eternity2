@@ -6,6 +6,90 @@ use eternity2_core::{Color, Hints, Puzzle, BORDER};
 
 use crate::BlackwoodSchedule;
 
+/// Vol-107 T1 — const tables for the v17a schedule pre-evaluated at every
+/// depth ∈ 0..256 (canonical 16×16). Used by the unrolled engine variant
+/// to fold per-D schedule lookups into immediate values, eliminating one
+/// L1 load per node.
+///
+/// `TARGETS_V17A_CANONICAL[D]` = required cumulative heuristic-edge count
+/// at depth D, computed from the v17a exhaustion_targets curve.
+/// `CONFLICTS_V17A_CANONICAL[D]` = cumulative break-budget at depth D,
+/// computed from the canonical break-index set [201, 206, ..., 255].
+///
+/// Both are evaluated by const fns at compile time. Values match what
+/// `blackwood_schedule_calibrated_v17a(&canonical_puzzle, &canonical_hints)`
+/// produces at runtime, modulo `pool_size.min(150)` which we approximate
+/// as 150 (canonical pool_size on Selby-Riordan is >150).
+pub const TARGETS_V17A_CANONICAL: [u32; 256] = compute_targets_v17a_canonical();
+pub const CONFLICTS_V17A_CANONICAL: [u32; 256] = compute_conflicts_v17a_canonical();
+
+const fn compute_targets_v17a_canonical() -> [u32; 256] {
+    // From schedule.rs blackwood_schedule_calibrated_v17a:
+    //   (0, 0), (60, 21), (80, 32), (100, 41), (120, 48),
+    //   (140, 58), (160, 82), (200, 112), (255, 150).
+    const CONTROL: [(u32, u32); 9] = [
+        (0, 0),
+        (60, 21),
+        (80, 32),
+        (100, 41),
+        (120, 48),
+        (140, 58),
+        (160, 82),
+        (200, 112),
+        (255, 150),
+    ];
+    let mut out = [0u32; 256];
+    let mut d = 0u32;
+    while d < 256 {
+        // Find the control-point interval [c0, c1] containing d.
+        let mut i = 0;
+        while i + 1 < CONTROL.len() && CONTROL[i + 1].0 < d {
+            i += 1;
+        }
+        // Interpolate.
+        if d >= CONTROL[CONTROL.len() - 1].0 {
+            out[d as usize] = CONTROL[CONTROL.len() - 1].1;
+        } else if d <= CONTROL[0].0 {
+            out[d as usize] = CONTROL[0].1;
+        } else {
+            let (d0, c0) = CONTROL[i];
+            let (d1, c1) = CONTROL[i + 1];
+            if d1 == d0 {
+                out[d as usize] = c1;
+            } else {
+                let span = (d1 - d0) as i64;
+                let dc = c1 as i64 - c0 as i64;
+                let off = (d - d0) as i64;
+                let interp = c0 as i64 + (dc * off) / span;
+                out[d as usize] = if interp < 0 { 0 } else { interp as u32 };
+            }
+        }
+        d += 1;
+    }
+    out
+}
+
+const fn compute_conflicts_v17a_canonical() -> [u32; 256] {
+    // Canonical break-indexes (n_pos=256 so the proportional scale is identity):
+    const BREAKS: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 255];
+    let mut out = [0u32; 256];
+    let mut d: u32 = 0;
+    let mut budget: u32 = 0;
+    while d < 256 {
+        // Increment budget if d is in BREAKS.
+        let mut i = 0;
+        while i < BREAKS.len() {
+            if BREAKS[i] == d {
+                budget += 1;
+            }
+            i += 1;
+        }
+        out[d as usize] = budget;
+        d += 1;
+    }
+    out
+}
+
 /// Pick Blackwood's 3 "heuristic colors" by (a) high piece-edge occurrence
 /// count, (b) not on any corner piece, (c) not on the centre/start hint
 /// piece. Matches `solver-engine::compute_heuristic_sides`.
