@@ -946,6 +946,11 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     let w: usize = (WH as f64).sqrt() as usize;
     debug_assert_eq!(w * w, WH);
     let h = w;
+    // Compile-time-known w for the canonical 16x16 specialisation
+    // (WH == 256). Hot loop uses these directly for cheap bitmask
+    // depth-meta computation.
+    const W_CANONICAL: usize = 16;
+    let canonical = WH == 256;
 
     let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
     let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
@@ -955,6 +960,8 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     // Cumulative conflicts (mismatches placed) at each depth.
     let mut conf: [u32; WH] = [0; WH];
 
+    // Vol-106 T11 — depth-meta tables retained for non-canonical sizes;
+    // canonical 16x16 path computes them inline from depth (cheaper).
     let mut depth_tbl: [u8; WH] = [0; WH];
     let mut depth_top_row: [bool; WH] = [false; WH];
     let mut depth_left_col: [bool; WH] = [false; WH];
@@ -1000,14 +1007,31 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
             break 'outer;
         }
 
-        let tbl = unsafe { *depth_tbl.get_unchecked(depth) } as usize;
-        let top_color: Color = if unsafe { *depth_top_row.get_unchecked(depth) } {
+        // Vol-106 T11 unrolling — compute depth-meta inline using
+        // bitmask arithmetic on the compile-time-constant W=16
+        // (when canonical). Eliminates 3 LUT reads per node.
+        let (tbl, is_top_row, is_left_col) = if canonical {
+            // depth/16 = row, depth%16 = col. Use shifts/masks for cheap codegen.
+            let row = depth >> 4;
+            let col = depth & 0xF;
+            let is_bottom_row = row == W_CANONICAL - 1;
+            let is_right_col = col == W_CANONICAL - 1;
+            let tbl = ((is_right_col as usize) << 1) | (is_bottom_row as usize);
+            (tbl, row == 0, col == 0)
+        } else {
+            let t = unsafe { *depth_tbl.get_unchecked(depth) } as usize;
+            let tr = unsafe { *depth_top_row.get_unchecked(depth) };
+            let lc = unsafe { *depth_left_col.get_unchecked(depth) };
+            (t, tr, lc)
+        };
+
+        let top_color: Color = if is_top_row {
             BORDER
         } else {
             let nbr = unsafe { *board.get_unchecked(depth - w) };
             unsafe { *bottom_ptr.add(nbr.0 as usize) }
         };
-        let left_color: Color = if unsafe { *depth_left_col.get_unchecked(depth) } {
+        let left_color: Color = if is_left_col {
             BORDER
         } else {
             let nbr = unsafe { *board.get_unchecked(depth - 1) };
