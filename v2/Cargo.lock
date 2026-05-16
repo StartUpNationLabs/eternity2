@@ -581,6 +581,7 @@ dependencies = [
 name = "eternity2-blackwood-fast"
 version = "0.1.0"
 dependencies = [
+ "eternity2-blackwood-fast-codegen",
  "eternity2-core",
  "eternity2-generator",
  "eternity2-puzzle-io",

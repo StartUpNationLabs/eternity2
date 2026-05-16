@@ -33,3 +33,7 @@ path = "src/bin/bf_bw.rs"
 [[bin]]
 name = "bf_similarity"
 path = "src/bin/bf_similarity.rs"
+
+[[bin]]
+name = "macro_test"
+path = "src/bin/macro_test.rs"
