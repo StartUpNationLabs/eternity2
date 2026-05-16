@@ -857,6 +857,85 @@ impl DestroyOp for BottomBandDestroy {
     }
 }
 
+/// Vol-108 T1 — σ-cycle-aware destroy.
+///
+/// Given an oracle board (a known good basin, e.g. the 459 record),
+/// compute the σ-permutation from `board` (current) to `oracle`,
+/// decompose into cycles, return the largest cycle's positions (or
+/// all cycles with length ≥ `min_size`, up to `max_cells`) as the
+/// destroy set.
+///
+/// Motivation: vol-107 T2 found that the largest σ-cycle between a
+/// partial and the 459 record predicts ALNS-liftability — partials
+/// with max-cycle > 50 are structurally locked. SigmaCycleDestroy
+/// targets EXACTLY those locked regions for repair, instead of the
+/// usual mismatch-density-driven heuristics.
+///
+/// Behaviour:
+///   - `min_size`: cycles below this length are ignored. Use 8-20.
+///   - `max_cells`: cap on total destroy set size. Set to 30-80.
+///   - The largest cycles are picked first.
+///   - Falls back to `RandomRegion{k:4}` when no σ-cycle ≥ min_size
+///     exists (board is too close to oracle).
+pub struct SigmaCycleDestroy {
+    pub oracle: Board,
+    pub min_size: u32,
+    pub max_cells: u32,
+    /// L∞ halo radius around each cycle cell. 0 = no halo (just cycle
+    /// cells). 1 = include 4-neighbours. Higher unlocks more of the
+    /// halo so repair can re-orient adjacent pieces.
+    pub halo: u32,
+}
+
+impl DestroyOp for SigmaCycleDestroy {
+    fn name(&self) -> &str { "sigma_cycle" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let cell_count = (w * h) as usize;
+        let cycles = crate::oracle_swap::compute_sigma_cycles(board, &self.oracle, cell_count);
+        let mut core: BTreeSet<Position> = BTreeSet::new();
+        for c in &cycles {
+            if (c.positions.len() as u32) < self.min_size {
+                break; // cycles sorted by size desc
+            }
+            for &p in &c.positions {
+                core.insert(p);
+                if core.len() as u32 >= self.max_cells {
+                    break;
+                }
+            }
+            if core.len() as u32 >= self.max_cells {
+                break;
+            }
+        }
+        if core.is_empty() {
+            // Fallback: small random region.
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+        // Add halo via L∞ expansion.
+        if self.halo == 0 {
+            return core;
+        }
+        let halo = self.halo as i32;
+        let mut out = core.clone();
+        for &p in &core {
+            let x = (p % w) as i32;
+            let y = (p / w) as i32;
+            for dy in -halo..=halo {
+                for dx in -halo..=halo {
+                    let nx = x + dx;
+                    let ny = y + dy;
+                    if nx >= 0 && nx < w as i32 && ny >= 0 && ny < h as i32 {
+                        out.insert((ny as u32) * w + (nx as u32));
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
 /// Vol-18 NOVEL — destroy a LARGE band (k_rows wide) centered on the
 /// densest mismatch row. Unlike WorstBand{4} which destroys 64 cells,
 /// MegaBand{k=8-10} destroys 128-160 cells. Generates fundamentally

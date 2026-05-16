@@ -61,7 +61,11 @@ pub fn compute_sigma_cycles(current: &Board, oracle: &Board, cell_count: usize) 
         }
         let mut positions: Vec<Position> = Vec::new();
         let mut q = start;
-        while !seen.contains(&q) {
+        // Walk only while q is in sigma's domain (placed in current
+        // AND its piece has an oracle target). Otherwise we'd push a
+        // non-placed position into the cycle and crash at piece lookup.
+        // Vol-108 T1 fix: was pushing q before sigma-membership check.
+        while !seen.contains(&q) && sigma.contains_key(&q) {
             seen.insert(q);
             positions.push(q);
             match sigma.get(&q) {

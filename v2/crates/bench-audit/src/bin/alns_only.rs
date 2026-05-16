@@ -29,8 +29,61 @@ use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
     BottomBandDestroy, ComponentClusterDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
     HalfBoardDestroy, HingeDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
-    RepairKind, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
+    RepairKind, SigmaCycleDestroy, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
+
+fn build_ops_with_oracle(preset: &str, oracle: Option<&Board>) -> Vec<Box<dyn DestroyOp>> {
+    match preset {
+        "sigma_only" => {
+            let oracle = oracle.expect("sigma_only preset requires --oracle");
+            vec![
+                Box::new(SigmaCycleDestroy {
+                    oracle: oracle.clone(),
+                    min_size: 8,
+                    max_cells: 60,
+                    halo: 0,
+                }),
+            ]
+        }
+        "sigma_halo" => {
+            // Vol-108 T1.b — try σ-cycle + 1-cell halo to unlock the
+            // surrounding pieces' rotations.
+            let oracle = oracle.expect("sigma_halo preset requires --oracle");
+            vec![
+                Box::new(SigmaCycleDestroy {
+                    oracle: oracle.clone(),
+                    min_size: 8,
+                    max_cells: 60,
+                    halo: 1,
+                }),
+            ]
+        }
+        "winning5_sigma" => {
+            let oracle = oracle.expect("winning5_sigma preset requires --oracle");
+            vec![
+                Box::new(RandomRegion { k: 4 }),
+                Box::new(WorstWindow { k: 5 }),
+                Box::new(ConflictDriven { max_size: 30 }),
+                Box::new(ConflictDriven { max_size: 80 }),
+                Box::new(MwpmDefectPair { max_pairs: 12 }),
+                Box::new(WorstBand { k_rows: 4 }),
+                Box::new(SigmaCycleDestroy {
+                    oracle: oracle.clone(),
+                    min_size: 10,
+                    max_cells: 80,
+                    halo: 0,
+                }),
+                Box::new(SigmaCycleDestroy {
+                    oracle: oracle.clone(),
+                    min_size: 20,
+                    max_cells: 40,
+                    halo: 1,
+                }),
+            ]
+        }
+        _ => build_ops(preset),
+    }
+}
 
 fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
     match preset {
@@ -198,6 +251,8 @@ fn main() {
     // to pin corner pieces during ALNS so the sweep's distinct
     // permutations are preserved through recovery.
     let mut extra_pins: Vec<u32> = Vec::new();
+    // Vol-108 T1 — oracle board path for SigmaCycleDestroy.
+    let mut oracle_path: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -205,6 +260,7 @@ fn main() {
             "--alns-budget-ms" => alns_ms = args.next().unwrap().parse().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--ops" => ops_preset = args.next().unwrap(),
+            "--oracle" => oracle_path = Some(PathBuf::from(args.next().unwrap())),
             "--repair-budget-ms" => repair_budget_ms = args.next().unwrap().parse().unwrap(),
             "--repair-kind" => repair_kind = args.next().unwrap(),
             "--t" => t = args.next().unwrap().parse().unwrap(),
@@ -243,7 +299,12 @@ fn main() {
         "ALNS config: ops={ops_preset} repair_kind={repair_kind} repair_budget_ms={repair_budget_ms} t={t} budget={alns_ms}ms seed={seed}"
     );
 
-    let mut ops = build_ops(&ops_preset);
+    // Vol-108 T1 — load oracle board if --oracle was given.
+    let oracle_board = oracle_path.as_ref().map(|p| {
+        eprintln!("loading oracle from {}", p.display());
+        load_cp_board(p)
+    });
+    let mut ops = build_ops_with_oracle(&ops_preset, oracle_board.as_ref());
     let cfg = AlnsConfig {
         time_budget_ms: alns_ms,
         repair_budget_ms,
