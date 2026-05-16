@@ -1,12 +1,17 @@
-use eternity2_core::{Board, Puzzle};
+use eternity2_core::{Board, Puzzle, BORDER};
 
 /// Count edge-matches between adjacent placed pieces on `board`.
 /// Returns `(matched, total)` over horizontal + vertical neighbour pairs
 /// that both have a piece placed. The canonical E2 maximum is 480
 /// (240 horizontal + 240 vertical inner edges).
 ///
-/// Border-vs-inner mismatches contribute to `total` but never to `matched`
-/// (BORDER=0 never equals an inner colour 1..=22).
+/// **Vol-118 fix**: BORDER-BORDER matches between adjacent placed cells
+/// do NOT count as `matched`. In a LEGAL board, BORDER edges face only
+/// outside the puzzle; two adjacent placed cells with BORDER edges
+/// touching would be illegal (the vol-118 bf-bucket-bug class).
+/// Excluding BORDER-BORDER from `matched` keeps the scorer honest for
+/// illegal boards, matching the conservative behavior of
+/// `eternity2_localsearch::alns::score_board`.
 #[must_use]
 pub fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
     let mut matched = 0u32;
@@ -24,7 +29,7 @@ pub fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
                     total += 1;
                     if let Some(np) = puzzle.piece(npid) {
                         let ne = np.edges.rotated(nrot).as_array();
-                        if e[1] == ne[3] {
+                        if e[1] == ne[3] && e[1] != BORDER {
                             matched += 1;
                         }
                     }
@@ -35,7 +40,7 @@ pub fn score_board(puzzle: &Puzzle, board: &Board) -> (u32, u32) {
                     total += 1;
                     if let Some(np) = puzzle.piece(npid) {
                         let ne = np.edges.rotated(nrot).as_array();
-                        if e[2] == ne[0] {
+                        if e[2] == ne[0] && e[2] != BORDER {
                             matched += 1;
                         }
                     }
