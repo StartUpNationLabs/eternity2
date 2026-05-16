@@ -261,6 +261,17 @@ Vol-25 shipped dirty-list scoping (fix-4, commit `fd5b615`) which captured only 
 ### `vault-validation-of-perf-wins` — status: `unbuilt` — since: vol-25
 The vol-25 fixes were validated against raw nps on synthetic 60 s probes. The meaningful metric for the research project is matched-edge score on real solves (multi-thread joe_depth150_bp_par for 5–30 min on canonical E2). Per the [[../../../../.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/project_e2_vol14_bp_null|Vol-14 BP-as-value-order REVERSAL]] memory, raw-nps wins don't always translate to score wins (CP-partial metric mid-pipeline can be misleading). Worth a one-shot validation before declaring victory. Effort: 30 min runtime + 5 min analysis.
 
+### `blackwood-fast-per-depth-unrolling` — status: `unbuilt` — since: vol-106 (user-flagged 2026-05-16)
+**Biggest remaining nps lever for blackwood-fast.** The current `solve_blackwood_sized` is one generic loop body that runs 256 times. libblackwood (Bucas's C engine) generates 256 distinct goto-labelled depth blocks with each block's constants (post_depth, schedule target, conflicts_allowed, is_top_row, is_left_col, depth_tbl) inlined at compile time — eliminating per-node table lookups for those.
+
+Rust path: const-generic + per-depth specialised functions that tail-call into each other (or — equivalently — proc-macro that generates the unrolled body, similar to libblackwood's `build.rs`-style codegen).
+
+User note 2026-05-16: "I feel like manual unrolling might be a huge gain as it was for blackwood algorithm". EV: 1.5-3× nps (extrapolating from libblackwood's 295M nps vs our 68M).
+
+Effort: 1-2 days if done via proc-macro; 2-4 hours if done via per-depth const-generic instantiations capped at 16 (one per row, sharing within-row code).
+
+This is the path to closing the remaining gap to libblackwood's 295M nps.
+
 ---
 
 ## Concepts catalog (status pages)
