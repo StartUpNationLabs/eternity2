@@ -20,6 +20,7 @@ fn main() {
     let mut break_first: Option<u32> = None;
     let mut break_count: Option<u32> = None;
     let mut threads: usize = 1;
+    let mut dump_partial: Option<PathBuf> = None;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -29,6 +30,7 @@ fn main() {
             "--break-first" => { break_first = Some(args[i + 1].parse().expect("break-first")); i += 2; }
             "--break-count" => { break_count = Some(args[i + 1].parse().expect("break-count")); i += 2; }
             "--threads" => { threads = args[i + 1].parse().expect("threads"); i += 2; }
+            "--dump-partial" => { dump_partial = Some(PathBuf::from(&args[i + 1])); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
     }
@@ -66,6 +68,34 @@ fn main() {
     let elapsed = t0.elapsed();
     let nps = (stats.nodes as f64) / elapsed.as_secs_f64();
     let score = score_board(&puzzle, &board);
+
+    if let Some(out_path) = &dump_partial {
+        // Write partial board in {placement: [{pos, piece_id, rotation}]} JSON.
+        // Skip unplaced cells (piece_id == u16::MAX).
+        let mut placements: Vec<serde_json::Value> = Vec::new();
+        for (pos, &(pid, rot)) in board.iter().enumerate() {
+            if pid == u16::MAX { continue; }
+            placements.push(serde_json::json!({
+                "pos": pos as u32,
+                "piece_id": pid,
+                "rotation": rot.as_u8(),
+            }));
+        }
+        let out = serde_json::json!({
+            "placement": placements,
+            "source": "blackwood_fast",
+            "schedule": schedule_name,
+            "max_depth": stats.max_depth,
+            "score": score,
+            "budget_ms": budget_ms,
+            "threads": threads,
+        });
+        std::fs::create_dir_all(out_path.parent().unwrap_or(std::path::Path::new("."))).ok();
+        std::fs::write(out_path, serde_json::to_string_pretty(&out).unwrap())
+            .expect("write partial");
+        eprintln!("[bf_bw] wrote partial to {}", out_path.display());
+    }
+
     println!(
         "{{\"profile\":\"blackwood_fast\",\"threads\":{},\"budget_ms\":{},\"elapsed_ms\":{},\"nodes\":{},\"max_depth\":{},\"solved\":{},\"best_score\":{},\"nps\":{:.0}}}",
         threads, budget_ms, elapsed.as_millis(), stats.nodes, stats.max_depth, stats.solved, score, nps

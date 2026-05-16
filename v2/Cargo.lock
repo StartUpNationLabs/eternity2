@@ -586,6 +586,7 @@ dependencies = [
  "eternity2-puzzle-io",
  "eternity2-time",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]

@@ -15,6 +15,7 @@ eternity2-time = { path = "../time" }
 eternity2-generator = { path = "../generator" }
 eternity2-puzzle-io = { path = "../puzzle-io" }
 rayon = "1.10"
+serde_json = "1"
 
 [[bin]]
 name = "bf_bench"
