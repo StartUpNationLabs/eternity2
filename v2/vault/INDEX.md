@@ -24,6 +24,8 @@ The Obsidian landing page. Click any wikilink to navigate.
 - **Vol-116**: hint-preserving Hungarian SHIPPED — full pipeline 5/5 canonical compliant. Score ceiling 435 on strict-canonical (raw DFS limited).
 - **Vol-117**: hint-preserving schedule path + 3 σ-cycle math findings: schedule×hint destructive interaction; rotation-locally-optimal across 12 boards; σ-cycle boundary growth (quantitative indecomposability); greedy min-boundary subset bridge REFUTED.
 - **Vol-118**: two-cluster 459-level set CONFIRMED via rigidity matrix; pipeline corner-perm specificity (McGavin perm only reaches 396); σ-subset score-lift theorem.
+- **Vol-118 (cont)**: **CRITICAL bf-bucket bug FIXED** (edge pieces at interior cells with BORDER edges facing inward) — [[concepts/bf-candidate-bucket-bug]]. Infrastructure CONSOLIDATION: [[ONBOARDING|ONBOARDING.md]], `eternity2_export::{load_board, save_board, verify, score_board}` canonical implementations, **39 bins migrated** (-427 lines duplicate I/O), `verify_board` + `board_convert` bins, [[docs/BOARD_FORMAT|BOARD_FORMAT.md]].
+- **Standing strict-canonical pipeline ceiling (vol-118 post-fix)**: 452 (5/5 hints, LEGAL_COMPLETE). Gap to record 457: 5 points. T11 30-min ALNS budget test in progress.
 
 ## Plans + discipline
 
