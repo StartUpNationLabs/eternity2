@@ -370,6 +370,60 @@ fn build_border_first_path() -> Vec<usize> {
     path
 }
 
+/// Vol-121 T2 — xorshift64 seeded RNG for path randomization. Deterministic
+/// per seed so basins are reproducible.
+#[inline(always)]
+fn next_xorshift64(state: &mut u64) -> u64 {
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state
+}
+
+fn fisher_yates_shuffle(v: &mut [usize], seed: u64) {
+    let mut state: u64 = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xDEAD_BEEF_CAFE_BABE);
+    if state == 0 { state = 0x1234_5678_9ABC_DEF0; }
+    let n = v.len();
+    if n < 2 { return; }
+    for i in (1..n).rev() {
+        let j = (next_xorshift64(&mut state) as usize) % (i + 1);
+        v.swap(i, j);
+    }
+}
+
+/// Vol-121 T2 — full random permutation of 0..N_POS, seeded.
+/// Maximum basin diversity but ignores constraint-propagation locality.
+fn build_random_path(seed: u64) -> Vec<usize> {
+    let mut path: Vec<usize> = (0..N_POS).collect();
+    fisher_yates_shuffle(&mut path, seed);
+    path
+}
+
+/// Vol-121 T2 — border-first (60 perimeter cells, deterministic), then
+/// RANDOM permutation of 196 interior cells, seeded.
+/// Preserves border-CSP-tightness while randomizing interior search tree.
+fn build_border_first_random_interior_path(seed: u64) -> Vec<usize> {
+    let mut path: Vec<usize> = Vec::new();
+    let mut seen: HashSet<usize> = HashSet::new();
+    for x in 0..N { push_unique(&mut path, &mut seen, xy_pos(x as i32, 0)); }
+    for y in 1..N { push_unique(&mut path, &mut seen, xy_pos(N as i32 - 1, y as i32)); }
+    for x in (0..(N - 1)).rev() { push_unique(&mut path, &mut seen, xy_pos(x as i32, N as i32 - 1)); }
+    for y in (1..(N - 1)).rev() { push_unique(&mut path, &mut seen, xy_pos(0, y as i32)); }
+    let border_len = path.len();
+    assert_eq!(border_len, 4 * N - 4);
+    // Collect interior, randomize.
+    let mut interior: Vec<usize> = Vec::new();
+    for y in 1..(N - 1) {
+        for x in 1..(N - 1) {
+            interior.push(xy_pos(x as i32, y as i32));
+        }
+    }
+    fisher_yates_shuffle(&mut interior, seed);
+    path.extend(interior);
+    assert_eq!(path.len(), N_POS);
+    path
+}
+
 fn main() {
     let mut budget_ms: u64 = 10_000;
     let mut puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
@@ -380,6 +434,7 @@ fn main() {
     let mut pin_hints = false;
     let mut save_best: Option<PathBuf> = None;
     let mut dump_path: bool = false;
+    let mut path_seed: u64 = 1; // vol-121 T2: used only by random* path modes
 
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -389,6 +444,7 @@ fn main() {
             "--puzzle" => { puzzle_path = PathBuf::from(&raw[i + 1]); i += 2; }
             "--path-mode" => { path_mode = raw[i + 1].clone(); i += 2; }
             "--path-csv" => { path_csv = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--path-seed" => { path_seed = raw[i + 1].parse().expect("path-seed"); i += 2; }
             "--threads" => { threads = raw[i + 1].parse().expect("threads"); i += 2; }
             "--thread-id-offset" => { thread_id_offset = raw[i + 1].parse().expect("thread-id-offset"); i += 2; }
             "--pin-hints" => { pin_hints = true; i += 1; }
@@ -420,6 +476,9 @@ fn main() {
             "hint-then-outspiral" => build_hint_then_outspiral_path(&hint_positions),
             "hint-then-borderin" => build_hint_then_borderin_path(&hint_positions),
             "centre-sandwich" => build_centre_sandwich_path(&hint_positions),
+            // Vol-121 T2 — randomized paths. --path-seed N gives reproducibility.
+            "random" => build_random_path(path_seed),
+            "border-first-random" => build_border_first_random_interior_path(path_seed),
             other => panic!("unknown path-mode: {other}"),
         }
     };
