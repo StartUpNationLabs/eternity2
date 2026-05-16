@@ -578,6 +578,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-blackwood-fast"
+version = "0.1.0"
+dependencies = [
+ "eternity2-core",
+ "eternity2-generator",
+ "eternity2-time",
+]
+
+[[package]]
 name = "eternity2-cdcl-proto"
 version = "0.1.0"
 dependencies = [

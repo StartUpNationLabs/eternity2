@@ -1,0 +1,19 @@
+[package]
+name = "eternity2-blackwood-fast"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+eternity2-core = { path = "../core" }
+eternity2-time = { path = "../time" }
+eternity2-generator = { path = "../generator" }
+
+[[bin]]
+name = "bf_bench"
+path = "src/bin/bench.rs"

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/bench-audit",
     "crates/benchmark",
+    "crates/blackwood-fast",
     "crates/cdcl-proto",
     "crates/core",
     "crates/cp-lp-search",
