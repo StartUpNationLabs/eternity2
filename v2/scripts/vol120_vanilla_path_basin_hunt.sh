@@ -19,7 +19,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 THREAD_OFFSETS="${THREAD_OFFSETS:-0 8 16 24 32}"
-PATH_MODE="${PATH_MODE:-border-first-mrv}"
+PATH_MODE="${PATH_MODE:-border-first}"
 VANILLA_BUDGET="${VANILLA_BUDGET:-60000}"
 ALNS_BUDGET="${ALNS_BUDGET:-300000}"
 ALNS_SEEDS="${ALNS_SEEDS:-1 2 7 42}"
