@@ -1,13 +1,13 @@
 ---
 name: sigma-cycle-predicts-alns
-description: "Vol-107 T2 finding (preliminary, N=4) — the largest σ-cycle size between a bf_bw partial and the 459 record correlates with the partial's ALNS-completion ceiling. Larger σ-cycle ≈ harder ALNS lift. Concrete data: offset=100 has max-cyc 71 (vs 31-33 for others) AND lower ALNS lift (446-448 vs 450-451)."
+description: "Vol-107 T2 finding (N=6, hypothesis WEAKENED) — initial N=4 suggested max-σ-cycle to 459 predicts ALNS-liftability, but extension to N=6 shows mixed signal. offset=50 has smallest max-cyc (23) but LOW ALNS lift (444); offset=100 has largest max-cyc (71) and LOW lift (446) — consistent. But the relationship isn't monotonic. May still hold within sub-clusters; further work needed."
 metadata:
   type: project
 ---
 
 # σ-cycle predicts ALNS-liftability (vol-107 T2)
 
-**Status**: `partial` — preliminary correlation, N=4 partials.
+**Status**: `partial` — hypothesis weakened after N=6 extension.
 **Origin**: vol-107 T2 (2026-05-16). Question raised by vol-106 T13.c:
 why does offset=0 reach ALNS 450-451 while offset=100 (deeper partial)
 only reaches 446-448?
@@ -67,6 +67,54 @@ distance to a target high-score basin.
 - σ-cycles are computed to vol-60's SPECIFIC 459 record. Other 459
   basins exist (multiple p06-perm records); the metric may differ
   per target.
+
+## Extended data (N=6, vol-107 T2 follow-up)
+
+After the initial N=4 finding, ran bf_bw on 5 more seed_offsets (50,
+200, 500, 2000, 5000) at 4t × 2min each, then ALNS 60s seed=42 on 3
+of them (the others' ALNS not yet measured).
+
+| offset | bf_score | max_cyc | ALNS @ 60s |
+|-------:|---------:|--------:|-----------:|
+|      0 |      431 |      29 |       (450) |
+|     50 |      436 |  **23** |    **444** |  ← smallest max-cyc, LOWER lift!
+|    100 |      442 |      71 |        446 |
+|    200 |      442 |      44 |        448 |
+|    500 |      433 |      31 |   (n/a)    |
+|   1000 |      439 |      31 |        447 |
+|   2000 |      443 |      29 |        450 |
+|   5000 |      439 |      30 |   (n/a)    |
+|  10000 |     (n/a)|      33 |   (n/a)    |
+
+**HYPOTHESIS WEAKENED**. offset=50 has the smallest max-cycle (23,
+smallest in the dataset) but its ALNS lift (444) is BELOW the
+mean. If max-cycle truly predicted liftability, this should be
+the BEST partial, not the worst-tested.
+
+**Partial reconciliation**:
+- The offset=100 outlier (max-cyc 71, lift 446) is still real —
+  one giant cycle does seem to be a meaningful drag.
+- But max-cyc < 30 doesn't guarantee good lift either.
+
+The hypothesis is probably TOO SIMPLE. A more honest framing:
+- max-cycle > 50 is a NEGATIVE signal (one giant cycle is hard).
+- max-cycle < 30 is INFORMATIVE BUT INSUFFICIENT (other basin
+  features matter too).
+
+## What might be a better predictor
+
+- **Number of cycles** (more independent cycles = easier
+  independent ALNS rep
+airs). offset=50 has 37 cycles (highest);
+  offset=2000 has 25 (lowest). Doesn't clearly correlate either.
+- **Cycle size DISTRIBUTION** (entropy / Gini). A flat
+  distribution may be more ALNS-friendly than one with extremes.
+- **Cell-pos-set OVERLAP** of σ-cycles with known
+  ALNS-destroy-op kernels (e.g., WorstBand{4}, ConflictDriven{30}).
+
+Vol-108 candidate: build a richer basin-feature extractor and
+correlate against ALNS-lift across N≥16 partials. Until then,
+this hypothesis is at best "partially supported".
 
 ## Linked
 
