@@ -40,16 +40,29 @@ across all known basins (vol-110, vol-60, vol-62, vol-76 sources).
 
 **9216 total alt-rotation tests, ZERO improvements found.**
 
-## Implication
+## Implication — honest interpretation
 
 The rotation degree of freedom is fully frozen at the high-score
-level sets. This sharpens the existing rigidity findings:
-- [[multiple-459-basins-rigid]] showed MIP halo-1 rigid.
-- This shows ROTATION-only (a STRICT subset of halo-1) also rigid.
+level sets.
 
-Why this matters: rotation-only is a 4× cheaper local move than
-"swap piece at p with piece at q". If even rotation can't lift
-the score, then the rotation-axis offers no improvement room.
+This is consistent with — but not strictly implied by — the existing
+halo-1 MIP rigidity:
+- [[multiple-459-basins-rigid]] tests MIP halo-1 (permutes pieces
+  within a ~50-cell region while neighbors stay frozen). Halo-1 MIP
+  DOES include rotation as part of the search (each variable is a
+  piece-rotation choice). So halo-1 MIP rigidity should imply
+  rotation-only rigidity — and the empirical check here CONFIRMS that.
+- The fresh information is mostly negative (no surprises): if ALNS
+  worked correctly on rotation-only moves, every output basin should
+  already be rotation-locally optimal. The 9216-test confirmation is
+  audit-level evidence that the pipeline's ALNS-polish step is doing
+  its job.
+
+Why this matters in spite of that: rotation is the CHEAPEST local
+move (one piece touched, no piece-uniqueness churn). The test is
+fast (768 evals per board, milliseconds) and could be a quick
+"is this board ALNS-polished?" sanity check on any future
+sub-1-minute pipelines.
 
 ## Connection to the 459 problem
 
