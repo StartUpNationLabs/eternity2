@@ -173,6 +173,21 @@ In order of effort vs payoff:
 4. **Piece-set blend** (path B) on $b_{60}, b_{110}$: sample 1000
    blends, score each. Cheap (~minutes).
 
+## Path B: MIP-PROVEN REFUTED at 4-basin scale (2026-05-16 vol-112 T1)
+
+A formal MIP test on the 4-basin Path B claim ($x_{c,b}$ binary
+indicators, piece-uniqueness constraints, edge-match objective):
+
+- **MIP optimum = 459** over the convex hull of basin-cell choices.
+- 17s wall on apple-m1.
+- Refutes Path B AT THIS BASIN SCALE: no cell-wise mix of our 4
+  observed 459 basins exceeds 459.
+
+The MIP is **rigorous** in a way the σ-cycle subset enumeration was
+not (the σ-subsets are a subset of the cell-wise mixes, so any blend
+not covered by σ-subsets is also covered by the MIP). See
+[[concepts/basin-mix-mip-refuted]].
+
 ## Path B + Path A simple form: EMPIRICALLY REFUTED (2026-05-16)
 
 Tested both in their simplest forms:
