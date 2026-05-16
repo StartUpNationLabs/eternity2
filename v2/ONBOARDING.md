@@ -274,6 +274,7 @@ All located in `target/release/` after `cargo build --release -p eternity2-bench
 | bin                          | role                                                |
 |------------------------------|-----------------------------------------------------|
 | `verify_board`               | comprehensive verifier (piece-uniqueness + border + hints + score) |
+| `board_convert`              | convert any board JSON to canonical JSON/CSV (vol-118 T14) |
 | `rescore_board`              | quick score recomputation (legacy; use verify_board) |
 | `diff_boards`                | piece-id cell-by-cell diff between two boards |
 | `print_bucas`                | print bucas-render URL for visual inspection |
@@ -284,6 +285,31 @@ All located in `target/release/` after `cargo build --release -p eternity2-bench
 | `edge_target_match`          | Hungarian piece-position matching (hint-preserving since vol-116) |
 | `alns_only`                  | run ALNS on a saved board (`--cp-board PATH`) |
 | `io_smoke_test`              | sanity-check load_board / save_board round-trip |
+
+### Quick recipes
+
+```bash
+# Convert a legacy board JSON to canonical format
+./target/release/board_convert old_board.json --out canonical.json
+
+# Convert to CSV
+./target/release/board_convert canonical.json --csv --out board.csv
+
+# Batch convert (preserves filenames, adds _canonical suffix)
+./target/release/board_convert --batch output/legacy_dir/*.json
+
+# Verify any board (single)
+./target/release/verify_board path/to/board.json
+
+# Verify many at once (exit 0 if all legal, 1 otherwise)
+./target/release/verify_board output/v17_alns_only/*.json
+
+# Get bucas URL for visual inspection
+./target/release/print_bucas board.json
+
+# Compare two boards (cell-by-cell)
+./target/release/diff_boards a.json b.json
+```
 
 ### Pipeline invocation
 
