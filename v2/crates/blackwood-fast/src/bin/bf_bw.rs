@@ -5,6 +5,7 @@
 
 use eternity2_blackwood_fast::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a, score_board, solve_blackwood,
+    solve_blackwood_par,
 };
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
@@ -18,6 +19,7 @@ fn main() {
     let mut schedule_name = String::from("v17a");
     let mut break_first: Option<u32> = None;
     let mut break_count: Option<u32> = None;
+    let mut threads: usize = 1;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -26,6 +28,7 @@ fn main() {
             "--schedule" => { schedule_name = args[i + 1].clone(); i += 2; }
             "--break-first" => { break_first = Some(args[i + 1].parse().expect("break-first")); i += 2; }
             "--break-count" => { break_count = Some(args[i + 1].parse().expect("break-count")); i += 2; }
+            "--threads" => { threads = args[i + 1].parse().expect("threads"); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
     }
@@ -53,13 +56,18 @@ fn main() {
     );
     eprintln!("[bf_bw] exhaustion_targets={:?}", schedule.exhaustion_targets);
 
+    eprintln!("[bf_bw] threads={}", threads);
     let t0 = std::time::Instant::now();
-    let (stats, board) = solve_blackwood(&puzzle, &schedule, budget_ms * 1000);
+    let (stats, board) = if threads > 1 {
+        solve_blackwood_par(&puzzle, &schedule, threads, budget_ms * 1000)
+    } else {
+        solve_blackwood(&puzzle, &schedule, budget_ms * 1000)
+    };
     let elapsed = t0.elapsed();
     let nps = (stats.nodes as f64) / elapsed.as_secs_f64();
     let score = score_board(&puzzle, &board);
     println!(
-        "{{\"profile\":\"blackwood_fast\",\"budget_ms\":{},\"elapsed_ms\":{},\"nodes\":{},\"max_depth\":{},\"solved\":{},\"best_score\":{},\"nps\":{:.0}}}",
-        budget_ms, elapsed.as_millis(), stats.nodes, stats.max_depth, stats.solved, score, nps
+        "{{\"profile\":\"blackwood_fast\",\"threads\":{},\"budget_ms\":{},\"elapsed_ms\":{},\"nodes\":{},\"max_depth\":{},\"solved\":{},\"best_score\":{},\"nps\":{:.0}}}",
+        threads, budget_ms, elapsed.as_millis(), stats.nodes, stats.max_depth, stats.solved, score, nps
     );
 }

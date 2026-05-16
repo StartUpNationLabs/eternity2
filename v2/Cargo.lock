@@ -585,6 +585,7 @@ dependencies = [
  "eternity2-generator",
  "eternity2-puzzle-io",
  "eternity2-time",
+ "rayon",
 ]
 
 [[package]]

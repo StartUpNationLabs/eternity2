@@ -353,6 +353,50 @@ impl RowMajorIndex {
         &self.relaxed_entries[lo..hi - 1]
     }
 
+    /// Fisher-Yates shuffle within each bucket. Sentinels are preserved
+    /// (the last slot of each bucket stays PieceRot::NONE). Used to
+    /// diversify per-thread search ordering with `seed` as the RNG seed.
+    /// `seed == 0` is a no-op (the global rare-first order is preserved).
+    pub fn shuffle_buckets(&mut self, seed: u64) {
+        if seed == 0 {
+            return;
+        }
+        let mut state: u64 = seed
+            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            .wrapping_add(0xDEAD_BEEF_CAFE_BABE);
+        let mut next = |s: &mut u64| -> u64 {
+            *s ^= *s << 13;
+            *s ^= *s >> 7;
+            *s ^= *s << 17;
+            *s
+        };
+        Self::shuffle_csr(&self.offsets, &mut self.entries, &mut state, &mut next);
+        if !self.relaxed_offsets.is_empty() {
+            Self::shuffle_csr(&self.relaxed_offsets, &mut self.relaxed_entries, &mut state, &mut next);
+        }
+    }
+
+    fn shuffle_csr(
+        offsets: &[u32],
+        entries: &mut [PieceRot],
+        state: &mut u64,
+        next: &mut dyn FnMut(&mut u64) -> u64,
+    ) {
+        for k in 0..offsets.len() - 1 {
+            let lo = offsets[k] as usize;
+            let hi = offsets[k + 1] as usize;
+            // last slot is the sentinel; shuffle [lo, hi-1)
+            let len = hi.saturating_sub(lo + 1);
+            if len <= 1 {
+                continue;
+            }
+            for i in (1..len).rev() {
+                let j = (next(state) as usize) % (i + 1);
+                entries.swap(lo + i, lo + j);
+            }
+        }
+    }
+
     /// Populate `heur_count_of` from a set of heuristic colors. Counts
     /// for each (piece, rotation) how many of its 4 edges are in
     /// `heuristic_sides`. Call after `build` if you want to use
@@ -729,6 +773,59 @@ fn solve_raw_sized<const WH: usize, const NPIECES: usize, const BITSET_WORDS: us
 ///
 /// Returns (stats, board, best_depth_seen). Currently no break-index
 /// allowance; that's vol-107 T1.
+/// Multi-thread variant. Spawns `n_threads` worker threads. Worker 0
+/// uses the global rare-first ordering; workers 1..n use a per-thread
+/// Fisher-Yates shuffle of the candidate lists seeded by thread_id.
+/// Returns the BEST board (deepest max_depth) across workers.
+pub fn solve_blackwood_par(
+    puzzle: &Puzzle,
+    schedule: &BlackwoodSchedule,
+    n_threads: usize,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    use rayon::prelude::*;
+    let mut base_index = RowMajorIndex::build(puzzle);
+    base_index.set_heuristic_sides(&schedule.heuristic_sides);
+    if !schedule.break_indexes_allowed.is_empty() {
+        base_index.build_relaxed_index(puzzle.color_count);
+    }
+    let targets = schedule.target_table(puzzle.cell_count() as usize);
+    let wh = puzzle.cell_count() as usize;
+    let mut conflicts_allowed: Vec<u32> = vec![0; wh];
+    let mut budget = 0u32;
+    let break_set: std::collections::HashSet<u32> =
+        schedule.break_indexes_allowed.iter().copied().collect();
+    for d in 0..wh as u32 {
+        if break_set.contains(&d) {
+            budget += 1;
+        }
+        conflicts_allowed[d as usize] = budget;
+    }
+
+    let results: Vec<(SearchStats, Vec<(PieceId, Rotation)>)> = (0..n_threads)
+        .into_par_iter()
+        .map(|tid| {
+            let mut idx = base_index.clone();
+            idx.shuffle_buckets(tid as u64);
+            if puzzle.width == 16 && puzzle.height == 16 && idx.n_pieces == 256 {
+                solve_blackwood_sized::<256, 256, 4>(
+                    &idx,
+                    &targets,
+                    schedule.max_heuristic_index,
+                    &conflicts_allowed,
+                    time_budget_us,
+                )
+            } else {
+                solve_raw_generic(&idx, puzzle, time_budget_us)
+            }
+        })
+        .collect();
+
+    // Pick the deepest result.
+    let best = results.into_iter().max_by_key(|(s, _)| s.max_depth).unwrap();
+    best
+}
+
 pub fn solve_blackwood(
     puzzle: &Puzzle,
     schedule: &BlackwoodSchedule,
