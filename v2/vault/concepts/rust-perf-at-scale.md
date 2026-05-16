@@ -120,6 +120,42 @@ result.
 5. **Speculative loads via `core::hint::spin_loop`** — micro-fence, not a lever for our pattern.
 6. **`panic = "abort"` profile** — tested vol-106 T7, **null result on bf_bw** (62.8M nps both ways) because our hot loop already has zero panic edges (`unsafe { get_unchecked }` throughout). Profile retained as `bench-abort` for future use.
 
+## Hot-loop assembly inspection (apple-m1 release, no PGO)
+
+`cargo asm -p eternity2-blackwood-fast --release --lib --simplify
+solve_blackwood_sized` produces this 9-instruction inner trial loop
+(reformatted):
+
+```aarch64
+LBB28_33:
+    and  w13, w12, #0x3fff      ; piece_idx = pr & 0x3FFF
+    lsr  x1,  x13, #6           ; word = piece_idx >> 6
+    lsl  x2,  x26, x13          ; bit = 1 << piece_idx (HW masks shift to <64)
+    ldr  x3,  [x21, x1, lsl #3] ; pieces_used[word]
+    tst  x3,  x2                ; test bit
+    b.eq LBB28_39               ; if 0 (unused) → placement code
+    ldrh w12, [x14, x15, lsl #1]; load next candidate (u16)
+    add  x15, x15, #1
+    cmp  w12, w22               ; compare to sentinel
+    b.ne LBB28_33               ; loop
+```
+
+This is essentially optimal for the algorithm as expressed:
+- 4 ALU ops (and, lsr, lsl, tst) — single cycle each.
+- 2 memory ops (`ldr` from `pieces_used` L1d, `ldrh` from `entries`
+  L2 / L3 / prefetched).
+- 2 branches (`b.eq`, `b.ne`).
+- 1 increment.
+
+The `lsl x2, x26, x13` works because aarch64 shift instructions
+mask the amount to the bottom 6 bits, so we don't need explicit
+`& 63` — LLVM correctly elided that mask.
+
+Conclusion: **per-cycle, this is at the ceiling.** Further gains
+must come from algorithmic changes (fewer trials per success,
+deeper-cutting propagators that actually pay) or instruction-stream
+reordering (PGO, BOLT).
+
 ## What we TRIED and REFUTED
 
 ### Compact 5+5-bit ref_key (vol-106 T7, 2026-05-16)
