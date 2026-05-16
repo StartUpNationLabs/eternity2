@@ -1,13 +1,18 @@
 ---
 name: schedule-hint-interaction
-description: "Vol-117 T1 finding — Blackwood schedule + 5/5 canonical hints interact DESTRUCTIVELY at the calibration used for unhinted runs. v17a schedule (max_heuristic_index=255) wedges at depth 35 (just past first hint). bw469 schedule (max_heuristic_index=160) reaches depth 83-84 in 10-60s. Raw DFS + hints (no schedule) reaches depth 192 in 30s. The schedule's heuristic targets at low depths were calibrated against unhinted branching distributions and become infeasible under hint constraints."
+description: "Vol-117 T1 finding — Blackwood schedule + 5/5 canonical hints interact DESTRUCTIVELY at the calibration used for unhinted runs. v17a schedule (max_heuristic_index=255) wedges at depth 35 (just past first hint). bw469 schedule (max_heuristic_index=160) reaches depth 83-84 in 10-60s. Raw DFS + hints (no schedule) reaches depth 192 in 30s. Vol-118 T5 ROOT-CAUSED this as a conflict-propagation bug at pinned cells; see [[hint-pin-conflict-propagation-fix]]."
 metadata:
   type: project
 ---
 
 # Schedule × hint interaction (vol-117 T1)
 
-**Status**: `built` (mechanism shipped vol-117 T1), `partial` (calibration question open).
+**Status**: `superseded` — root cause identified and fixed in vol-118 T5.
+See [[hint-pin-conflict-propagation-fix]].
+
+The original framing (schedule's heuristic-edge targets are
+incompatible with hint pinning) was WRONG. The actual cause was a
+conflict-budget bookkeeping bug at pinned cells.
 
 ## Mechanism
 
