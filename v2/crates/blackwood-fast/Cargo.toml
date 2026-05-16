@@ -22,3 +22,7 @@ path = "src/bin/bench.rs"
 [[bin]]
 name = "vanilla_v2"
 path = "src/bin/vanilla_v2.rs"
+
+[[bin]]
+name = "bf_bw"
+path = "src/bin/bf_bw.rs"

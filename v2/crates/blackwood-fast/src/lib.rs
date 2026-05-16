@@ -27,6 +27,9 @@
 
 #![allow(unsafe_code)]
 
+pub mod schedule;
+pub use schedule::{blackwood_schedule_469, compute_heuristic_sides};
+
 use eternity2_core::{Color, PieceId, Puzzle, Rotation, BORDER};
 
 /// A piece + rotation encoded as a single u16 to keep the candidate
@@ -97,6 +100,67 @@ pub struct RowMajorIndex {
     /// Per-PieceRot.0 (u16), the RIGHT color (for fast left-color lookup
     /// from depth-1 board cell).
     pub right_of: Vec<Color>,
+    /// Per-PieceRot.0 (u16), the count of heuristic-color edges on
+    /// this piece-rotation (0..=4). Populated by `set_heuristic_sides`;
+    /// all-zero otherwise (no Blackwood schedule effect).
+    pub heur_count_of: Vec<u8>,
+}
+
+/// Blackwood schedule parameters for `solve_blackwood`.
+/// Vol-15-style heuristic-color schedule + (future) break-index allowance.
+#[derive(Debug, Clone)]
+pub struct BlackwoodSchedule {
+    /// Set of edge colors that count toward the exhaustion schedule
+    /// (typically 3 colors with the most piece-edge occurrences).
+    pub heuristic_sides: Vec<Color>,
+    /// Piecewise-linear schedule control points: `(depth, target_count)`,
+    /// sorted ascending by depth. The required cumulative count of
+    /// placed heuristic-edges at intermediate depths is linearly
+    /// interpolated.
+    pub exhaustion_targets: Vec<(u32, u32)>,
+    /// Maximum depth at which the schedule applies; beyond this, no
+    /// schedule check.
+    pub max_heuristic_index: u32,
+}
+
+impl BlackwoodSchedule {
+    /// Target heuristic-piece-occurrence count at `depth`, piecewise-
+    /// linear interpolation. Saturates at endpoints.
+    #[must_use]
+    #[inline]
+    pub fn target_at(&self, depth: u32) -> u32 {
+        let xs = &self.exhaustion_targets;
+        if xs.is_empty() {
+            return 0;
+        }
+        if depth <= xs[0].0 {
+            return xs[0].1;
+        }
+        if depth >= xs[xs.len() - 1].0 {
+            return xs[xs.len() - 1].1;
+        }
+        for w in xs.windows(2) {
+            let (d0, c0) = w[0];
+            let (d1, c1) = w[1];
+            if depth >= d0 && depth <= d1 {
+                if d1 == d0 {
+                    return c1;
+                }
+                let span = (d1 - d0) as u64;
+                let dc = (c1 as i64) - (c0 as i64);
+                let off = (depth - d0) as u64;
+                let interp = (c0 as i64) + ((dc * off as i64) / span as i64);
+                return interp.max(0) as u32;
+            }
+        }
+        xs[xs.len() - 1].1
+    }
+
+    /// Precomputed per-depth target, length WH.
+    #[must_use]
+    pub fn target_table(&self, wh: usize) -> Vec<u32> {
+        (0..wh as u32).map(|d| self.target_at(d)).collect()
+    }
 }
 
 #[inline(always)]
@@ -171,6 +235,36 @@ impl RowMajorIndex {
             piece_ids,
             bottom_of,
             right_of,
+            heur_count_of: vec![0; 1 << 16],
+        }
+    }
+
+    /// Populate `heur_count_of` from a set of heuristic colors. Counts
+    /// for each (piece, rotation) how many of its 4 edges are in
+    /// `heuristic_sides`. Call after `build` if you want to use
+    /// `solve_blackwood`.
+    pub fn set_heuristic_sides(&mut self, heuristic_sides: &[Color]) {
+        // Reset.
+        for v in self.heur_count_of.iter_mut() {
+            *v = 0;
+        }
+        // Bitset of heuristic colors for O(1) membership.
+        let mut is_heur: [bool; 256] = [false; 256];
+        for &c in heuristic_sides {
+            is_heur[c as usize] = true;
+        }
+        for piece_idx in 0..self.n_pieces as u16 {
+            for rot in 0..4u8 {
+                let pr = PieceRot::new(piece_idx, rot);
+                let e = self.edges[(piece_idx as usize) * 4 + rot as usize];
+                let mut c = 0u8;
+                for &col in &e {
+                    if col != BORDER && is_heur[col as usize] {
+                        c += 1;
+                    }
+                }
+                self.heur_count_of[pr.0 as usize] = c;
+            }
         }
     }
 
@@ -432,6 +526,167 @@ fn solve_raw_sized<const WH: usize, const NPIECES: usize, const BITSET_WORDS: us
             let bit = 1u64 << (piece_idx & 63);
             if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
                 continue;
+            }
+            unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
+            unsafe { *board.get_unchecked_mut(depth) = pr; }
+            unsafe { *cursor.get_unchecked_mut(depth) = (c_idx - lo) as u32; }
+            stats.nodes += 1;
+            if (depth as u32 + 1) > stats.max_depth {
+                stats.max_depth = depth as u32 + 1;
+            }
+            depth += 1;
+            if depth < WH {
+                unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            }
+            placed = true;
+            break;
+        }
+
+        if !placed {
+            unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            if depth == 0 {
+                break 'outer;
+            }
+            depth -= 1;
+            let pr = unsafe { *board.get_unchecked(depth) };
+            let piece_idx = pr.piece_idx() as usize;
+            unsafe {
+                *pieces_used.get_unchecked_mut(piece_idx >> 6) &= !(1u64 << (piece_idx & 63));
+                *board.get_unchecked_mut(depth) = PieceRot::NONE;
+            }
+        }
+    }
+
+    let out = board_to_out(index, &board);
+    (stats, out)
+}
+
+/// Run the Blackwood-schedule-constrained backtracker on canonical
+/// 16×16 / 256-piece. Requires `index.heur_count_of` to be set via
+/// `set_heuristic_sides`. Branches that fall behind the schedule's
+/// `target_at(depth)` are pruned by skipping the candidate.
+///
+/// Returns (stats, board, best_depth_seen). Currently no break-index
+/// allowance; that's vol-107 T1.
+pub fn solve_blackwood(
+    puzzle: &Puzzle,
+    schedule: &BlackwoodSchedule,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    let mut index = RowMajorIndex::build(puzzle);
+    index.set_heuristic_sides(&schedule.heuristic_sides);
+    if puzzle.width == 16 && puzzle.height == 16 && index.n_pieces == 256 {
+        let targets = schedule.target_table(256);
+        return solve_blackwood_sized::<256, 256, 4>(&index, &targets, schedule.max_heuristic_index, time_budget_us);
+    }
+    // Generic path not implemented yet for blackwood schedule; fall back
+    // to raw DFS (no schedule pruning) for other sizes.
+    solve_raw_generic(&index, puzzle, time_budget_us)
+}
+
+fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WORDS: usize>(
+    index: &RowMajorIndex,
+    targets: &[u32],
+    max_heuristic_index: u32,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    let w: usize = (WH as f64).sqrt() as usize;
+    debug_assert_eq!(w * w, WH);
+    let h = w;
+
+    let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
+    let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
+    let mut cursor: [u32; WH] = [0; WH];
+    // Cumulative heuristic-edge count at each depth (0 at depth 0).
+    let mut cum: [u32; WH] = [0; WH];
+
+    let mut depth_tbl: [u8; WH] = [0; WH];
+    let mut depth_top_row: [bool; WH] = [false; WH];
+    let mut depth_left_col: [bool; WH] = [false; WH];
+    for d in 0..WH {
+        let x = d % w;
+        let y = d / w;
+        depth_tbl[d] = (((x == w - 1) as u8) << 1) | ((y == h - 1) as u8);
+        depth_top_row[d] = y == 0;
+        depth_left_col[d] = x == 0;
+    }
+
+    let mut stats = SearchStats::default();
+    let start = eternity2_time::Clock::now();
+    let mut depth: usize = 0;
+
+    let offsets_ptr = index.offsets.as_ptr();
+    let entries_ptr = index.entries.as_ptr();
+    let bottom_ptr = index.bottom_of.as_ptr();
+    let right_ptr = index.right_of.as_ptr();
+    let heur_ptr = index.heur_count_of.as_ptr();
+    let targets_ptr = targets.as_ptr();
+
+    'outer: loop {
+        if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
+            break 'outer;
+        }
+        if depth == WH {
+            stats.solved = true;
+            stats.max_depth = WH as u32;
+            break 'outer;
+        }
+
+        let tbl = unsafe { *depth_tbl.get_unchecked(depth) } as usize;
+        let top_color: Color = if unsafe { *depth_top_row.get_unchecked(depth) } {
+            BORDER
+        } else {
+            let nbr = unsafe { *board.get_unchecked(depth - w) };
+            unsafe { *bottom_ptr.add(nbr.0 as usize) }
+        };
+        let left_color: Color = if unsafe { *depth_left_col.get_unchecked(depth) } {
+            BORDER
+        } else {
+            let nbr = unsafe { *board.get_unchecked(depth - 1) };
+            unsafe { *right_ptr.add(nbr.0 as usize) }
+        };
+        let key = ref_key(top_color, left_color);
+        let flat = (tbl << 16) | (key as usize);
+        let lo = unsafe { *offsets_ptr.add(flat) } as usize;
+        let mut c_idx = lo + unsafe { *cursor.get_unchecked(depth) } as usize;
+
+        // Schedule target for the post-placement depth (depth+1).
+        // Skip the schedule check past max_heuristic_index.
+        let post_depth = (depth as u32) + 1;
+        let schedule_active = post_depth <= max_heuristic_index;
+        let target = if schedule_active {
+            unsafe { *targets_ptr.add(post_depth as usize - 1) }
+        } else {
+            0
+        };
+        let prev_cum = if depth == 0 { 0 } else { unsafe { *cum.get_unchecked(depth - 1) } };
+
+        let mut placed = false;
+        loop {
+            let pr = unsafe { *entries_ptr.add(c_idx) };
+            if pr.0 == PieceRot::NONE.0 {
+                break;
+            }
+            c_idx += 1;
+            let piece_idx = pr.piece_idx() as usize;
+            let word = piece_idx >> 6;
+            let bit = 1u64 << (piece_idx & 63);
+            if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
+                continue;
+            }
+            // Heuristic-schedule pruning. The cumulative count AFTER placing
+            // this piece would be prev_cum + heur_count_of[pr.0]. If
+            // the schedule demands `target` heuristic-edges by depth
+            // post_depth, and we'd be below it, prune this branch.
+            if schedule_active {
+                let new_cum = prev_cum + unsafe { *heur_ptr.add(pr.0 as usize) } as u32;
+                if new_cum < target {
+                    continue;
+                }
+                unsafe { *cum.get_unchecked_mut(depth) = new_cum; }
+            } else {
+                // Past max_heuristic_index; cum bookkeeping no longer matters.
+                unsafe { *cum.get_unchecked_mut(depth) = prev_cum; }
             }
             unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
             unsafe { *board.get_unchecked_mut(depth) = pr; }
