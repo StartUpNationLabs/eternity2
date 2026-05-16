@@ -48,6 +48,35 @@ This is why:
   strict-canonical.
 - The "hint cost" is real and quantifiable.
 
+## Hint-neighbor budget analysis (vol-121 follow-up)
+
+For each of the 5 hint positions × 4 edges = 20 hint-edges, computed
+the count of puzzle pieces that could match by color on the relevant
+side (any rotation), excluding the 5 hint pieces themselves:
+
+| Hint pos | T budget | R budget | B budget | L budget |
+|---------:|---------:|---------:|---------:|---------:|
+| 34       |       44 |       42 |       42 |       45 |
+| 45       |       44 |       46 |       44 |       46 |
+| 135      |       42 |       42 |       42 |       42 |
+| 210      |       46 |       42 |       43 |       42 |
+| 221      |       45 |       43 |       44 |       46 |
+
+**All hint edges have 42-46 candidate neighbors.** NOT particularly
+constrained — the hint colors are mid-frequency (50 of each across
+the puzzle), and removing 5 hint pieces leaves 42-48 valid candidates
+per side per color.
+
+**So why does the hint cost 2 edges?** Not because of supply scarcity
+at the hint-edge level. It must come from:
+1. **Joint piece-placement infeasibility**: the SPECIFIC combination of
+   42-piece options at all 20 hint-edges simultaneously doesn't admit
+   a 459+ board layout WITHIN ALNS/CSP reach.
+2. **Basin asymmetry**: the canonical hint piece-rotations point
+   the basin toward a low-ALNS-ceiling region. ALNS exploring from
+   the hint constraints can't escape past 457 — while ALNS freed of
+   hints reaches 459.
+
 ## Open question
 
 Is the hint cost a fixed 2 edges, or does it scale with basin? If a
