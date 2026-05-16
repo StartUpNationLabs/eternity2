@@ -111,14 +111,72 @@ literally unroll it; we'd have to const-generic our way to per-depth
 specialised functions to get the libblackwood-style fully-unrolled
 result.
 
+## Proc-macro per-depth unrolling — APPLIED, measured (vol-106 T12)
+
+User intuition: "manual unrolling might be a huge gain as it was for
+blackwood". Built. Measured. **+25% nps single-thread on canonical.**
+
+### The mechanism
+
+`crates/blackwood-fast-codegen` proc-macro crate exposes
+`depth_dispatch_256!(body)` which takes a token-tree body and emits
+a 256-arm match where `__D__` is substituted by each arm's literal
+depth value (as a `usize` const).
+
+`solve_blackwood_unrolled_256` rewrites the per-node body using
+`__D__` placeholders for the per-D constants. After substitution:
+
+```rust
+const D_ROW: usize = 5usize / 16;       // arm at depth 5
+const D_COL: usize = 5usize % 16;
+const IS_TOP_ROW: bool = D_ROW == 0;    // true
+const IS_BOTTOM_ROW: bool = D_ROW == 15;// false
+const IS_LEFT_COL: bool = D_COL == 0;   // false
+const IS_RIGHT_COL: bool = D_COL == 15; // false
+const TBL: usize = ...;                 // = 0 for depth 5
+```
+
+All these become `const` values; LLVM folds them into immediate operands
+on the per-arm basic-block layout. Per-arm context also lets LLVM specialise
+branch prediction for that depth's typical access pattern.
+
+### Measurements (canonical Selby-Riordan 16×16, v17a schedule, 10s, single-thread)
+
+| variant                | nodes (M) | nps (M) | Δ baseline |
+|------------------------|----------:|--------:|-----------:|
+| baseline               |      637  |    63   |       —    |
+| + PGO                  |      724  |    72   |    +14%    |
+| + unrolled (E2_BF_UNROLLED=1) | 761 | 76      |    +21%    |
+| **+ PGO + unrolled**   |    **787**|  **79** |  **+25%**  |
+
+Variance across 4 runs: ±1%. Correctness preserved (same max_depth=192,
+same best_score=344).
+
+### Build cost
+
+The 256-fold expansion balloons compile time from ~5s to ~41s. Worth
+it for production builds.
+
+### Why my initial analysis was wrong
+
+I had estimated ~5-10% based on counting "foldable" per-D values
+(only the depth-meta). I underestimated the win from:
+- **Per-arm branch-prediction specialisation**: LLVM gives each arm
+  its own basic-block layout. Branch hints in arm-D-5 are tuned for
+  the access patterns at depth 5, separate from arm-D-200.
+- **Code locality**: 256 distinct arm bodies fit (eventually) in
+  I-cache; PGO can specialise the layout further.
+
+This is the second optimization this hour where direct measurement
+beat analytical prediction (the first being the compact-ref_key
+refutation, where the analytical prediction was overoptimistic).
+
 ## What we did NOT yet do
 
-1. **BOLT post-link reordering** ([cargo-pgo blog](https://kobzol.github.io/rust/cargo/2023/07/28/rust-cargo-pgo.html)) — typical 5-10% over PGO. Apple-m1 BOLT support is less mature than x86; would need to verify it produces a working Mach-O.
-2. **`#[inline(always)]` on the hot-loop helpers** (entry_pid, entry_e, entry_s). Already done in our crates but worth verifying via `cargo asm`.
-3. **Per-depth specialised functions** to get true 256-block unrolling. Const-generic + recursion + LLVM tail-call. Multi-day work.
-4. **NEON-SIMD bucket sort at init** — init is sub-second, irrelevant.
-5. **Speculative loads via `core::hint::spin_loop`** — micro-fence, not a lever for our pattern.
-6. **`panic = "abort"` profile** — tested vol-106 T7, **null result on bf_bw** (62.8M nps both ways) because our hot loop already has zero panic edges (`unsafe { get_unchecked }` throughout). Profile retained as `bench-abort` for future use.
+1. **BOLT post-link reordering** ([cargo-pgo blog](https://kobzol.github.io/rust/cargo/2023/07/28/rust-cargo-pgo.html)) — typical 5-10% over PGO. Apple-m1 BOLT support is less mature than x86.
+2. **NEON-SIMD bucket sort at init** — init is sub-second, irrelevant.
+3. **Speculative loads via `core::hint::spin_loop`** — not a lever for our pattern.
+4. **`panic = "abort"` profile** — tested vol-106 T7, **null result on bf_bw** (62.8M nps both ways) because our hot loop already has zero panic edges (`unsafe { get_unchecked }` throughout). Profile retained as `bench-abort`.
 
 ## Hot-loop assembly inspection (apple-m1 release, no PGO)
 

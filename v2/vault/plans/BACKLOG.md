@@ -261,7 +261,32 @@ Vol-25 shipped dirty-list scoping (fix-4, commit `fd5b615`) which captured only 
 ### `vault-validation-of-perf-wins` — status: `unbuilt` — since: vol-25
 The vol-25 fixes were validated against raw nps on synthetic 60 s probes. The meaningful metric for the research project is matched-edge score on real solves (multi-thread joe_depth150_bp_par for 5–30 min on canonical E2). Per the [[../../../../.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/project_e2_vol14_bp_null|Vol-14 BP-as-value-order REVERSAL]] memory, raw-nps wins don't always translate to score wins (CP-partial metric mid-pipeline can be misleading). Worth a one-shot validation before declaring victory. Effort: 30 min runtime + 5 min analysis.
 
-### `blackwood-fast-per-depth-unrolling` — status: `analysis complete, low EV` — since: vol-106 (user-flagged 2026-05-16, analysed 2026-05-16)
+### `blackwood-fast-per-depth-unrolling` — status: `built` — vol-106 (2026-05-16)
+
+**SHIPPED**. User intuition was correct; my prior "low EV" analysis
+was wrong. The full per-depth unrolling gives **+25% nps** (baseline
+63M → PGO+unrolled 79M single-thread on canonical Selby-Riordan).
+
+Implementation: `solve_blackwood_unrolled_256` in
+`crates/blackwood-fast/src/lib.rs` uses the `depth_dispatch_256!`
+proc-macro from `crates/blackwood-fast-codegen` to emit 256 distinct
+match arms. In each arm, `__D__` substitutes to the literal depth
+value as a `usize` const, enabling LLVM to constant-fold per-D
+quantities (D_ROW, D_COL, IS_TOP_ROW, IS_BOTTOM_ROW, IS_LEFT_COL,
+IS_RIGHT_COL, TBL, POST_DEPTH).
+
+Opt-in via `E2_BF_UNROLLED=1` env var. Build time penalty: ~36s
+extra (5s → 41s) due to 256-fold expansion of the inner body.
+
+Why my prior analysis was wrong: I underestimated how much LLVM
+exploits per-arm branch-prediction independence. Even when
+`targets[D]` and `conflicts_allowed[D]` stay as runtime loads, the
+per-arm context lets LLVM specialise the basic-block layout and
+branch predictor for each depth's typical access pattern. The
+constant-folded depth-meta is a secondary win on top.
+
+See concept page [[../concepts/rust-perf-at-scale]] for the broader
+optimization log.
 
 **Analysis update 2026-05-16 ~10:00 CEST**: after building the
 proc-macro scaffold (`depth_dispatch_256!`) and confirming it works,
