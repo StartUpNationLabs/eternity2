@@ -213,10 +213,21 @@ fn main() {
         std::process::exit(1);
     }
     let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
-    let (puzzle, _hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
+    let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     let board = load_board(&board_path, &puzzle);
     let (s_old, total) = score_board(&puzzle, &board);
     eprintln!("baseline: {}/{}", s_old, total);
+
+    // Vol-116 T1 — collect canonical hints from puzzle. The Hungarian
+    // matching below will EXCLUDE hint positions and hint pieces from
+    // their respective per-class pools so hints stay pinned through
+    // the matching step. This preserves canonical hint compliance
+    // end-to-end through the bound-ascent + Hungarian + ALNS pipeline.
+    let hint_positions: std::collections::HashSet<u32> =
+        hints.hints.iter().map(|h| h.position).collect();
+    let hint_pieces: std::collections::HashSet<u16> =
+        hints.hints.iter().map(|h| h.piece_id).collect();
+    eprintln!("canonical hints: {} (pinned through Hungarian)", hints.hints.len());
 
     // Compute the relaxed 461-equivalent target.
     let mut target = relaxed_edge_target(&puzzle, &board);
@@ -240,9 +251,13 @@ fn main() {
     let mut positions_by_cls: HashMap<u8, Vec<u32>> = HashMap::new();
     let mut pieces_by_cls: HashMap<u8, Vec<u16>> = HashMap::new();
     for pos in 0..puzzle.cell_count() {
+        // Vol-116 T1: exclude hint positions from the matching pool.
+        if hint_positions.contains(&pos) { continue; }
         positions_by_cls.entry(border_class_of_pos(&puzzle, pos)).or_default().push(pos);
     }
     for piece in puzzle.pieces() {
+        // Vol-116 T1: exclude hint pieces from the matching pool.
+        if hint_pieces.contains(&piece.id) { continue; }
         pieces_by_cls.entry(border_class_of_piece(&puzzle, piece.id)).or_default().push(piece.id);
     }
     for (k, v) in &positions_by_cls {
@@ -253,6 +268,13 @@ fn main() {
     let mut new_board = Board::empty(&puzzle);
     loop {
     iter += 1;
+    // Vol-116 T1: pre-place canonical hints on new_board at every iteration.
+    // The Hungarian step writes other cells in-place below; we re-clear
+    // and re-place hints first to avoid stale data.
+    new_board = Board::empty(&puzzle);
+    for h in &hints.hints {
+        new_board.place(h.position, h.piece_id, h.rotation);
+    }
     let mut total_k = 0i64;
     for cls in [0u8, 1, 2] {
         let pieces_vec = pieces_by_cls.get(&cls).cloned().unwrap_or_default();
