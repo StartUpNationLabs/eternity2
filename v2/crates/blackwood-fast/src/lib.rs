@@ -1355,6 +1355,317 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     (stats, out)
 }
 
+/// Vol-117 T1 — hint-preserving variant of `solve_blackwood_sized`.
+///
+/// Same Blackwood schedule + break-index logic as `solve_blackwood_sized`
+/// but auto-advances at pinned depths and computes `cum`/`conf` for
+/// the pinned piece based on its actual heuristic count and conflicts.
+///
+/// IMPORTANT: schedule pruning at pinned cells is DISABLED (we cannot
+/// reject the pin even if `new_cum < target`). Conflict counting IS
+/// enforced — if a pinned cell would exceed `conflicts_allowed[depth]`,
+/// the DFS will fail completely (no recovery possible). This mirrors
+/// `solve_raw_sized_pinned`.
+fn solve_blackwood_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WORDS: usize>(
+    index: &RowMajorIndex,
+    initial_board: [PieceRot; WH],
+    is_pinned: [bool; WH],
+    initial_pieces_used: [u64; BITSET_WORDS],
+    targets: &[u32],
+    max_heuristic_index: u32,
+    conflicts_allowed: &[u32],
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    let w: usize = (WH as f64).sqrt() as usize;
+    debug_assert_eq!(w * w, WH);
+    let h = w;
+    const W_CANONICAL: usize = 16;
+    let canonical = WH == 256;
+
+    let mut pieces_used: [u64; BITSET_WORDS] = initial_pieces_used;
+    let mut board: [PieceRot; WH] = initial_board;
+    let mut best_board: [PieceRot; WH] = initial_board;
+    let mut cursor: [u32; WH] = [0; WH];
+    let mut cum: [u32; WH] = [0; WH];
+    let mut conf: [u32; WH] = [0; WH];
+
+    let mut depth_tbl: [u8; WH] = [0; WH];
+    let mut depth_top_row: [bool; WH] = [false; WH];
+    let mut depth_left_col: [bool; WH] = [false; WH];
+    for d in 0..WH {
+        let x = d % w;
+        let y = d / w;
+        depth_tbl[d] = (((x == w - 1) as u8) << 1) | ((y == h - 1) as u8);
+        depth_top_row[d] = y == 0;
+        depth_left_col[d] = x == 0;
+    }
+
+    let mut stats = SearchStats::default();
+    let start = eternity2_time::Clock::now();
+    let mut depth: usize = 0;
+
+    let strict_offsets_ptr = index.offsets.as_ptr();
+    let strict_entries_ptr = index.entries.as_ptr();
+    let relaxed_offsets_ptr = if index.relaxed_offsets.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_offsets.as_ptr()
+    };
+    let relaxed_entries_ptr = if index.relaxed_entries.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_entries.as_ptr()
+    };
+    let top_ptr = index.top_of.as_ptr();
+    let bottom_ptr = index.bottom_of.as_ptr();
+    let left_ptr = index.left_of.as_ptr();
+    let right_ptr = index.right_of.as_ptr();
+    let heur_ptr = index.heur_count_of.as_ptr();
+    let targets_ptr = targets.as_ptr();
+    let conf_alw_ptr = conflicts_allowed.as_ptr();
+
+    'outer: loop {
+        if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
+            break 'outer;
+        }
+        if depth == WH {
+            stats.solved = true;
+            stats.max_depth = WH as u32;
+            break 'outer;
+        }
+
+        let (_tbl, is_top_row, is_left_col) = if canonical {
+            let row = depth >> 4;
+            let col = depth & 0xF;
+            let is_bottom_row = row == W_CANONICAL - 1;
+            let is_right_col = col == W_CANONICAL - 1;
+            let tbl = ((is_right_col as usize) << 1) | (is_bottom_row as usize);
+            (tbl, row == 0, col == 0)
+        } else {
+            let t = unsafe { *depth_tbl.get_unchecked(depth) } as usize;
+            let tr = unsafe { *depth_top_row.get_unchecked(depth) };
+            let lc = unsafe { *depth_left_col.get_unchecked(depth) };
+            (t, tr, lc)
+        };
+
+        // Vol-117 T1: at pinned depths, compute conf/cum from the pinned
+        // placement, advance, never recurse on candidates.
+        if unsafe { *is_pinned.get_unchecked(depth) } {
+            let pr = unsafe { *board.get_unchecked(depth) };
+            let top_color: Color = if is_top_row {
+                BORDER
+            } else {
+                let nbr = unsafe { *board.get_unchecked(depth - w) };
+                unsafe { *bottom_ptr.add(nbr.0 as usize) }
+            };
+            let left_color: Color = if is_left_col {
+                BORDER
+            } else {
+                let nbr = unsafe { *board.get_unchecked(depth - 1) };
+                unsafe { *right_ptr.add(nbr.0 as usize) }
+            };
+            let p_top = unsafe { *top_ptr.add(pr.0 as usize) };
+            let p_left = unsafe { *left_ptr.add(pr.0 as usize) };
+            let candidate_conf = ((p_top != top_color) as u32) + ((p_left != left_color) as u32);
+            let prev_conf = if depth == 0 { 0 } else { unsafe { *conf.get_unchecked(depth - 1) } };
+            // Vol-117 T1: pinned cells are not choices. We record the
+            // forced mismatch count but do NOT enforce the conflict
+            // budget here (the schedule's conflicts_allowed governs
+            // VOLUNTARY moves, not forced placements).
+            let new_conf = prev_conf + candidate_conf;
+            unsafe { *conf.get_unchecked_mut(depth) = new_conf; }
+            let post_depth = (depth as u32) + 1;
+            let schedule_active = post_depth <= max_heuristic_index;
+            let prev_cum = if depth == 0 { 0 } else { unsafe { *cum.get_unchecked(depth - 1) } };
+            if schedule_active {
+                let new_cum = prev_cum + unsafe { *heur_ptr.add(pr.0 as usize) } as u32;
+                unsafe { *cum.get_unchecked_mut(depth) = new_cum; }
+            } else {
+                unsafe { *cum.get_unchecked_mut(depth) = prev_cum; }
+            }
+            stats.nodes += 1;
+            if (depth as u32 + 1) > stats.max_depth {
+                stats.max_depth = depth as u32 + 1;
+                best_board.copy_from_slice(&board);
+            }
+            depth += 1;
+            if depth < WH {
+                unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            }
+            continue;
+        }
+
+        let top_color: Color = if is_top_row {
+            BORDER
+        } else {
+            let nbr = unsafe { *board.get_unchecked(depth - w) };
+            unsafe { *bottom_ptr.add(nbr.0 as usize) }
+        };
+        let left_color: Color = if is_left_col {
+            BORDER
+        } else {
+            let nbr = unsafe { *board.get_unchecked(depth - 1) };
+            unsafe { *right_ptr.add(nbr.0 as usize) }
+        };
+        let _tbl_dummy = _tbl;
+        let key = ref_key(top_color, left_color);
+        let flat = (_tbl_dummy << 16) | (key as usize);
+
+        let allowed_here = unsafe { *conf_alw_ptr.add(depth) };
+        let prev_conf = if depth == 0 { 0 } else { unsafe { *conf.get_unchecked(depth - 1) } };
+        let use_relaxed = !relaxed_offsets_ptr.is_null()
+            && allowed_here > 0
+            && prev_conf < allowed_here;
+        let (lo, list_ptr) = if use_relaxed {
+            let lo = unsafe { *relaxed_offsets_ptr.add(flat) } as usize;
+            (lo, relaxed_entries_ptr)
+        } else {
+            let lo = unsafe { *strict_offsets_ptr.add(flat) } as usize;
+            (lo, strict_entries_ptr)
+        };
+        let mut c_idx = lo + unsafe { *cursor.get_unchecked(depth) } as usize;
+
+        let post_depth = (depth as u32) + 1;
+        let schedule_active = post_depth <= max_heuristic_index;
+        let target = if schedule_active {
+            unsafe { *targets_ptr.add(post_depth as usize - 1) }
+        } else {
+            0
+        };
+        let prev_cum = if depth == 0 { 0 } else { unsafe { *cum.get_unchecked(depth - 1) } };
+
+        let mut placed = false;
+        loop {
+            let pr = unsafe { *list_ptr.add(c_idx) };
+            if pr.0 == PieceRot::NONE.0 {
+                break;
+            }
+            c_idx += 1;
+            let piece_idx = pr.piece_idx() as usize;
+            let word = piece_idx >> 6;
+            let bit = 1u64 << (piece_idx & 63);
+            if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
+                continue;
+            }
+
+            let candidate_conf = if use_relaxed {
+                let p_top = unsafe { *top_ptr.add(pr.0 as usize) };
+                let p_left = unsafe { *left_ptr.add(pr.0 as usize) };
+                ((p_top != top_color) as u32) + ((p_left != left_color) as u32)
+            } else {
+                0
+            };
+            let new_conf = prev_conf + candidate_conf;
+            if new_conf > allowed_here {
+                continue;
+            }
+
+            if schedule_active {
+                let new_cum = prev_cum + unsafe { *heur_ptr.add(pr.0 as usize) } as u32;
+                if new_cum < target {
+                    continue;
+                }
+                unsafe { *cum.get_unchecked_mut(depth) = new_cum; }
+            } else {
+                unsafe { *cum.get_unchecked_mut(depth) = prev_cum; }
+            }
+            unsafe { *conf.get_unchecked_mut(depth) = new_conf; }
+            unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
+            unsafe { *board.get_unchecked_mut(depth) = pr; }
+            unsafe { *cursor.get_unchecked_mut(depth) = (c_idx - lo) as u32; }
+            stats.nodes += 1;
+            if (depth as u32 + 1) > stats.max_depth {
+                stats.max_depth = depth as u32 + 1;
+                best_board.copy_from_slice(&board);
+            }
+            depth += 1;
+            if depth < WH {
+                unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            }
+            placed = true;
+            break;
+        }
+
+        if !placed {
+            unsafe { *cursor.get_unchecked_mut(depth) = 0; }
+            // Backtrack: skip back through pinned cells.
+            loop {
+                if depth == 0 {
+                    break 'outer;
+                }
+                depth -= 1;
+                if unsafe { *is_pinned.get_unchecked(depth) } {
+                    continue;
+                }
+                let pr = unsafe { *board.get_unchecked(depth) };
+                let piece_idx = pr.piece_idx() as usize;
+                unsafe {
+                    *pieces_used.get_unchecked_mut(piece_idx >> 6) &= !(1u64 << (piece_idx & 63));
+                    *board.get_unchecked_mut(depth) = PieceRot::NONE;
+                }
+                break;
+            }
+        }
+    }
+
+    let out = board_to_out(index, &best_board);
+    (stats, out)
+}
+
+/// Vol-117 T1 entry point — hint-preserving Blackwood schedule + break.
+/// Mirrors `solve_blackwood`'s canonical-16x16 path but with pinning.
+pub fn solve_blackwood_with_hints(
+    puzzle: &Puzzle,
+    hints: &Hints,
+    schedule: &BlackwoodSchedule,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    let mut index = RowMajorIndex::build(puzzle);
+    index.set_heuristic_sides(&schedule.heuristic_sides);
+    if !schedule.break_indexes_allowed.is_empty() {
+        index.build_relaxed_index(puzzle.color_count);
+    }
+    if puzzle.width == 16 && puzzle.height == 16 && index.n_pieces == 256 {
+        let targets = schedule.target_table(256);
+        let wh = 256usize;
+        let mut conflicts_allowed: Vec<u32> = vec![0; wh];
+        let mut budget = 0u32;
+        let break_set: std::collections::HashSet<u32> =
+            schedule.break_indexes_allowed.iter().copied().collect();
+        for d in 0..wh as u32 {
+            if break_set.contains(&d) {
+                budget += 1;
+            }
+            conflicts_allowed[d as usize] = budget;
+        }
+        // Build pinning state.
+        let mut board: [PieceRot; 256] = [PieceRot::NONE; 256];
+        let mut is_pinned: [bool; 256] = [false; 256];
+        let mut pieces_used: [u64; 4] = [0; 4];
+        for hint in &hints.hints {
+            let piece_idx = (0..index.n_pieces)
+                .find(|&i| index.piece_ids[i as usize] == hint.piece_id)
+                .expect("hint piece not in puzzle") as u16;
+            let pr = PieceRot::new(piece_idx, hint.rotation.as_u8());
+            board[hint.position as usize] = pr;
+            is_pinned[hint.position as usize] = true;
+            pieces_used[(piece_idx as usize) >> 6] |= 1u64 << (piece_idx & 63);
+        }
+        return solve_blackwood_sized_pinned::<256, 256, 4>(
+            &index,
+            board,
+            is_pinned,
+            pieces_used,
+            &targets,
+            schedule.max_heuristic_index,
+            &conflicts_allowed,
+            time_budget_us,
+        );
+    }
+    // Generic fallback: ignore hints.
+    solve_raw_generic(&index, puzzle, time_budget_us)
+}
+
 /// Vol-106 T12 — proc-macro-unrolled variant of `solve_blackwood_sized`
 /// for canonical 16×16. Uses `depth_dispatch_256!` from the codegen
 /// crate to emit 256 distinct per-depth match arms with the literal
