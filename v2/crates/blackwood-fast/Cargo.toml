@@ -31,6 +31,10 @@ name = "bf_bw"
 path = "src/bin/bf_bw.rs"
 
 [[bin]]
+name = "bf_bw_hinted"
+path = "src/bin/bf_bw_hinted.rs"
+
+[[bin]]
 name = "bf_similarity"
 path = "src/bin/bf_similarity.rs"
 
