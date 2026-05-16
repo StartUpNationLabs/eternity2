@@ -821,6 +821,7 @@ fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WO
 
     let mut pieces_used: [u64; BITSET_WORDS] = initial_pieces_used;
     let mut board: [PieceRot; WH] = initial_board;
+    let mut best_board: [PieceRot; WH] = initial_board;
     let mut cursor: [u32; WH] = [0; WH];
 
     let mut depth_tbl: [u8; WH] = [0; WH];
@@ -856,12 +857,10 @@ fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WO
         // Vol-113 T1: if depth is pinned, the hint piece is already in board
         // and pieces_used. Just advance.
         if unsafe { *is_pinned.get_unchecked(depth) } {
-            // Verify constraints against placed neighbours (sanity).
-            // For canonical E2 hints, these should always be consistent;
-            // we trust the input.
             stats.nodes += 1;
             if (depth as u32 + 1) > stats.max_depth {
                 stats.max_depth = depth as u32 + 1;
+                best_board.copy_from_slice(&board);
             }
             depth += 1;
             if depth < WH {
@@ -907,6 +906,7 @@ fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WO
             stats.nodes += 1;
             if (depth as u32 + 1) > stats.max_depth {
                 stats.max_depth = depth as u32 + 1;
+                best_board.copy_from_slice(&board);
             }
             depth += 1;
             if depth < WH {
@@ -926,10 +926,8 @@ fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WO
                 }
                 depth -= 1;
                 if unsafe { *is_pinned.get_unchecked(depth) } {
-                    // Pinned — keep going back.
                     continue;
                 }
-                // Found a non-pinned cell to undo.
                 let pr = unsafe { *board.get_unchecked(depth) };
                 let piece_idx = pr.piece_idx() as usize;
                 unsafe {
@@ -941,7 +939,7 @@ fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WO
         }
     }
 
-    let out = board_to_out(index, &board);
+    let out = board_to_out(index, &best_board);
     (stats, out)
 }
 
