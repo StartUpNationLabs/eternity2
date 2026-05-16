@@ -10,32 +10,10 @@
 // Usage: verify_board <board.json> [board.json ...]
 // Returns exit-code 0 if all boards legal, 1 if any has violations.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use eternity2_benchmark::loader::load_puzzle_with_hints;
-use eternity2_core::{Board, PieceId, Rotation};
-use eternity2_export::verify;
-
-fn load_board(path: &Path, puzzle: &eternity2_core::Puzzle) -> Result<Board, String> {
-    let bytes = std::fs::read(path).map_err(|e| format!("read {path:?}: {e}"))?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| format!("parse: {e}"))?;
-    let arr = v.get("placement")
-        .and_then(|x| x.as_array())
-        .or_else(|| v.get("board").and_then(|b| b.get("placement")).and_then(|x| x.as_array()))
-        .ok_or("missing placement[]")?;
-    let mut board = Board::empty(puzzle);
-    for (idx, item) in arr.iter().enumerate() {
-        if item.is_null() { continue; }
-        let pos = item.get("pos").and_then(|x| x.as_u64())
-            .unwrap_or(idx as u64) as u32;
-        let pid = item.get("piece_id").and_then(|x| x.as_u64()).ok_or("entry missing piece_id")?;
-        let rot = item.get("rotation").and_then(|x| x.as_u64()).ok_or("entry missing rotation")?;
-        let piece_id = PieceId::try_from(pid as u32).map_err(|e| format!("piece_id: {e}"))?;
-        let rotation = Rotation::from_u8(rot as u8).ok_or("bad rotation")?;
-        board.place(pos, piece_id, rotation);
-    }
-    Ok(board)
-}
+use eternity2_export::{load_board, verify};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
