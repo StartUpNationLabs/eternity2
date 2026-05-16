@@ -94,9 +94,13 @@ pub struct RowMajorIndex {
     pub edges: Vec<[Color; 4]>,
     /// Per-piece-idx, the piece_id (for back-translation).
     pub piece_ids: Vec<PieceId>,
+    /// Per-PieceRot.0 (u16), the TOP color (for break-index mismatch test).
+    pub top_of: Vec<Color>,
     /// Per-PieceRot.0 (u16), the BOTTOM color (for fast top-color lookup
     /// from depth-w board cell).
     pub bottom_of: Vec<Color>,
+    /// Per-PieceRot.0 (u16), the LEFT color (for break-index mismatch test).
+    pub left_of: Vec<Color>,
     /// Per-PieceRot.0 (u16), the RIGHT color (for fast left-color lookup
     /// from depth-1 board cell).
     pub right_of: Vec<Color>,
@@ -104,10 +108,16 @@ pub struct RowMajorIndex {
     /// this piece-rotation (0..=4). Populated by `set_heuristic_sides`;
     /// all-zero otherwise (no Blackwood schedule effect).
     pub heur_count_of: Vec<u8>,
+    /// Optional 1-mismatch-allowed candidate index. Same shape as
+    /// `offsets` / `entries` but each bucket contains piece-rotations
+    /// matching EXACTLY ONE of (top_color, left_color). Built on
+    /// demand by `build_relaxed_index`. Empty if not built.
+    pub relaxed_offsets: Vec<u32>,
+    pub relaxed_entries: Vec<PieceRot>,
 }
 
 /// Blackwood schedule parameters for `solve_blackwood`.
-/// Vol-15-style heuristic-color schedule + (future) break-index allowance.
+/// Vol-15-style heuristic-color schedule + break-index allowance.
 #[derive(Debug, Clone)]
 pub struct BlackwoodSchedule {
     /// Set of edge colors that count toward the exhaustion schedule
@@ -121,6 +131,13 @@ pub struct BlackwoodSchedule {
     /// Maximum depth at which the schedule applies; beyond this, no
     /// schedule check.
     pub max_heuristic_index: u32,
+    /// Break-index depths: at these depths, the placement may have
+    /// one neighbour-side mismatch instead of strict matching.
+    /// Cumulative mismatches across the run cannot exceed the count
+    /// of break-indexes reached. Standard set = [201, 206, 211, 216,
+    /// 221, 225, 229, 233, 237, 239, 241, 256] for canonical 256-cell.
+    /// Empty disables break-index allowance.
+    pub break_indexes_allowed: Vec<u32>,
 }
 
 impl BlackwoodSchedule {
@@ -185,16 +202,19 @@ impl RowMajorIndex {
             }
         }
 
-        // bottom_of / right_of indexed by PieceRot.0 (u16). Allocate the
-        // full u16 range so the inner-loop deref is a single load.
-        let mut bottom_of: Vec<Color> = vec![0; 1 << 16];
+        // top_of / right_of / bottom_of / left_of indexed by PieceRot.0 (u16).
+        let mut top_of: Vec<Color> = vec![0; 1 << 16];
         let mut right_of: Vec<Color> = vec![0; 1 << 16];
+        let mut bottom_of: Vec<Color> = vec![0; 1 << 16];
+        let mut left_of: Vec<Color> = vec![0; 1 << 16];
         for piece_idx in 0..n_pieces as u16 {
             for rot in 0..4u8 {
                 let pr = PieceRot::new(piece_idx, rot);
                 let e = edges[(piece_idx as usize) * 4 + rot as usize];
-                bottom_of[pr.0 as usize] = e[2];
+                top_of[pr.0 as usize] = e[0];
                 right_of[pr.0 as usize] = e[1];
+                bottom_of[pr.0 as usize] = e[2];
+                left_of[pr.0 as usize] = e[3];
             }
         }
 
@@ -233,10 +253,104 @@ impl RowMajorIndex {
             n_pieces: n_pieces as u16,
             edges,
             piece_ids,
+            top_of,
             bottom_of,
+            left_of,
             right_of,
             heur_count_of: vec![0; 1 << 16],
+            relaxed_offsets: Vec::new(),
+            relaxed_entries: Vec::new(),
         }
+    }
+
+    /// Build the relaxed candidate index used at break-index depths.
+    /// For each (tbl, top, left), the bucket contains piece-rotations
+    /// with AT MOST 1 mismatch on (top, left). Includes the strict-match
+    /// piece-rotations as a subset (0 mismatches). The conflict cost
+    /// (0 or 1) is encoded by the high bit of PieceRot.0 (bit 14, normally
+    /// the rotation bit's MSB). We use a separate parallel `conflict_of`
+    /// table indexed by the candidate index instead, to keep PieceRot
+    /// pristine.
+    ///
+    /// At call time we pass the puzzle's `color_count` so we only fan
+    /// out across actually-used colors, keeping the build at ~O(C^2 *
+    /// pieces) instead of O(256^2 * pieces).
+    pub fn build_relaxed_index(&mut self, color_count: u32) {
+        if !self.relaxed_offsets.is_empty() {
+            return;
+        }
+        let n_colors = color_count.max(2) as u8;
+        const N_FLAT_KEYS: usize = 4 * 65536;
+        let n_pieces = self.n_pieces as usize;
+        let mut buckets: Vec<Vec<PieceRot>> = (0..N_FLAT_KEYS).map(|_| Vec::new()).collect();
+
+        // For each (piece, rot), enumerate (required_top, required_left)
+        // pairs where the piece would have AT MOST 1 mismatch.
+        // Mismatch options:
+        //   (a) 0 mismatch: required_top == p.top && required_left == p.left.
+        //   (b) 1 mismatch on top: required_top != p.top, required_left == p.left.
+        //   (c) 1 mismatch on left: required_top == p.top, required_left != p.left.
+        // Iterate colors 0..n_colors (BORDER + interior).
+        for piece_idx in 0..n_pieces {
+            for rot in 0..4u8 {
+                let e = self.edges[piece_idx * 4 + rot as usize];
+                let right_is_border = e[1] == BORDER;
+                let bottom_is_border = e[2] == BORDER;
+                let pr = PieceRot::new(piece_idx as u16, rot);
+                let p_top = e[0];
+                let p_left = e[3];
+
+                // (a) Strict match.
+                {
+                    let key = ref_key(p_top, p_left);
+                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
+                    push_into(0);
+                    if bottom_is_border { push_into(1); }
+                    if right_is_border { push_into(2); }
+                    if right_is_border && bottom_is_border { push_into(3); }
+                }
+                // (b) 1 mismatch on top.
+                for required_top in 0..=n_colors {
+                    if required_top == p_top { continue; }
+                    let key = ref_key(required_top, p_left);
+                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
+                    push_into(0);
+                    if bottom_is_border { push_into(1); }
+                    if right_is_border { push_into(2); }
+                    if right_is_border && bottom_is_border { push_into(3); }
+                }
+                // (c) 1 mismatch on left.
+                for required_left in 0..=n_colors {
+                    if required_left == p_left { continue; }
+                    let key = ref_key(p_top, required_left);
+                    let mut push_into = |tbl: u8| { buckets[flat_key(tbl, key)].push(pr); };
+                    push_into(0);
+                    if bottom_is_border { push_into(1); }
+                    if right_is_border { push_into(2); }
+                    if right_is_border && bottom_is_border { push_into(3); }
+                }
+            }
+        }
+
+        let mut offsets: Vec<u32> = Vec::with_capacity(N_FLAT_KEYS + 1);
+        let mut entries: Vec<PieceRot> = Vec::new();
+        offsets.push(0);
+        for bucket in &buckets {
+            entries.extend_from_slice(bucket);
+            entries.push(PieceRot::NONE);
+            offsets.push(entries.len() as u32);
+        }
+        self.relaxed_offsets = offsets;
+        self.relaxed_entries = entries;
+    }
+
+    #[must_use]
+    #[inline(always)]
+    pub fn relaxed_candidates(&self, tbl: usize, key: u16) -> &[PieceRot] {
+        let k = (tbl << 16) | (key as usize);
+        let lo = self.relaxed_offsets[k] as usize;
+        let hi = self.relaxed_offsets[k + 1] as usize;
+        &self.relaxed_entries[lo..hi - 1]
     }
 
     /// Populate `heur_count_of` from a set of heuristic colors. Counts
@@ -575,12 +689,32 @@ pub fn solve_blackwood(
 ) -> (SearchStats, Vec<(PieceId, Rotation)>) {
     let mut index = RowMajorIndex::build(puzzle);
     index.set_heuristic_sides(&schedule.heuristic_sides);
+    if !schedule.break_indexes_allowed.is_empty() {
+        index.build_relaxed_index(puzzle.color_count);
+    }
     if puzzle.width == 16 && puzzle.height == 16 && index.n_pieces == 256 {
         let targets = schedule.target_table(256);
-        return solve_blackwood_sized::<256, 256, 4>(&index, &targets, schedule.max_heuristic_index, time_budget_us);
+        // Build per-depth conflicts_allowed table: count of break-indexes
+        // at depth ≤ d. At each break-index, budget grows by 1.
+        let wh = 256usize;
+        let mut conflicts_allowed: Vec<u32> = vec![0; wh];
+        let mut budget = 0u32;
+        let break_set: std::collections::HashSet<u32> =
+            schedule.break_indexes_allowed.iter().copied().collect();
+        for d in 0..wh as u32 {
+            if break_set.contains(&d) {
+                budget += 1;
+            }
+            conflicts_allowed[d as usize] = budget;
+        }
+        return solve_blackwood_sized::<256, 256, 4>(
+            &index,
+            &targets,
+            schedule.max_heuristic_index,
+            &conflicts_allowed,
+            time_budget_us,
+        );
     }
-    // Generic path not implemented yet for blackwood schedule; fall back
-    // to raw DFS (no schedule pruning) for other sizes.
     solve_raw_generic(&index, puzzle, time_budget_us)
 }
 
@@ -588,6 +722,7 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     index: &RowMajorIndex,
     targets: &[u32],
     max_heuristic_index: u32,
+    conflicts_allowed: &[u32],
     time_budget_us: u64,
 ) -> (SearchStats, Vec<(PieceId, Rotation)>) {
     let w: usize = (WH as f64).sqrt() as usize;
@@ -597,8 +732,9 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     let mut pieces_used: [u64; BITSET_WORDS] = [0; BITSET_WORDS];
     let mut board: [PieceRot; WH] = [PieceRot::NONE; WH];
     let mut cursor: [u32; WH] = [0; WH];
-    // Cumulative heuristic-edge count at each depth (0 at depth 0).
     let mut cum: [u32; WH] = [0; WH];
+    // Cumulative conflicts (mismatches placed) at each depth.
+    let mut conf: [u32; WH] = [0; WH];
 
     let mut depth_tbl: [u8; WH] = [0; WH];
     let mut depth_top_row: [bool; WH] = [false; WH];
@@ -615,12 +751,25 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
     let start = eternity2_time::Clock::now();
     let mut depth: usize = 0;
 
-    let offsets_ptr = index.offsets.as_ptr();
-    let entries_ptr = index.entries.as_ptr();
+    let strict_offsets_ptr = index.offsets.as_ptr();
+    let strict_entries_ptr = index.entries.as_ptr();
+    let relaxed_offsets_ptr = if index.relaxed_offsets.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_offsets.as_ptr()
+    };
+    let relaxed_entries_ptr = if index.relaxed_entries.is_empty() {
+        std::ptr::null()
+    } else {
+        index.relaxed_entries.as_ptr()
+    };
+    let top_ptr = index.top_of.as_ptr();
     let bottom_ptr = index.bottom_of.as_ptr();
+    let left_ptr = index.left_of.as_ptr();
     let right_ptr = index.right_of.as_ptr();
     let heur_ptr = index.heur_count_of.as_ptr();
     let targets_ptr = targets.as_ptr();
+    let conf_alw_ptr = conflicts_allowed.as_ptr();
 
     'outer: loop {
         if (stats.nodes & 0xFFFF) == 0 && start.elapsed_us() > time_budget_us {
@@ -647,11 +796,26 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
         };
         let key = ref_key(top_color, left_color);
         let flat = (tbl << 16) | (key as usize);
-        let lo = unsafe { *offsets_ptr.add(flat) } as usize;
+
+        // Choose strict vs relaxed list. We use relaxed only when:
+        // (1) relaxed index was built, (2) conflicts_allowed[depth] > 0
+        //     (some break-index has been crossed), (3) we still have
+        //     budget at this depth (prev_conf < allowed).
+        let allowed_here = unsafe { *conf_alw_ptr.add(depth) };
+        let prev_conf = if depth == 0 { 0 } else { unsafe { *conf.get_unchecked(depth - 1) } };
+        let use_relaxed = !relaxed_offsets_ptr.is_null()
+            && allowed_here > 0
+            && prev_conf < allowed_here;
+        let (lo, list_ptr) = if use_relaxed {
+            let lo = unsafe { *relaxed_offsets_ptr.add(flat) } as usize;
+            (lo, relaxed_entries_ptr)
+        } else {
+            let lo = unsafe { *strict_offsets_ptr.add(flat) } as usize;
+            (lo, strict_entries_ptr)
+        };
         let mut c_idx = lo + unsafe { *cursor.get_unchecked(depth) } as usize;
 
         // Schedule target for the post-placement depth (depth+1).
-        // Skip the schedule check past max_heuristic_index.
         let post_depth = (depth as u32) + 1;
         let schedule_active = post_depth <= max_heuristic_index;
         let target = if schedule_active {
@@ -663,7 +827,7 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
 
         let mut placed = false;
         loop {
-            let pr = unsafe { *entries_ptr.add(c_idx) };
+            let pr = unsafe { *list_ptr.add(c_idx) };
             if pr.0 == PieceRot::NONE.0 {
                 break;
             }
@@ -674,10 +838,24 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
             if (unsafe { *pieces_used.get_unchecked(word) } & bit) != 0 {
                 continue;
             }
-            // Heuristic-schedule pruning. The cumulative count AFTER placing
-            // this piece would be prev_cum + heur_count_of[pr.0]. If
-            // the schedule demands `target` heuristic-edges by depth
-            // post_depth, and we'd be below it, prune this branch.
+
+            // Conflict count for this candidate at this position.
+            // For row-major scan: conflict = (piece.top != required_top)
+            // + (piece.left != required_left). Strict list always gives 0;
+            // relaxed list gives 0 or 1.
+            let candidate_conf = if use_relaxed {
+                let p_top = unsafe { *top_ptr.add(pr.0 as usize) };
+                let p_left = unsafe { *left_ptr.add(pr.0 as usize) };
+                ((p_top != top_color) as u32) + ((p_left != left_color) as u32)
+            } else {
+                0
+            };
+            let new_conf = prev_conf + candidate_conf;
+            if new_conf > allowed_here {
+                continue;
+            }
+
+            // Heuristic-schedule pruning.
             if schedule_active {
                 let new_cum = prev_cum + unsafe { *heur_ptr.add(pr.0 as usize) } as u32;
                 if new_cum < target {
@@ -685,9 +863,9 @@ fn solve_blackwood_sized<const WH: usize, const NPIECES: usize, const BITSET_WOR
                 }
                 unsafe { *cum.get_unchecked_mut(depth) = new_cum; }
             } else {
-                // Past max_heuristic_index; cum bookkeeping no longer matters.
                 unsafe { *cum.get_unchecked_mut(depth) = prev_cum; }
             }
+            unsafe { *conf.get_unchecked_mut(depth) = new_conf; }
             unsafe { *pieces_used.get_unchecked_mut(word) |= bit; }
             unsafe { *board.get_unchecked_mut(depth) = pr; }
             unsafe { *cursor.get_unchecked_mut(depth) = (c_idx - lo) as u32; }

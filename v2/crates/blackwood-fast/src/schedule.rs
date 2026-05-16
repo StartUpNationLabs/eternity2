@@ -130,10 +130,21 @@ pub fn blackwood_schedule_469(puzzle: &Puzzle, hints: &Hints) -> Option<Blackwoo
         targets.push((remap(d), scale_c(c)));
     }
 
+    // Blackwood's canonical break-index set, scaled proportionally.
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| {
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
+            scaled.min(n_pos.saturating_sub(1))
+        })
+        .collect();
+
     Some(BlackwoodSchedule {
         heuristic_sides: colors,
         exhaustion_targets: targets,
         max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
     })
 }
 
@@ -161,10 +172,20 @@ pub fn blackwood_schedule_calibrated_v17a(puzzle: &Puzzle, hints: &Hints) -> Opt
         (last_idx, pool_size.min(150)),
     ];
 
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| {
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
+            scaled.min(n_pos.saturating_sub(1))
+        })
+        .collect();
+
     let target_max = targets.last().map(|&(d, _)| d).unwrap_or(last_idx);
     Some(BlackwoodSchedule {
         heuristic_sides: colors,
         exhaustion_targets: targets,
         max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
     })
 }

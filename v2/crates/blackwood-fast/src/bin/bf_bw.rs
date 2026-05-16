@@ -14,23 +14,36 @@ fn main() {
     );
     let mut budget_ms: u64 = 5000;
     let mut schedule_name = String::from("v17a");
+    let mut break_first: Option<u32> = None;
+    let mut break_count: Option<u32> = None;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--puzzle" => { puzzle_path = PathBuf::from(&args[i + 1]); i += 2; }
             "--budget-ms" => { budget_ms = args[i + 1].parse().expect("budget"); i += 2; }
             "--schedule" => { schedule_name = args[i + 1].clone(); i += 2; }
+            "--break-first" => { break_first = Some(args[i + 1].parse().expect("break-first")); i += 2; }
+            "--break-count" => { break_count = Some(args[i + 1].parse().expect("break-count")); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
     }
 
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
-    let schedule = match schedule_name.as_str() {
+    let mut schedule = match schedule_name.as_str() {
         "v15" | "469" => blackwood_schedule_469(&puzzle, &hints).expect("schedule built"),
         "v17a" => blackwood_schedule_calibrated_v17a(&puzzle, &hints).expect("schedule built"),
         other => panic!("unknown schedule: {other}"),
     };
+    // Optional break-index override for exploration.
+    if let (Some(first), Some(n)) = (break_first, break_count) {
+        let wh = (puzzle.width * puzzle.height) as u32;
+        let mut new_breaks: Vec<u32> = (0..n).map(|i| (first + i).min(wh - 1)).collect();
+        new_breaks.dedup();
+        eprintln!("[bf_bw] override breaks: {:?}", new_breaks);
+        schedule.break_indexes_allowed = new_breaks;
+    }
     eprintln!("[bf_bw] schedule={}", schedule_name);
+    eprintln!("[bf_bw] break_indexes_allowed={:?}", schedule.break_indexes_allowed);
     eprintln!(
         "[bf_bw] puzzle: {}x{}, colors={}, schedule heuristic_sides={:?} max_idx={} pool_size~ many",
         puzzle.width, puzzle.height, puzzle.color_count,
