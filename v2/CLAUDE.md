@@ -38,10 +38,10 @@ report number". The senior-researcher mode is:
   Commit and document as you go.
 
 - **NO LIMITING THOUGHTS ON AMBITION.** Don't pre-estimate weeks/months
-  for an idea and use that estimate as a reason to skip it. The
-  minimal-viable PoC of any "weeks-long" approach is almost always
-  overnight-doable; try the smallest version, let the data tell you if
-  it's worth scaling. Don't decline an angle because "tooling doesn't
+  for an idea and use that estimate as a reason to skip it. "Weeks-long"
+  approaches are often overnight-doable, and sometimes the full version
+  is also tractable in one push — don't pre-shrink the scope either way.
+  Just start building. Don't decline an angle because "tooling doesn't
   exist" — build the tool. Don't decline because "uncertain payoff" —
   run it, measure, iterate. "Compute too expensive" is rarely the real
   blocker; the real blocker is usually "I haven't tried it yet".

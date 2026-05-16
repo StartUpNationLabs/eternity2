@@ -98,9 +98,9 @@ TOP UNTRIED HIGH-EV DIRECTIONS (from IDEAS_FROM_BLANK)
 
 NO LIMITING THOUGHTS ON AMBITION
 - Don't pre-estimate weeks/months for a task and use that as a reason to
-  skip it. The minimal-viable PoC of any "weeks-long" idea is almost always
-  overnight-doable. Try the smallest version first; let the data tell you
-  if it's worth scaling.
+  skip it. "Weeks-long" ideas are often overnight-doable, and sometimes
+  the full version is also tractable in one push — don't pre-shrink the
+  scope either way. Just start building.
 - Don't decline an angle because "tooling doesn't exist". Build the tool.
 - Don't decline because "uncertain payoff". Run it; measure; iterate.
 - "Compute too expensive" is rarely the real blocker — the real blocker
