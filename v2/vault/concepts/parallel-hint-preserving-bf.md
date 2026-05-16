@@ -33,6 +33,29 @@ Pipeline (par-8 partial → bound-ascent → Hungarian):
 - Bound-ascent: 411/480, UB 460.
 - Hungarian: 432/480 (5/5 hints OK).
 
+## Downstream pipeline (vol-118 T5b end-to-end)
+
+Full pipeline: par-8 bf-hinted-v17a (60s) → bound-ascent → Hungarian
+→ ALNS.
+
+| stage              | score | placed | hints |
+|--------------------|------:|-------:|------:|
+| par-8 bf (60s)     |   414 | 232/256 |   5/5 |
+| bound-ascent       |   411 | 256/256 |   5/5 |  (UB 460)
+| Hungarian          |   432 | 256/256 |   5/5 |
+| ALNS (seed=1, basic, 60s) | **449** | 256/256 |   5/5 |
+
+**449/480 strict-canonical (5/5 hints OK)** is the highest strict-
+canonical score this pipeline has produced. Compare:
+
+- Raw+pin (vol-116) ALNS ceiling: 435 strict-canonical.
+- Schedule+pin single-thread (vol-118 T5 fix): 431 strict-canonical.
+- **Schedule+pin PARALLEL (vol-118 T5b): 449 strict-canonical.**
+- Strict-canonical record (per memory, blackwood_mrv): 457. Still
+  above us by 8.
+
+ALNS sweep across seeds × ops is in progress to confirm reproducibility.
+
 ## Why parallel helps
 
 Single-thread DFS with the strict v17a schedule reaches depth 192
