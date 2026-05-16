@@ -61,7 +61,8 @@ fn substitute_placeholder(ts: proc_macro2::TokenStream, d: u32) -> proc_macro2::
                 TokenTree::Group(proc_macro2::Group::new(g.delimiter(), inner))
             }
             TokenTree::Ident(id) if id.to_string() == "__D__" => {
-                TokenTree::Literal(proc_macro2::Literal::u32_unsuffixed(d))
+                // Emit as usize literal so call sites can use .wrapping_sub etc.
+                TokenTree::Literal(proc_macro2::Literal::usize_suffixed(d as usize))
             }
             other => other,
         };
