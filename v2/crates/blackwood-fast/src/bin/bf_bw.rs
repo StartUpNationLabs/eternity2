@@ -5,7 +5,7 @@
 
 use eternity2_blackwood_fast::{
     blackwood_schedule_469, blackwood_schedule_calibrated_v17a, score_board, solve_blackwood,
-    solve_blackwood_par,
+    solve_blackwood_par_offset,
 };
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
@@ -20,6 +20,7 @@ fn main() {
     let mut break_first: Option<u32> = None;
     let mut break_count: Option<u32> = None;
     let mut threads: usize = 1;
+    let mut seed_offset: u64 = 0;
     let mut dump_partial: Option<PathBuf> = None;
     let mut i = 1;
     while i < args.len() {
@@ -30,6 +31,7 @@ fn main() {
             "--break-first" => { break_first = Some(args[i + 1].parse().expect("break-first")); i += 2; }
             "--break-count" => { break_count = Some(args[i + 1].parse().expect("break-count")); i += 2; }
             "--threads" => { threads = args[i + 1].parse().expect("threads"); i += 2; }
+            "--seed-offset" => { seed_offset = args[i + 1].parse().expect("seed-offset"); i += 2; }
             "--dump-partial" => { dump_partial = Some(PathBuf::from(&args[i + 1])); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
@@ -58,10 +60,13 @@ fn main() {
     );
     eprintln!("[bf_bw] exhaustion_targets={:?}", schedule.exhaustion_targets);
 
-    eprintln!("[bf_bw] threads={}", threads);
+    eprintln!("[bf_bw] threads={} seed_offset={}", threads, seed_offset);
     let t0 = std::time::Instant::now();
     let (stats, board) = if threads > 1 {
-        solve_blackwood_par(&puzzle, &schedule, threads, budget_ms * 1000)
+        solve_blackwood_par_offset(&puzzle, &schedule, threads, seed_offset, budget_ms * 1000)
+    } else if seed_offset > 0 {
+        // Single-thread with non-zero seed offset: use 1-thread par_offset.
+        solve_blackwood_par_offset(&puzzle, &schedule, 1, seed_offset, budget_ms * 1000)
     } else {
         solve_blackwood(&puzzle, &schedule, budget_ms * 1000)
     };

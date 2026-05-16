@@ -783,6 +783,20 @@ pub fn solve_blackwood_par(
     n_threads: usize,
     time_budget_us: u64,
 ) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    solve_blackwood_par_offset(puzzle, schedule, n_threads, 0, time_budget_us)
+}
+
+/// Vol-106 T13.c — like `solve_blackwood_par` but with a `seed_offset`
+/// added to each thread's bucket-shuffle seed. Lets us sweep different
+/// search basins by varying the offset (instead of always exploring
+/// seeds 0..n_threads-1).
+pub fn solve_blackwood_par_offset(
+    puzzle: &Puzzle,
+    schedule: &BlackwoodSchedule,
+    n_threads: usize,
+    seed_offset: u64,
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
     use rayon::prelude::*;
     let mut base_index = RowMajorIndex::build(puzzle);
     base_index.set_heuristic_sides(&schedule.heuristic_sides);
@@ -806,7 +820,7 @@ pub fn solve_blackwood_par(
         .into_par_iter()
         .map(|tid| {
             let mut idx = base_index.clone();
-            idx.shuffle_buckets(tid as u64);
+            idx.shuffle_buckets(seed_offset + tid as u64);
             if puzzle.width == 16 && puzzle.height == 16 && idx.n_pieces == 256 {
                 solve_blackwood_sized::<256, 256, 4>(
                     &idx,
