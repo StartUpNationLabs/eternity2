@@ -1,15 +1,79 @@
 ---
 name: edge-color-supply-propagator
-description: "Vol-106 T8 SKETCH — a new propagator for DFS-based E2 solving: maintain remaining edge-color supply across unplaced pieces, check that all currently-known frontier constraints can still be satisfied. Cheap per-node (4 deltas + ~17 lookups on canonical 16x16), with measurable pruning at low depths. Untested at scale; vol-107 candidate to build into blackwood-fast."
+description: "Vol-106 T8 SKETCH then REFUTED. New propagator idea (maintain remaining edge-color supply, check frontier feasibility). Implemented + measured 2026-05-16: ZERO PRUNING, ~40% nps slowdown. The check is REDUNDANT with the existing (top, left)-keyed candidate bucket structure. Documented as a dead-end."
 metadata:
   type: project
 ---
 
-# Edge-color supply propagator (vol-106 T8 sketch)
+# Edge-color supply propagator (vol-106 T8 — REFUTED)
 
-**Status**: `unbuilt` (sketch only). Conceived 2026-05-16 during
-vol-106 T8 brainstorm. Not in libblackwood, not in vanilla_fastest,
-not in solver-engine. Genuinely new operator.
+**Status**: `refuted` (built + measured 2026-05-16). The check
+caught zero additional pruning opportunities beyond what the
+existing candidate-bucket structure already provides, while adding
+~40% per-node overhead.
+
+## Refutation (2026-05-16)
+
+The check `supply[P.bottom] < 2` (after consuming P's 4 edges) was
+implemented in `solve_blackwood_sized`. Measured on canonical
+Selby-Riordan 16×16/v17a schedule, single-thread, 10s budget:
+
+| version              | nodes (M) | max_depth | best_score | nps (M) |
+|----------------------|----------:|----------:|-----------:|--------:|
+| baseline (no T8)     |      630  |       192 |        344 |     63  |
+| + edge-supply check  |      388  |       192 |        344 | **39**  |
+
+Same max_depth, same best_score, just 60% the throughput. Conclusion:
+**the check is redundant with the existing candidate bucket structure.**
+
+## Why it's redundant
+
+The bucket at `(tbl, top_color, left_color)` already contains ONLY
+piece-rotations whose top edge matches `top_color` and left edge
+matches `left_color`. When we walk that bucket, we cannot SELECT a
+piece whose colors would later cause supply[k] = 0 for a required-k,
+because for cell d+w to demand color k, color k must appear on the
+piece P we just placed AT depth d (i.e., P.bottom = k). And then
+the next iteration's bucket at `(top=k, left=...)` would contain
+ONLY pieces with top=k — if no such unplaced piece exists, the bucket
+is naturally empty and we backtrack.
+
+So the bucket structure IS the propagator. Adding an explicit supply
+check duplicates the work that the empty-bucket → empty-trial path
+already performs.
+
+## When it would have helped
+
+The propagator would catch failures EARLIER than the bucket structure
+only if we had richer constraints (e.g., the cell at d+2w requires
+top=k AND no remaining piece has top=k). That requires multi-step
+look-ahead, which the simple supply check doesn't do.
+
+A more elaborate forward-check (compute "all unplaced pieces' top
+edges as a multiset, count occurrences of each color, compare to
+the multiset of required-tops across all currently-known frontier
+cells") could theoretically catch this. But the per-node cost would
+be much higher, and it's not clear the win is positive.
+
+## Lesson
+
+**Bucket-structured DFS already encodes the local-feasibility
+propagator.** Adding redundant checks doesn't help. To beat this
+baseline, propagators must catch failures that the bucket structure
+can't — and on E2 with this row-major scan, those are far between.
+
+The math here: the cheap propagator's expected pruning value is
+zero because the search would have backtracked one step later anyway.
+The marginal expected node-savings is tiny (~1 node per dead branch),
+while the per-trial overhead applies to ~7 trials per success deep
+in the search.
+
+## Original sketch (preserved per vault "no quiet deletes" rule)
+
+**Original status (preserved)**: `unbuilt` (sketch only). Conceived
+2026-05-16 during vol-106 T8 brainstorm. Not in libblackwood, not in
+vanilla_fastest, not in solver-engine. Genuinely new operator. *(See
+the rest of this page for the original design.)*
 
 ## The propagator
 
