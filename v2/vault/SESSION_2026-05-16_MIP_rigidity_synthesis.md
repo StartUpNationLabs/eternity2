@@ -105,12 +105,29 @@ information available on this puzzle.
 
 ## Open work
 
-- Vol-91 (halo-2 McGavin): tests if rigidity extends to bigger
-  halo. Currently running.
-- Vol-90 joint (59-cell local 459 halo-1): tests local 459's joint
-  rigidity. Currently running.
+- Vol-91 (halo-2 McGavin) **KILLED at 55min CPU** — HiGHS stuck at
+  root LP on 54-cell halo-2 MIP. No usable bound returned. The
+  halo-2 question remains genuinely open (would need either a
+  better-formulated MIP, Lagrangian decomposition, or hours-days
+  of commercial solver time).
+- Vol-90 joint (59-cell local 459 halo-1): COMPLETED +0 PROVEN
+  (see [[local459-halo1-joint-proven]]).
 - Lagrangian decomposition of top-4 / top-5 — not yet built.
 - Halo-3 MIP — likely intractable, not yet attempted.
+
+## Session close (2026-05-16 ~02:17)
+
+Final tally: **83 commits since the "1 month away" signal**
+(yesterday ~19:25 → today ~02:17). Net standing record:
+**459/480 unchanged**.
+
+The session's research-grade output is the structural-rigidity
+proof set, not records. Six MIP-PROVEN local-optimal regions
+across two top-score basins, plus the first non-trivial sound
+upper bound below 480 on canonical E2 (vol-86: top-4 ≤ 123).
+
+The maximally-adversarial thesis is now rigorously proven via
+MIP, not just empirically observed.
 
 ## Linked
 
