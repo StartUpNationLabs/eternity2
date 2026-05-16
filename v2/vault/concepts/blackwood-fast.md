@@ -102,12 +102,13 @@ intrinsics. The remaining gap is split across:
 
 ## What still needs to be ported
 
-1. **Heuristic-pattern schedule (Blackwood 469 params).** Once
-   integrated, this turns blackwood-fast from a raw DFS into the
-   actual Blackwood algorithm. See [[blackwood-algorithm]]
-   "469 parameter set".
-2. **Break-index allowance.** The 12 specific depths where ≤1
-   edge mismatch is allowed.
+1. ~~Heuristic-pattern schedule.~~ **DONE** (T2.a). `solve_blackwood`
+   API + `BlackwoodSchedule` struct + ported `blackwood_schedule_469`
+   and `blackwood_schedule_calibrated_v17a` from solver-engine.
+2. ~~Break-index allowance.~~ **DONE** (T2.b). Relaxed candidate
+   index (`build_relaxed_index`) + per-depth `conflicts_allowed`
+   table + per-placement cumulative-conflicts tracking. Verified
+   activating: depth jumps 192→207 when break-first=160.
 3. **Multi-thread orchestration.** Bucas's main.py launches N
    worker processes with different bucket-seed offsets. Trivial
    in Rust via rayon.
@@ -117,6 +118,11 @@ intrinsics. The remaining gap is split across:
 5. **Solution save & resume.** Currently we only return the
    board state at termination. The C engine writes intermediate
    "best depth seen" board snapshots.
+6. **Schedule calibration.** With mechanism complete, the gap to
+   469 is now a CALIBRATION problem: where to place the break-
+   indexes, what target curve. Standard [201, 206, ...] never
+   engages because the v17a schedule's depth-wall is at 192.
+   Vol-107 candidate.
 
 ## What this enables
 
