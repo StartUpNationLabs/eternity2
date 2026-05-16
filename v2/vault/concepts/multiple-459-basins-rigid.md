@@ -73,6 +73,37 @@ To break 459, we'd need:
    basins can the pipeline find? Each additional one strengthens
    conjecture C1.
 
+## Vol-110 T2.b extension (2026-05-16 ~13:40)
+
+Manufactured **3 distinct pipeline 459 basins** by varying the
+bound-ascent seed on offset=100 (8 trials → 2 success). Plus
+preserve the original = 4 pipeline basins. Plus vol-60 = 5 basins
+total.
+
+Pairwise σ-cycle structure (cycle sizes):
+
+| pair                          | cycle sizes                |
+|-------------------------------|----------------------------|
+| vol-60 ↔ pipeline-orig        | [143, 31, 28, 25, 20, ...] |
+| vol-60 ↔ pipeline-bseed1      | [112, 80, 24, 12, 10, ...] |
+| vol-60 ↔ pipeline-bseed6      | [190, 40, 7, 6, 6, ...]    |
+| pipe-bseed1 ↔ pipe-orig       | [11, 10, 6, 4, 3]          |
+| pipe-bseed6 ↔ pipe-orig       | [25, 10]                   |
+| pipe-bseed1 ↔ pipe-bseed6     | [11, 9, 5, 5, 3, 3]        |
+
+**Clustering finding**: pipeline basins are NEAR each other in
+σ-space (max cycle ≤ 25). vol-60 is FAR from all of them (max
+cycle 112-190). The 459-level set has at least 2 STRUCTURALLY
+DISTANT CLUSTERS of basins.
+
+**Blend test**: enumerated all 2^n σ-cycle subsets across 6 basin
+pairs. **None** yields a blend with score > 459. The best
+non-trivial blends are 451-455. Strong empirical refutation of
+**Path B (basin blend → 460+)** from MATH_NOTES_2026-05-16.
+
+Generalises vol-99's σ-cycle indecomposability from "459 → 469
+cycles don't decompose" to "459 ↔ 459 cycles also don't decompose."
+
 ## Linked
 
 - [[new-459-from-bf-pipeline]] — origin of the new 459.
