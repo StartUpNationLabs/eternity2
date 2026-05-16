@@ -180,7 +180,7 @@ refutation, where the analytical prediction was overoptimistic).
 
 ## What we did NOT yet do
 
-1. **BOLT post-link reordering** ([cargo-pgo blog](https://kobzol.github.io/rust/cargo/2023/07/28/rust-cargo-pgo.html)) — typical 5-10% over PGO. Apple-m1 BOLT support is less mature than x86.
+1. **BOLT post-link reordering** ([cargo-pgo blog](https://kobzol.github.io/rust/cargo/2023/07/28/rust-cargo-pgo.html)) — **NOT APPLICABLE on apple-m1**. Vol-108 T3 research: BOLT supports ELF binaries (x86-64 / AArch64 Linux) only; macOS Mach-O is unsupported. Confirmed via [LLVM BOLT README](https://github.com/llvm/llvm-project/blob/main/bolt/README.md) and [BOLT-on-AArch64 tutorial Oct 2025](https://llvm.org/devmtg/2025-10/slides/tutorials/mpeis.pdf). Available only if we cross-compile to Linux for benchmarking — out of scope for our apple-m1 target.
 2. **NEON-SIMD bucket sort at init** — init is sub-second, irrelevant.
 3. **Speculative loads via `core::hint::spin_loop`** — not a lever for our pattern.
 4. **`panic = "abort"` profile** — tested vol-106 T7, **null result on bf_bw** (62.8M nps both ways) because our hot loop already has zero panic edges (`unsafe { get_unchecked }` throughout). Profile retained as `bench-abort`.

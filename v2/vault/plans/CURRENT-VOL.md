@@ -1,104 +1,77 @@
-# Current vol — vol-107 OPEN 2026-05-16 ~10:35 CEST
+# Current vol — vol-108 CLOSED 2026-05-16 ~12:15 CEST
 
-**Author**: autonomous agent (user away ≥ 1 month).
-**Theme**: extend the vol-106 perf+algorithm engine with one
-genuine invention + one calibration win, both aligned to the
-[[../DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] directive.
+## Vol-108 close summary
 
-## Vol-106 close summary
+**0 positive shipments, 2 honest refutations, 1 "not applicable":**
 
-Standing record: 459/480 (unchanged). Engine progress:
-- blackwood-fast: 79 M nps single-thread (PGO+unrolled), ~180× prior.
-- vanilla-v2: 97 M pp/s (PGO), +27% over vanilla_fastest.
-- Pipeline: bf 4t×5min → ALNS 2min reaches **score 450-451 stably**
-  across 3 seeds (variance ~0.5%).
-- Full Blackwood algorithm port (schedule + break-index allowance).
-- 6 documented negative results (compact ref_key, panic=abort,
-  supply propagator, cooperative frontier hashing, row dispatch,
-  T13.b break-first at long budgets).
-- Proc-macro per-depth unrolling shipped (T12, +25%).
+- T1 ✗ SigmaCycleDestroy ALNS op REFUTED. Built + tested on
+  offset=100 partial. The σ-cycle's structural lock comes from
+  halo edge-colour constraints, not cycle cells.
+- T2 ✗ Fanout-sort value ordering REFUTED. Same trajectory at
+  v17a strict, 5% nps regression from cache perturbation.
+- T3 ✗ BOLT post-link reordering NOT APPLICABLE on apple-m1
+  (Mach-O unsupported; ELF-only).
 
-See [[../sessions/vol-106]] for the consolidated table.
+Collateral fix: vol-18 `compute_sigma_cycles` was crashing on
+partial boards; fixed (`sigma.contains_key` check before push).
 
-## Vol-107 binding items (≤ 3 per CLAUDE.md vault discipline)
+See [[../sessions/vol-108]] for the consolidated table.
 
-### T1 — Per-schedule monomorphisation (concrete perf invention)
+## Engine state (unchanged)
 
-`solve_blackwood_unrolled_256` currently has `targets[D]` and
-`conflicts_allowed[D]` as runtime loads. Per the T12 analysis,
-making these compile-time const tables (one set per schedule
-variant) should give an additional ~5-10% nps. Approach:
-- Add `const TARGETS_V17A: [u32; 256] = [...]` (pre-computed from
-  the v17a schedule's exhaustion_targets curve).
-- Add `const CONFLICTS_V17A: [u32; 256] = [...]` (pre-computed
-  from break-indexes).
-- Pass them as const-generic parameters or via `static`s referenced
-  in each match arm.
+- bf_bw: 84-85 M nps single-thread (PGO+T12+T1).
+- vanilla_v2: 97 M pp/s.
+- Pipeline reaches 450-451 stably in 7 min.
+- Standing record: 459/480 unchanged.
 
-If +5%, ship as `E2_BF_UNROLLED_V17A=1`. If not, revert with
-measurement documented.
+## Vol-109 binding items (≤ 3)
 
-### T2 — Basin-vs-ALNS-liftability characterisation (invention research)
+### T1 — Oracle-aware ALNS repair (continuation of vol-108 T1)
 
-Vol-106 T13.c discovered that different seed-offsets reach
-different basins; offset=0 lands in an ALNS-favourable basin
-(450-451) while offset=100 lands in a less-liftable one (446-448).
-**What distinguishes a "liftable" basin?**
+Vol-108 T1 found that destroying σ-cycle cells alone doesn't unlock
+the basin because the halo's edge colours pin the repair. The fix:
+extend `repair_cells` to accept ORACLE PIECE pins for halo positions.
+This forces the halo to take the oracle's piece assignment, removing
+the structural lock, while the σ-cycle interior is freely repaired
+by SA / CP.
 
-Hypothesis: σ-cycle structure (vol-65 method) of the partial
-predicts ALNS-completion ceiling. Specifically: basins where the
-σ-cycle decomposition has fewer/smaller "rigid" cycles past the
-partial's depth should be more ALNS-liftable.
+Effort: multi-day (modify repair API, plumb through ALNS framework,
+test variance). Could unlock the offset=100-style basins.
 
-Build:
-- A `basin_analysis` bin that takes a partial and computes:
-  - Cells matched (score).
-  - σ-cycle decomposition vs. known 459 basin records.
-  - Connected-component count of mismatched cells.
-- Run on the 4 sweep partials from vol-106 T13.c (off=0, 100, 1000, 10000).
-- Correlate basin properties with measured ALNS ceiling.
+### T2 — Beam-search engine variant
 
-If correlation found → vol-108+ can predictively skip un-liftable
-basins.
+A NEW search algorithm: maintain top-K partial boards at each depth,
+expand each in parallel. Different from DFS — more breadth at low
+depths, less depth at high depths. K=8 matches our thread count.
+Test on canonical Selby-Riordan: does beam reach a depth/score
+inaccessible to 8-thread DFS?
 
-### T3 — Doc + measurement: vanilla_v2 PGO baked into release path
+Vol-106 T10 measured 0.8% pairwise agreement across 8 DFS threads.
+Beam search SHOULD produce more diverse trajectories at low depths
+(since the beam explores ALL top-K from each depth, not just one).
 
-vanilla_v2 currently requires manual PGO invocation. Bake the
-PGO build into either:
-- A `scripts/build_release.sh` that runs PGO for both bf_bw and
-  vanilla_v2 then drops symlinks in `target/release/`.
-- A CI step that commits the .profdata.
+Effort: 1-2 days. Build alongside, don't replace, bf_bw.
 
-Less research, more housekeeping — but it makes the 97M-pps
-result reproducible without the user knowing about PGO.
+### T3 — Cross-machine throughput benchmark
+
+Port bf_bw to a portable build target (cross-compile to
+x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu) and measure
+on different hardware. Compare apple-m1 84-85M to intel x86-64 and
+M2/M3. Useful both for verifying our optimizations don't apple-m1-
+overfit AND for unlocking BOLT (which works on Linux ELF).
+
+Effort: 2-4 hours assuming no cross-compile surprises.
 
 ## Audit-at-open compliance
 
-23 `unbuilt` BACKLOG items all aged ≥ 3 vols. Per audit-at-open:
-- **Score-axis items** (multi-cell bound-ascent, learned-on-ties-
-  long-pt, joe-iteration-budgeted-prune, mcgavin-prune-restart-
-  bound-trigger, kissat-rc2-maxsat, tight-joint-bound-survey,
-  unsat-soft-value-order × 2, diverse-457-search): orthogonal to
-  vols 106-115 directive (which is engine speedup + invention,
-  not score-axis). Mark **deferred for the entire vols-106-115
-  window**; revisit after vol-115.
-- **Engine-perf items** (incremental-ac3-count-maintenance,
-  restore-or-simd, profile-bin-use-null-sink, precompute-cell-
-  nb-info, vault-validation-of-perf-wins): these target the OLD
-  solver-engine path which the blackwood-fast crate now bypasses.
-  Mark **wont-do** for vol-107 specifically (still valid in
-  isolation if someone returns to solver-engine).
-- **Code-refactor items** (extract-eternity2-time/-export/-puzzle-
-  io, split-solver-engine-lib, consolidate-bin-harness): tech-debt;
-  not blocking any research. Defer indefinitely.
-- **RL self-play value-order**: 1-week build; out of scope for
-  a 1-week-each-vol cadence. Defer.
+All vol-106-115 directive items still apply: blank-puzzle speedup
++ invention. Score-axis is OUT OF SCOPE.
 
 ## Linked
 
 - [[../INDEX]]
 - [[../DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]]
-- [[../sessions/vol-106|vol-106 close]]
+- [[../sessions/vol-108|vol-108 close]]
+- [[../concepts/sigma-cycle-destroy]]
+- [[../concepts/fanout-sort-value-order]]
 - [[../concepts/blackwood-fast]]
-- [[../concepts/vanilla-v2]]
-- [[../concepts/rust-perf-at-scale]]
