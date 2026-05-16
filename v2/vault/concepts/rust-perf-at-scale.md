@@ -146,8 +146,15 @@ branch prediction for that depth's typical access pattern.
 |------------------------|----------:|--------:|-----------:|
 | baseline               |      637  |    63   |       —    |
 | + PGO                  |      724  |    72   |    +14%    |
-| + unrolled (E2_BF_UNROLLED=1) | 761 | 76      |    +21%    |
-| **+ PGO + unrolled**   |    **787**|  **79** |  **+25%**  |
+| + T12 unrolled         |      761  |    76   |    +21%    |
+| + T12 + PGO            |      787  |    79   |    +25%    |
+| + T1 v17a-const        |      823  |    82   |    +30%    |
+| **+ T1 const + PGO**   |    **848**|  **85** |  **+35%**  |
+
+T1 (vol-107) adds per-schedule const tables for `targets[D]` and
+`conflicts_allowed[D]`, eliminating 2 L1 loads per node when the
+v17a schedule is in use (the canonical setup). Opt-in via
+`E2_BF_UNROLLED_V17A_CONST=1`.
 
 Variance across 4 runs: ±1%. Correctness preserved (same max_depth=192,
 same best_score=344).
