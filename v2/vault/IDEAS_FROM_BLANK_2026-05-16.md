@@ -61,8 +61,9 @@ fresh. A trace for the user when they return.
 
 ### A. SDP relaxation of edge-matching
 Semidefinite programming on the edge-matching constraint graph.
-Would give a tighter UB than LP relaxation. Days of formulation
-work; uncertain solver performance at canonical scale.
+Would give a tighter UB than LP relaxation. Try the smallest
+formulation first — single-row or single-shell edge-matching SDP
+on toy 6×6 — to see if the gap shrinks vs LP. If yes, scale.
 
 ### B. Continuous-relaxation gradient descent
 Treat piece-positions as continuous (soft assignments) and use
@@ -74,7 +75,9 @@ Untested on E2.
 ### C. RL self-play with curriculum learning
 Train a neural network to play E2 placement game, starting from
 small grid sizes (4×4, 6×6) and growing to canonical 16×16.
-Months of training compute.
+Try the minimal version first: a 1M-param Transformer trained on
+6×6 trajectories from existing CP solver, see if it beats random
+placement at 6×6. If signal exists, scale.
 
 ### D. Multi-agent search
 Multiple independent solvers run in parallel, each exploring a
@@ -122,7 +125,7 @@ class).
   finding). Could be unblocked with a propagator-aware Blackwood.
 - **CAS (Concentric Annular Solving)**: bounded at 433-436 due to
   piece-availability under greedy commit (vol-74). Joint shell-
-  pair MIP (4× cost) might break this bound.
+  pair MIP might break this bound.
 
 ## Approaches refuted in vault
 
@@ -132,26 +135,30 @@ class).
 - σ-cycle subset application from oracle (always reduces score)
 - Random-region MIPs (LP loose without defect density)
 
-## Budget reality check
+## What I would do next if starting fresh
 
-- Single agent on 8-core M1: ~80M-bench-fast nps × 5 min = 400 G nodes/min
-- Blackwood reaches 295M nps × 1 month = 12 quadrillion nodes
-- McGavin's 469 was reached after weeks-months of compute on his
-  Blackwood port. Our compute budget is fundamentally smaller.
+Order by directness, not by perceived effort. Try each minimal
+version overnight; let data decide if it scales.
 
-## What I would do tomorrow if starting fresh
-
-1. **Port libblackwood** (Bucas's unrolled C) — would unlock the
-  295M-nps engine that found 469 in the first place. ~2 weeks.
-2. **Build joint-piece-set+cell-set MIP** — directly testable
-  σ-cycle moves. ~1 week.
-3. **SDP/Lasserre LP UB on canonical E2** — first sound UB <
-  476. ~1 month research + tooling.
+1. **Port libblackwood** (Bucas's unrolled C, github.com/jfbucas/libblackwood)
+   to unlock the 295M nps engine that found 469. Even partial port
+   (e.g. just the per-cell goto unrolling for one heuristic) gives
+   measurable speedup signal.
+2. **Build joint-piece-set+cell-set MIP** — directly testable σ-cycle
+   moves. Minimal version: 4-cell σ-cycle inside MIP region; if
+   feasible, scale to larger.
+3. **SDP/Lasserre LP UB on canonical E2** — try at 6×6 toy first;
+   if gap shrinks vs LP, formulate at canonical 16×16.
 4. **Multi-agent search forcing all 24 corner perms** — covers
-  full landscape. ~1 day to build, days-weeks to run.
+   full landscape. Vol-103/104 showed our pipeline gives 427 for
+   McGavin's perm; multi-agent across all 24 may discover other
+   459+ basins.
+5. **Bottom-rows-only MIP variants** — rows 12-15 are 3× more
+   diverse per per-row-diversity-corpus. Targeted ALNS or MIP on
+   rows 12-15 alone with all upper rows pinned.
 
-The other ideas (RL, gradient, group-theoretic) are months of
-research-engineering work each.
+Don't pre-stamp these with time estimates — try the minimal
+version overnight, let the data decide what to scale.
 
 ## Standing 459 = real ceiling under current tooling
 

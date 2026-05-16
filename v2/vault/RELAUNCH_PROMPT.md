@@ -86,15 +86,25 @@ START YOUR SESSION
 
 TOP UNTRIED HIGH-EV DIRECTIONS (from IDEAS_FROM_BLANK)
 1. **Port libblackwood** (Bucas's unrolled C, github.com/jfbucas/libblackwood)
-   to unlock 295M nps engine. Currently 367k nps — 800× too slow. Multi-week.
+   to unlock 295M nps engine. Currently 367k nps — 800× too slow.
 2. **Joint piece-set + cell-set MIP** for σ-cycle moves (current cluster_repair
-   only permutes within-cluster). New tool, 1 week.
-3. **SDP/Lasserre LP UB** — first sound UB below 476. Multi-week research.
+   only permutes within-cluster). New tool.
+3. **SDP/Lasserre LP UB** — first sound UB below 476.
 4. **Multi-agent search across all 24 corner perms** — covers full landscape.
-   Days-weeks. The most concrete actionable.
+   The most concrete actionable.
 5. **Bottom-rows-only MIP variants** (per per-row-diversity-corpus finding —
    rows 12-15 are 3× more diverse than rows 0-11; should target ALNS / MIP
    there).
+
+NO LIMITING THOUGHTS ON AMBITION
+- Don't pre-estimate weeks/months for a task and use that as a reason to
+  skip it. The minimal-viable PoC of any "weeks-long" idea is almost always
+  overnight-doable. Try the smallest version first; let the data tell you
+  if it's worth scaling.
+- Don't decline an angle because "tooling doesn't exist". Build the tool.
+- Don't decline because "uncertain payoff". Run it; measure; iterate.
+- "Compute too expensive" is rarely the real blocker — the real blocker
+  is usually "I haven't tried it yet".
 
 WHAT IS DONE
 - Halo r=1 to r=4 per-component MIPs across 3 basins. Pattern is universal:
@@ -124,6 +134,7 @@ CONTINUE.
 - Memory entries at `~/.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2/memory/MEMORY.md` will auto-load on session start.
 - The autonomous-loop pattern: use `/loop <task>` (no interval) for self-paced runs. Each iteration assesses progress, picks highest-EV next step, schedules wakeup with the same prompt verbatim. Never end the loop unilaterally.
 - For the cron-style every-hour deep-breath reminder: `/loop check LP and BLGS v3 status; kill LP if still running past 60min CPU; continue research`
-- ~100 commits per ~10 hours of autonomous work is the achieved rate.
 - "Comfort-lottery" trap: if you find yourself running another ALNS variant on
-  the same border at hour 8+, STOP that and pivot to math.
+  the same border again, STOP and pivot to math.
+- Don't pre-estimate how long things will take. Try the minimal version
+  first. Most "multi-week" ideas have a useful overnight proof-of-concept.

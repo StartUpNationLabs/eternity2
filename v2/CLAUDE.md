@@ -37,6 +37,20 @@ report number". The senior-researcher mode is:
   RL self-play — all are valid pursuits inside one autonomous run.
   Commit and document as you go.
 
+- **NO LIMITING THOUGHTS ON AMBITION.** Don't pre-estimate weeks/months
+  for an idea and use that estimate as a reason to skip it. The
+  minimal-viable PoC of any "weeks-long" approach is almost always
+  overnight-doable; try the smallest version, let the data tell you if
+  it's worth scaling. Don't decline an angle because "tooling doesn't
+  exist" — build the tool. Don't decline because "uncertain payoff" —
+  run it, measure, iterate. "Compute too expensive" is rarely the real
+  blocker; the real blocker is usually "I haven't tried it yet".
+
+- **Don't pre-estimate timelines.** Saying "this would take 2 weeks"
+  or "1 month" in advance is almost always wrong AND almost always
+  becomes a self-fulfilling reason not to start. Just start. Time
+  estimates from the model are not reliable signals.
+
 - **Take research notes AS YOU GO.** Every non-trivial derivation,
   observation, lemma, conjecture, or numerical finding must be written
   into the vault *at the moment it occurs* — not "after the experiment
