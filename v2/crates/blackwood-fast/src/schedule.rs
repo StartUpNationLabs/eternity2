@@ -232,6 +232,100 @@ pub fn blackwood_schedule_469(puzzle: &Puzzle, hints: &Hints) -> Option<Blackwoo
     })
 }
 
+/// Vol-118 T5 — hint-aware variant of v17a. Shifts target curve down by the
+/// cumulative heuristic-count of pinned hint pieces, so the schedule's
+/// targets remain FEASIBLE post-hint-placement.
+///
+/// Concrete: target_hinted[d] = max(0, target_v17a[d] - hint_heur_cum_at(d))
+/// where hint_heur_cum_at(d) = Σ heur_count(hint_piece) for hints with
+/// depth ≤ d.
+///
+/// This unblocks the depth-35 wedge found in vol-117 T1 where the v17a
+/// target floor at depth 35 (12.25) was infeasible given the constrained
+/// candidate list under hint pinning.
+pub fn blackwood_schedule_calibrated_v17a_hint_aware(
+    puzzle: &Puzzle,
+    hints: &Hints,
+) -> Option<BlackwoodSchedule> {
+    let colors = compute_heuristic_sides(puzzle, hints);
+    if colors.len() < 3 {
+        return None;
+    }
+    let pool_size = count_color_occurrences(puzzle, &colors);
+    let n_pos = puzzle.cell_count() as usize;
+    let last_idx = (n_pos as u32).saturating_sub(1);
+
+    // Compute heur_count for each hint piece at its pinned rotation.
+    let heur_set: std::collections::HashSet<Color> = colors.iter().copied().collect();
+    let mut sorted_hints: Vec<_> = hints.hints.iter().collect();
+    sorted_hints.sort_by_key(|h| h.position);
+    // Cumulative hint heur contribution at each depth.
+    let mut hint_cum_at: Vec<u32> = vec![0u32; n_pos + 1];
+    for h in &sorted_hints {
+        let piece = puzzle.piece(h.piece_id).expect("hint piece in puzzle");
+        // Rotate piece edges according to the hint rotation.
+        let base = piece.edges.as_array();
+        let r = h.rotation.as_u8() as usize;
+        let rotated = match r {
+            0 => [base[0], base[1], base[2], base[3]],
+            1 => [base[3], base[0], base[1], base[2]],
+            2 => [base[2], base[3], base[0], base[1]],
+            3 => [base[1], base[2], base[3], base[0]],
+            _ => unreachable!(),
+        };
+        let mut hc = 0u32;
+        for &c in &rotated {
+            if c != BORDER && heur_set.contains(&c) {
+                hc += 1;
+            }
+        }
+        // Add to cumulative starting at hint position.
+        for d in (h.position as usize)..=n_pos {
+            hint_cum_at[d] += hc;
+        }
+    }
+
+    // Original v17a control points.
+    let base_targets: Vec<(u32, u32)> = vec![
+        (0, 0),
+        (60, 21),
+        (80, 32),
+        (100, 41),
+        (120, 48),
+        (140, 58),
+        (160, 82),
+        (200, 112),
+        (last_idx, pool_size.min(150)),
+    ];
+
+    // Subtract hint contribution at each control point.
+    let targets: Vec<(u32, u32)> = base_targets
+        .into_iter()
+        .map(|(d, t)| {
+            let shift = hint_cum_at[d as usize];
+            let new_t = t.saturating_sub(shift);
+            (d, new_t)
+        })
+        .collect();
+
+    let bw_breaks: [u32; 12] = [201, 206, 211, 216, 221, 225, 229, 233, 237, 239, 241, 256];
+    let breaks: Vec<u32> = bw_breaks
+        .iter()
+        .map(|&b| {
+            let scaled = ((b as u64 * n_pos as u64) / 256u64) as u32;
+            scaled.min((n_pos as u32).saturating_sub(1))
+        })
+        .collect();
+
+    let target_max: u32 = targets.last().map(|&(d, _)| d).unwrap_or(last_idx);
+    Some(BlackwoodSchedule {
+        heuristic_sides: colors,
+        exhaustion_targets: targets,
+        max_heuristic_index: target_max,
+        break_indexes_allowed: breaks,
+    })
+}
+
 /// Vol-17 idea A — empirically calibrated schedule derived from McGavin's
 /// 469 community board (N=1 corpus). Less aggressive than the
 /// affine-remapped vol-15 schedule. From `output/v17_calibration.json`.

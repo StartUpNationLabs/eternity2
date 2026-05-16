@@ -6,8 +6,8 @@
 // AND get the strong scores the schedule path generates.
 
 use eternity2_blackwood_fast::{
-    blackwood_schedule_469, blackwood_schedule_calibrated_v17a, score_board,
-    solve_blackwood_with_hints,
+    blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
+    blackwood_schedule_calibrated_v17a_hint_aware, score_board, solve_blackwood_with_hints,
 };
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
@@ -40,10 +40,13 @@ fn main() {
     let schedule = match schedule_name.as_str() {
         "v17a" => blackwood_schedule_calibrated_v17a(&puzzle, &hints)
             .expect("v17a schedule must build on canonical puzzle"),
+        "v17a_hint" => blackwood_schedule_calibrated_v17a_hint_aware(&puzzle, &hints)
+            .expect("v17a_hint schedule must build on canonical puzzle"),
         "bw469" => blackwood_schedule_469(&puzzle, &hints)
             .expect("bw469 schedule must build on canonical puzzle"),
         other => panic!("unknown schedule: {}", other),
     };
+    eprintln!("schedule targets: {:?}", schedule.exhaustion_targets);
     eprintln!("schedule: {}", schedule_name);
     eprintln!(
         "schedule: max_heur_idx={} break_indexes={}",

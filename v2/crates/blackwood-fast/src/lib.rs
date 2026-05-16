@@ -28,7 +28,10 @@
 #![allow(unsafe_code)]
 
 pub mod schedule;
-pub use schedule::{blackwood_schedule_469, blackwood_schedule_calibrated_v17a, compute_heuristic_sides};
+pub use schedule::{
+    blackwood_schedule_469, blackwood_schedule_calibrated_v17a,
+    blackwood_schedule_calibrated_v17a_hint_aware, compute_heuristic_sides,
+};
 
 use eternity2_core::{Color, Hints, PieceId, Puzzle, Rotation, BORDER};
 
@@ -1466,13 +1469,15 @@ fn solve_blackwood_sized_pinned<const WH: usize, const NPIECES: usize, const BIT
             };
             let p_top = unsafe { *top_ptr.add(pr.0 as usize) };
             let p_left = unsafe { *left_ptr.add(pr.0 as usize) };
-            let candidate_conf = ((p_top != top_color) as u32) + ((p_left != left_color) as u32);
+            let _candidate_conf = ((p_top != top_color) as u32) + ((p_left != left_color) as u32);
             let prev_conf = if depth == 0 { 0 } else { unsafe { *conf.get_unchecked(depth - 1) } };
-            // Vol-117 T1: pinned cells are not choices. We record the
-            // forced mismatch count but do NOT enforce the conflict
-            // budget here (the schedule's conflicts_allowed governs
-            // VOLUNTARY moves, not forced placements).
-            let new_conf = prev_conf + candidate_conf;
+            // Vol-118 T5: pinned cells are forced placements. Their
+            // mismatches at the pinned position are STRUCTURAL — not
+            // chargeable to the conflict budget. We carry conf forward
+            // unchanged. (Vol-117 T1 had it adding to conf which caused
+            // the depth-35 wedge: post-hint cum-conf exceeded
+            // allowed_here=0 before any break-index activated.)
+            let new_conf = prev_conf;
             unsafe { *conf.get_unchecked_mut(depth) = new_conf; }
             let post_depth = (depth as u32) + 1;
             let schedule_active = post_depth <= max_heuristic_index;
