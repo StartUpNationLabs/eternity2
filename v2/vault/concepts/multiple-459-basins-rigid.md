@@ -104,6 +104,19 @@ non-trivial blends are 451-455. Strong empirical refutation of
 Generalises vol-99's σ-cycle indecomposability from "459 → 469
 cycles don't decompose" to "459 ↔ 459 cycles also don't decompose."
 
+### MIP halo-2 check on new basin (vol-111 T2 — PARTIAL)
+
+Tested halo-2 rigidity on the pipeline-orig 459 basin:
+- **Component 1** (2 defect cells, 7-cell halo-2 region): delta=+0
+  **PROVEN** in 18s.
+- **Component 0** (31 defect cells, 67-cell halo-2 region): MIP
+  killed at ~13 min CPU; INCONCLUSIVE.
+
+The smaller component is halo-2 rigid. The larger needs hours of
+MIP for a definitive proof. Conjecture C3 (halo-2 rigidity across
+basins) is supported for the small component but not proven for
+the large one.
+
 ### σ-distance to McGavin 469 (vol-111 finding)
 
 For each of our 4 basins, compute σ-cycles to McGavin 469
