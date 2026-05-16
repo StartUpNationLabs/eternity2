@@ -12,9 +12,21 @@ DRY = '--dry-run' in sys.argv
 
 BIN_DIR = Path('/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/crates/bench-audit/src/bin')
 
-REPLACEMENT = """// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+REPLACEMENT_RESULT = """// Vol-118 T9: migrated to canonical eternity2_export::load_board.
 fn load_board(path: &std::path::Path, puzzle: &eternity2_core::Puzzle) -> Result<eternity2_core::Board, String> {
     eternity2_export::load_board(path, puzzle).map_err(|e| format!("{e}"))
+}"""
+
+REPLACEMENT_BOARD = """// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+fn load_board(path: &std::path::Path, puzzle: &eternity2_core::Puzzle) -> eternity2_core::Board {
+    eternity2_export::load_board(path, puzzle).expect("load_board")
+}"""
+
+REPLACEMENT_BOARD_NOPUZZLE = """// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+fn load_board(path: &std::path::Path) -> eternity2_core::Board {
+    let puzzle_path = std::path::PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
+    let (puzzle, _) = eternity2_benchmark::loader::load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
+    eternity2_export::load_board(path, &puzzle).expect("load_board")
 }"""
 
 SKIP = {
@@ -58,16 +70,19 @@ def find_load_board_func(text):
     signature = text[sig_start:sig_end] if sig_end > sig_start else text[sig_start:sig_start+100]
     return (sig_start, end, signature)
 
-def is_canonical_pattern(signature):
-    """Check if the signature matches one of the patterns we can safely replace."""
-    # Must return Result<Board, ...> and take (path, puzzle) args.
-    if 'Result<Board' not in signature:
-        return False
-    if 'puzzle' not in signature:
-        return False
-    if 'path' not in signature:
-        return False
-    return True
+def classify_pattern(signature):
+    """Return one of: 'result_with_puzzle', 'board_with_puzzle',
+    'board_nopuzzle', None."""
+    sig = signature.strip()
+    if 'fn load_board' not in sig:
+        return None
+    if 'Result<Board' in sig and 'puzzle' in sig:
+        return 'result_with_puzzle'
+    if '-> Board' in sig and 'puzzle' in sig:
+        return 'board_with_puzzle'
+    if '-> Board' in sig and 'puzzle' not in sig:
+        return 'board_nopuzzle'
+    return None
 
 def migrate(path):
     text = path.read_text()
@@ -75,16 +90,22 @@ def migrate(path):
     if found is None:
         return False
     start, end, sig = found
-    if not is_canonical_pattern(sig):
+    kind = classify_pattern(sig)
+    if kind is None:
         return False
+    repl = {
+        'result_with_puzzle': REPLACEMENT_RESULT,
+        'board_with_puzzle': REPLACEMENT_BOARD,
+        'board_nopuzzle': REPLACEMENT_BOARD_NOPUZZLE,
+    }[kind]
 
-    new_text = text[:start] + REPLACEMENT + text[end:]
+    new_text = text[:start] + repl + text[end:]
 
     if DRY:
-        print(f"WOULD MIGRATE: {path.name}  (signature: {sig.strip()})")
+        print(f"WOULD MIGRATE ({kind}): {path.name}  ({sig.strip()})")
     else:
         path.write_text(new_text)
-        print(f"MIGRATED: {path.name}")
+        print(f"MIGRATED ({kind}): {path.name}")
     return True
 
 if __name__ == "__main__":

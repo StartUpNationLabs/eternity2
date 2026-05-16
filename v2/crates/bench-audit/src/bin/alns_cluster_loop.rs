@@ -46,22 +46,11 @@ fn build_winning5() -> Vec<Box<dyn DestroyOp>> {
     ]
 }
 
-fn load_board(path: &std::path::Path) -> Board {
-    let raw = std::fs::read_to_string(path).expect("read");
-    let v: serde_json::Value = serde_json::from_str(&raw).expect("parse");
-    let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
-    let (puzzle, _) = load_puzzle_with_hints(&puzzle_path).expect("load");
-    let mut b = Board::empty(&puzzle);
-    if let Some(arr) = v.get("placement").and_then(|x| x.as_array()) {
-        for p in arr {
-            if p.is_null() { continue; }
-            let pos = p["pos"].as_u64().unwrap() as u32;
-            let pid = p["piece_id"].as_u64().unwrap() as u16;
-            let rot = Rotation::from_u8(p["rotation"].as_u64().unwrap() as u8).unwrap();
-            b.place(pos, pid, rot);
-        }
-    }
-    b
+// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+fn load_board(path: &std::path::Path) -> eternity2_core::Board {
+    let puzzle_path = std::path::PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
+    let (puzzle, _) = eternity2_benchmark::loader::load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
+    eternity2_export::load_board(path, &puzzle).expect("load_board")
 }
 
 /// Run dedicated cluster CP repair on `board`. Returns the repaired board.

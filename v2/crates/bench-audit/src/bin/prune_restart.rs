@@ -41,20 +41,9 @@ use eternity2_solver_engine::{
 use eternity2_solver_trait::{Objective, SolveOpts, SolveOutcome, Solver};
 use eternity2_core::BORDER;
 
-fn load_board(path: &std::path::Path, puzzle: &Puzzle) -> Board {
-    let raw = std::fs::read_to_string(path).expect("read");
-    let v: serde_json::Value = serde_json::from_str(&raw).expect("parse");
-    let mut b = Board::empty(puzzle);
-    if let Some(arr) = v.get("placement").and_then(|x| x.as_array()) {
-        for p in arr {
-            if p.is_null() { continue; }
-            let pos = p["pos"].as_u64().unwrap() as u32;
-            let pid = p["piece_id"].as_u64().unwrap() as u16;
-            let rot = Rotation::from_u8(p["rotation"].as_u64().unwrap() as u8).unwrap();
-            b.place(pos, pid, rot);
-        }
-    }
-    b
+// Vol-118 T9: migrated to canonical eternity2_export::load_board.
+fn load_board(path: &std::path::Path, puzzle: &eternity2_core::Puzzle) -> eternity2_core::Board {
+    eternity2_export::load_board(path, puzzle).expect("load_board")
 }
 
 /// Local cell score: how many of `pos`'s 4 edges match its current
