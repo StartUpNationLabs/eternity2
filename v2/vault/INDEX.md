@@ -16,7 +16,8 @@ The Obsidian landing page. Click any wikilink to navigate.
 - **Gap to community**: 10 points; the 459 ↔ 469 gap is **rigorously characterised** as a board-spanning σ-cycle problem (vols 65-101 PAPER).
 - **Spec contract**: `v2/V2_DESIGN.md`.
 - **Project guide**: `v2/CLAUDE.md`.
-- **2026-05-16 PAPER**: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem|Local Rigidity Theorem]] (13+ MIP-proven local-optimal regions, sound UB ≤ 123 on McGavin top-4, universal σ-cycle indecomposability).
+- **2026-05-16 PAPER**: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem|Local Rigidity Theorem]] (13+ MIP-proven local-optimal regions, sound UB ≤ 123 on McGavin top-4, universal σ-cycle indecomposability). **Caveat (vol-105)**: the "first sound UB below 480" claim is a SUBSET-bound, not unconditional. See [[concepts/board-wide-ub-derivation]].
+- **2026-05-16 DIRECTIVE (vols 106-115)**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] — pivot to blank-puzzle speedup + NEW algorithm classes (paper-publishable inventions). User-invented [[concepts/relax-and-cross-cvc|Relax-and-Cross (CVC)]].
 
 ## Plans + discipline
 
@@ -81,6 +82,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 |  80 |             459 |       — | **Blackwood "lots of overlap" rationale REFUTED at single-seed**: 7-triple sweep, top-overlap triples scored worst (436-437), bottom-overlap best (446). 1-seed result; needs variance check. [[blackwood-triple-sweep]] |  |
 |  82 |             459 |       — | **McGavin basin TOP-DETERMINING**: bottom-N pinning gives 443-462 vs top-N=14 → 469. Mismatch geometry: McGavin 11 mismatches concentrate in rows 0-4 (top 5). [[mcgavin-basin-top-bottom-symmetry]] [[mcgavin-469-mismatch-geometry]] |  |
 |  83-101 |       459 |       — | **Local Rigidity Theorem proven**: 13+ MIP-PROVEN local-optimal regions across 3 basins. McGavin halo-1 (vol-83, 37 cells, 895s) → halo-2 per-comp (vol-92) → halo-3 per-comp (vol-94) → halo-4 comp 0 (vol-96, 57 cells = LARGEST). Local 459 halo-1 joint (vol-90, 59 cells, 1800s) + halo-2 per-comp (vol-93) + halo-4 per-comp (vol-100, comp 0 = 56 cells PROVEN). Vol-32 458 halo-2 per-comp (vol-95). First sound UB below 480 (vol-86: top-4 ≤ 123). σ-cycle indecomposability UNIVERSAL across 3 basin-pairs (vols 65/99/101). σ-cycles board-spanning (rows 1-14 × cols 1-14). McGavin near-twin orbit = exactly 2 boards (6555 perturbations tested, 0 give 470). Corner perm (3,2,0,1) UNIQUE 469 host across 1156-board corpus. PAPER: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem]]. Standing 459 unchanged after 10h autonomous. |  |
+| 105 | 459 | — | **Vol-105 closed early (user redirect)**: rows-12-15 LP-UB on local-459 = 121.14 (conditional global UB ≤ 477 if outside pinned). σ-cycle MIP infrastructure prepared (T1 never launched). Audit found canonical ceiling is 469 (McGavin), NOT 470 — corpus 470s are 1-clue Blackwood variant. PAPER UB claim corrected (subset-bound, not unconditional). **New directive issued for vols 106-115**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]]. User-invented [[concepts/relax-and-cross-cvc\|CVC]] algorithm reserved. [[sessions/vol-105]]. |  |
 
 
 ## Concepts — by category
