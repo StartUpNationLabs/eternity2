@@ -826,6 +826,80 @@ pub fn solve_blackwood_par(
     best
 }
 
+/// Vol-106 T10 — multi-thread variant returning ALL per-thread results
+/// for analysis (e.g., measuring cross-worker board similarity to gauge
+/// whether cooperative-frontier-hashing would pay off).
+pub fn solve_blackwood_par_all(
+    puzzle: &Puzzle,
+    schedule: &BlackwoodSchedule,
+    n_threads: usize,
+    time_budget_us: u64,
+) -> Vec<(SearchStats, Vec<(PieceId, Rotation)>)> {
+    use rayon::prelude::*;
+    let mut base_index = RowMajorIndex::build(puzzle);
+    base_index.set_heuristic_sides(&schedule.heuristic_sides);
+    if !schedule.break_indexes_allowed.is_empty() {
+        base_index.build_relaxed_index(puzzle.color_count);
+    }
+    let targets = schedule.target_table(puzzle.cell_count() as usize);
+    let wh = puzzle.cell_count() as usize;
+    let mut conflicts_allowed: Vec<u32> = vec![0; wh];
+    let mut budget = 0u32;
+    let break_set: std::collections::HashSet<u32> =
+        schedule.break_indexes_allowed.iter().copied().collect();
+    for d in 0..wh as u32 {
+        if break_set.contains(&d) {
+            budget += 1;
+        }
+        conflicts_allowed[d as usize] = budget;
+    }
+    (0..n_threads)
+        .into_par_iter()
+        .map(|tid| {
+            let mut idx = base_index.clone();
+            idx.shuffle_buckets(tid as u64);
+            if puzzle.width == 16 && puzzle.height == 16 && idx.n_pieces == 256 {
+                solve_blackwood_sized::<256, 256, 4>(
+                    &idx,
+                    &targets,
+                    schedule.max_heuristic_index,
+                    &conflicts_allowed,
+                    time_budget_us,
+                )
+            } else {
+                solve_raw_generic(&idx, puzzle, time_budget_us)
+            }
+        })
+        .collect()
+}
+
+/// Vol-106 T10 — measure pairwise board similarity across N workers.
+/// Returns a (N×N) matrix `sim[i][j]` = number of cells where worker i
+/// and worker j agree (same piece_id + rotation). Diagonal entries
+/// are each worker's max_depth.
+#[must_use]
+pub fn pairwise_similarity(boards: &[Vec<(PieceId, Rotation)>]) -> Vec<Vec<u32>> {
+    let n = boards.len();
+    let mut sim = vec![vec![0u32; n]; n];
+    for i in 0..n {
+        for j in 0..n {
+            if i == j {
+                // Count placed cells (piece_id != MAX = sentinel for unplaced).
+                sim[i][j] = boards[i].iter().filter(|(p, _)| *p != PieceId::MAX).count() as u32;
+            } else {
+                let mut agree = 0u32;
+                for (a, b) in boards[i].iter().zip(boards[j].iter()) {
+                    if a == b && a.0 != PieceId::MAX {
+                        agree += 1;
+                    }
+                }
+                sim[i][j] = agree;
+            }
+        }
+    }
+    sim
+}
+
 pub fn solve_blackwood(
     puzzle: &Puzzle,
     schedule: &BlackwoodSchedule,

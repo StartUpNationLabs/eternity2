@@ -28,3 +28,7 @@ path = "src/bin/vanilla_v2.rs"
 [[bin]]
 name = "bf_bw"
 path = "src/bin/bf_bw.rs"
+
+[[bin]]
+name = "bf_similarity"
+path = "src/bin/bf_similarity.rs"

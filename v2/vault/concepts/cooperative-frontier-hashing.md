@@ -1,16 +1,78 @@
 ---
 name: cooperative-frontier-hashing
-description: "Vol-106 T9 INVENTION SKETCH — N parallel DFS workers share a probabilistic hash table of explored 'frontier states' (= the placed-cells multiset at a given depth). When worker B reaches a frontier worker A already explored to depth D₁, B can prune at depth D₁ (since A already proved no completion below). NEW: this is dependency-free coordination through a shared lock-free dedupe table. Not in libblackwood (single-thread per process), not in any E2 paper found."
+description: "Vol-106 T9 INVENTION REFUTED BY T10 MEASUREMENT. Hypothesis: shared frontier-hash dedupe across workers would catch redundant subtree exploration. Empirical (T10): 8 workers each place ~214 cells, pairwise agreement is 1.8 cells (0.8%). Workers explore radically different trajectories; shared hash would have near-zero hit rate. Don't build."
 metadata:
   type: project
 ---
 
-# Cooperative frontier hashing (vol-106 T9 sketch — INVENTION)
+# Cooperative frontier hashing (vol-106 T9 — REFUTED PRE-BUILD)
 
-**Status**: `unbuilt`. Conceived 2026-05-16 during vol-106 T9
-brainstorm under user directive "invent new horizons". Not in
-libblackwood, vanilla_fastest, or solver-engine. Not found in
-published E2 literature (community-corpus survey vol-65).
+**Status**: `refuted` (without building) 2026-05-16. The hypothesis
+was tested empirically via [[#The T10 measurement]] before building
+the lock-free shared table. Result: workers' trajectories diverge
+so quickly that the shared dedupe table would have near-zero hit
+rate.
+
+## The T10 measurement
+
+`bf_similarity` runs 8 workers × 15s on canonical Selby-Riordan
+16×16 with the v17a schedule, then computes pairwise agreement
+(cells where two workers' deepest boards have the same piece + rotation):
+
+```
+[bf_similarity] per-thread max_depth:
+    t0: max_depth=192    t1: max_depth=218    t2: max_depth=220
+    t3: max_depth=215    t4: max_depth=220    t5: max_depth=192
+    t6: max_depth=235    t7: max_depth=220
+
+mean diagonal (placed cells per thread): 214.0
+mean off-diagonal (agreement between threads): 1.8
+max off-diagonal: 5
+agreement fraction: 0.8%
+```
+
+**Interpretation**: workers have effectively NO shared frontier
+states at their deepest boards. The variance in `max_depth` (192
+to 235) and the near-orthogonal placements confirm that shuffling
+the candidate-list order leads to genuinely different search
+trajectories. A shared dedupe table would catch only ~0.8% of
+states even at maximum exploration depth — and the hit rate at
+shallower depths (where dedupe would help most) is probably even
+lower, since deep agreements at least reflect the "natural"
+constraint structure.
+
+**Conclusion**: the cooperative-frontier-hashing operator is
+unbuilt and will stay so. The hypothesis is refuted by direct
+measurement, not by analytical argument — the right way.
+
+## Why the hypothesis failed
+
+A row-major DFS with a sentinel-walked candidate list is highly
+PATH-DEPENDENT: the FIRST piece tried at depth k determines which
+candidates are available at depth k+1, which compounds across the
+trajectory. Two workers with different bucket orderings effectively
+explore different branches of the search tree from depth ~1 onward.
+
+For a shared hash table to pay off, workers would have to RECONVERGE
+on the same partial board through different paths. This requires
+that the underlying solution space has a strong "central tendency"
+— like a chess engine where many opening sequences lead to the same
+mid-game position. E2's row-major DFS has no such reconvergence.
+
+## What this DOES tell us
+
+The diversity of 0.8% agreement is **good news** for the existing
+multi-thread parallelism: workers genuinely explore different
+parts of the space, justifying the speedup we measured (8t @ 30s
+reaches 235 depth / 427 score vs 1t @ 30s reaching 192 depth / 344
+score).
+
+## Original sketch (preserved per vault "no quiet deletes")
+
+**Original status (preserved)**: `unbuilt`. Conceived 2026-05-16 during
+vol-106 T9 brainstorm. Not in libblackwood, vanilla_fastest, or
+solver-engine. Not found in published E2 literature (community-corpus
+survey vol-65).
 
 ## The idea
 
