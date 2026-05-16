@@ -28,7 +28,7 @@
 #![allow(unsafe_code)]
 
 pub mod schedule;
-pub use schedule::{blackwood_schedule_469, compute_heuristic_sides};
+pub use schedule::{blackwood_schedule_469, blackwood_schedule_calibrated_v17a, compute_heuristic_sides};
 
 use eternity2_core::{Color, PieceId, Puzzle, Rotation, BORDER};
 

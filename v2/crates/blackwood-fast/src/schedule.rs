@@ -136,3 +136,35 @@ pub fn blackwood_schedule_469(puzzle: &Puzzle, hints: &Hints) -> Option<Blackwoo
         max_heuristic_index: target_max,
     })
 }
+
+/// Vol-17 idea A — empirically calibrated schedule derived from McGavin's
+/// 469 community board (N=1 corpus). Less aggressive than the
+/// affine-remapped vol-15 schedule. From `output/v17_calibration.json`.
+pub fn blackwood_schedule_calibrated_v17a(puzzle: &Puzzle, hints: &Hints) -> Option<BlackwoodSchedule> {
+    let colors = compute_heuristic_sides(puzzle, hints);
+    if colors.len() < 3 {
+        return None;
+    }
+    let pool_size = count_color_occurrences(puzzle, &colors);
+    let n_pos = puzzle.cell_count();
+    let last_idx = n_pos.saturating_sub(1);
+
+    let targets: Vec<(u32, u32)> = vec![
+        (0, 0),
+        (60, 21),
+        (80, 32),
+        (100, 41),
+        (120, 48),
+        (140, 58),
+        (160, 82),
+        (200, 112),
+        (last_idx, pool_size.min(150)),
+    ];
+
+    let target_max = targets.last().map(|&(d, _)| d).unwrap_or(last_idx);
+    Some(BlackwoodSchedule {
+        heuristic_sides: colors,
+        exhaustion_targets: targets,
+        max_heuristic_index: target_max,
+    })
+}

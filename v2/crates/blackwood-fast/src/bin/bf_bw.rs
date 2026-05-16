@@ -3,7 +3,7 @@
 // Usage: bf_bw [--puzzle path] [--budget-ms ms]
 // Defaults: canonical Selby-Riordan 16x16, 5000 ms.
 
-use eternity2_blackwood_fast::{blackwood_schedule_469, solve_blackwood};
+use eternity2_blackwood_fast::{blackwood_schedule_469, blackwood_schedule_calibrated_v17a, solve_blackwood};
 use eternity2_puzzle_io::load_puzzle_with_hints;
 use std::path::PathBuf;
 
@@ -13,17 +13,24 @@ fn main() {
         "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/data/puzzles/size_16_official_eternity.csv",
     );
     let mut budget_ms: u64 = 5000;
+    let mut schedule_name = String::from("v17a");
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--puzzle" => { puzzle_path = PathBuf::from(&args[i + 1]); i += 2; }
             "--budget-ms" => { budget_ms = args[i + 1].parse().expect("budget"); i += 2; }
+            "--schedule" => { schedule_name = args[i + 1].clone(); i += 2; }
             _ => { eprintln!("unknown arg: {}", args[i]); std::process::exit(1); }
         }
     }
 
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
-    let schedule = blackwood_schedule_469(&puzzle, &hints).expect("schedule built");
+    let schedule = match schedule_name.as_str() {
+        "v15" | "469" => blackwood_schedule_469(&puzzle, &hints).expect("schedule built"),
+        "v17a" => blackwood_schedule_calibrated_v17a(&puzzle, &hints).expect("schedule built"),
+        other => panic!("unknown schedule: {other}"),
+    };
+    eprintln!("[bf_bw] schedule={}", schedule_name);
     eprintln!(
         "[bf_bw] puzzle: {}x{}, colors={}, schedule heuristic_sides={:?} max_idx={} pool_size~ many",
         puzzle.width, puzzle.height, puzzle.color_count,
