@@ -1,77 +1,68 @@
-# Current vol — vol-108 CLOSED 2026-05-16 ~12:15 CEST
+# Current vol — vol-109 CLOSED 2026-05-16 ~12:55 CEST
 
-## Vol-108 close summary
+## Vol-109 close summary
 
-**0 positive shipments, 2 honest refutations, 1 "not applicable":**
+**0 positive shipments. 1 empirical refutation, 2 analytical
+refutations, 1 partial (infrastructure blocker).** The empirical
+T1.a refutation is the senior-researcher win of the day: a
+10-minute test saved a multi-day infrastructure investment.
 
-- T1 ✗ SigmaCycleDestroy ALNS op REFUTED. Built + tested on
-  offset=100 partial. The σ-cycle's structural lock comes from
-  halo edge-colour constraints, not cycle cells.
-- T2 ✗ Fanout-sort value ordering REFUTED. Same trajectory at
-  v17a strict, 5% nps regression from cache perturbation.
-- T3 ✗ BOLT post-link reordering NOT APPLICABLE on apple-m1
-  (Mach-O unsupported; ELF-only).
+- T1.a ✓ Built `scripts/vol109_oracle_graft.py`; empirically
+  refuted the oracle-aware-repair hypothesis. Grafting oracle
+  pieces drops partial score by 170-200 points.
+- T1 ✗ Oracle-aware ALNS repair NOT BUILT (analytical concern
+  confirmed empirically).
+- T2 ✗ Beam-search ANALYTICALLY REFUTED.
+- T3 partial — cross-compile blocked by no Linux linker on macOS host.
 
-Collateral fix: vol-18 `compute_sigma_cycles` was crashing on
-partial boards; fixed (`sigma.contains_key` check before push).
-
-See [[../sessions/vol-108]] for the consolidated table.
+See [[../sessions/vol-109]] for the full table.
 
 ## Engine state (unchanged)
 
-- bf_bw: 84-85 M nps single-thread (PGO+T12+T1).
-- vanilla_v2: 97 M pp/s.
-- Pipeline reaches 450-451 stably in 7 min.
-- Standing record: 459/480 unchanged.
+- bf_bw 84-85M nps; pipeline → ALNS 450-451 stable in 7 min.
+- Standing record 459/480.
 
-## Vol-109 binding items (≤ 3)
+## Vol-110 binding items (≤ 3)
 
-### T1 — Oracle-aware ALNS repair (continuation of vol-108 T1)
+### T1 — Multi-objective ALNS (invention candidate)
 
-Vol-108 T1 found that destroying σ-cycle cells alone doesn't unlock
-the basin because the halo's edge colours pin the repair. The fix:
-extend `repair_cells` to accept ORACLE PIECE pins for halo positions.
-This forces the halo to take the oracle's piece assignment, removing
-the structural lock, while the σ-cycle interior is freely repaired
-by SA / CP.
+Objective = matched-edges + γ × (rigid-cluster-count or
+sigma-cycle-distance-to-McGavin). Bias ALNS toward
+McGavin-shaped basins (1 large component vs the current 4 small
+ones in 459 basin).
 
-Effort: multi-day (modify repair API, plumb through ALNS framework,
-test variance). Could unlock the offset=100-style basins.
+Effort: multi-day. Variance testing mandatory (≥ 8 seeds per
+γ value).
 
-### T2 — Beam-search engine variant
+Prior: medium. The rigidity theorem (vols 83-101) showed McGavin
+has a single large rigid component; basins with this property
+might be ALNS-liftable to 469. Untested.
 
-A NEW search algorithm: maintain top-K partial boards at each depth,
-expand each in parallel. Different from DFS — more breadth at low
-depths, less depth at high depths. K=8 matches our thread count.
-Test on canonical Selby-Riordan: does beam reach a depth/score
-inaccessible to 8-thread DFS?
+### T2 — Pipeline composition test (cheap experiment)
 
-Vol-106 T10 measured 0.8% pairwise agreement across 8 DFS threads.
-Beam search SHOULD produce more diverse trajectories at low depths
-(since the beam explores ALL top-K from each depth, not just one).
+Run bound-ascent (vol-22) → Hungarian → bf_bw 5min → ALNS on a
+non-record basin. Tests if bf_bw's higher throughput recovers
+basins vol-22's old solver-engine couldn't reach.
 
-Effort: 1-2 days. Build alongside, don't replace, bf_bw.
+Effort: 1-2 hours. Plumbing not invention.
 
-### T3 — Cross-machine throughput benchmark
+Prior: low to medium. The vol-22 work reached 469-ceiling basins;
+bf_bw might fail to find them or might find new ones.
 
-Port bf_bw to a portable build target (cross-compile to
-x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu) and measure
-on different hardware. Compare apple-m1 84-85M to intel x86-64 and
-M2/M3. Useful both for verifying our optimizations don't apple-m1-
-overfit AND for unlocking BOLT (which works on Linux ELF).
+### T3 — Cross-toolchain install (infrastructure)
 
-Effort: 2-4 hours assuming no cross-compile surprises.
+Install x86_64-linux-gnu cross-toolchain (x-tools or
+homebrew-formula equivalent) so bf_bw can link to Linux targets.
+Then cross-compile + scp to a Linux box for BOLT.
 
-## Audit-at-open compliance
+Effort: 2-4 hours assuming clean install.
 
-All vol-106-115 directive items still apply: blank-puzzle speedup
-+ invention. Score-axis is OUT OF SCOPE.
+Prior: medium for cross-machine validation; BOLT win is unclear
+without seeing apple-m1 vs x86-64 numbers first.
 
 ## Linked
 
 - [[../INDEX]]
 - [[../DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]]
-- [[../sessions/vol-108|vol-108 close]]
-- [[../concepts/sigma-cycle-destroy]]
-- [[../concepts/fanout-sort-value-order]]
-- [[../concepts/blackwood-fast]]
+- [[../sessions/vol-109|vol-109 close]]
+- [[../LAB_NOTES_2026-05-16]]
