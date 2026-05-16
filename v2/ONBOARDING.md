@@ -80,6 +80,11 @@ let (matched, total) = score_board(&puzzle, &board);  // matched/480 for canonic
 `matched` = count of edge-color matches between adjacent placed pieces.
 `total`   = count of total placed-pair adjacencies (capped at 480 for a complete 16×16).
 
+**IMPORTANT (vol-118 T13)**: the scorer EXCLUDES BORDER-BORDER edge matches between
+adjacent placed cells. In a LEGAL board this is always 0. On illegal boards (the
+vol-118 bf-bucket-bug class), this prevents spurious "match" inflation. Consistent
+with `eternity2_localsearch::alns::score_board`.
+
 **For a FULL verification including illegal-placement checks**:
 
 ```rust
