@@ -116,9 +116,36 @@ result.
 1. **BOLT post-link reordering** ([cargo-pgo blog](https://kobzol.github.io/rust/cargo/2023/07/28/rust-cargo-pgo.html)) — typical 5-10% over PGO. Apple-m1 BOLT support is less mature than x86; would need to verify it produces a working Mach-O.
 2. **`#[inline(always)]` on the hot-loop helpers** (entry_pid, entry_e, entry_s). Already done in our crates but worth verifying via `cargo asm`.
 3. **Per-depth specialised functions** to get true 256-block unrolling. Const-generic + recursion + LLVM tail-call. Multi-day work.
-4. **2-level offsets table** to fit per-depth lookup in L1d. Concrete next step; expected +5% based on cache-miss math.
-5. **NEON-SIMD bucket sort at init** — init is sub-second, irrelevant.
-6. **Speculative loads via `core::hint::spin_loop`** — micro-fence, not a lever for our pattern.
+4. **NEON-SIMD bucket sort at init** — init is sub-second, irrelevant.
+5. **Speculative loads via `core::hint::spin_loop`** — micro-fence, not a lever for our pattern.
+6. **`panic = "abort"` profile** — tested vol-106 T7, **null result on bf_bw** (62.8M nps both ways) because our hot loop already has zero panic edges (`unsafe { get_unchecked }` throughout). Profile retained as `bench-abort` for future use.
+
+## What we TRIED and REFUTED
+
+### Compact 5+5-bit ref_key (vol-106 T7, 2026-05-16)
+
+Theory: replace the 1 MB flat offsets table (4×65536×u32, L2-resident)
+with a 16 KB compact table keyed by `(tbl << 10) | (top << 5) | left`
+(5+5 bits for top/left). Cache math suggested ~10 cycles saved
+per node × 62M nodes = ~20% speedup.
+
+**Empirical: 0% gain, slight regression (62M → 61M nps).** Three
+3×10s runs confirmed the regression. Reasons (best guess):
+
+- LLVM's shift-by-16 emit was already cheap (single `lsl` instruction).
+- The actually-accessed key subset in the 1 MB table clustered
+  in a small region — apple-m1's hardware prefetcher and 12 MB L2
+  served them effectively, making the "L2 cost" smaller than the
+  predicted 14 cycles.
+- The compact table's denser layout brought DIFFERENT keys into
+  the same cache line, increasing false sharing across depths.
+
+**Lesson**: cache-math-based predictions of speedup are unreliable
+without profiling. The 1 MB flat table is already effectively
+L1-hot through clustering. Move on; revert without committing.
+
+This refutation is preserved here per the "no quiet deletes"
+vault rule.
 
 ## Resources cited / consulted
 
