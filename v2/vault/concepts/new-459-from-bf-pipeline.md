@@ -1,11 +1,46 @@
 ---
 name: new-459-from-bf-pipeline
-description: "Vol-110 T2 — pipeline composition (offset=100 bf-partial → bound-ascent → Hungarian → ALNS 60s) reaches 459/480 reproducibly across 3 of 4 seeds. INDEPENDENTLY RESCORED 459. Cell-diff vs vol-60's 459 record = 3/256 — this is a STRUCTURALLY DIFFERENT 459 basin, found by a NEW pipeline. Ties our standing record from a non-T0 starting basin."
+description: "Vol-110 T2 — pipeline reaches 459/480 reproducibly. INDEPENDENTLY RESCORED 459. CRITICAL CAVEAT (vol-111): the pipeline VIOLATES all 5 canonical 5-clue hints (0/5 hint compliance). The 459-score is on the HINT-FREE / 1-clue variant of E2, NOT canonical 5-clue. Standing canonical record (459/480 with 5/5 hints, vol-60) is NOT tied or broken by this work."
 metadata:
   type: project
 ---
 
-# New 459 basin from bf-pipeline composition (vol-110 T2)
+# Pipeline 459 basins — HINT-FREE caveat (vol-110 T2, vol-111 retraction)
+
+## CRITICAL CAVEAT — hint compliance violation
+
+**As discovered in vol-111**: all 5 pipeline-derived 459+ boards
+have **0/5 canonical-hint compliance**. The bound-ascent step
+re-arranges pieces freely, displacing the 5 canonical-hint pieces
+from their pinned positions. The Hungarian + ALNS steps don't
+restore them.
+
+| board                       | matched | hints |
+|-----------------------------|--------:|------:|
+| pipeline orig (vol-110 T2)  | 459/480 | **0/5** |
+| pipeline bseed1             | 459/480 | **0/5** |
+| pipeline bseed6             | 459/480 | **0/5** |
+| pipeline bseed11            | 459/480 | **0/5** |
+| pipeline bseed9             | 460/480 | **0/5** |
+
+**These boards are valid 1-clue / unframed E2 solutions but NOT
+canonical 5-clue solutions.** The standing canonical record
+(459/480 with 5/5 hints, vol-60 RECORD_TIE_459_p06) is **NOT
+tied or broken** by this work.
+
+The bseed9_score460 board would be a 460/480 RECORD on the
+1-clue variant but the canonical Eternity II target is the 5-clue
+puzzle. Different scoring conventions apply.
+
+## What this means
+
+Vol-110 T2's "reproducible 459" finding is REAL but on the wrong
+puzzle variant. The bf-pipeline + bound-ascent + Hungarian + ALNS
+recipe is effective for the 1-clue variant; for canonical 5-clue
+it would need hint-preservation (pin the 5 hint positions
+through every step).
+
+
 
 **Status**: `built` 2026-05-16 ~13:05 CEST.
 **File**: `output/vol-110/NEW_459_from_off100_pipeline_seed1.json`.
