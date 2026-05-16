@@ -1,13 +1,100 @@
 ---
 name: oracle-aware-alns-repair
-description: "Vol-109 T1 candidate — analytical concern. Continuation of vol-108 T1 SigmaCycleDestroy refutation. Idea: destroy σ-cycle + halo, force halo to oracle's pieces, let repair fill cycle interior. Concern: even with halo oracle-pinned, the boundary BEYOND the halo still constrains, just one halo-ring further out. Iterative halo-expansion converges to 'destroy everything, replace with oracle' — which is trivially the oracle. Need a more principled formulation before building."
+description: "Vol-109 T1 — analytical concern EMPIRICALLY CONFIRMED. The cheap test (`vol109_oracle_graft.py`) grafted the oracle's pieces at σ-cycle positions into offset=100's partial. Result: score DROPPED from 442 to 271 (-171). Cumulative grafting through top-6 cycles never exceeds 271. The boundary mismatch from partial graft dominates. The multi-day oracle-aware-repair infra would face the SAME problem and is NOT justified."
 metadata:
   type: project
 ---
 
-# Oracle-aware ALNS repair (vol-109 T1 — concern documented before build)
+# Oracle-aware ALNS repair (vol-109 T1 — REFUTED EMPIRICALLY)
 
-**Status**: `unbuilt` with analytical concern. 2026-05-16 ~12:40.
+**Status**: `refuted` 2026-05-16 ~12:50. Tested empirically via
+`scripts/vol109_oracle_graft.py`.
+
+## Empirical refutation (T1.a measurement)
+
+Took offset=100 partial (244 placed, score 442) + vol-60's 459
+record as oracle. For each σ-cycle (sorted by size desc), grafted
+the oracle's `(piece_id, rotation)` at those cycle positions into
+the partial. Scored the result.
+
+| graft variant            | placed | score | Δ from partial |
+|--------------------------|-------:|------:|---------------:|
+| partial (baseline)       |    244 |   442 |             — |
+| oracle (reference)       |    256 |   459 |             — |
+| graft top-1 cycle (71)   |    244 | **271**|       **-171**|
+| graft top-2 cycles (96)  |    244 |   250 |          -192 |
+| graft top-3 cycles (120) |    244 |   241 |          -201 |
+| graft top-4 cycles (133) |    244 |   250 |          -192 |
+| graft top-5 cycles (146) |    244 |   261 |          -181 |
+| graft top-6 cycles (157) |    244 |   267 |          -175 |
+
+**Grafting DROPS the score by 170-200 points.** Cumulative grafting
+through 6 cycles never recovers past 271. The hypothesis "ALNS
+repair could fix this" must lift +200 points just to return to
+baseline — vastly beyond ALNS's reach (which typically lifts +5-10).
+
+## Why the graft is catastrophic
+
+The partial achieved score 442 because its piece placements have
+MANY matching edges in the non-cycle region. Grafting oracle pieces
+at cycle positions creates:
+- Matched edges WITHIN the grafted region (the oracle's internal
+  matches at those cells) — gain.
+- Mismatched edges at the BOUNDARY between grafted and non-grafted
+  cells — loss.
+
+The grafted region's boundary is significantly larger than its
+interior (perimeter scaling), so boundary mismatches dominate.
+Net effect: -170 points.
+
+## What this means for vol-109 T1
+
+The cheap test confirms the analytical concern:
+[[oracle-aware-alns-repair]] (this page's previous version).
+Even with halo oracle-pinning + repair fills cycle interior, the
+boundary mismatch persists at the halo's outer edge. The repair
+would have to fill the cycle interior AND choose pieces that
+re-match the halo's outer boundary — which is over-constrained
+when the halo is FORCED to oracle values that don't match the
+non-grafted neighbours.
+
+Multi-day infra not justified.
+
+## What might still work
+
+A successful basin-escape would require **simultaneous** changes
+to:
+- The σ-cycle interior (free).
+- The full halo (free or oracle-pinned).
+- The cells JUST OUTSIDE the halo (free) — to match the new
+  halo's edge colours.
+
+That's basically destroying ~half the board. At that point we're
+no longer doing "local repair" — we're doing "find a new basin
+from a tiny prefix." Which is essentially the vol-22 basin-escape
+recipe (bound-ascent → Hungarian → ALNS) which we already have.
+
+## Original concern (preserved per "no quiet deletes")
+
+[Previous analytical text:]
+The idea was: modify `repair_cells` to accept "oracle pins" so
+SigmaCycleDestroy + halo-pin can unlock locked basins. The
+analytical concern was that iterative halo expansion converges to
+"destroy everything, replace with oracle" — trivially the oracle's
+score, not higher.
+
+The empirical test confirms this and more strongly: even ONE step
+of grafting (before any expansion) drops the score catastrophically.
+The expansion would have to undo all that boundary damage to even
+return to the partial's baseline.
+
+## Linked
+
+- [[sigma-cycle-destroy]] — vol-108 T1 (refuted).
+- [[sigma-cycle-predicts-alns]] — vol-107 T2 (partial).
+- [[basin-escape-recipe]] — vol-22 historical version.
+- [[oracle-cycle-swap]] — vol-18 `apply_cycle`.
+- `scripts/vol109_oracle_graft.py` — the experiment.
 
 ## The idea (from vol-108 T1 follow-up)
 
