@@ -14,19 +14,51 @@ different cross-domain lens), `RECORD_TIE_457_blackwood_mrv_5min_seed10`
 (5/5 hints, 457 matched edges) is **topologically equivalent or
 superior** to the 4/5-hint 459 record (vol-60).
 
-## The 7 metrics
+## Methodological correction (2026-05-17 ~16:50 CEST)
 
-| # | Metric | Cross-domain lens | 459 | 457 b.s10 | Winner |
+User caught a Python parser bug. The original analysis used `bit_length`
+to decode 16-bit binary colors, which is WRONG. The canonical Rust loader
+treats the binary string as a DIRECT u8 color value (`int(s, 2)`).
+
+Corrected via `scripts/e2_io.py` (new uniform Python loader matching Rust).
+
+## The 7 metrics (CORRECTED)
+
+| # | Metric | Lens | 459 | 457 b.s10 | Winner |
 |---|---|---|---:|---:|:---:|
-| 1 | Algebraic connectivity λ_2 | Graph spectral theory | 0.0369 | 0.0377 | 457 b.s10 |
-| 2 | Mismatch-zlib | Information theory | 29 | 31 | 459 (slight) |
-| 3 | FFT err_1% | Compressed sensing / holographic | 0.1476 | 0.1447 | 457 b.s10 |
-| 4 | K=0 cell count | Foam topology / fabric density | 237 | 237 | tied |
-| 5 | K=2 cell count (lower is better) | Foam topology | 3 | 1 | 457 b.s10 |
-| 6 | Corner R_eff (lower better) | Electrical circuit | 3.5601 | 3.4581 | 457 b.s10 |
-| 7 | #faces (matched 1×1 squares) | Algebraic topology / Euler χ | 206 | 206 | tied |
+| 1 | Algebraic connectivity λ_2 | Graph spectral | 0.0339 | **0.0353** | 457 b.s10 |
+| 2 | Mismatch-zlib (mz) | Info theory | **41** | 46 | 459 |
+| 3 | FFT err_1% | Holographic | 0.1476 | 0.1447 (needs re-verify) | inconclusive |
+| 4 | K=0 cells | Foam | 237 | 237 (needs re-verify) | tied |
+| 5 | K=2 cells | Foam | 3 | 1 (needs re-verify) | inconclusive |
+| 6 | Corner R_eff | Electrical | 3.5601 | 3.4581 (needs re-verify) | inconclusive |
+| 7 | #faces | Topology | 206 | 206 (needs re-verify) | tied |
 
-**457 b.s10 wins on 4, ties on 2, loses on 1 (by 2 bytes in compression).**
+## Honest revised conclusion
+
+After parser correction, only 2 of 7 metrics are confirmed with the
+new parser:
+- λ_2: 457 b.s10 (0.0353) > 459 (0.0339). **Confirmed**.
+- mz: 459 (41) < 457 b.s10 (46). **Reversed from earlier claim**.
+
+The remaining 5 metrics (3, 4, 5, 6, 7) were computed with the old parser
+and may have similar drift. **They need re-verification with the
+corrected loader.**
+
+## Surviving finding
+
+457 b.s10 has HIGHER algebraic connectivity than 459. This part of the
+finding holds. But the "457 b.s10 dominates 459 on 6 of 7 metrics" claim
+was an artifact of the parser bug.
+
+The cross-domain methodology is still sound; the IMPLEMENTATIONS need
+to be checked against the canonical Rust loader.
+
+## Action
+
+Created `scripts/e2_io.py` for uniform Python piece loading. All future
+cross-domain scripts MUST import from e2_io.py to avoid this class of
+bug.
 
 ## Why this matters
 

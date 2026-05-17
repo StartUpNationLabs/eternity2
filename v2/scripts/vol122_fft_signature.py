@@ -30,13 +30,11 @@ PUZZLE = "../data/puzzles/size_16_official_eternity.csv"
 
 
 def parse_color(s):
-    """Parse the binary one-hot color encoding."""
+    """Parse the 16-bit binary string as direct color value.
+    BORDER = 65535 (all 1s) = 0 in our convention."""
     if s == "1" * 16:
         return 0  # BORDER
-    v = int(s, 2)
-    if v == 0:
-        return 0
-    return v.bit_length()  # 1-indexed
+    return int(s, 2)
 
 
 def load_pieces():
