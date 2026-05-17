@@ -42,25 +42,33 @@ That gives 24 × ~9 = ~216 cubes, each ~7s SAT call. Total ~25 min ×
 8 cores = 3 min wall-clock vs 1h kissat solo. If still no decision,
 deepen cubes by another layer.
 
-### 2. SAT Modulo Symmetries (arxiv 2501.17201 + dynamic SMS) — HIGH EV
+### 2. ~~SAT Modulo Symmetries~~ — RETRACTED 2026-05-17 by user
 
-**SAT solver with a custom propagator that learns symmetry-breaking
-predicates during search.** 2-3× speedup on graph enumeration problems.
+**Initial proposal**: pin TL corner piece+rotation as a unit clause for
+96× search-space cut. **Wrong on this puzzle.**
 
-**Fit to E2**: our SAT encoding has *massive* symmetries we don't break:
-- **Board rotation symmetry**: 4-fold (rotate 90°/180°/270°).
-- **Corner permutation symmetry**: any of 24 corner perms gives the
-  same puzzle (up to which corner is "TL").
+User correctly noted (see [[E2_KNOWN_FACTS]] and [[INVENTIONS_BACKLOG]]
+item D1 marked `wont-do (vol-27) DO NOT REVISIT`):
 
-Static breaking of these is straightforward (pin TL corner piece +
-rotation as a unit clause). That alone cuts the search space by 96×.
-SMS dynamically prunes more during search. **Should be the first
-optimization we try.**
+- Canonical Selby-Riordan E2 has **0 rotation-symmetric pieces** (all
+  256 piece orbits are size 4).
+- The 5 canonical hints at positions {135, 210, 34, 221, 45} are
+  **not 4-fold-symmetric** — they fix the board's absolute orientation
+  and break any rotation pseudo-symmetry the unhinted puzzle might
+  appear to have.
+- Therefore: there is no "24 corner perms equivalent up to TL fixing"
+  quotient. Each of the 4 corner pieces has a unique correct position
+  in the hint-oriented frame; pinning TL is just an arbitrary 4-way
+  branch the CDCL solver handles cheaply.
 
-**Action**: add `--symmetry-break-corners` flag to sat_e2 binary that
-pins one specific corner piece-rotation as a unit clause. Re-run
-canonical kissat with that flag. Measure progress vs unbroken at the
-1h mark.
+**Lesson**: symmetry-breaking is a major SAT trick on *random* or
+*generic* CSPs, but Selby-Riordan deliberately designed canonical E2
+to be **maximally asymmetric** (vol-65). Standard textbook tricks from
+the symmetry-breaking literature **do not apply** here.
+
+This is the kind of mistake the vault is supposed to prevent —
+re-discovering "no symmetries" after vol-27, vol-65, and vol-118 all
+established it. Logging here so the next vol catches it.
 
 ### 3. PI-GNN / Physics-Inspired Graph Coloring (arxiv 2408.01503) — MEDIUM EV
 
@@ -126,14 +134,23 @@ puzzle toward exactly one 480 basin.
 **Action**: re-read the original Selby paper if findable. Check whether
 the hint placement reveals the algorithm.
 
-## Top 3 picks by EV
+## Top 2 picks by EV (post-retraction)
 
-1. **Symmetry-break corners in kissat** (vol-125 W12 task). Trivial
-   to implement, immediate 96× speedup. Should be first.
-2. **AlphaMapleSAT-style MCTS-CnC** on our encoding. Higher engineering
-   cost but addresses the actual bottleneck (kissat alone can't decide).
-3. **Projected model counting**. Stronger result than SAT (number of
-   solutions). Implementation-heavy but theoretically gorgeous.
+1. **AlphaMapleSAT-style MCTS-CnC** on our existing kissat encoding.
+   Engineering-heavy but addresses the actual bottleneck (kissat alone
+   can't decide canonical E2). The reward signal (CDCL conflict-rate
+   per cube) is concrete and doesn't depend on any symmetry property.
+2. **Projected model counting** (D4 / GANAK) over border variables.
+   Asks "how many BORDERS admit any 480 interior" instead of "find
+   one". A counter could return 0 (provable unsolvability) or a small
+   number (enumerable target list). Treewidth-bounded → in-principle
+   tractable for the border ring.
+
+Idea #1 (corner symmetry-break) retracted above. The user-noted lesson:
+**don't apply textbook symmetry tricks to a maximally-asymmetric Selby
+puzzle without checking the vault**. Any future "factor-K speedup
+from breaking [some symmetry]" claim must first verify the symmetry
+*actually exists* on canonical E2.
 
 ## Linked
 
