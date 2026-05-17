@@ -268,3 +268,6 @@ path = "src/bin/color_class_analysis.rs"
 [[bin]]
 name = "mdf_fill"
 path = "src/bin/mdf_fill.rs"
+[[bin]]
+name = "dump_pieces_by_id"
+path = "src/bin/dump_pieces_by_id.rs"
