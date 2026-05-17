@@ -182,6 +182,7 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[w-sat-459-unsat-findings]] — kissat UNSATs 459 halos, 9 basin borders
 - [[w11-sat-verified-border-enum]] — SAT-screen invention (border-pin filter)
 - [[w11-sat-correctness-validated]] — 2026-05-17 round-trip + sabotage validation
+- [[w11-border-screen-unviable]] — primary-engine retirement (border space ~10^7-10^9)
 
 ## Basins — notable boards
 
