@@ -33,10 +33,9 @@ def load_placement(board_path):
 
 
 def parse_color(s):
+    """Canonical: matches Rust loader. 16-bit binary string as direct u8."""
     if s == "1" * 16: return 0
-    v = int(s, 2)
-    if v == 0: return 0
-    return v.bit_length()
+    return int(s, 2)
 
 
 def load_pieces():
