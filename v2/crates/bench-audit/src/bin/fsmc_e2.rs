@@ -71,6 +71,10 @@ struct Searcher {
     zob: Zobrist,
     cache: HashMap<u64, u32>,
     use_memo: bool,
+    /// If > 0, only hash the most-recently-placed K cells' frontier (partial state).
+    partial_frontier_k: usize,
+    /// If true, don't include piece-bitset in hash.
+    frontier_only: bool,
     stats: Stats,
     max_nodes: u64,
     time_limit: std::time::Duration,
@@ -78,7 +82,7 @@ struct Searcher {
 }
 
 impl Searcher {
-    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool) -> Self {
+    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool, partial_frontier_k: usize, frontier_only: bool) -> Self {
         let side = puzzle.width as usize;
         let n_cells = side * side;
         let n_pieces = puzzle.pieces().len();
@@ -101,6 +105,8 @@ impl Searcher {
             zob: Zobrist::new(n_pieces, n_cells, max_color),
             cache: HashMap::new(),
             use_memo,
+            partial_frontier_k,
+            frontier_only,
             stats: Stats { nodes: 0, cache_hits: 0, cache_misses: 0, best_depth: 0, nodes_saved_estimate: 0 },
             max_nodes,
             time_limit: std::time::Duration::from_secs_f64(time_secs),
@@ -150,12 +156,20 @@ impl Searcher {
 
     fn state_hash(&self, depth: usize) -> u64 {
         let mut h: u64 = 0;
-        for pid in 0..self.n_pieces {
-            if self.used_pids[pid] {
-                h ^= self.zob.piece_hash[pid];
+        if !self.frontier_only {
+            for pid in 0..self.n_pieces {
+                if self.used_pids[pid] {
+                    h ^= self.zob.piece_hash[pid];
+                }
             }
         }
-        for d in 0..depth {
+        // Choose which cells to include in frontier hash
+        let start_d = if self.partial_frontier_k > 0 && self.partial_frontier_k < depth {
+            depth - self.partial_frontier_k
+        } else {
+            0
+        };
+        for d in start_d..depth {
             let pos = self.pos_order[d];
             let pc = self.board[pos].as_ref().expect("placed");
             let r = pos / self.side;
@@ -228,6 +242,8 @@ fn main() {
     let mut max_nodes: u64 = 10_000_000;
     let mut time_secs: f64 = 120.0;
     let mut use_memo = true;
+    let mut partial_frontier_k: usize = 0;
+    let mut frontier_only = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -235,6 +251,8 @@ fn main() {
             "--max-nodes" => max_nodes = args.next().unwrap().parse().unwrap(),
             "--time-secs" => time_secs = args.next().unwrap().parse().unwrap(),
             "--no-memo" => use_memo = false,
+            "--partial-frontier-k" => partial_frontier_k = args.next().unwrap().parse().unwrap(),
+            "--frontier-only" => frontier_only = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -242,9 +260,9 @@ fn main() {
     let (puzzle, _hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     println!("puzzle: {} side={} pieces={} color_count={}",
         puzzle_path.display(), puzzle.width, puzzle.pieces().len(), puzzle.color_count);
-    println!("memo: {}", use_memo);
+    println!("memo: {} partial_k: {} frontier_only: {}", use_memo, partial_frontier_k, frontier_only);
 
-    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo);
+    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo, partial_frontier_k, frontier_only);
     let t = Instant::now();
     let solved = s.search(0);
     let elapsed = t.elapsed();

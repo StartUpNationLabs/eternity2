@@ -54,14 +54,37 @@ than vanilla.
 
 1. **Bounded-depth memoization**: only memoize at depths > N (where
    hit rates may be higher). Need per-depth hit-rate profiling.
-2. **Partial frontier hash**: hash only LAST K frontier cells, not all.
-   Decouples cache from full piece-set. May get spurious hits but
-   higher hit rate.
-3. **Frontier-only key (no piece-set)**: ignore placed-piece set
-   entirely. Cache says "given this frontier shape, no solution
-   exists from any piece-set". Lossy but very small key.
+2. **Partial frontier hash** (TESTED): hash only LAST K frontier cells.
+   On 10×10/c10 with K=10 or K=20, **NO CHANGE** in hit rate (0.64%)
+   because piece-bitset still dominates the key.
+3. **Frontier-only key (no piece-set)** (TESTED): on 10×10/c10 with
+   K=5, hit rate JUMPED to **33.5%**. But the search now terminates
+   at depth 74 vs 82 unmemoized — the cache is LOSSY (cuts off
+   legitimate subtrees that share frontier-color signatures but have
+   different remaining-piece sets).
+   * **Not safe for proven-complete solving.**
+   * Could be useful for **BASIN DISCOVERY** (find any partial with
+     high score, doesn't matter if we miss other paths).
 4. **Symmetric-equivalent state**: canonicalize the frontier mod
    rotations/reflections of the partial board. May increase hits.
+
+## New direction (from these tests)
+
+FSMC pure exhaustion-skip is **insufficient** for canonical-scale.
+
+But the **frontier-only key** has a usable form:
+- Replace "skip subtree as exhausted" with "skip subtree because best
+  score from this frontier shape was X — only continue if we can beat
+  X from the remaining pieces".
+- This is **best-score-from-frontier memoization** for the MaxScore CSP.
+- Wrong in subtle way: we cache score given a frontier shape, but
+  different piece-sets can achieve different bests. Cache is LOWER
+  BOUND only (best seen so far across visits with same frontier).
+- For SEARCH RANKING: pessimistic cache lets us prune branches that
+  can't improve over the cached lower bound.
+
+This could be a new invention: **frontier-keyed score memoization for
+MaxScore CSP** (rather than exhaustion-skip). Worth a follow-up.
 
 ## Status
 
