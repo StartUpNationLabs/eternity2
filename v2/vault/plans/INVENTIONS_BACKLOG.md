@@ -586,6 +586,156 @@ No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 
 **Concept**: [[../concepts/k11-cross-domain-brainstorm]] section 4.
 
+## M-series — Completely Different Models (added 2026-05-17, K12 brainstorm)
+
+Per user directive "model the puzzle as something completely different". All UNBUILT.
+
+### M1. Foam topology — `unbuilt` (designed)
+
+**Idea.** Matched-edge regions = 2D bubbles. Junction angles (3+-region meetings) should obey Plateau's 120° law if board is at "equilibrium". Distance from Plateau statistics = signature.
+
+**Concrete first step.** Identify junctions in 459/458/J1 boards, measure angles. ~1h Python.
+
+**Concept:** [[../concepts/k12-completely-different-models]] M1.
+
+### M2. Electrical circuit / impedance — `unbuilt`
+
+**Idea.** Pieces = 4-terminal resistors; colors = resistance values; matched edges = wires. Total impedance of border-to-border paths = scalar signature. Kirchhoff's laws on the matched-edge graph give global constraints.
+
+**Why different.** Circuit theory gives EFFECTIVE-RESISTANCE between any two nodes — a scalar that integrates ALL paths, not just shortest.
+
+**Concrete first step.** Compute pairwise effective resistance (graph theory) between 4 corner cells for various boards. Should correlate with board "rigidity".
+
+**EV.** Medium. Effective resistance is a well-studied graph invariant; likely correlates with score.
+
+**Effort.** 1 day Python.
+
+### M3. DNA sequence alignment — `unbuilt`
+
+**Idea.** 22 colors → 22 extended bases. Adjacent pieces "base-pair". Apply Smith-Waterman to row sequences. Sequence alignment scores might predict matchability.
+
+**Caveat.** May collapse to J1 column-DP (already explored). Worth a 1h PoC to see if it's genuinely different.
+
+**EV.** Low-medium.
+
+**Effort.** 1h.
+
+### M4. Crystallographic lattice gas — `unbuilt`
+
+**Idea.** Pieces = molecules with 4 binding sites; colors = binding energies. Lattice gas Hamiltonian. Find ground state via Wang-Landau MCMC.
+
+**Why different.** Wang-Landau samples the ENTIRE energy landscape uniformly — different from ALNS which biases toward greedy descent.
+
+**Effort.** 2 days.
+
+### M5. Cellular automaton — `wont-do`
+
+Collapses to ALNS-like behavior.
+
+### M6. Music chord progression — `unbuilt`
+
+**Idea.** Pieces = chords (4 notes = 4 colors). Adjacent edges = chord transitions. Music-theoretic VOICE LEADING constraints might identify "playable" boards.
+
+**Why different.** Music theory has well-developed notions of CONSONANCE distance metric (Tenney's harmonic distance, Euler's gradus suavitatis). These metrics might give a new scoring function.
+
+**Concrete first step.** Define a color-pair "consonance" matrix from the canonical E2 piece-graph. Map to musical intervals via similarity. See if "consonant" boards = high-score.
+
+**EV.** Low-medium. Stretching the analogy.
+
+**Effort.** 1 day.
+
+### M7. Matrix factorization / recommender system — partial-overlap with vol-122 J3
+
+**Idea.** 256×256 piece-piece compatibility matrix → SVD. Latent factors reveal piece "preferences".
+
+**Done partially.** Vol-122 J3 did Laplacian spectral decomposition. SVD with different normalization (collaborative filtering style) is a different angle.
+
+**Effort.** 1 day.
+
+### M8. Knot / braid theory — `unbuilt`
+
+**Idea.** Each piece-side permutation under rotation = a permutation group element. Adjacent pieces' compatible-rotation set = braid generators. Find boards whose "braid invariant" is trivial.
+
+**Why different.** Knot invariants (Jones polynomial, Alexander polynomial) are GLOBAL topological invariants — completely different from local color-matching.
+
+**Concrete first step.** For a complete board, compute the boundary braid (= 60-edge sequence of permutations applied). Compute its Burau matrix or Jones polynomial.
+
+**EV.** Speculative. May not connect to matched-edge score at all.
+
+**Effort.** 2-3 days.
+
+### M9. Protein folding (HP-model) — `unbuilt`
+
+**Idea.** Pieces = amino acids; colors = hydrophobicity classes. Find folding (= board arrangement) minimizing exposed hydrophobic edges.
+
+**EV.** Low (HP-model is over-simplified).
+
+**Effort.** 1 day.
+
+### M10. Stock market / time series — `unbuilt`
+
+**Idea.** Each row/column = a time series of "prices" (colors). Matched = stable; mismatched = price jump. ARIMA model on row sequences.
+
+**Concrete first step.** Treat row 0-15 of 459 record as a time series. Fit ARIMA, compute residuals. Compare to J1 boards.
+
+**EV.** Low. ARIMA on discrete categorical sequences is odd.
+
+**Effort.** 1h.
+
+### M11. Chemistry / molecular bonds — `wont-do`
+
+Too similar to M2/M4.
+
+### M12. Linguistics / parsing — `unbuilt`
+
+**Idea.** Piece edges as production rules. Board = parse tree. Find boards satisfying a context-free grammar.
+
+**EV.** Low. CFG parsing on grids has been done in image recognition but doesn't seem to add to puzzle solving.
+
+**Effort.** 2 days.
+
+### M13. Holographic encoding / compressed sensing — `unbuilt` (per user reminder)
+
+**Idea.** A hologram encodes 3D info via 2D interference. Apply compressed sensing / Fourier reconstruction to a partial board's mismatch map. Predict full board structure.
+
+**Why different.** Compressed sensing recovers sparse signals from few measurements. The mismatch map is sparse (21 mismatches in 480 edges = 4.4% density). Inverse-FFT reconstruction might INTERPOLATE missing colors.
+
+**Concrete first step.** For the 459 board, compute the 2D FFT of the mismatch indicator. Try to predict surrounding-cell mismatches from a subset.
+
+**EV.** Medium. Compressed sensing is well-studied; if it works, it's a NEW partial-to-complete predictor.
+
+**Effort.** 1-2 days.
+
+### M14. Topological data analysis (persistent homology) — `unbuilt`
+
+**Idea.** Compute persistent homology of the matched-edge graph. β_0 (connected components) and β_1 (cycles) at different "filtration thresholds" give a barcode signature.
+
+**Why different.** Persistent homology is GLOBAL but multi-scale. May reveal hierarchical basin structure.
+
+**Concrete first step.** Use ripser or giotto-tda on the matched-edge graphs of 459/458/J1.
+
+**EV.** Medium. TDA is novel for E2 but technically demanding.
+
+**Effort.** 2-3 days.
+
+### M15. Statistical mechanics replica trick — `unbuilt`
+
+**Idea.** Compute the partition function $Z = \sum_{\text{configs}} e^{-\beta E}$ via replica trick. Replica symmetry breaking would indicate glassy basins.
+
+**Why different.** Replica trick has been used for analyzing spin glasses; if E2 is glassy, RS breaking would explain why search saturates.
+
+**EV.** Medium. Theoretical heavy lift but novel.
+
+**Effort.** 3-5 days.
+
+### M16. Information bottleneck / variational inference — `unbuilt`
+
+**Idea.** Train an information-bottleneck model that compresses partial boards into latent codes, then decodes to predict completions. Identify the "bottleneck dimensions" that encode score.
+
+**EV.** Medium-high. IB is a powerful tool for finding minimal sufficient statistics.
+
+**Effort.** 3-5 days (ML setup heavy).
+
 ### Open slot for next invention
 
 - (placeholder)
