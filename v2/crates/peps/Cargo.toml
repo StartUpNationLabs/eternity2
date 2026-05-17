@@ -30,3 +30,11 @@ path = "src/bin/peps_solve.rs"
 [[bin]]
 name = "peps_marginals_export"
 path = "src/bin/peps_marginals_export.rs"
+
+[[bin]]
+name = "peps_debug"
+path = "src/bin/peps_debug.rs"
+
+[[bin]]
+name = "peps_bench"
+path = "src/bin/peps_bench.rs"

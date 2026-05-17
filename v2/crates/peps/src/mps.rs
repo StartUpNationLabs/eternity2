@@ -364,8 +364,14 @@ fn absorb_row(state: BoundaryState, row_cells: &[Array4<f64>]) -> BoundaryState 
             // (N, S, W) shape (K, K, K).
             // We want flat (N, W) → N*K+W matching T's (N, h_{size-2}) ordering.
 
-            let h_axis = size - 1;
-            let n_axis = size;
+            // T axes: (1, S_0, S_1, ..., S_{size-2}, h_{size-2}, N_{size-1}, 1).
+            // That's 1 + (size-1) S's + 1 h + 1 N + 1 = size + 2 axes.
+            // h is at axis `size`, N is at axis `size + 1`.
+            // BUT after x=0 (for size=2, no middle iterations), ndim = size + 3 = 5.
+            // For size > 2 with middle iterations, ndim stays at size + 3 until the right border.
+            // So: h_axis at size, n_axis at size+1.
+            let h_axis = size;
+            let n_axis = size + 1;
             // Permute T to put N before h.
             let mut perm: Vec<usize> = (0..t.ndim()).collect();
             perm.swap(h_axis, n_axis); // (..., N, h, ...)
@@ -484,6 +490,24 @@ mod tests {
         let p = PathBuf::from("../../../data/generated").join(rel);
         if p.exists() { return p; }
         PathBuf::from("data/generated").join(rel)
+    }
+
+    #[test]
+    fn log_z_2x2_matches_python() {
+        let path = data_path("size_2_colors_2_c27cbb68.csv");
+        if !path.exists() { return; }
+        let puzzle = load_puzzle(&path).unwrap();
+        let ctx = PepsContext::new(Arc::new(puzzle));
+        eprintln!("2x2 ctx: K={}, n_pieces={}", ctx.k_colors, ctx.n_pieces);
+        let mu = vec![0.0; ctx.n_pieces];
+        let pinned: Vec<Option<PieceRot>> = vec![None; ctx.size * ctx.size];
+        let log_z_val = log_z_lagrangian(&ctx, &mu, &pinned, 0);
+        eprintln!("log_z (2×2 exact) = {}", log_z_val);
+        assert!(
+            (log_z_val - 3.526361).abs() < 0.01,
+            "log_z mismatch: {} vs 3.526361",
+            log_z_val
+        );
     }
 
     #[test]
