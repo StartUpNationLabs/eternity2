@@ -62,6 +62,37 @@ Full interior SAT (191 cells free, 60 border + 5 hints pinned).
 - If SAT: solution found. **Millionaire win.**
 - If timeout: inconclusive.
 
+## 🚨 FULL INTERIOR SAT RESULT: UNSATISFIABLE (1.37s!)
+
+**THIS PROVES: the 459 board's BORDER RING (60 pieces) is INCOMPATIBLE
+with any 480/480 solution.**
+
+Even with ALL 191 interior cells freed and SAT given complete freedom,
+no assignment produces all 480 edges matched.
+
+This is a **STRUCTURAL THEOREM**: the 459 record's border ring is
+genuinely WRONG for solving E2. To reach 480 requires:
+- A DIFFERENT border ring configuration.
+- Which means: different corner permutations + edge piece arrangements.
+
+This rules out the entire ALNS-from-459 path for reaching 480. **Any
+local refinement around the 459 basin is mathematically futile for
+solving E2.**
+
+McGavin's 469 likely has the same property — would need to test.
+
+## The new strategic direction
+
+1. **Test other border configurations**. Vol-122 N1 built 12,958
+   corner-3×3 clusters. Vol-119 + border-DP explored variants. SAT-test
+   each border ring for interior compatibility.
+
+2. **Enumerate borders compatible with 480**. This is the systematic
+   search the 122-vol body should have been doing all along.
+
+3. **W1 PEPS would still help**: PEPS marginals could guide border
+   ring construction, then SAT-verify interior.
+
 ## Next experiments
 
 If interior UNSAT:
