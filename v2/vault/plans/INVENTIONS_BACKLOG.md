@@ -755,6 +755,170 @@ Too similar to M2/M4.
 
 **Effort**: 1-2 days (instrument → repro → fix → regression test).
 
+## W-series — Web-roam 2026-05-17 (cross-domain harvest from forums + scientific literature)
+
+Origin: vol-122 session-resume web roam after N-series dead-end. User
+directive: "roam around online... see what exists in the world we could
+bring in there". Concept page: [[../concepts/web-roam-2026-05-17]].
+
+### W1. Hyperoptimized approximate tensor-network contraction — `unbuilt` (Tier S)
+
+**Source.** Gray & Chan PRX 14, 011009 (2024); arXiv:2407.21287 for
+rugged spin glasses.
+
+**Idea.** Represent puzzle's Boltzmann distribution as a 2D PEPS-style
+tensor network. Approximately contract with fixed bond-dimension χ to
+recover per-site marginals. Sequentially fix highest-marginal piece-rotation
+per cell. Cost: N² for 2D short-range, independent of landscape ruggedness.
+
+**Why different.** Boundary-MPS (vol-13 refuted) was 1D *for counting*.
+W1 is 2D PEPS *for per-site marginals* — different operational primitive.
+Doesn't traverse landscape. The 2024 paper benchmarks on 48×48 spin glass
+= comparable scale to E2's 16×16.
+
+**Concrete first step.** Use `cotengra` + `opt_einsum`. Encode 6×6 E2 with
+edges-as-variables (~24 edges) and validity tensors at each cell. χ=16
+marginals → fix piece-rotation per cell. Compare against `solver-engine`
+joe profile on same 6×6 puzzle. **1 week PoC**, then scale to 8×8, 12×12,
+16×16.
+
+**EV.** **Very high.** Continuous-but-rigorous; physics-validated on
+rugged landscapes; untested at canonical E2 scale.
+
+**Effort.** 1 week PoC, ~3 weeks full canonical attack.
+
+### W2. Survey Propagation (Mézard-Zecchina) — `unbuilt` (Tier S)
+
+**Source.** Braunstein-Mézard-Zecchina 2002/2005; Marino-Parisi-Ricci-Tersenghi
+*Nature Communications* 7, 12996 (2016) backtracking-SP.
+
+**Idea.** Generalized BP that passes *surveys over message clusters*. Designed
+for k-SAT close to SAT/UNSAT threshold where BP cycles. Backtracking-SP reaches
+solutions "in regions unreachable by any other algorithm" per 2016 paper.
+
+**Why different.** Vol-11/12 BP gave 18.84% reduction (not strong alone).
+SP captures *cluster structure* that BP cannot. E2 has documented cluster
+structure (vols 18-22, 65, 99-115).
+
+**Concrete first step.** Adapt our `eternity2-sat-encoder` output → feed
+to Braunstein-Mézard public SP code (or `thibsej/SurveyPropagation`). 6×6
+E2 first, then 8×8, then canonical.
+
+**EV.** **High.** Physics-validated; never tried on E2.
+
+**Effort.** ~1 week.
+
+### W3. Kovalsky-Glasner-Basri Vandermonde-LP — `unbuilt` (Tier A)
+
+**Source.** Kovalsky, Glasner, Basri. *SIAM J. Imaging Sci.* 2015
+(arXiv:1409.5957). Vault has the citation (vol-2/3, [[publishability]])
+but never built.
+
+**Idea.** Exponential change of variables $T_i = e^{t_i}$. Color constraints
+become polynomial equations. Vandermonde relaxation: replace permutation
+matrix with doubly-stochastic (Birkhoff-von Neumann polytope). Iterative LP:
+$P^{n+1} = \arg\max \langle P^n, P \rangle$ subject to linear constraints +
+doubly-stochastic.
+
+**Why different.** Vol-44 cell-pair LP is *generic*. Kovalsky uses *algebraic*
+Vandermonde structure with polynomial closure. Paper validated on 6×6 (2 iter)
+and 8×8 (6 iter); never scaled to 16×16.
+
+**Concrete first step.** Julia or Python+scipy.linprog PoC on 4×4. Scale
+if iteration count is reasonable.
+
+**EV.** Medium-high. Different relaxation could give different partials.
+
+**Effort.** 1 week PoC, 2 weeks full.
+
+### W4. LKH-style adaptive-cardinality k-opt chains — `unbuilt` (Tier A)
+
+**Source.** Helsgaun, "General k-opt submoves for LKH." Math. Prog. Comp.
+(2009). State-of-the-art TSP heuristic.
+
+**Idea.** Adaptive-K edge-chain: start a swap, evaluate gain, conditionally
+extend chain or close it. Chains routinely reach K=10-20 by chaining gains.
+
+**Why different.** Our ALNS operators are all *fixed-cardinality* destroys
+(1-rot, 2-swap, k-band). Vol-20, 65, 99 show E2 basins are operator-locked
+under K≤5. LKH-chains break this barrier by *gain-chaining* — never tried.
+
+**Concrete first step.** Implement `lkh_chain_e2` operator in
+`crates/localsearch/src/`. Add to ALNS basic ops bundle. Run on standing
+458 strict-canonical + 459 record basins.
+
+**EV.** Medium-high. Adaptive-cardinality moves are a *missing axis* in
+our operator portfolio.
+
+**Effort.** 2-3 days.
+
+### W5. GFlowNet-amortized ant-colony sampling — `unbuilt` (Tier B)
+
+**Source.** Kim et al. AISTATS 2025 (GFACS).
+
+**Idea.** Train GFlowNet to amortize prior over solution space; iterate
+with ACO-style search.
+
+**Why different.** Generative rather than search-based. Diverse-by-construction.
+
+**Concrete first step.** Define MDP: state = partial board, action = place
+piece. Train GFlowNet via flow-matching loss on synthetic 6×6/8×8.
+
+**EV.** Medium. Speculative.
+
+**Effort.** 2-3 weeks (ML training).
+
+### W6. Discrete score-based diffusion (SEDD / DeFoG) — `unbuilt` (Tier B)
+
+**Source.** Lou et al. SEDD ICML 2024 (arXiv:2310.16834); DeFoG 2025.
+
+**Idea.** Discrete diffusion with score-entropy loss. Generate boards via
+reverse diffusion.
+
+**Why different.** Generative paradigm; 1024-state discrete labels.
+
+**EV.** Low-medium. Generative fidelity untested at E2 state space.
+
+**Effort.** 3-4 weeks.
+
+### W7. Frozen-variable / backbone fraction by basin — `unbuilt` (Tier B)
+
+**Source.** Achlioptas-Coja-Oghlan 2007-2012 (frozen variables in random CSPs);
+Molloy 2012 (freezing threshold k-coloring).
+
+**Idea.** For each cell in a basin (e.g., 459-basin), count distinct
+piece-rotation values across all basin boards. Cells with 1 value = frozen
+(true backbone); 4+ values = liquid. Map freezing fraction by region.
+
+**Why different.** Vol-17 found 17/18-cell backbone, vol-20 corrected to
+5 hint cells. Have we measured *freezing structure* of the 459-class basin?
+Different from operator-lock at K≤5.
+
+**Concrete first step.** Use existing 459/458 basin board dump. Python
+script: for each cell pos in [0..255], count distinct (piece_id, rotation)
+across basin boards. Plot heatmap. ~1-2 days.
+
+**EV.** Medium. New structural signature.
+
+**Effort.** 1-2 days.
+
+### W8. Tropical-geometry framework realisation counting — `unbuilt` (Tier C)
+
+**Source.** arXiv:2502.10255 (Feb 2025).
+
+**Idea.** Tropical-geometry deletion-contraction on a bigraph to count
+realisations of a rigid framework. A solved board = a framework.
+
+**Why different.** Closed-form upper bound on the *number of distinct
+full-score boards*. Could give a counting result instead of just bound on
+score.
+
+**EV.** Low-medium. Speculative.
+
+**Effort.** 1-2 weeks.
+
+---
+
 ### Open slot for next invention
 
 - (placeholder)
