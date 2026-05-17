@@ -209,8 +209,84 @@ fn solve_band(
         states_per_col.push(new_states);
     }
 
+    // Build map: color → # piece-rotations with that TOP edge (for forward-look)
+    let mut color_top_supply: Vec<u32> = vec![0; max_color + 1];
+    for pid in 0..n_pieces {
+        if initial_used.contains(pid as u16) { continue; }
+        // Skip pieces already used by the band's top row (which IS in initial_used... wait no,
+        // initial_used was passed in; the new pieces from this band are in best.used).
+        // We'll subtract those below.
+        for rot in 0..4u8 {
+            let e = pieces[pid];
+            let rotated_top = match rot {
+                0 => e[0],
+                1 => e[3],
+                2 => e[2],
+                _ => e[1],
+            };
+            if rotated_top != 0 {
+                color_top_supply[rotated_top as usize] += 1;
+            }
+        }
+    }
+
     let last = &states_per_col[side - 1];
-    let best = &last[0];
+    // FLH: pick the top-K states, compute future_compat for each, pick the best by (score, compat).
+    // future_compat for state = sum over cols c of min(1, color_top_supply[state.bot[c].edges[2]]
+    //   - (1 if state used a piece with that color top else 0))
+    // For simplicity, just count cols whose bot.B color has supply > 0 after subtracting state's used pieces.
+
+    let n_consider = 100.min(last.len());
+    let mut best_idx = 0;
+    let mut best_compat_score = i64::MIN;
+    for k in 0..n_consider {
+        let s = &last[k];
+        // Walk back to get bot row
+        let mut bot_colors = vec![0u8; side];
+        let mut cur = s.clone();
+        let mut cur_col = side - 1;
+        loop {
+            bot_colors[cur_col] = cur.bot.edges[2]; // bottom edge color
+            if cur_col == 0 { break; }
+            cur = states_per_col[cur_col - 1][cur.parent_idx as usize].clone();
+            cur_col -= 1;
+        }
+        // Compute supply minus pieces used by THIS state
+        let mut supply = color_top_supply.clone();
+        for pid in 0..n_pieces {
+            if s.used.contains(pid as u16) && !initial_used.contains(pid as u16) {
+                // This piece is used by this state but wasn't in initial_used → subtract from supply
+                for rot in 0..4u8 {
+                    let e = pieces[pid];
+                    let rotated_top = match rot {
+                        0 => e[0],
+                        1 => e[3],
+                        2 => e[2],
+                        _ => e[1],
+                    };
+                    if rotated_top != 0 {
+                        if supply[rotated_top as usize] > 0 {
+                            supply[rotated_top as usize] -= 1;
+                        }
+                    }
+                }
+            }
+        }
+        let mut compat = 0i64;
+        for c in 0..side {
+            let needed_top = bot_colors[c];
+            if needed_top != 0 && supply[needed_top as usize] > 0 {
+                compat += 1;
+            }
+        }
+        // Combined score: 100 * state.score + compat (prefer higher score, tiebreak by compat)
+        let combined = 100 * s.score as i64 + compat;
+        if combined > best_compat_score {
+            best_compat_score = combined;
+            best_idx = k;
+        }
+    }
+    let best = &last[best_idx];
     let final_score = best.score;
     let mut top_row_assign = vec![(0u16, 0u8); side];
     let mut bot_row_assign = vec![(0u16, 0u8); side];
