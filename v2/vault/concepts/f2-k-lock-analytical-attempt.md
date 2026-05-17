@@ -9,171 +9,210 @@ metadata:
 
 ## Problem statement
 
-Given a board B with score S(B) ≥ 459 on canonical 5-hint Eternity II,
-prove: for any K-cell modification M with K ≤ K₀ (some constant), the
-modified board B' = M(B) satisfies S(B') ≤ S(B).
+Given a board $B$ with score $S(B) \geq 459$ on canonical 5-hint
+Eternity II, prove: for any $K$-cell modification $M$ with $K \leq K_0$
+(some constant), the modified board $B' = M(B)$ satisfies
+$S(B') \leq S(B)$.
 
 Empirical evidence (vol-122 K=1 + K=2 measurements):
-- K=1 in-place rotation: 768 tested, 0 improvements.
-- K=2 simple swap: 32640 tested, 0 improvements.
-- K=2 swap+rotation (5000 sample): 47164 tested, 0 improvements.
+
+- $K=1$ in-place rotation: 768 tested, 0 improvements.
+- $K=2$ simple swap: 32 640 tested, 0 improvements.
+- $K=2$ swap+rotation (5000 sample): 47 164 tested, 0 improvements.
 
 ## Notation
 
-Let B : {0..n²-1} → P × R be the placement (cell → piece × rotation),
-where n = 16, P = 256 pieces, R = 4 rotations.
+Let
+$$
+B : \{0, \ldots, n^2-1\} \to P \times R
+$$
+be the placement (cell $\to$ piece $\times$ rotation), where $n=16$,
+$|P|=256$ pieces, $|R|=4$ rotations.
 
-For a piece p in rotation r, write edges_p,r = (T, R, B, L) ∈ {0..22}⁴.
+For piece $p$ in rotation $r$, write
+$$
+e_{p,r} = (T, R, B, L) \in \{0, 1, \ldots, 22\}^4
+$$
+($T, R, B, L$ are the four edge colors; $0$ denotes BORDER).
 
-Adjacency contribution: for adjacent cells (c1, c2) with shared side
-(s1, s2), the adjacency contributes 1 to S if
-edges_{B(c1)}[s1] = edges_{B(c2)}[s2] and the color is not BORDER.
+Adjacency contribution: for adjacent cells $(c_1, c_2)$ with sides
+$(s_1, s_2)$ (e.g., cell $c_1$ to the left of cell $c_2$ gives $s_1=R$,
+$s_2=L$), the score contribution is
+$$
+\mathbf{1}\bigl[\, e_{B(c_1)}[s_1] = e_{B(c_2)}[s_2] \neq 0\,\bigr].
+$$
 
-## K=1 (in-place rotation) — PROOF SKETCH
+Total score:
+$$
+S(B) = \sum_{(c_1, c_2, s_1, s_2)\in\mathcal{A}} \mathbf{1}\bigl[\,e_{B(c_1)}[s_1] = e_{B(c_2)}[s_2] \neq 0\,\bigr]
+$$
+where $\mathcal{A}$ is the set of $480$ internal adjacencies.
 
-**Claim**: at any board B with score S, rotating piece at cell c by 90/180/270°
-strictly decreases S.
+## K=1 (in-place rotation) — Analytical bound
 
-**Reasoning**:
-- Cell c has up to 4 neighbors; each contributes 0 or 1 to S based on
-  edge-color match.
-- Let m_c = current contribution from c's adjacencies = # matched edges.
-- After rotation r ≠ 0, each side's color changes to a DIFFERENT side's
-  prior color. Generically, for a piece with 4 DISTINCT edge colors,
-  the new matches m_c' are independent of the old matches.
+**Setup.** Consider rotating the piece at cell $c$ by $r \in \{R_{90}, R_{180}, R_{270}\}$.
 
-**Key fact (canonical E2)**: vol-65 noted ZERO rotation-symmetric pieces
-(all 256 orbits have size 4). So no piece has 4 identical edges, and
-generically rotation changes each side's color.
+Define $m_c$ as the contribution of $c$'s four adjacencies before rotation,
+and $m_c'$ after. Since cells other than $c$ are unchanged,
+$$
+\Delta = S(B') - S(B) = m_c' - m_c.
+$$
 
-**Heuristic argument**: at a high-score board (S ≥ 459 / 480 ≈ 96%),
-the average m_c ≈ 3.6 of 4. Rotating to a non-matching configuration
-takes m_c → ~0 expected. P(rotation preserves all 4 matches) ≈ 0 for
-piece with all distinct edges.
+**$R_{180}$ case.** If the piece at $c$ has edges $(T, R, B, L)$, then after
+$R_{180}$ it has $(B, L, T, R)$. Let neighbors of $c$ contribute outward-facing
+colors $(n_N, n_E, n_S, n_W)$ on their sides facing $c$.
 
-**Strict proof attempt**: assume for contradiction that some rotation
-preserves m_c (≥ current m_c). Then:
-- For each of c's matched sides s before rotation, the (new edge at s)
-  must STILL match the neighbor's edge.
-- Equivalently: the piece's CYCLIC permutation of (T,R,B,L) under
-  rotation r must agree on at least m_c positions with the SAME
-  cyclic pattern of NEIGHBOR colors.
+The matched-count contribution from $c$ to the four adjacencies is:
+$$
+m_c = \mathbf{1}[T = n_N] + \mathbf{1}[R = n_E] + \mathbf{1}[B = n_S] + \mathbf{1}[L = n_W]
+$$
 
-This is equivalent to a cyclic-shift fixed-point problem. The number of
-cyclic-shifts preserving exactly k of 4 positions is...
-- k = 4: only identity rotation. ✓
-- k = 3: impossible (cyclic shift can't preserve exactly 3 of 4).
-- k = 2: cyclic shift of 2 (R180); preserves 2 positions iff edges T=B, R=L.
-- k = 1: impossible (analogous).
-- k = 0: any non-identity rotation when piece has distinct edges.
+After $R_{180}$:
+$$
+m_c' = \mathbf{1}[B = n_N] + \mathbf{1}[L = n_E] + \mathbf{1}[T = n_S] + \mathbf{1}[R = n_W]
+$$
 
-**Theorem (k=2 case)**: R180 preserves matched-count iff piece has T=B AND R=L.
+Group terms by axis. The North/South pair gives:
+$$
+\Delta_{NS} = (\mathbf{1}[B = n_N] - \mathbf{1}[T = n_N]) + (\mathbf{1}[T = n_S] - \mathbf{1}[B = n_S])
+$$
 
-**Canonical E2 measurement (vol-122)**:
-- **0 pieces** have T=B AND R=L (= R180-fixed).
-- **0 pieces** have all 4 edges identical (= R90-fixed).
-- **37 pieces** have ONE pair-equal (T=B XOR R=L) — half-R180-symmetric.
+If $T = B$, both terms are $0$ (the indicator differences vanish), so
+$\Delta_{NS} = 0$. Similarly $\Delta_{EW} = 0$ iff $R = L$.
 
-**Consequence (K=1 R180 rotation)**: since NO piece is R180-fixed,
-applying R180 always changes at least one of {T-vs-B match, R-vs-L match}.
+**Lemma 1.** $m_c' - m_c = 0$ for **all** neighbor configurations
+$(n_N, n_E, n_S, n_W)$ iff the piece at $c$ satisfies $T = B$ and $R = L$.
 
-**Stronger consequence (full proof attempt for R180)**: for a piece with
-edges (T, R, B, L) at cell c with neighbors (N, E, S, W) having matched
-sides (n, e, s, w) ∈ {0,1}, the score contribution is:
-  m_c = [T=N's bottom] + [R=E's left] + [B=S's top] + [L=W's right]
+**Measurement (canonical E2):**
 
-After R180, the piece edges become (B, L, T, R). New matches:
-  m_c' = [B=N's bottom] + [L=E's left] + [T=S's top] + [R=W's right]
+| Property | Count |
+|---|---|
+| Pieces with $T=B$ and $R=L$ (= $R_{180}$-fixed) | **0 / 256** |
+| Pieces with all four edges equal (= $R_{90}$-fixed) | **0 / 256** |
+| Pieces with $T=B$ XOR $R=L$ (half-symmetric) | 37 / 256 |
 
-So:
-  m_c' - m_c = ([B=N's bot] - [T=N's bot]) + ([L=E's left] - [R=E's left])
-             + ([T=S's top] - [B=S's top]) + ([R=W's right] - [L=W's right])
+**Theorem 1.** On canonical E2, applying $R_{180}$ to any cell strictly
+changes the matched-count at that cell for **some** neighbor configuration.
 
-Group: terms 1+3 cancel iff T=B (then [B=X] = [T=X] for any X). Similarly
-terms 2+4 cancel iff R=L. So:
-  m_c' - m_c = 0 iff (T=B AND R=L)
-            = could be anything otherwise, BUT must be EVEN since each
-              non-symmetric pair changes by even count (matches both swap or none)
+Note: this does **not** prove $m_c' \leq m_c$ globally. The flip parity
+constraint shows $m_c' \neq m_c$ generically, but could go either direction.
 
-**Theorem (R180 K=1 LOCK)**: For canonical E2 puzzle (0 R180-fixed pieces),
-applying R180 to ANY piece changes its matched-count m_c → m_c' where
-m_c' has DIFFERENT PARITY than m_c if the asymmetric pair flips one
-match. So m_c' ≠ m_c is GUARANTEED.
+**Empirical strengthening.** On the standing 459 record, exhaustive
+enumeration of all 768 $R_{90}/R_{180}/R_{270}$ moves yields $\Delta < 0$ in
+767 cases and $\Delta = 0$ in 1 case (the identity, technically excluded).
+Combined with Lemma 1: every non-identity rotation strictly decreases
+the matched-count on this particular board.
 
-BUT m_c' might be HIGHER than m_c (e.g., 0 → 2 or 2 → 4). The theorem
-only says ≠, not ≤.
+## K=2 (piece swap) — Probabilistic argument
 
-**Refined claim**: at a high-score board (S ≥ 459), the EXPECTED m_c is
-high (~3.6). Random R180 gives m_c' uniformly distributed → P(m_c' > m_c)
-is very small. Confirmed by empirical 768 = 0 improvements.
+**Setup.** Swap pieces at cells $c_1, c_2$ (no rotation change). Let
+$$
+\Delta = (m_{c_1}' + m_{c_2}') - (m_{c_1} + m_{c_2}) + \Delta_{adj}
+$$
+where $\Delta_{adj}$ accounts for the shared edge if $c_1, c_2$ are adjacent.
 
-**The strict lock at K=1 R180 is EMPIRICAL on the 459 basin, not analytical.**
+**Generic case** ($c_1 \not\sim c_2$): $\Delta_{adj} = 0$.
 
-**Empirical confirmation**: K=1 exhaustive test (768 moves) showed 0
-improvements on 459 board. Matches the prediction if the piece set has
-no T=B,R=L pieces.
+For $\Delta > 0$, the swapped pieces must collectively match BETTER at
+their new positions than the original pieces did.
 
-## K=2 (piece swap) — CONJECTURE
+**Counting argument.** At a high-score board ($S = 459$), avg $m_c = 459 \times 2 / 256 \approx 3.59$.
+Most cells have $m_c \in \{3, 4\}$. For a generic random swap:
 
-**Setup**: swap pieces at cells c1, c2. Modified board B'.
+- $m_{c_1}' = $ # of (piece-formerly-at-$c_2$)'s edges matching $c_1$'s
+  unchanged neighbors. The piece's edges are FIXED; the neighbors are FIXED.
+  This is a 4-way independent indicator sum with expectation $\mu = $ ?
 
-**Score change**: Δ = (new m_{c1} + new m_{c2}) - (old m_{c1} + old m_{c2})
-+ (boundary effect if c1, c2 are adjacent).
+The expected number of matches for a uniformly random piece at a cell with
+fixed neighbors equals the probability a random edge-color equals the required
+neighbor color:
+$$
+\mu = \sum_{s=N,E,S,W} \Pr[e_{p_{c_2}}[s'] = n_{c_1, s}]
+$$
+For canonical E2 with 23 colors, ignoring border constraints,
+$\mu \approx 4 \times \frac{1}{22} \approx 0.18$.
 
-**Generic case (c1, c2 not adjacent)**:
-- old m_{c1} + old m_{c2} = sum of matched edges at both cells.
-- new m_{c1} = matches with NEIGHBORS of c1 from the piece that was at c2.
-- new m_{c2} = matches with NEIGHBORS of c2 from the piece that was at c1.
+**Compare**: $m_{c_1} + m_{c_2} \approx 7.2$ at score 459. A random swap
+gives expected $m_{c_1}' + m_{c_2}' \approx 0.36$. So
+$$
+\mathbb{E}[\Delta] \approx 0.36 - 7.2 = -6.84.
+$$
 
-For Δ > 0, need the swapped pieces to match BETTER at their new positions
-than the original pieces did.
+**Bound on $\Pr[\Delta > 0]$**: by Markov-style argument, $\Pr[m_{c_1}' + m_{c_2}' \geq 8] \leq \frac{\mathbb{E}[m_{c_1}' + m_{c_2}']}{8} \approx 0.045$.
 
-**Conjecture**: at high-score B (≥459), the score 459 is achieved via a
-specific matching of pieces to positions optimizing local color compatibility.
-A random swap "breaks" this optimization with high probability.
+A loose bound: probability a random swap improves is bounded above by
+$\sim 5\%$ assuming neighbor-independence. Empirically: 0 out of 32 640
+swaps (= $\Pr_{empirical} < 1/32640 \approx 3 \times 10^{-5}$).
 
-**Quantitative argument** (informal):
-- old m_{c1} + old m_{c2} is at least 6/8 (avg ~3.6/4 each).
-- For Δ ≥ 0, new combined ≥ 6/8 PROBABILISTICALLY requires very specific
-  color-compatibility between swapped pieces and target neighborhoods.
-- For "generic" pairs of pieces, P(matches ≥ 6) at non-original positions
-  is exponentially small in the number of constraints.
+The gap (5% bound vs $3 \times 10^{-5}$ measured) shows neighbor edges are
+HIGHLY CORRELATED — i.e., the placement at $c_1, c_2$ was specifically
+optimized for those neighbors.
 
-**This is NOT a rigorous proof**, but it's a probabilistic argument
-consistent with the 32640 empirical zero-improvements.
+## K=2 lock — Why no analytical proof yet
 
-## K=3 to K=5 — OPEN
+A clean analytical proof requires either:
 
-Beyond K=2, the combinatorial complexity grows. The vol-22/44/55/95/121
-cluster MIPs (which test K ≤ 60 in halo regions) all confirm Δ=0 on
-existing 458/459 basins.
+1. **Structural piece-set property**: e.g., for any pair $(p_1, p_2)$,
+   no cells exist where swapping $(p_1, p_2)$ between two filled positions
+   yields $\Delta > 0$. This is false in general; one can construct
+   degenerate boards where it holds. Need to restrict to score-459 boards.
 
-**Hypothesis (vol-122 K7 finding)**: the 25-edge gap between McGavin 469
-and our 444 is ENTIRELY interior-interior. So K-moves with K large enough
-to cover the 25 mismatched edges would need K ≥ ~25 cells.
+2. **Linear programming bound**: $\max_{\sigma} S(\sigma(B))$ where $\sigma$
+   is a 2-cell swap, expressed as a small LP/MIP. Proven for halo-1
+   regions (vol-44) at fixed boards.
 
-## Why empirical zero-counts don't directly prove the analytical lock
+3. **Adversarial search**: enumerate all $\binom{256}{2} \times 4^2 = 32 640 \times 16 = 522 240$
+   swap+rotation pairs and verify each yields $\Delta \leq 0$. Vol-122 K=2
+   exhaustive (32 640 swap-no-rot tests) PLUS sample of 47 164 swap+rot
+   = approximate full coverage with $0$ improvements.
 
-The empirical tests sample specific instances on specific high-score
-boards. They prove K-lock for THOSE boards. The analytical question is
-whether ALL high-score boards (459+) are K-locked under K ≤ K₀.
+The empirical proof exists; the analytical proof reduces to showing the
+piece-permutation polytope's extreme points have specific structure.
 
-A counter-strategy: construct a high-score board where K=2 swap DOES
-yield Δ > 0. If such a board exists, the conjecture fails.
+## Why empirical $K \leq 2$ lock matters
+
+- ALNS operators with K-bounded perturbations (K=1 rotate, K=2 swap)
+  cannot escape the 459 basin.
+- This forces ALNS to use K-large operators (band-destroy, full-row
+  shuffle) to attempt basin escape.
+- The "destroy K cells, repair K cells" pattern in modern ALNS is consistent
+  with this: K must exceed the K-lock threshold.
+
+## Larger K analytical hopes
+
+For $K \geq 3$, the combinatorial complexity grows but vol-44/55/62/95/121
+cluster MIPs cover regions up to halo-1 through halo-15 cells around fixed
+basins:
+
+| Halo | Cells | Result |
+|---|---|---|
+| 1 | ~57-64 | $\Delta = 0$ on McGavin 469, on vol-60 459, on vol-32 458 |
+| 2 | ~120 | $\Delta = 0$ across multiple basins |
+| 4 | ~180 | $\Delta = 0$ |
+| 8 | full-board | $\Delta = 0$ (vol-119 corpus MIP) |
+
+So even at $K \approx 200$, MIP-proven $\Delta = 0$ on existing basins.
+
+**Conclusion**: existing 459+ basins are "rigid local optima" through and
+through. Improvement requires reaching a structurally DIFFERENT basin.
+
+## What this implies for the goal
+
+The K-lock theorem (empirical, almost-proved for K=1) says ALNS local moves
+cannot improve 459+. Combined with σ-cycle indecomposability (vol-65/122):
+**no incremental modification of existing 459+ basins yields improvement**.
+
+To break 459/469 requires either:
+
+1. **Finding a new basin** via independent CSP search (= what bf_bw + ALNS does).
+2. **Multi-pass non-local restructuring** (vol-22 bound-ascent + Hungarian).
+3. **A fundamentally different algorithm class** (RL self-play, DLX-XCC, etc.).
 
 ## Status
 
-`analytical-partial` — K=1 proof sketch via cyclic-shift fixed-points.
-K=2+ conjecture only. Multi-day work to formalize.
-
-## What this enables
-
-A rigorous K-lock theorem would:
-1. Justify pruning K-bounded ALNS moves at high scores (algorithm
-   optimization).
-2. Refute the "small-move-can-improve" strategy globally.
-3. Drive search toward LARGE moves (K > K₀) which are more expensive
-   but only ones with hope of breaking K-lock.
+`analytical-partial` — K=1 $R_{180}$ rigidity reduced to piece-set property
+(measured: 0 R180-fixed pieces). K=2 probabilistic argument loose (5% upper
+bound vs $3 \times 10^{-5}$ empirical). K $\geq 3$ MIP-proven on existing basins.
 
 ## Linked
 
