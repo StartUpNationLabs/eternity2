@@ -534,6 +534,58 @@ No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 1. Adjacency-pair MIP for tighter UB (vs vol-44 per-color = 480).
 2. Pair-supply CSP propagator (extends K3 CFCC to pair level).
 
+### K10. Kuramoto coupled oscillator dynamics — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** Model 256 pieces × 4 sides as Kuramoto oscillators on a 16×16 grid. Adjacent oscillators couple with strength 1 iff their face colors match. Find sync configurations via Kuramoto dynamics (continuous-time gradient descent on the Kuramoto Hamiltonian).
+
+**Why genuinely different.** Continuous-relaxation physics — different from discrete CSP/MIP/ALNS. The DYNAMICS may visit configurations CSP can't reach.
+
+**Concrete first step.** Python PoC on 4×4/c4 — does the system sync to a global optimum?
+
+**EV.** Medium-low. Continuous-relaxation usually loses information for discrete combinatorial.
+
+**Effort.** 1 day.
+
+### K11.1. Wave-mechanics Hamiltonian — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** Each color = a frequency ω_c. Each piece = a 4-port scattering center. Adjacent edges coupled by $J \cos(ω_{c_i} - ω_{c_j})$. Eigenmodes of the Hamiltonian on a partial board reveal "soft" directions where piece swaps lower energy.
+
+**Concrete first step.** Build the 256×256 piece-piece compatibility Hamiltonian. Eigendecompose. Inspect lowest-eigenvalue eigenvectors for piece-swap candidates.
+
+**Why different.** Continuous-spectral analysis of a piece-piece graph is novel for E2. (Vol-122 J3 did spectral on the COUPLING graph; here we add the energy Hamiltonian of the assigned configuration.)
+
+**Effort.** 1 day. Spec page: [[../concepts/k11-cross-domain-brainstorm]] section 1.
+
+**EV.** Medium. The wave-packet dynamics (vol-122 K10 cousin) is the novel hook.
+
+### K11.2. Optical transmission channel rank — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** Treat each color as a wavelength. Matched edges transmit, mismatched edges reflect. Compute the 16×16 transmission channel matrix $T_{ij}$ between border entries. Measure its RANK and CONDITION NUMBER as a board signature.
+
+**Why different.** Existing methods sum scalar mismatches; channel rank uses GLOBAL transmission paths. Could discriminate 458 (2 big mismatch clusters) from 459 (4 small clusters).
+
+**Concrete first step.** Implement ray-tracing through matched-edge graph for the standing 459, vol-32 458, J1 boards. Compare channel rank. ~1h Python.
+
+**EV.** Medium-high. Channel rank is a NEW scalar feature; if it correlates strongly with score, it's a new scoring function.
+
+**Effort.** 1h PoC + 1 day analysis.
+
+**Concept**: [[../concepts/k11-cross-domain-brainstorm]] section 2.
+
+### K11.4. Information-theoretic compression scoring — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** Compute the LZ77 / arithmetic-coding compression length of a board's piece-id sequence. Hypothesis: high-score boards COMPRESS BETTER because they have more local structure.
+
+**Why different.** Information-theoretic complexity is independent of edge-matching metric. Provides an orthogonal signal.
+
+**Concrete first step.** 30 min Python: for each candidate board, compute LZ77 compression ratio of row-major + col-major + spiral-major piece sequences.
+
+**EV.** Medium-low. Compression may correlate with structural rigidity but might not discriminate fine score differences.
+
+**Effort.** 30 min - 1 day.
+
+**Concept**: [[../concepts/k11-cross-domain-brainstorm]] section 4.
+
 ### Open slot for next invention
 
 - (placeholder)
