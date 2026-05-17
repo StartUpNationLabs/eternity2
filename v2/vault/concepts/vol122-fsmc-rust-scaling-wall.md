@@ -91,9 +91,25 @@ MaxScore CSP** (rather than exhaustion-skip). Worth a follow-up.
 - 5×5–8×8: **CONFIRMED WIN** (FSMC enables solving previously
   unsolvable instances).
 - 10×10+: **SCALING WALL** — pure FSMC doesn't help.
-- Net assessment: **partial success**. The IDEA is sound but the
-  CANONICAL ENCODING needs work. The 5×5–8×8 wins are publishable
-  in their own right (a recipe for low-color jigsaw CSPs).
+- **Canonical 16×16/22c**: hit rate = **0.00%** after 11M states in 60s.
+  Search reaches d203 vs d207 baseline = SLOWER and SHALLOWER. PIH
+  ALSO has 0% hit rate at canonical scale. Even color-supply collisions
+  are vanishingly rare because the supply space is too high-dimensional.
+- Net assessment: **negative at canonical scale**. The IDEA is sound
+  but cannot solve E2 directly. The 5×5–8×8 wins are publishable in
+  their own right (a recipe for low-color jigsaw CSPs).
+
+## Why no convergence at canonical
+
+For canonical 16×16/22c, the color-supply vector has 22 dimensions,
+each ranging 0..50+. State space ≈ 50^22 ≈ 10^37. With 11M states
+visited, P(collision) ≈ 11M / 10^37 ≈ 0.
+
+So PIH's compression of piece-bitset (256-dim) into color-supply (22-dim)
+ISN'T ENOUGH at canonical. The remaining 22 dims are still too many.
+
+Possible escape: **per-color-MOD-K hash** where supply is bucketed into
+coarser bins (e.g., supply // 4). Trades correctness for collision rate.
 
 ## Linked
 
