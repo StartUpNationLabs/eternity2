@@ -75,6 +75,8 @@ struct Searcher {
     partial_frontier_k: usize,
     /// If true, don't include piece-bitset in hash.
     frontier_only: bool,
+    /// PIH: use remaining-color-supply multiset instead of piece-bitset.
+    color_supply_key: bool,
     stats: Stats,
     max_nodes: u64,
     time_limit: std::time::Duration,
@@ -82,7 +84,7 @@ struct Searcher {
 }
 
 impl Searcher {
-    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool, partial_frontier_k: usize, frontier_only: bool) -> Self {
+    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool, partial_frontier_k: usize, frontier_only: bool, color_supply_key: bool) -> Self {
         let side = puzzle.width as usize;
         let n_cells = side * side;
         let n_pieces = puzzle.pieces().len();
@@ -107,6 +109,7 @@ impl Searcher {
             use_memo,
             partial_frontier_k,
             frontier_only,
+            color_supply_key,
             stats: Stats { nodes: 0, cache_hits: 0, cache_misses: 0, best_depth: 0, nodes_saved_estimate: 0 },
             max_nodes,
             time_limit: std::time::Duration::from_secs_f64(time_secs),
@@ -156,7 +159,26 @@ impl Searcher {
 
     fn state_hash(&self, depth: usize) -> u64 {
         let mut h: u64 = 0;
-        if !self.frontier_only {
+        if self.color_supply_key {
+            // Path-Independent Hash: use REMAINING-COLOR-SUPPLY multiset
+            // instead of placed-piece-bitset. Two states with same
+            // remaining-color-multiset + same frontier-colors collide.
+            // Hash = sum of count-of-each-color-still-available * random_per_color.
+            let mut color_counts = vec![0u32; self.max_color as usize + 1];
+            for pid in 0..self.n_pieces {
+                if !self.used_pids[pid] {
+                    // Count colors on each edge of UNUSED piece (any rotation = same multiset)
+                    for s in 0..4 {
+                        color_counts[self.pieces_rot[pid][0][s] as usize] += 1;
+                    }
+                }
+            }
+            for (c, &count) in color_counts.iter().enumerate() {
+                // Mix count and color into hash via a position-independent multiplier
+                let color_zob = self.zob.piece_hash[c.min(self.n_pieces - 1)];
+                h = h.wrapping_add(color_zob.wrapping_mul(count as u64));
+            }
+        } else if !self.frontier_only {
             for pid in 0..self.n_pieces {
                 if self.used_pids[pid] {
                     h ^= self.zob.piece_hash[pid];
@@ -244,6 +266,7 @@ fn main() {
     let mut use_memo = true;
     let mut partial_frontier_k: usize = 0;
     let mut frontier_only = false;
+    let mut color_supply_key = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -253,6 +276,7 @@ fn main() {
             "--no-memo" => use_memo = false,
             "--partial-frontier-k" => partial_frontier_k = args.next().unwrap().parse().unwrap(),
             "--frontier-only" => frontier_only = true,
+            "--color-supply-key" => color_supply_key = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -260,9 +284,9 @@ fn main() {
     let (puzzle, _hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     println!("puzzle: {} side={} pieces={} color_count={}",
         puzzle_path.display(), puzzle.width, puzzle.pieces().len(), puzzle.color_count);
-    println!("memo: {} partial_k: {} frontier_only: {}", use_memo, partial_frontier_k, frontier_only);
+    println!("memo: {} partial_k: {} frontier_only: {} color_supply_key: {}", use_memo, partial_frontier_k, frontier_only, color_supply_key);
 
-    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo, partial_frontier_k, frontier_only);
+    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo, partial_frontier_k, frontier_only, color_supply_key);
     let t = Instant::now();
     let solved = s.search(0);
     let elapsed = t.elapsed();
