@@ -129,24 +129,42 @@ could fix those cells and propagate. Marginal contribution likely.
 
 ## Priority recommendation (METHOD-finding, not record-breaking)
 
-Days 1-7: **Complete W1 canonical-scale validation**.
-  - Tune chi (16 → 64 → 256+ on cloud).
-  - If converges + marginals correlate with truth → big win.
-  - Effort: 7 days CPU + 2 days cloud GPU at chi=256+.
+UPDATED with vol-123 empirical findings.
 
-Days 8-14: **Build W2 Survey Propagation on E2 factor graph**.
-  - Encode E2 CNF via sat-encoder.
-  - Adapt thibsej/SurveyPropagation to consume our CNF.
-  - Test SP convergence near canonical's threshold.
+### Vol-123 results
+  - **W1 PEPS-Lagrangian**: solves 4×4 (1s) and 6×6 (5min) completely.
+    Canonical 16×16 OOM at chi=32 on laptop.
+  - **W2 SP-Lagrangian**: REFUTED. BP zeros out pieces; Lagrangian can't recover.
+  - **W2 BP (plain) + decimation**: WORKS at canonical scale in ~15 min.
+    Solves 4×4 in 0.1s. Canonical signals are weak (mean_max_prob = 0.04).
+  - **W2 BP-confident** (threshold ≥0.5): only 5 cells pinned on canonical
+    (the hints). BP signals too weak for confident decimation.
 
-Days 15-21: **Build W3 Kovalsky-Glasner Vandermonde-LP**.
-  - Implement Julia or Python prototype.
-  - Validate on 4×4, 8×8.
-  - Scale to canonical.
+### Strategy revision
 
-Days 22-28: **F1 hybrid pipelines**.
-  - Best of W1/W2/W3 marginals → CSP value-order → CSP solve.
-  - This is the path most likely to actually produce a solved board.
+Days 1-3: **Cloud W1 canonical** at chi=128-256 with 64-128 GB RAM.
+  - Single Lagrangian dual round.
+  - Output: per-cell-piece-rotation marginals JSON.
+  - If marginals are stronger than W2 BP (mean_max_prob > 0.1 ideally),
+    HUGE WIN.
+  - Cost: ~$50-100 cloud.
+
+Days 4-7: **BP-decimation canonical full run, compare to W1 marginals**.
+  - W2 BP-decim should produce ~complete partial board in 15-30 min.
+  - W1 marginals (once dumped) compared per-cell to BP marginals.
+  - If W1 strongly disagrees with BP on cells, W1 likely correct.
+
+Days 8-14: **F1 hybrid pipeline at canonical scale**.
+  - W1 marginals → CSP solver-engine as value-order.
+  - Run on canonical 16×16. Compare to vol-12 BP baseline (18.84% reduction).
+  - Target: ≥ 50% interior reduction.
+
+Days 15-21: **W3 Kovalsky-Glasner Vandermonde-LP** (different relaxation).
+  - May give marginals that complement W1.
+
+Days 22-28: **Backtracking-SP + cluster-aware BP**.
+  - If pure BP works but signals weak, backtracking-SP (Marino-Parisi 2016)
+    may unlock structure.
 
 If any path produces marginals or partial that exceed 469 → focus there.
 
