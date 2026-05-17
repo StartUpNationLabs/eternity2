@@ -22,37 +22,56 @@ treats the binary string as a DIRECT u8 color value (`int(s, 2)`).
 
 Corrected via `scripts/e2_io.py` (new uniform Python loader matching Rust).
 
-## The 7 metrics (CORRECTED)
+## The 7 metrics (FULLY CORRECTED)
 
 | # | Metric | Lens | 459 | 457 b.s10 | Winner |
 |---|---|---|---:|---:|:---:|
 | 1 | Algebraic connectivity λ_2 | Graph spectral | 0.0339 | **0.0353** | 457 b.s10 |
 | 2 | Mismatch-zlib (mz) | Info theory | **41** | 46 | 459 |
-| 3 | FFT err_1% | Holographic | 0.1476 | 0.1447 (needs re-verify) | inconclusive |
-| 4 | K=0 cells | Foam | 237 | 237 (needs re-verify) | tied |
-| 5 | K=2 cells | Foam | 3 | 1 (needs re-verify) | inconclusive |
-| 6 | Corner R_eff | Electrical | 3.5601 | 3.4581 (needs re-verify) | inconclusive |
-| 7 | #faces | Topology | 206 | 206 (needs re-verify) | tied |
+| 3 | FFT err_1% | Holographic | **0.2833** | 0.3004 | 459 |
+| 4 | K=0 foam cells | Foam | **221** | 214 | 459 |
+| 5 | K=2 cells (lower better) | Foam | 5 | **4** | 457 b.s10 |
+| 6 | Corner R_eff (lower better) | Electrical | 3.8054 | **3.5917** | 457 b.s10 |
+| 7 | #faces | Topology | **192** | 187 | 459 |
 
-## Honest revised conclusion
+## Honest conclusion
 
-After parser correction, only 2 of 7 metrics are confirmed with the
-new parser:
-- λ_2: 457 b.s10 (0.0353) > 459 (0.0339). **Confirmed**.
-- mz: 459 (41) < 457 b.s10 (46). **Reversed from earlier claim**.
+After parser correction, the picture is MIXED, not dominant:
+- **459 wins on 4 metrics**: mz, err_1%, K=0, #faces.
+- **457 b.s10 wins on 3 metrics**: λ_2, K=2, R_eff.
 
-The remaining 5 metrics (3, 4, 5, 6, 7) were computed with the old parser
-and may have similar drift. **They need re-verification with the
-corrected loader.**
+Neither board dominates structurally. They have COMPLEMENTARY strengths:
+- 459 is better at MATCHED-EDGE FABRIC (mz, K=0, #faces, FFT
+  reconstruction).
+- 457 b.s10 is better at GLOBAL CONNECTIVITY (λ_2, R_eff).
 
-## Surviving finding
+## What this MEANS
 
-457 b.s10 has HIGHER algebraic connectivity than 459. This part of the
-finding holds. But the "457 b.s10 dominates 459 on 6 of 7 metrics" claim
-was an artifact of the parser bug.
+The 459 record represents a basin with TIGHTER LOCAL MATCHING (more
+matched-edge unit squares, more cells with all 4 edges matched). The
+457 b.s10 represents a basin with STRONGER LARGE-SCALE STRUCTURE
+(better global connectivity, fewer 2-degree junctions in mismatch).
 
-The cross-domain methodology is still sound; the IMPLEMENTATIONS need
-to be checked against the canonical Rust loader.
+These are DIFFERENT modes of "structural goodness":
+- 459's mode: pack as many local matches as possible, even if global
+  connectivity is weaker.
+- 457 b.s10's mode: maintain global cohesion at the cost of some
+  matched-edge density.
+
+To find a 460+ board, we'd want a basin that combines BOTH modes:
+high local matching AND high global connectivity. Neither current
+record achieves this simultaneously.
+
+## Methodological lesson
+
+The Python parser bug caused us to OVERSTATE the 457 b.s10's advantage.
+With corrected encoding (e2_io.py), the cross-domain story is more
+nuanced: distinct basin types with different structural strengths.
+
+**The cross-domain methodology is still sound**: 7 metrics from 7 lenses
+DID reveal meaningful structural distinctions. The "457 dominates"
+claim was bug-amplified; the underlying signal is "457 and 459 are
+different basin types".
 
 ## Action
 
