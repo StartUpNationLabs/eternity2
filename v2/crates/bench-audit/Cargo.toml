@@ -34,6 +34,10 @@ features = ["derive"]
 [dependencies.serde_json]
 version = "1"
 
+[dependencies.rusqlite]
+version = "0.32"
+features = ["bundled"]
+
 [dev-dependencies]
 criterion = { version = "0.5", default-features = false, features = ["html_reports", "cargo_bench_support"] }
 
@@ -271,3 +275,7 @@ path = "src/bin/mdf_fill.rs"
 [[bin]]
 name = "dump_pieces_by_id"
 path = "src/bin/dump_pieces_by_id.rs"
+
+[[bin]]
+name = "n1_corner_3x3_enum"
+path = "src/bin/n1_corner_3x3_enum.rs"
