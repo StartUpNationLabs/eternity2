@@ -1,0 +1,33 @@
+{
+  "source": "vol123_w2_bp_confident",
+  "threshold": 0.5,
+  "puzzle_size": 16,
+  "n_placed": 5,
+  "placement": [
+    {
+      "pos": 34,
+      "piece_id": 207,
+      "rotation": 1
+    },
+    {
+      "pos": 45,
+      "piece_id": 254,
+      "rotation": 1
+    },
+    {
+      "pos": 135,
+      "piece_id": 138,
+      "rotation": 0
+    },
+    {
+      "pos": 210,
+      "piece_id": 180,
+      "rotation": 1
+    },
+    {
+      "pos": 221,
+      "piece_id": 248,
+      "rotation": 2
+    }
+  ]
+}
