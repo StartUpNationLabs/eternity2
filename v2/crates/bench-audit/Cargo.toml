@@ -236,3 +236,7 @@ path = "src/bin/dlx_e2.rs"
 [[bin]]
 name = "fsmc_e2"
 path = "src/bin/fsmc_e2.rs"
+
+[[bin]]
+name = "j1_column_dp"
+path = "src/bin/j1_column_dp.rs"
