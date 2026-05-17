@@ -66,6 +66,17 @@ fn rotate_edges(e: [u8; 4], rot: u8) -> [u8; 4] {
     }
 }
 
+// Cheap deterministic hash for tiebreaking states. Different seeds produce
+// different tie-breaks → different J1 trajectories.
+#[inline]
+fn tie_hash(seed: u64, score: u32, top_pid: u16, top_rot: u8, bot_pid: u16, bot_rot: u8) -> u64 {
+    let mut h = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    h ^= (score as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    h ^= ((top_pid as u64) << 16 | (top_rot as u64)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    h ^= ((bot_pid as u64) << 16 | (bot_rot as u64)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    h
+}
+
 fn solve_band(
     pieces: &[[u8; 4]],
     side: usize,
@@ -77,6 +88,7 @@ fn solve_band(
     beam: usize,
     time_limit: std::time::Duration,
     flh_consider: usize,
+    seed: u64,
 ) -> Option<(u32, Vec<(u16, u8)>, Vec<(u16, u8)>)> {
     let n_pieces = pieces.len();
 
@@ -185,7 +197,8 @@ fn solve_band(
             });
         }
     }
-    col0_states.sort_unstable_by_key(|s| std::cmp::Reverse(s.score));
+    col0_states.sort_unstable_by_key(|s| (std::cmp::Reverse(s.score),
+        tie_hash(seed, s.score, s.top.pid, s.top.rot, s.bot.pid, s.bot.rot)));
     col0_states.truncate(beam);
     if col0_states.is_empty() { return None; }
     states_per_col.push(col0_states);
@@ -225,7 +238,8 @@ fn solve_band(
                 }
             }
         }
-        new_states.sort_unstable_by_key(|s| std::cmp::Reverse(s.score));
+        new_states.sort_unstable_by_key(|s| (std::cmp::Reverse(s.score),
+            tie_hash(seed, s.score, s.top.pid, s.top.rot, s.bot.pid, s.bot.rot)));
         new_states.truncate(beam);
         if new_states.is_empty() {
             eprintln!("  col {}: NO STATES (likely hint piece-supply infeasible)", j);
@@ -315,6 +329,7 @@ fn main() {
     let mut time_per_band_secs: u64 = 120;
     let mut flh_consider: usize = 100;
     let mut out_path = PathBuf::from("output/vol-122/j1_chain_hinted.json");
+    let mut seed: u64 = 0;
 
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -324,6 +339,7 @@ fn main() {
             "--time-per-band" => time_per_band_secs = args.next().unwrap().parse().unwrap(),
             "--flh-consider" => flh_consider = args.next().unwrap().parse().unwrap(),
             "--out" => out_path = PathBuf::from(args.next().unwrap()),
+            "--seed" => seed = args.next().unwrap().parse().unwrap(),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -406,6 +422,7 @@ fn main() {
             beam,
             std::time::Duration::from_secs(time_per_band_secs),
             flh_consider,
+            seed.wrapping_mul(1_000_003).wrapping_add(band_idx as u64),
         );
         let elapsed = t0.elapsed();
         let max_band = 3 * side - 2;
