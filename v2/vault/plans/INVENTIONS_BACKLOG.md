@@ -518,6 +518,22 @@ brute-force-find 469+ basins from many starting points.
 both exploit state equivalence; ZDD does it via shared subDAGs at the
 data-structure level, FSMC does it via cache lookups).
 
+### J7. Hint-Free Forced-Move Analysis (HFFM) — status: `analysis-done` (vol-122)
+
+**Idea.** For each adjacency color-pair (c1, c2), count L-shape supply
+(# pieces × rotations × sides that present c1-then-c2 on adjacent piece
+sides). For each piece, find color-pairs it UNIQUELY provides.
+
+**Done (vol-122).** 92/256 pieces (36%) uniquely provide at least one
+color pair. All 4 corner pieces and most edge pieces are in this set.
+No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
+
+**Concept**: [[../concepts/vol122-hffm-forced-pieces]].
+
+**Next steps.**
+1. Adjacency-pair MIP for tighter UB (vs vol-44 per-color = 480).
+2. Pair-supply CSP propagator (extends K3 CFCC to pair level).
+
 ### Open slot for next invention
 
 - (placeholder)
