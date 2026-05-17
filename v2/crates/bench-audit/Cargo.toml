@@ -240,3 +240,7 @@ path = "src/bin/fsmc_e2.rs"
 [[bin]]
 name = "j1_column_dp"
 path = "src/bin/j1_column_dp.rs"
+
+[[bin]]
+name = "j1_chain_dp"
+path = "src/bin/j1_chain_dp.rs"
