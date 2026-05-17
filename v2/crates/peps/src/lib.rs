@@ -1,50 +1,76 @@
-// W1 — PEPS with Lagrangian piece-uniqueness for Eternity II.
+// eternity2-peps — Rust port of W1 PEPS-Lagrangian for Eternity II.
 //
-// Rust port of the validated Python implementation in
-// scripts/w1_peps/peps_quimb_lagrangian.py.
+// Algorithm overview (validated in Python via scripts/w1_peps/):
 //
-// Algorithmic reference: vault/concepts/w1-peps-design-derivation.md
-// Empirical validation: vault/concepts/w1-peps-empirical-results.md
+// 1. Encode the puzzle as a 2D tensor network (PEPS):
+//    - Each cell (y, x) has a (K, K, K, K) tensor over (N, E, S, W) colors.
+//    - Cell tensor T_i[cN, cE, cS, cW] = sum over (pid, rot) such that
+//      piece(pid).rotated(rot).edges = (cN, cE, cS, cW), weighted by exp(-mu[pid]).
+//    - Border-fixed axes have only one non-zero entry at BORDER=0.
+//    - Adjacent cells share their bond axes (cell-i.E == cell-(i+1).W).
 //
-// This crate provides:
-//   - PepsContext: holds puzzle + lookup tables for efficient tensor builds.
-//   - build_cell_tensor: construct the (K,K,K,K) tensor for a given cell.
-//   - boundary_mps_contract: chi-truncated boundary-MPS contraction.
-//   - lagrangian_dual: iteratively enforce piece-uniqueness via Lagrangian.
-//   - sequential_piece_fixing: greedy cell-by-cell fixing.
+// 2. Run Lagrangian dual on piece-uniqueness:
+//    - Z(mu) = trace(PEPS(mu))
+//    - q_p = expected count of piece p across all cells
+//    - Update mu_p ← mu_p + eta * (q_p - 1)
+//    - Iterate until max |q_p - 1| < tol.
 //
-// The eventual goal: canonical 16×16 PEPS contraction in minutes/hours
-// instead of Python's projected days.
+// 3. Sequential piece-fixing:
+//    - At dual convergence, pick the (cell, piece, rot) with highest
+//      probability. Pin it.
+//    - Re-run dual with the pinned cell fixed.
+//    - Repeat until all cells fixed or budget exhausted.
+//
+// Reference:
+//   vault/concepts/w1-peps-design-derivation.md
+//   vault/concepts/w1-peps-empirical-results.md
+//   scripts/w1_peps/peps_quimb_lagrangian.py (validated Python)
+//
+// Phase 1 (this crate): full Rust port with parallel opened-cell contractions
+// via Rayon, OpenBLAS-backed SVD for chi-truncation.
 
-#![forbid(unsafe_code)]
+// Note: ndarray::s! macro uses unsafe internally, so we use deny instead of forbid.
+#![deny(unsafe_code)]
 
 use eternity2_core::{Puzzle, Rotation, BORDER};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub mod tensor;
 pub mod mps;
 pub mod lagrangian;
 
+/// Per-piece per-rotation signature: (N, E, S, W) colors.
+pub type Signature = [u8; 4];
+
+/// (piece_id, rotation) pair.
+pub type PieceRot = (u16, u8);
+
 /// Context for PEPS computations, shared across iterations.
 pub struct PepsContext {
     pub puzzle: Arc<Puzzle>,
-    /// piece_rotations[pid] = [(N, E, S, W); 4] for the 4 rotations
-    pub piece_rotations: Vec<[[u8; 4]; 4]>,
-    /// Reverse lookup: (N, E, S, W) -> list of (pid, rot)
-    pub signature_lookup: std::collections::HashMap<[u8; 4], Vec<(u16, u8)>>,
-    pub k_colors: usize, // K = n_interior_colors + 1 (BORDER = 0)
+    /// piece_rotations[pid] = [Signature; 4] for the 4 rotations
+    pub piece_rotations: Vec<[Signature; 4]>,
+    /// Reverse lookup: Signature -> list of (pid, rot)
+    pub signature_lookup: HashMap<Signature, Vec<PieceRot>>,
+    /// K = max interior color + 1 (BORDER=0; interior = 1..K-1).
+    pub k_colors: usize,
+    /// Convenience: puzzle.width as usize.
+    pub size: usize,
+    /// Convenience: puzzle.pieces().len()
+    pub n_pieces: usize,
 }
 
 impl PepsContext {
     pub fn new(puzzle: Arc<Puzzle>) -> Self {
         let n_pieces = puzzle.pieces().len();
         let mut piece_rotations = Vec::with_capacity(n_pieces);
-        let mut signature_lookup = std::collections::HashMap::new();
+        let mut signature_lookup: HashMap<Signature, Vec<PieceRot>> = HashMap::new();
         let mut max_color: u8 = 0;
 
         for (pid, piece) in puzzle.pieces().iter().enumerate() {
             let mut rotations = [[0u8; 4]; 4];
-            for rot_idx in 0..4 {
+            for rot_idx in 0..4u8 {
                 let rot = match rot_idx {
                     0 => Rotation::R0,
                     1 => Rotation::R90,
@@ -52,8 +78,8 @@ impl PepsContext {
                     _ => Rotation::R270,
                 };
                 let edges = piece.edges.rotated(rot).as_array();
-                let arr: [u8; 4] = [edges[0] as u8, edges[1] as u8, edges[2] as u8, edges[3] as u8];
-                rotations[rot_idx] = arr;
+                let arr: Signature = [edges[0] as u8, edges[1] as u8, edges[2] as u8, edges[3] as u8];
+                rotations[rot_idx as usize] = arr;
                 for &c in &arr {
                     if c != BORDER && c > max_color {
                         max_color = c;
@@ -61,27 +87,27 @@ impl PepsContext {
                 }
                 signature_lookup
                     .entry(arr)
-                    .or_insert_with(Vec::new)
-                    .push((pid as u16, rot_idx as u8));
+                    .or_default()
+                    .push((pid as u16, rot_idx));
             }
             piece_rotations.push(rotations);
         }
 
-        // K = max interior color + 1 (for BORDER=0) + 1 (because colors are 0..max)
-        // Actually our convention: BORDER=0, interior colors 1..=max_color.
-        // So K = max_color + 1.
         let k_colors = (max_color + 1) as usize;
+        let size = puzzle.width as usize;
 
         Self {
             puzzle,
             piece_rotations,
             signature_lookup,
             k_colors,
+            size,
+            n_pieces,
         }
     }
 
-    /// Get (N, E, S, W) edges for a piece + rotation, as u8 array.
-    pub fn piece_edges(&self, pid: u16, rot: u8) -> [u8; 4] {
+    /// Get (N, E, S, W) edges for a piece + rotation.
+    pub fn piece_edges(&self, pid: u16, rot: u8) -> Signature {
         self.piece_rotations[pid as usize][rot as usize]
     }
 }
@@ -92,17 +118,23 @@ mod tests {
     use eternity2_puzzle_io::load_puzzle;
     use std::path::Path;
 
+    fn data_path(rel: &str) -> std::path::PathBuf {
+        // Tests run from the crate dir; data is at v2's parent's data/.
+        // Try both relative paths.
+        let p = std::path::PathBuf::from("../../../data/generated").join(rel);
+        if p.exists() { return p; }
+        let p = std::path::PathBuf::from("data/generated").join(rel);
+        p
+    }
+
     #[test]
     fn loads_small_puzzle() {
-        let path = Path::new("../../../data/generated/size_4_colors_6_92cd6738.csv");
-        if !path.exists() {
-            // Try another relative path
-            return; // skip if data missing
-        }
-        let puzzle = load_puzzle(path).expect("load");
+        let path = data_path("size_4_colors_6_92cd6738.csv");
+        if !path.exists() { return; }
+        let puzzle = load_puzzle(&path).expect("load");
         let ctx = PepsContext::new(Arc::new(puzzle));
-        assert_eq!(ctx.puzzle.width, 4);
-        // K should be at least 2 (BORDER + at least 1 interior)
+        assert_eq!(ctx.size, 4);
         assert!(ctx.k_colors >= 2);
+        assert_eq!(ctx.n_pieces, 16);
     }
 }
