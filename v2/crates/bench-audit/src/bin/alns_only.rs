@@ -253,10 +253,13 @@ fn main() {
     let mut extra_pins: Vec<u32> = Vec::new();
     // Vol-108 T1 — oracle board path for SigmaCycleDestroy.
     let mut oracle_path: Option<PathBuf> = None;
+    // Vol-122 K11 — allow custom puzzle path (e.g. for hint-relaxation experiments).
+    let mut custom_puzzle: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--cp-board" => cp_board_path = PathBuf::from(args.next().unwrap()),
+            "--puzzle" => custom_puzzle = Some(PathBuf::from(args.next().unwrap())),
             "--alns-budget-ms" => alns_ms = args.next().unwrap().parse().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--ops" => ops_preset = args.next().unwrap(),
@@ -286,7 +289,7 @@ fn main() {
         eprintln!("--cp-board PATH required");
         std::process::exit(1);
     }
-    let puzzle_path = PathBuf::from("../data/puzzles/size_16_official_eternity.csv");
+    let puzzle_path = custom_puzzle.clone().unwrap_or_else(|| PathBuf::from("../data/puzzles/size_16_official_eternity.csv"));
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     let cp_board = load_cp_board(&cp_board_path);
     let (cp_m, _) = score_board(&puzzle, &cp_board);
