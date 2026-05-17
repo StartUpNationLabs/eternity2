@@ -22,7 +22,7 @@ from puzzle_loader import Puzzle, load_puzzle, BORDER
 
 
 def valid_rotations_for_cell(puzzle: Puzzle, pid: int, pos: int,
-                              strict_border: bool = True) -> list[int]:
+                              strict_border: bool = True) -> list[int]:  # noqa
     """All rotations r such that placing piece pid at pos with rotation r
     has BORDER on the right sides (if on perimeter).
 
