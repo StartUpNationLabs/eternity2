@@ -421,6 +421,54 @@ The veteran researcher's three intermediate targets:
 
 **Effort.** ~2 days.
 
+### J4. Per-Color Lagrangian Schedule (PCLS) — status: `refuted-as-discriminator` (vol-122)
+
+**Idea.** Combine vol-22's bound-ascent (color-priority Lagrangian multipliers on piece-uniqueness constraints) with a Blackwood-style *schedule of relaxations*, but the schedule is **per-color rather than per-side**. Each step:
+1. Solve the LP relaxation of the per-color matching polytope with current multipliers λ_k.
+2. Read LP shadow prices; identify the color with the **largest binding shadow price** (= the color most "blocking" further improvement).
+3. Relax piece-uniqueness for that color by 1 unit (allow one duplicate of one piece-color).
+4. Re-solve LP; lock the most-improved piece placement integer.
+5. Repeat until enough placements lock to form a CSP seed.
+
+**Why genuinely different from existing methods.**
+- **vs vol-22 bound-ascent**: vol-22 ascends a static bound; PCLS uses LP shadow prices to *adaptively choose which color to relax*. Vol-22 collapses score on full apply; PCLS locks integers incrementally.
+- **vs Blackwood schedule**: Blackwood relaxes specific edge constraints in a fixed order. PCLS relaxes piece-supply constraints, chosen by LP duality (no human-curated schedule).
+- **vs cluster MIP**: PCLS produces a SEED (partial board) via LP, not a final integer solution; MIP-locality is local, PCLS is global-LP-guided.
+
+**Concrete first step (PoC, 1-2 days).**
+1. Use the existing `border_lp_ub` LP infrastructure.
+2. Add λ_k multipliers on per-color piece-supply constraints (start λ=0).
+3. After each LP solve, identify k* = argmax shadow_price(supply_k).
+4. Add a binary lock variable for the largest fractional placement in color k*, fix it to 1.
+5. Re-solve. Repeat ≤ 60 iterations (≤ border-DP scale).
+6. Dump the locked placements as a CSP partial; pipe to `border_to_csp_fill`.
+
+**Why this might work where vol-22 didn't.**
+Vol-22 reaches LP score 473 but collapses on integer apply because it tries to apply ALL color relaxations at once. PCLS locks ONE integer per step, so the LP stays feasible at each step. The lock prevents the rollback that broke vol-22.
+
+**Linked.** [[../concepts/vol-22-bound-ascent]] (if exists), [[../concepts/inv3-border-dp-seed]], [[../concepts/inv-b4-hall-color-pair-refuted]].
+
+**EV.** Medium-high. Synthesizes vol-22's reach (LP UB 473) with vol-122 A1's locking discipline. Independent of any existing 459/469 basin → respects directive 1.
+
+**Effort.** 1-2 days PoC; 1 week full attack.
+
+**Result (vol-122 2026-05-17).** Built PoC v3. **PCLS supply-LP gives identical UB=480 for McGavin border AND all 5 clean-slate borders** — supply isn't the binding constraint at the per-color level. Concept: [[../concepts/vol122-pcls-poc-result]]. Refutes the supply-LP version; future PCLS must use per-cell-pair LP (vol-44 / B3).
+
+### J5. Interior-only ALNS with cyclic border freezing — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** The 176-cell plateau finding (vol-122 A1) shows that CSP-fill from a clean-slate border saturates at the same interior count across 3 distinct borders. This is a *fixed-border interior bottleneck*, not a border-search problem. Run ALNS where the destroy operator is **constrained to the interior 14×14** and the border is **frozen** for K iterations, then unfrozen for K iterations (cyclic). Lets ALNS explore interior basins independently of border configuration.
+
+**Why different.**
+- Current ALNS basic destroys anywhere; usually destroys border cells (which then need re-repair, wasting effort).
+- Interior-only freezes the border ring as a stable scaffolding; ALNS only re-arranges the 196 interior pieces.
+- Cyclic unfreeze (every K=100 iter) prevents getting stuck in a single border's basin.
+
+**Concrete first step.** Add `--freeze-border` flag to `alns_only`. Run on a CSP-filled board; compare convergence vs unfrozen baseline.
+
+**EV.** Medium. The 176-plateau finding directly motivates this.
+
+**Effort.** 1 day to add flag + 30-min runs to measure.
+
 ### Open slot for next invention
 
 - (placeholder)

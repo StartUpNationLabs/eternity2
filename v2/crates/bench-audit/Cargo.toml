@@ -224,3 +224,7 @@ path = "src/bin/board_diff.rs"
 [[bin]]
 name = "border_cluster"
 path = "src/bin/border_cluster.rs"
+
+[[bin]]
+name = "border_to_csp_fill"
+path = "src/bin/border_to_csp_fill.rs"
