@@ -260,3 +260,7 @@ path = "src/bin/dump_corners.rs"
 [[bin]]
 name = "dump_free_pieces"
 path = "src/bin/dump_free_pieces.rs"
+
+[[bin]]
+name = "color_class_analysis"
+path = "src/bin/color_class_analysis.rs"
