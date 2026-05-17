@@ -248,3 +248,7 @@ path = "src/bin/j1_chain_dp.rs"
 [[bin]]
 name = "j1_stratum_fix"
 path = "src/bin/j1_stratum_fix.rs"
+
+[[bin]]
+name = "j1_chain_hinted"
+path = "src/bin/j1_chain_hinted.rs"
