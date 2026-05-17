@@ -93,6 +93,13 @@ def main():
     ap.add_argument("--lambda-cell", type=float, default=50.0)
     ap.add_argument("--lambda-piece", type=float, default=50.0)
     ap.add_argument("--use-hints", action="store_true", help="enforce CSV hints")
+    ap.add_argument("--pin-corners", action="store_true",
+                    help="pin the 4 corner pieces (from CSV generator metadata) as a starting condition")
+    ap.add_argument("--pin-all", action="store_true",
+                    help="pin ALL pieces from CSV — sanity check that QUBO has a valid global solution")
+    ap.add_argument("--solver-mode", default="neal",
+                    choices=["neal", "sb", "tabu", "neal-then-tabu"],
+                    help="dwave-neal, simulated-bifurcation, dwave-tabu, or neal-then-tabu pipeline")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 

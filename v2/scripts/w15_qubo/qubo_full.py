@@ -21,30 +21,38 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "w1_peps"))
 from puzzle_loader import Puzzle, load_puzzle, BORDER
 
 
-def valid_rotations_for_cell(puzzle: Puzzle, pid: int, pos: int) -> list[int]:
+def valid_rotations_for_cell(puzzle: Puzzle, pid: int, pos: int,
+                              strict_border: bool = True) -> list[int]:
     """All rotations r such that placing piece pid at pos with rotation r
-    has BORDER on the right sides (if on perimeter) and not BORDER on internal
-    sides."""
+    has BORDER on the right sides (if on perimeter).
+
+    strict_border=True: also requires interior sides to NOT be BORDER. This is
+    correct for canonical Eternity II where BORDER=0 is a dedicated outside-color.
+    On generated test puzzles, color 0 may legitimately appear interior, so
+    pass strict_border=False to keep more rotations valid.
+    """
     W = puzzle.size
     row, col = pos // W, pos % W
     out = []
     for r in range(4):
         n, e, s, w = puzzle.piece_edges(pid, r)
+        # Sides facing outside the board MUST be BORDER (otherwise can't be placed there).
         if row == 0 and n != BORDER: continue
         if row == W-1 and s != BORDER: continue
         if col == 0 and w != BORDER: continue
         if col == W-1 and e != BORDER: continue
-        if row != 0 and n == BORDER: continue
-        if row != W-1 and s == BORDER: continue
-        if col != 0 and w == BORDER: continue
-        if col != W-1 and e == BORDER: continue
+        if strict_border:
+            # Sides facing interior MUST NOT be BORDER.
+            if row != 0 and n == BORDER: continue
+            if row != W-1 and s == BORDER: continue
+            if col != 0 and w == BORDER: continue
+            if col != W-1 and e == BORDER: continue
         out.append(r)
     return out
 
 
-def build_var_index(puzzle: Puzzle):
-    """Map (pid, rot, pos) → variable index for the full puzzle.
-    Only valid (piece, rot, cell) combos get vars."""
+def build_var_index(puzzle: Puzzle, strict_border: bool = True):
+    """Map (pid, rot, pos) → variable index for the full puzzle."""
     W = puzzle.size
     n_cells = W * W
     var_idx = {}
@@ -53,7 +61,7 @@ def build_var_index(puzzle: Puzzle):
 
     for pid in range(puzzle.n_pieces):
         for pos in range(n_cells):
-            for rot in valid_rotations_for_cell(puzzle, pid, pos):
+            for rot in valid_rotations_for_cell(puzzle, pid, pos, strict_border=strict_border):
                 idx = len(var_idx)
                 var_idx[(pid, rot, pos)] = idx
                 pos_to_vars[pos].append(idx)
