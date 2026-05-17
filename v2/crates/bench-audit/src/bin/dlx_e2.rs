@@ -249,35 +249,46 @@ impl Dlx {
         while r != chosen {
             self.solution.push(r);
             // For each node in this row, cover/purify its column
+            let mut feasible = true;
+            let mut covered_so_far: Vec<usize> = Vec::new();
             let mut j = self.nodes[r].right;
             while j != r {
                 let col = self.nodes[j].column;
                 if self.columns[col].primary {
                     self.cover(col);
+                    covered_so_far.push(j);
                 } else if self.nodes[j].color == -1 {
-                    self.cover(col);  // plain at-most-once
+                    self.cover(col);
+                    covered_so_far.push(j);
                 } else {
-                    self.purify(j);
+                    let cur = self.columns[col].purified_color;
+                    if cur == -1 {
+                        self.purify(j);
+                        covered_so_far.push(j);
+                    } else if cur == self.nodes[j].color {
+                        // Already purified to matching color — nothing to do
+                    } else {
+                        // Conflict — this row is infeasible
+                        feasible = false;
+                        break;
+                    }
                 }
                 j = self.nodes[j].right;
             }
-            if self.search() { return true; }
+            if feasible {
+                if self.search() { return true; }
+            }
             self.solution.pop();
-            let mut j = self.nodes[r].left;
-            while j != r {
-                let col = self.nodes[j].column;
+            // Unwind only what we covered, in reverse.
+            for &k in covered_so_far.iter().rev() {
+                let col = self.nodes[k].column;
                 if self.columns[col].primary {
                     self.uncover(col);
-                } else if self.nodes[j].color == -1 {
+                } else if self.nodes[k].color == -1 {
                     self.uncover(col);
-                } else if self.columns[col].purified_color == -1
-                    && self.columns[col].purified_color == self.nodes[j].color
-                {
-                    // already unpurified
                 } else {
-                    self.unpurify(j);
+                    self.unpurify(k);
                 }
-                j = self.nodes[j].left;
             }
             r = self.nodes[r].down;
         }
