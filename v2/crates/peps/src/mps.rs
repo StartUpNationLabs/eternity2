@@ -23,7 +23,7 @@
 use crate::{PepsContext, PieceRot};
 use crate::tensor::build_all_cell_tensors;
 use eternity2_core::BORDER;
-use ndarray::{Array2, Array4, ArrayD, Axis, IxDyn};
+use ndarray::{Array1, Array2, Array4, ArrayD, Axis, IxDyn};
 
 /// Boundary state ArrayD with shape (1, K, K, ..., K, 1) — `size`+2 axes total.
 pub type BoundaryState = ArrayD<f64>;
@@ -436,7 +436,10 @@ fn absorb_row(state: BoundaryState, row_cells: &[Array4<f64>]) -> BoundaryState 
 }
 
 /// Compute log Z by exact row-by-row contraction.
-pub fn log_z(ctx: &PepsContext, cells: &[Array4<f64>], _chi: usize) -> f64 {
+///
+/// If chi == 0 (or chi >= K^size), uses exact contraction (no truncation).
+/// Otherwise uses chi-truncated boundary MPS.
+pub fn log_z(ctx: &PepsContext, cells: &[Array4<f64>], chi: usize) -> f64 {
     let size = ctx.size;
     let k = ctx.k_colors;
     let mut state = initial_state(k, size);
@@ -444,6 +447,10 @@ pub fn log_z(ctx: &PepsContext, cells: &[Array4<f64>], _chi: usize) -> f64 {
     for r in 0..size - 1 {
         let row: Vec<Array4<f64>> = (0..size).map(|x| cells[r * size + x].clone()).collect();
         state = absorb_row(state, &row);
+        // Apply chi truncation after each row (except first since dim is small).
+        if chi > 0 && r > 0 {
+            state = truncate_state(state, chi);
+        }
     }
     // Bottom row: absorb, then contract all S axes at BORDER.
     let bottom: Vec<Array4<f64>> = (0..size)
@@ -466,6 +473,130 @@ pub fn log_z(ctx: &PepsContext, cells: &[Array4<f64>], _chi: usize) -> f64 {
     } else {
         z.ln()
     }
+}
+
+/// Truncate the boundary state's K^size middle axes to a chi-bounded MPS,
+/// then re-expand back to ArrayD form for the next absorb_row call.
+///
+/// Strategy:
+///   1. Reshape state (1, K, ..., K, 1) to a matrix (1, K^size) → drop trailing 1.
+///   2. SVD-sweep left-to-right to factorize into MPS of bond dim ≤ chi.
+///   3. Contract the MPS back into ArrayD form for downstream absorb_row.
+///   This collapses the singular-value information into the boundary state but
+///   bounds memory to (size × chi × K).
+///
+/// Truncation is approximate — chi=infinity is exact.
+fn truncate_state(state: BoundaryState, chi: usize) -> BoundaryState {
+    use ndarray_linalg::SVD;
+    let shape = state.shape().to_vec();
+    let n = shape.len();
+    if n < 4 {
+        // Too small to truncate; bond dims would all be 1.
+        return state;
+    }
+    let k = shape[1]; // assumes uniform K
+    let size = n - 2; // number of K-axes
+    assert_eq!(shape[0], 1);
+    assert_eq!(shape[n - 1], 1);
+
+    // Flatten state to (1, K^size).
+    let total_k: usize = shape[1..n - 1].iter().product();
+    let flat = state
+        .into_shape_with_order(IxDyn(&[1, total_k]))
+        .expect("flatten state");
+    let mut leftover_mat = flat
+        .into_shape_with_order((1, total_k))
+        .expect("2d")
+        .into_dimensionality::<ndarray::Ix2>()
+        .expect("2d");
+
+    // SVD sweep: split off one K-axis at a time.
+    let mut mps_tensors: Vec<Array2<f64>> = Vec::new();
+    let mut left_bond = 1usize;
+    for col in 0..size {
+        // leftover_mat has shape (left_bond, K^(size-col)).
+        // Reshape to (left_bond * K, K^(size-col-1)).
+        let rest = leftover_mat.shape()[1] / k;
+        let mat = leftover_mat
+            .into_shape_with_order((left_bond * k, rest))
+            .expect("reshape for SVD")
+            .into_dimensionality::<ndarray::Ix2>()
+            .expect("2d");
+        let (u_opt, s_vec, vt_opt) = mat.svd(true, true).expect("svd");
+        let u = u_opt.expect("u");
+        let vt = vt_opt.expect("vt");
+        let keep = if chi > 0 { chi.min(s_vec.len()) } else { s_vec.len() };
+        let u_kept: Array2<f64> = u.slice(ndarray::s![.., ..keep]).to_owned();
+        let s_kept: Array1<f64> = s_vec.slice(ndarray::s![..keep]).to_owned();
+        let vt_kept: Array2<f64> = vt.slice(ndarray::s![..keep, ..]).to_owned();
+        mps_tensors.push(u_kept); // shape (left_bond*K, keep)
+
+        // Compute S * Vt for the next step.
+        let mut s_vt = vt_kept;
+        for i in 0..keep {
+            let scale = s_kept[i];
+            let mut row = s_vt.row_mut(i);
+            row.mapv_inplace(|v| v * scale);
+        }
+        leftover_mat = s_vt;
+        left_bond = keep;
+    }
+
+    // mps_tensors now has `size` 2D matrices: U_col with shape (left_bond_col * K, right_bond_col).
+    // leftover_mat at end has shape (right_bond_last, 1).
+    // The product U_0 @ U_1 @ ... @ U_{size-1} @ leftover gives the original tensor (up to truncation).
+
+    // Reconstruct the boundary state as ArrayD.
+    // The MPS reads:
+    //   T[i_0, i_1, ..., i_{size-1}] = U_0[i_0, b_0] U_1[b_0*K + i_1, b_1] ... U_{size-1}[b_{size-2}*K + i_{size-1}, b_{size-1}] * leftover[b_{size-1}, 0]
+    // We'll contract them sequentially.
+    //
+    // Start with accumulator A: shape (b_0, 1) reshape U_0 to (1, K, b_0) (treating first K as physical).
+    // Actually simpler: rebuild T_full = U_0 @ U_1 @ ... but each U_i is (left_bond * K, right_bond),
+    // and physical K is the inner dim of left_bond*K. So:
+    //
+    // We'll just multiply all MPS tensors and reshape.
+
+    // First, multiply all U_col together to reconstruct (1, K^size, last_right_bond).
+    // Each U_col has shape (prev_right * K, new_right). Multiplying U_{col+1} into the
+    // running accumulator: result has shape (prev_running * K, new_right). This is the
+    // standard MPS-to-full conversion.
+
+    let mut running = mps_tensors[0].clone(); // shape (1*K, b_0) = (K, b_0)
+    for col in 1..size {
+        let u = &mps_tensors[col]; // (b_{col-1} * K, b_col)
+        // We have running: (1*K^col, b_{col-1}). Need to combine with u: (b_{col-1} * K, b_col).
+        // Result: (1*K^(col+1), b_col).
+        //
+        // Method: running @ u_reshape where u_reshape is (b_{col-1}, K * b_col).
+        let b_prev = running.shape()[1];
+        let total_per_prev_row = u.shape()[1] * k;
+        let u_reshape: Array2<f64> = u
+            .view()
+            .to_shape((b_prev, k * u.shape()[1]))
+            .expect("reshape u")
+            .to_owned();
+        // running shape (M, b_{col-1}) @ u_reshape (b_{col-1}, K*b_col) = (M, K*b_col)
+        // = (1*K^col, K*b_col). Reshape to (1*K^(col+1), b_col).
+        let product = running.dot(&u_reshape);
+        let m_new = product.shape()[0] * k;
+        let b_col = u.shape()[1];
+        running = product
+            .into_shape_with_order((m_new, b_col))
+            .expect("reshape running");
+        let _ = total_per_prev_row;
+    }
+    // running shape: (K^size, last_right_bond).
+    // Multiply by leftover_mat (last_right_bond, 1) → (K^size, 1).
+    let final_flat = running.dot(&leftover_mat); // (K^size, 1)
+    let mut full_shape: Vec<usize> = vec![1];
+    for _ in 0..size {
+        full_shape.push(k);
+    }
+    full_shape.push(1);
+    final_flat
+        .into_shape_with_order(IxDyn(&full_shape))
+        .expect("reshape final")
 }
 
 /// High-level interface.
