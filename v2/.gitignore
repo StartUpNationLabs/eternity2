@@ -17,3 +17,5 @@ output/**/*.dSYM
 
 # Claude Code per-project state (scheduled_tasks.lock, etc.)
 /.claude/
+output/vol-123/w_sat*/sat_e2_*.cnf
+output/vol-123/w_sat*/sat_e2_*.wcnf
