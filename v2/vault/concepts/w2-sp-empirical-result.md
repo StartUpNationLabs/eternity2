@@ -71,6 +71,25 @@ The SP code itself isn't wasted — it can serve as:
    conflict-driven backtracking on top of SP.
 3. **Component in W3 hybrid pipelines** (different inner solver).
 
+## SECOND TRY: plain BP (no Lagrangian) for value-order
+
+After refuting SP-Lagrangian, retried with mu=0 (just plain BP).
+
+**RESULT: BP converges in 21 iter (10 ms) on 4×4 with reasonable beliefs.**
+
+Sample beliefs:
+- Cell (0,0) corner: top 3 = (piece 7 rot 0, 0.386), (piece 4 rot 0, 0.386), (piece 6 rot 3, 0.228)
+- Cell (0,2): top candidate 0.614 — high confidence
+- Convergence: max change < 1e-4 after 21 iter
+
+This is useful as a **CSP value-order heuristic**! The beliefs give per-cell
+piece-rotation probabilities. Vol-12 BP gave 18.84% reduction; this is likely
+similar but more efficient (multi-class messages instead of bit-level).
+
+**Followup work**: extract these beliefs as JSON and feed to CSP backtracker
+as value-order. Compare against vanilla and vol-12 BP value-order on canonical
+16×16.
+
 ## Conclusion
 
 W2 SP-Lagrangian is **refuted as a direct E2 solver**. The Lagrangian
