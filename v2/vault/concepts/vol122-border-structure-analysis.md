@@ -44,6 +44,41 @@ ALL borders have the same 56-color multiset on their interior-facing edges:
 
 **Conclusion**: uniform color spacing is NOT the discriminator. Our worst-scoring borders are MORE uniform than McGavin.
 
+## Finding 4: per-border-cell single-piece supply is also invariant
+
+For each border cell's interior-facing color, count interior-piece-rotation
+options that can place a piece adjacent. Sum across all 56 cells:
+
+| Border | sum_supply | min_per_cell | mean |
+|---|---|---|---|
+| perm0 | 2548 | 43 | 45.5 |
+| perm3 | 2548 | 43 | 45.5 |
+| mcgavin | 2548 | 43 | 45.5 |
+
+Identical. The single-piece per-cell supply is determined by the color
+multiset, which is invariant.
+
+## Finding 5: Rust border_lp_ub (per-cell-pair LP) also identical
+
+| Border | bb | bi_ub | lp_interior | total_ub | solve_time |
+|---|---|---|---|---|---|
+| perm0_b0 | 60 | 56.0 | 364.0 | **480.0** | 511s |
+| McGavin | 60 | 56.0 | 364.0 | **480.0** | 422s |
+
+The MUCH stronger per-cell-pair LP (with positional constraints) also says
+480 for both. Even rigorous LP can't distinguish 469-host borders from
+439-host borders.
+
+## Conclusion
+
+**LP-style methods cannot distinguish "good" basin-hosting borders from
+"bad" ones at any level we've tested**: per-color supply, per-cell-pair
+geometry, color-gap uniformity, per-cell single-piece supply. All invariant
+across all valid borders.
+
+The 30-edge gap between McGavin (469) and ours (439) is entirely
+INTEGER-STRUCTURAL — captured only by full MIP or actual ALNS search.
+
 ## Open question
 
 What structural property of the border permutation enables 469 vs 439? 
