@@ -232,3 +232,7 @@ path = "src/bin/border_to_csp_fill.rs"
 [[bin]]
 name = "dlx_e2"
 path = "src/bin/dlx_e2.rs"
+
+[[bin]]
+name = "fsmc_e2"
+path = "src/bin/fsmc_e2.rs"
