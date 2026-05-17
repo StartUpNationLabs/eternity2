@@ -370,9 +370,57 @@ The veteran researcher's three intermediate targets:
 
 ---
 
-## J. New ideas to brainstorm in future vols
+## J. New inventions emerging mid-research
 
-Placeholder section — add ideas here as they emerge:
+### J1. Double-row column-DP with beam search — status: `unbuilt` (added 2026-05-17)
+
+**Idea.** Solve puzzle as a 2-row sliding band. State = (column index, colors of the band's top + bottom boundary at this column). DP processes columns left-to-right, choosing 2 pieces per column step. Memo over (col, top_boundary_color, bottom_boundary_color) tuples. Then sweep over band positions (rows 0-1, 1-2, ..., 14-15).
+
+**Why different.** Row-by-row CSP captures only horizontal coupling. Column-DP captures vertical coupling AS PART OF STATE. Both axes simultaneously.
+
+**Why hard.** Naive state = 23^32 colors — intractable. But with **beam search** (keep top-K states per column), bounded to 23 × 23 × K manageable.
+
+**Next steps.**
+1. Implement single-band column-DP on a fixed band (rows 0-1).
+2. Add beam pruning to keep top-K=10000 states.
+3. Sweep bands; chain solutions via shared row.
+4. Compare matched-edge counts vs row-major DFS.
+
+**EV.** Medium-high. Beam search on column-DP is a textbook approach that hasn't been applied here.
+
+**Effort.** ~3 days.
+
+### J2. "Reverse SAT": find a board that DOESN'T exceed score N — status: `unbuilt`
+
+**Idea.** Encode the constraint "score ≤ N" as SAT. Add "score > 469" as the hypothesis. If UNSAT, **proves 469 is the global maximum** (mathematically). If SAT, the witness is the record.
+
+**Why different.** All our work attacks "find a board with score ≥ N". The dual — prove no such board exists — is logically equivalent but algorithmically different.
+
+**Next steps.**
+1. Adapt `cluster_maxsat_repair` encoder for full-board SAT.
+2. Add "matched edges ≥ 470" as hard constraint.
+3. Solve with kissat / z3 / cadical.
+
+**EV.** Low for finding a record (the SAT instance is huge). High for the dual proof IF some clever encoding is feasible.
+
+**Effort.** ~1 week.
+
+### J3. Spectral piece-graph embedding — status: `unbuilt`
+
+**Idea.** Build a "piece-compatibility graph": nodes = pieces, edges = "could be placed adjacent on the board with some rotation". Compute the graph Laplacian's eigendecomposition. The Fiedler vector gives a natural piece ordering. Use it as a CSP variable-order heuristic.
+
+**Why different.** All current variable orders are geometric (cell position). Spectral order is algebraic (piece compatibility).
+
+**Next steps.**
+1. Build compatibility graph (~256 nodes, ~tens of thousands of edges).
+2. Compute Laplacian + Fiedler vector.
+3. Use as CSP variable order in vanilla_path via --path-csv.
+
+**EV.** Low-medium. Spectral methods rarely beat hand-tuned heuristics on this scale of CSP.
+
+**Effort.** ~2 days.
+
+### Open slot for next invention
 
 - (placeholder)
 
