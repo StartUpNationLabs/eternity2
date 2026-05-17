@@ -63,26 +63,6 @@ report number". The senior-researcher mode is:
 This role is the single most important behavioural rule for this
 project. Anything else in this file is secondary if it conflicts.
 
-## Vols 61-70 directive (2026-05-15)
-
-User issued an explicit directive: **vols 61 through 70 must each be a
-GENUINELY NEW invented algorithm**. Not "X with Y" variants of existing
-named methods. Each algorithm gets a new name (not in any literature).
-The user is away until end of week (~2026-05-18 to 21); the autonomous
-run continues through that window.
-
-- **Vol-61 is grandfathered** as a SOTA-pipeline calibration vol (was
-  launched before the directive).
-- **Vol-62 onwards**: invented algorithms only. Naming is part of the
-  invention.
-- Negative results acceptable if the algorithm itself was novel.
-- See `memory/feedback_vols_61_to_70_invented_algos.md` for candidate
-  list + binding rules.
-
-This directive supersedes any "comfort lottery" or "more of the same"
-tendencies. If a vol-62+ idea is a variant of an existing method, it
-DOES NOT COUNT — pivot to a real invention.
-
 ## Scientific rigor — anti-patterns to never repeat
 
 These are mistakes I have made repeatedly in this project. They are
