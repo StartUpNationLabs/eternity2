@@ -22,6 +22,7 @@ fn main() {
     let mut solver_kind = "gacolor_ac3_par".to_string();
     let mut seed: u64 = 1;
     let mut out_path: Option<PathBuf> = None;
+    let mut random_fill = false;
 
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -31,6 +32,7 @@ fn main() {
             "--solver" => solver_kind = args.next().unwrap(),
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--out" => out_path = Some(PathBuf::from(args.next().unwrap())),
+            "--random-fill-remaining" => random_fill = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -107,6 +109,43 @@ fn main() {
         }
     };
 
+    let placed_final = placed_count(&new_board, &puzzle);
+
+    // Optional random fill of empty cells using unused pieces (random rotation).
+    let mut new_board = new_board;
+    if random_fill && placed_final < puzzle.cell_count() {
+        use eternity2_core::Rotation;
+        let used_pids: std::collections::BTreeSet<u16> = (0..puzzle.cell_count())
+            .filter_map(|p| new_board.get(p).map(|(pid, _)| pid as u16))
+            .collect();
+        let mut remaining: Vec<u16> = (0..puzzle.pieces().len() as u16)
+            .filter(|p| !used_pids.contains(p))
+            .collect();
+        let empty: Vec<u32> = (0..puzzle.cell_count())
+            .filter(|p| new_board.get(*p).is_none())
+            .collect();
+        // Fisher-Yates shuffle of remaining using a simple seeded PRNG.
+        let mut prng = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut next_u32 = || {
+            prng ^= prng << 13;
+            prng ^= prng >> 7;
+            prng ^= prng << 17;
+            (prng & 0xFFFF_FFFF) as u32
+        };
+        for i in (1..remaining.len()).rev() {
+            let j = (next_u32() as usize) % (i + 1);
+            remaining.swap(i, j);
+        }
+        let n_to_fill = empty.len().min(remaining.len());
+        for i in 0..n_to_fill {
+            let pos = empty[i];
+            let pid = remaining[i];
+            let rot_idx = (next_u32() as u8) & 0b11;
+            let rot = Rotation::from_u8(rot_idx).unwrap();
+            let _ = new_board.place(pos, pid, rot);
+        }
+        eprintln!("random-fill: placed {} more cells", n_to_fill);
+    }
     let placed_final = placed_count(&new_board, &puzzle);
     let (matched_final, _) = score_board(&puzzle, &new_board);
     eprintln!(
