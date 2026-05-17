@@ -736,6 +736,25 @@ Too similar to M2/M4.
 
 **Effort.** 3-5 days (ML setup heavy).
 
+### BUG-FIX: ALNS basic produces duplicate pieces — `unbuilt` (2026-05-17 evening)
+
+**Evidence**: vol-122 evening run of `alns_only --ops basic --seed 7` on `RECORD_TIE_457_vol34_t3_t01_seed1.json` reported `matched=459/480` but `verify_board` rejected with `duplicates: [180, 248]` and `uniq=254/256`. The ALNS final scoring counts edges WITHOUT verifying piece-uniqueness, so duplicate placements yield inflated scores.
+
+**Reproduction**: `./target/release/alns_only --cp-board output/vol-34/t3_signal/RECORD_TIE_457_vol34_t3_t01_seed1.json --alns-budget-ms 1800000 --seed 7 --ops basic`. Output board has piece 180 at both pos 197 and pos 210 (canonical hint position), piece 248 at both pos 72 and pos 221.
+
+**Why important**: the bug INVALIDATES claims of new records produced by ALNS basic. Any "458+" board from this preset must be `verify_board`-checked before claiming. Furthermore, the bug might be silently inflating scores in many previous runs (vol-60, vol-110, etc.).
+
+**Likely root cause**: one of the `basic` ALNS operators (random_region / worst_window / conflict_driven / mwpm_defect_pair / worst_band) places a piece during repair without marking it used in the placement bitset, leaving a stale copy at the original location.
+
+**Concrete first step**:
+1. Instrument `alns_only` to assert piece-uniqueness after every operator's commit.
+2. Reproduce the bug with a small budget (~30s) and capture which operator caused the duplication.
+3. Fix the operator's place-and-remove invariant.
+
+**EV**: HIGH. Bug correctness affects the entire ALNS-basic result history. Likely several "false records" lurking.
+
+**Effort**: 1-2 days (instrument → repro → fix → regression test).
+
 ### Open slot for next invention
 
 - (placeholder)
