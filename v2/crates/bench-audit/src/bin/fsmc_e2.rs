@@ -57,6 +57,7 @@ struct Stats {
     cache_misses: u64,
     best_depth: usize,
     nodes_saved_estimate: u64,
+    cfcc_prunes: u64,
 }
 
 struct Searcher {
@@ -65,6 +66,8 @@ struct Searcher {
     n_pieces: usize,
     max_color: u8,
     pieces_rot: Vec<[[u8; 4]; 4]>,
+    /// piece_color_counts[pid][color] = # edges of color on piece pid (rotation-invariant)
+    piece_color_counts: Vec<Vec<u16>>,
     pos_order: Vec<usize>,
     board: Vec<Option<PlacedCell>>,
     used_pids: Vec<bool>,
@@ -77,6 +80,12 @@ struct Searcher {
     frontier_only: bool,
     /// PIH: use remaining-color-supply multiset instead of piece-bitset.
     color_supply_key: bool,
+    /// K3 CFCC: enable color-flow-capacity propagator.
+    use_cfcc: bool,
+    /// Live remaining color supply (incremental).
+    color_supply: Vec<u16>,
+    /// Live frontier color demand (incremental).
+    color_demand: Vec<u16>,
     stats: Stats,
     max_nodes: u64,
     time_limit: std::time::Duration,
@@ -84,23 +93,35 @@ struct Searcher {
 }
 
 impl Searcher {
-    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool, partial_frontier_k: usize, frontier_only: bool, color_supply_key: bool) -> Self {
+    fn new(puzzle: Puzzle, max_nodes: u64, time_secs: f64, use_memo: bool, partial_frontier_k: usize, frontier_only: bool, color_supply_key: bool, use_cfcc: bool) -> Self {
         let side = puzzle.width as usize;
         let n_cells = side * side;
         let n_pieces = puzzle.pieces().len();
         let max_color = puzzle.color_count as u8;
         let mut pieces_rot = vec![[[0u8; 4]; 4]; n_pieces];
+        let n_colors = max_color as usize + 1;
+        let mut piece_color_counts = vec![vec![0u16; n_colors]; n_pieces];
+        let mut color_supply = vec![0u16; n_colors];
         for (pid, piece) in puzzle.pieces().iter().enumerate() {
             for r in 0..4u8 {
                 let rot = Rotation::from_u8(r).unwrap();
                 let e = piece.edges.rotated(rot).as_array();
                 pieces_rot[pid][r as usize] = [e[0] as u8, e[1] as u8, e[2] as u8, e[3] as u8];
             }
+            // Color counts (rotation-invariant)
+            for c in piece.edges.as_array() {
+                let ci = c as usize;
+                if ci != 0 {
+                    piece_color_counts[pid][ci] += 1;
+                    color_supply[ci] += 1;
+                }
+            }
         }
         let pos_order: Vec<usize> = (0..n_cells).collect();
         Self {
             side, n_cells, n_pieces, max_color,
             pieces_rot,
+            piece_color_counts,
             pos_order,
             board: vec![None; n_cells],
             used_pids: vec![false; n_pieces],
@@ -110,7 +131,10 @@ impl Searcher {
             partial_frontier_k,
             frontier_only,
             color_supply_key,
-            stats: Stats { nodes: 0, cache_hits: 0, cache_misses: 0, best_depth: 0, nodes_saved_estimate: 0 },
+            use_cfcc,
+            color_supply,
+            color_demand: vec![0u16; n_colors],
+            stats: Stats { nodes: 0, cache_hits: 0, cache_misses: 0, best_depth: 0, nodes_saved_estimate: 0, cfcc_prunes: 0 },
             max_nodes,
             time_limit: std::time::Duration::from_secs_f64(time_secs),
             t_start: Instant::now(),
@@ -214,6 +238,82 @@ impl Searcher {
         h
     }
 
+    /// CFCC check: returns true if feasible (no color demand > supply).
+    fn cfcc_ok(&self) -> bool {
+        for k in 1..self.color_demand.len() {
+            if self.color_demand[k] > self.color_supply[k] {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Update demand incrementally when placing a piece at pos with edges.
+    /// Returns delta to undo on backtrack.
+    fn update_demand_on_place(&mut self, pos: usize, edges: &[u8; 4]) {
+        let r = pos / self.side;
+        let c = pos % self.side;
+        let offsets: [(i32, i32, usize); 4] = [
+            (-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3),
+        ];
+        for &(dr, dc, my_side) in &offsets {
+            let nr = r as i32 + dr;
+            let nc = c as i32 + dc;
+            if nr < 0 || nc < 0 || nr >= self.side as i32 || nc >= self.side as i32 {
+                continue; // boundary
+            }
+            let npos = (nr as usize) * self.side + nc as usize;
+            let my_color = edges[my_side];
+            if let Some(n) = &self.board[npos] {
+                // Neighbor already placed: that side WAS in demand, now satisfied.
+                // Subtract the neighbor's color (which equals my_color since we matched).
+                let n_side = 2 ^ my_side;  // opposite side index (0↔2, 1↔3 — for 0,1,2,3: opp = (my+2)%4)
+                let opp_side = (my_side + 2) % 4;
+                let their_color = n.edges[opp_side];
+                if their_color != 0 {
+                    // That neighbor was contributing to demand; remove it.
+                    self.color_demand[their_color as usize] = self.color_demand[their_color as usize].saturating_sub(1);
+                }
+                let _ = n_side; // unused, kept for clarity
+            } else {
+                // Neighbor unplaced: my color contributes new demand.
+                if my_color != 0 {
+                    self.color_demand[my_color as usize] += 1;
+                }
+            }
+        }
+    }
+
+    fn update_demand_on_unplace(&mut self, pos: usize, edges: &[u8; 4]) {
+        let r = pos / self.side;
+        let c = pos % self.side;
+        let offsets: [(i32, i32, usize); 4] = [
+            (-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3),
+        ];
+        for &(dr, dc, my_side) in &offsets {
+            let nr = r as i32 + dr;
+            let nc = c as i32 + dc;
+            if nr < 0 || nc < 0 || nr >= self.side as i32 || nc >= self.side as i32 {
+                continue;
+            }
+            let npos = (nr as usize) * self.side + nc as usize;
+            let my_color = edges[my_side];
+            if let Some(n) = &self.board[npos] {
+                // Neighbor still placed: re-add their demand.
+                let opp_side = (my_side + 2) % 4;
+                let their_color = n.edges[opp_side];
+                if their_color != 0 {
+                    self.color_demand[their_color as usize] += 1;
+                }
+            } else {
+                // Neighbor unplaced: remove my contribution.
+                if my_color != 0 {
+                    self.color_demand[my_color as usize] = self.color_demand[my_color as usize].saturating_sub(1);
+                }
+            }
+        }
+    }
+
     fn search(&mut self, depth: usize) -> bool {
         self.stats.nodes += 1;
         if self.stats.nodes > self.max_nodes { return false; }
@@ -223,6 +323,11 @@ impl Searcher {
         }
         if depth == self.n_cells {
             return true;
+        }
+
+        if self.use_cfcc && !self.cfcc_ok() {
+            self.stats.cfcc_prunes += 1;
+            return false;
         }
 
         if self.use_memo {
@@ -244,8 +349,21 @@ impl Searcher {
                 if !self.compat_neighbors(&edges, pos) { continue; }
                 self.board[pos] = Some(PlacedCell { edges });
                 self.used_pids[pid] = true;
+                // Update CFCC state: subtract piece's color supply, update frontier demand
+                if self.use_cfcc {
+                    for k in 1..self.color_supply.len() {
+                        self.color_supply[k] = self.color_supply[k].saturating_sub(self.piece_color_counts[pid][k]);
+                    }
+                    self.update_demand_on_place(pos, &edges);
+                }
                 if self.search(depth + 1) {
                     return true;
+                }
+                if self.use_cfcc {
+                    self.update_demand_on_unplace(pos, &edges);
+                    for k in 1..self.color_supply.len() {
+                        self.color_supply[k] += self.piece_color_counts[pid][k];
+                    }
                 }
                 self.board[pos] = None;
                 self.used_pids[pid] = false;
@@ -267,6 +385,7 @@ fn main() {
     let mut partial_frontier_k: usize = 0;
     let mut frontier_only = false;
     let mut color_supply_key = false;
+    let mut use_cfcc = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -277,6 +396,7 @@ fn main() {
             "--partial-frontier-k" => partial_frontier_k = args.next().unwrap().parse().unwrap(),
             "--frontier-only" => frontier_only = true,
             "--color-supply-key" => color_supply_key = true,
+            "--cfcc" => use_cfcc = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -284,9 +404,10 @@ fn main() {
     let (puzzle, _hints) = load_puzzle_with_hints(&puzzle_path).expect("load");
     println!("puzzle: {} side={} pieces={} color_count={}",
         puzzle_path.display(), puzzle.width, puzzle.pieces().len(), puzzle.color_count);
-    println!("memo: {} partial_k: {} frontier_only: {} color_supply_key: {}", use_memo, partial_frontier_k, frontier_only, color_supply_key);
+    println!("memo: {} partial_k: {} frontier_only: {} color_supply_key: {} cfcc: {}",
+        use_memo, partial_frontier_k, frontier_only, color_supply_key, use_cfcc);
 
-    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo, partial_frontier_k, frontier_only, color_supply_key);
+    let mut s = Searcher::new(puzzle, max_nodes, time_secs, use_memo, partial_frontier_k, frontier_only, color_supply_key, use_cfcc);
     let t = Instant::now();
     let solved = s.search(0);
     let elapsed = t.elapsed();
@@ -295,7 +416,7 @@ fn main() {
     println!("best_depth: {}/{}", s.stats.best_depth, s.n_cells);
     println!("nodes_visited: {}", s.stats.nodes);
     println!("cache_size: {}", s.cache.len());
-    println!("cache_hits: {}  cache_misses: {}", s.stats.cache_hits, s.stats.cache_misses);
+    println!("cache_hits: {}  cache_misses: {}  cfcc_prunes: {}", s.stats.cache_hits, s.stats.cache_misses, s.stats.cfcc_prunes);
     let total = s.stats.cache_hits + s.stats.cache_misses;
     if total > 0 {
         println!("hit_rate: {:.2}%", 100.0 * s.stats.cache_hits as f64 / total as f64);
