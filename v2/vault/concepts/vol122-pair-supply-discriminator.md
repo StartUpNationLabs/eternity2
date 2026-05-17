@@ -44,25 +44,32 @@ can L-shape match, that border is structurally harder. McGavin's
 specific permutation puts colors in an order that maximizes interior
 L-shape compatibility.
 
+## Refinement (later same day) — DEMOTES the discriminator
+
+A REFINED pair-supply was computed: for each adjacent border-facing pair
+(c1, c2), count *pairs of interior pieces* (p1, p2) where p1 in some
+rotation shows c1 on top, p2 in some rotation shows c2 on top, AND
+p1.right_color == p2.left_color (shared interior-interior edge match).
+
+Results:
+
+| Border | Raw pair-supply | Refined pair-supply | ALNS score |
+|---|---|---|---|
+| perm0 | 1116 | 6718 | 424 |
+| perm3 | 1020 | 6728 | 439 |
+| McGavin | 1316 | 6586 | 469 (others); 435 (our stack) |
+
+**The REFINED metric REVERSES the correlation**. McGavin has the LOWEST
+refined supply (6586), perm3 the HIGHEST (6728).
+
+Combined with the finding that **McGavin's border + our stack = 435**
+(see [[vol122-mcgavin-border-our-stack-435]]), this DEMOTES the
+pair-supply hypothesis: the raw correlation was likely coincidence.
+
 ## Status
 
-- **Discriminator: CONFIRMED** (preliminary, 3 data points + 100 in
-  flight).
-- **Optimization target**: enumerate borders by max pair-supply score
-  → re-run A1 pipeline → expect best border to score 460+.
-- **Open**: is this a SUFFICIENT condition or just NECESSARY? Maybe
-  beating 459 requires pair-supply > 1300.
-
-## Implications
-
-This is the first PROVEN-positive structural property of "good" borders.
-After 4+ negative LP-based hypotheses (PCLS, B4 Hall, color-uniformity,
-per-cell-pair LP), we have a hand-hold.
-
-## Next step
-
-Enumerate borders by max pair-supply score (greedy or local search) →
-generate 50 high-pair-supply borders → run A1 pipeline → measure scores.
+`refined-and-demoted` — raw pair-supply was coincidence; the real
+bottleneck is search algorithm, not border choice.
 
 ## Linked
 
