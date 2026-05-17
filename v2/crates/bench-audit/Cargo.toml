@@ -228,3 +228,7 @@ path = "src/bin/border_cluster.rs"
 [[bin]]
 name = "border_to_csp_fill"
 path = "src/bin/border_to_csp_fill.rs"
+
+[[bin]]
+name = "dlx_e2"
+path = "src/bin/dlx_e2.rs"
