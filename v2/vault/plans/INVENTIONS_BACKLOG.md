@@ -172,20 +172,22 @@ Each invention has:
 
 **Effort.** ~3 days.
 
-### B4. Color-pair supply Hall-condition — status: `unbuilt`
+### B4. Color-pair supply Hall-condition — status: `refuted` (vol-122 2026-05-17)
 
 **Idea.** For each color pair (c1,c2), compute supply (# edges that can have this pair) vs demand. Hall-marriage: perfect-matched board exists only if supply ≥ demand.
 
-**Why different.** Vol-44 measured per-color UB (loose). Per-color-pair is tighter.
+**Why different.** Vol-44 measured per-color UB (loose). Per-side rotation choice could expose a tighter Hall constraint.
 
-**Next steps.**
-1. Compute color-pair supply (analytical).
-2. Compute demand (fixed = 480 internal adjacencies).
-3. Find pairs with supply < demand = forced mismatches.
+**Done (vol-122).** Built LP and MIP with binary rotation choice per piece + per-color horizontal/vertical match budget + per-side supply constraints + geometric caps (h ≤ 240, v ≤ 240). **LP optimum = 480.0. MIP optimum = 480.0.** Hall does NOT tighten vol-44's 480 — rotation freedom is fully sufficient for side balance. Per-color k the LP achieves exactly floor(N_k/2) at the optimum.
 
-**EV.** Medium-high. If any color-pair has supply ≪ demand, UB tightens substantially.
+**Refutation.** Side-imbalance hypothesis (vol-44 loose because of rotation-side mismatch) is refuted.
 
-**Effort.** 1 day.
+Concept: [[../concepts/inv-b4-hall-color-pair-refuted]]. Script: `scripts/vol122_inv_b4_color_pair_hall.py`.
+
+**Future directions still open:**
+- 3-cell column Hall (intra-piece constraints across two stacked adjacencies)
+- Color-triple supply (corner-adjacent contiguous segments)
+- True per-cell-pair LP gives 478 (vol-44); Hall+geometry could narrow further.
 
 ---
 
