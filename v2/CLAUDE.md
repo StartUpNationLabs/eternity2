@@ -240,6 +240,13 @@ All v2 work lives inside `v2/`. The sibling directories of `v2/` (`solvers/`, `f
 
 ## Research vault — READ FIRST when starting a new volume
 
+**LOAD ORDER for any new autonomous run:**
+1. `v2/vault/REMINDER_USER_DIRECTIVES.md` — binding rules from the user (2026-05-17). If you skip this, you will repeat dead-end work.
+2. `v2/vault/plans/INVENTIONS_BACKLOG.md` — the systematic list of unexplored attacks. Pick top `unbuilt` or `partial`.
+3. `v2/vault/INDEX.md` — Map-of-Content.
+4. `v2/vault/plans/CURRENT-VOL.md` — current vol's binding items.
+5. The most recent `v2/vault/sessions/vol-NN.md`.
+
 `v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5–8 volumes. It is an Obsidian-compatible vault: pages link via `[[wikilink]]`, the canonical entry point is `vault/INDEX.md` (Map-of-Content).
 
 The vault is the single source of truth for **what we know and what we've tried** on Eternity II. Code is the source of truth for *what we currently do*; the vault is the source of truth for *the research history, current bounds, and the open questions*.
