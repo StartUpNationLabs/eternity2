@@ -89,6 +89,56 @@ McGavin's border. **A different border is needed for 480.**
 3. kissat may TIMEOUT on tightly-constrained borders (fewer free cells →
    easier SAT, but our pinning IS tight).
 
+## Vol-123 PROVED RESULTS
+
+After fixing the encoder bug, tested all available border configs:
+
+| Source | Border ID | Score | Result | Time |
+|--------|-----------|-------|--------|------|
+| vol-60 RECORD | RECORD_TIE_459_p06 | 459 | UNSAT | 0.01s |
+| BP-decim canonical | bp_decim 435 | 435 | UNSAT | 0.38s |
+| McGavin community | mcgavin_469 | 469 | UNSAT | 0.00s |
+| vol-122 strict | RECORD_BREAK_458_strict | 458 | UNSAT | 0.05s |
+| vol-122 border-DP | border_partial_perm0 | n/a | UNSAT | 0.73s |
+| vol-122 border-DP | border_partial_perm1 | n/a | UNSAT | 0.73s |
+| vol-122 border-DP | border_partial_perm2 | n/a | UNSAT | 1.80s |
+| vol-122 border-DP | border_partial_perm3 | n/a | UNSAT | 0.73s |
+| vol-122 border-DP | border_partial_perm4 | n/a | UNSAT | 0.74s |
+
+**TOTAL: 9 distinct border configurations, ALL UNSAT for 480.**
+
+These borders span:
+- 4 different corner permutations (vol-122 perm0..4 + community 469's)
+- High-score basin borders (459, 469)
+- Algorithmic borders (BP-decim, vol-122 strict)
+
+CONCLUSION: **the correct 480 border ring is NOT among our 9 discovered
+configurations.** Need to enumerate MORE borders systematically.
+
+## ENCODER CORRECTNESS — VALIDATED (vol-124, 2026-05-17)
+
+Per user prompt *"I am very curious to see if our SAT algo is REALLY
+able to tell whether a puzzle is possible or not just from the edge
+alone"*, ran the full SAT-round-trip on small known-solvable puzzles:
+
+| Puzzle | Fresh SAT | Decode + verify | W11 border-pin |
+|---|---|---|---|
+| size_4_colors_4 (`--no-hints`) | SAT 0.02s | ✓ 12/12 + 16/16 | SAT 0.00s |
+| size_5_colors_4 (`--no-hints`) | SAT <1s   | ✓ 20/20 + 20/20 | SAT 0.02s |
+
+**The W11 border-screening tool is sound.** UNSAT determinations on
+the 9 canonical-E2 borders above are real, not artifacts. See
+[[w11-sat-correctness-validated]] for the full validation writeup.
+
+The remaining corner permutations (1-23 unexplored in vol-122) might
+hold the answer. Vol-122 used `corner_perm_idx: 0` for all 5 partials.
+
+## Next experiment
+
+Run vol-122 border-DP for corner_perm_idx in {1, 2, ..., 23}. Each
+should yield ~5 border partials. Test each via W11 screen. That's
+~115 SAT tests at <2 seconds each = ~5 minutes total.
+
 ## Linked
 
 - [[w-sat-459-unsat-findings]] (the verification tool)

@@ -179,6 +179,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[boundary-mps]] — 10¹⁰¹ overcounting gap
 - [[eulerian-border]] — vacuous on canonical E2
 - [[blackwood-layered-depth-wall]] — schedule wall structural
+- [[w-sat-459-unsat-findings]] — kissat UNSATs 459 halos, 9 basin borders
+- [[w11-sat-verified-border-enum]] — SAT-screen invention (border-pin filter)
+- [[w11-sat-correctness-validated]] — 2026-05-17 round-trip + sabotage validation
 
 ## Basins — notable boards
 
