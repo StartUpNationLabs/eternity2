@@ -279,3 +279,11 @@ path = "src/bin/dump_pieces_by_id.rs"
 [[bin]]
 name = "n1_corner_3x3_enum"
 path = "src/bin/n1_corner_3x3_enum.rs"
+
+[[bin]]
+name = "n2_four_corner_match"
+path = "src/bin/n2_four_corner_match.rs"
+
+[[bin]]
+name = "n3_four_corner_feasibility"
+path = "src/bin/n3_four_corner_feasibility.rs"
