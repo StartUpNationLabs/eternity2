@@ -100,6 +100,27 @@ records.** The vault entries (math derivation, empirical results, canonical
 scale plan, this assessment) capture sufficient state for future sessions
 to pick up the threads.
 
+## Late-session update (2026-05-17 20:55)
+
+After the W1 small-scale validation, pivoted to W2 (BP-decimation) which
+WORKED at canonical scale in 11 minutes producing a 435/480 board. Then
+ALNS basic lift took it to 448/480 in 10 more minutes. So:
+
+  - **W2 BP-decim canonical pipeline (~50 min): 448/480** 
+  - vs. standing 459 = 95.6% (record-class needs longer ALNS + better basins)
+
+This is the **first end-to-end candidate METHOD** validated on canonical E2
+in vol-123. It's not record-class but it's CHEAP (50 min) and REPRODUCIBLE
+(no compute-expensive PEPS needed).
+
+W1 vs W2 trade-off:
+  - **W1**: stronger marginals, expensive (cloud-scale for canonical)
+  - **W2**: weaker marginals, cheap (laptop runs in 11 min)
+  - **Hybrid**: W1 marginals computed on cloud, fed as input to W2-style
+    decimation. Best of both worlds. Path forward.
+
+This is concrete progress toward "the way to solve".
+
 ## Linked
 
 - [[w1-peps-design-derivation]]
