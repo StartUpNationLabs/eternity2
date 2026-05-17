@@ -761,7 +761,19 @@ Origin: vol-122 session-resume web roam after N-series dead-end. User
 directive: "roam around online... see what exists in the world we could
 bring in there". Concept page: [[../concepts/web-roam-2026-05-17]].
 
-### W1. Hyperoptimized approximate tensor-network contraction — `unbuilt` (Tier S)
+### W1. Hyperoptimized approximate tensor-network contraction — `built-tested` (vol-123)
+
+STATUS UPDATE (vol-123):
+  - Python implementation `scripts/w1_peps/peps_quimb_lagrangian.py`
+  - Math derivation: vault/concepts/w1-peps-design-derivation.md
+  - 4×4 generated puzzle: complete solve in 1 second
+  - 6×6 generated puzzle: complete solve in 5 minutes
+  - Canonical 16×16: OOM at chi=32 on laptop, needs CLOUD (64-128 GB RAM)
+  - Rust port: cell tensor builder + exact contraction PASS 3/3 tests.
+    Chi-truncation correct but doesn't save memory (TODO).
+  - Standing 458 unchanged: needs cloud W1 chi=128+ to test marginals-driven CSP solve
+
+
 
 **Source.** Gray & Chan PRX 14, 011009 (2024); arXiv:2407.21287 for
 rugged spin glasses.
@@ -787,7 +799,21 @@ rugged landscapes; untested at canonical E2 scale.
 
 **Effort.** 1 week PoC, ~3 weeks full canonical attack.
 
-### W2. Survey Propagation (Mézard-Zecchina) — `unbuilt` (Tier S)
+### W2. Survey Propagation (Mézard-Zecchina) — `built-tested` (vol-123)
+
+STATUS UPDATE (vol-123):
+  - SP-Lagrangian (with piece-uniqueness): REFUTED on 4×4
+    (BP zeros pieces; Lagrangian can't recover them).
+  - Plain BP (multi-class messages): WORKS at canonical 16×16.
+    Converges in 13 iter, 3.6 sec. Marginals weak: mean_max_prob=0.04.
+  - BP-decimation pipeline: 435/480 canonical in 11 min.
+    + ALNS basic 10min: 444-448 (best 448).
+    + ALNS basic 30min: plateau at 448.
+  - Files: scripts/w2_sp/{sp_e2.py, bp_decimation.py, bp_confident.py,
+    export_marginals.py, verify_partial.py}
+  - Standing 458 unchanged: W2 pipeline reaches 448 (worse than 459).
+
+
 
 **Source.** Braunstein-Mézard-Zecchina 2002/2005; Marino-Parisi-Ricci-Tersenghi
 *Nature Communications* 7, 12996 (2016) backtracking-SP.
@@ -831,7 +857,16 @@ if iteration count is reasonable.
 
 **Effort.** 1 week PoC, 2 weeks full.
 
-### W4. LKH-style adaptive-cardinality k-opt chains — `unbuilt` (Tier A)
+### W4. LKH-style adaptive-cardinality k-opt chains — `built-tested` (vol-123)
+
+STATUS UPDATE (vol-123):
+  - LkhChainDestroy implemented in crates/localsearch/src/alns.rs
+  - Available as `basic_lkh` and `lkh_only` presets in alns_only
+  - Tested on 459 basin × 4 seeds × 5min: all stuck at 459 (same as basic)
+  - Doesn't break K≤5 operator-lock in short budget
+  - May need longer compute or different basins to show effect
+
+
 
 **Source.** Helsgaun, "General k-opt submoves for LKH." Math. Prog. Comp.
 (2009). State-of-the-art TSP heuristic.
@@ -881,7 +916,17 @@ reverse diffusion.
 
 **Effort.** 3-4 weeks.
 
-### W7. Frozen-variable / backbone fraction by basin — `unbuilt` (Tier B)
+### W7. Frozen-variable / backbone fraction by basin — `built-completed` (vol-123)
+
+STATUS UPDATE (vol-123):
+  - 47 boards at matched=459 analyzed
+  - 1 frozen cell out of 256: (1,15) = piece 56 rot 1
+  - 76.6% of cells have exactly 3 distinct piece-rotations
+  - Confirms vol-20 "no deep backbone" empirically
+  - Files: scripts/w7_frozen_backbone/measure.py
+  - Output: output/vol-123/w7/frozen_backbone_459.json
+
+
 
 **Source.** Achlioptas-Coja-Oghlan 2007-2012 (frozen variables in random CSPs);
 Molloy 2012 (freezing threshold k-coloring).
