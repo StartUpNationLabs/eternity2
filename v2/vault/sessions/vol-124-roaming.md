@@ -134,23 +134,98 @@ puzzle toward exactly one 480 basin.
 **Action**: re-read the original Selby paper if findable. Check whether
 the hint placement reveals the algorithm.
 
-## Top 2 picks by EV (post-retraction)
+## Round 2 — deeper roam (after backlog audit + Wang-tile literature)
 
-1. **AlphaMapleSAT-style MCTS-CnC** on our existing kissat encoding.
-   Engineering-heavy but addresses the actual bottleneck (kissat alone
-   can't decide canonical E2). The reward signal (CDCL conflict-rate
-   per cube) is concrete and doesn't depend on any symmetry property.
-2. **Projected model counting** (D4 / GANAK) over border variables.
-   Asks "how many BORDERS admit any 480 interior" instead of "find
-   one". A counter could return 0 (provable unsolvability) or a small
-   number (enumerable target list). Treewidth-bounded → in-principle
-   tractable for the border ring.
+### 8. Salassa-Vancroonenburg "MILP + Max-Clique" (arxiv 1709.00252) — UNKNOWN EV
 
-Idea #1 (corner symmetry-break) retracted above. The user-noted lesson:
-**don't apply textbook symmetry tricks to a maximally-asymmetric Selby
-puzzle without checking the vault**. Any future "factor-K speedup
-from breaking [some symmetry]" claim must first verify the symmetry
-*actually exists* on canonical E2.
+**Max-Clique formulation**: nodes = (tile, position, rotation); edges
+between non-conflicting nodes. Solve for clique of size n² (=256 for
+E2). Published 2017, provided 3×3 to 9×9 instances as benchmarks but
+"larger sizes hard to manage."
+
+**Fit**: this IS the formulation we'd write if we tried max-clique. The
+authors said canonical 16×16 was beyond practical clique solvers in
+2017. Modern clique solvers (PMC, MoMC, mokas) may have moved the
+goalpost. Worth a fresh ablation.
+
+### 9. Heule 2008 SAT encoding + Ansótegui-Sellmann-Tabar — REFERENCE
+
+The encoding we already use IS effectively Heule 2008 / Ansótegui-
+Sellmann-Tabar 2008 (the comment in `crates/benchmark/src/bin/sat_e2.rs`
+confirms this). So we're at SOTA on the SAT encoding axis already.
+Nothing new in the literature on the encoding itself.
+
+### 10. Kovalsky-Glasner "Global approach" (arxiv 1409.5957) — REFUTED ON E2
+
+**Their LP+SDP "Vandermonde" formulation explicitly fails on E2.**
+Quote from §5.2.3: *"We haven't had as much success with larger
+problems, such as the Eternity II puzzle, which pose a considerable
+combinatorial challenge."* They solved 12×12; 16×16 was out of reach.
+
+**Decision**: do NOT pursue W3 (Vandermonde-LP) for canonical E2 —
+the authors themselves said it won't work. Task #59 should be marked
+`wont-do (vol-124, authors explicit failure on E2)`.
+
+### 11. Bourreau-Stoyan-Pasternak "Variable Transformation to 2×2"
+(IEA/AIE 2020) — HIGH EV (NEW IDEA)
+
+**Move the problem from 1×1-cell domain to 2×2-cell domain.** Instead
+of "place piece P at cell C with rotation R", solve "place 2×2 block
+B at 2×2-cell position B_pos". Each 2×2 block is a 4-tuple of compatible
+(piece, rotation) quartets with internal edges already matched.
+
+**Why it works**: when you build the 2×2 alphabet upfront, you've
+*precomputed* all 2×2 internal matchings. The resulting search at the
+2×2 level has higher arity but **dramatically fewer choices** at each
+super-cell. Authors claim "orders of magnitude smaller search spaces"
++ "statistically exploitable features" the 1×1 lacks.
+
+**This is genuinely orthogonal to anything we've tried.** Our naive
+piece-rotation-cell encoding has ~700 options per cell. The 2×2
+encoding's super-cells have far fewer (most 2×2 quartets don't form
+internally-consistent blocks).
+
+**Action**: build a 2×2-block enumerator for canonical E2. For each
+8×8 super-grid cell, list all 2×2 quartets that internally match (≈
+piece⁴ × rotation⁴ × matching constraints). Likely ~1000-100000 valid
+blocks per super-cell vs the naïve 700 single-cell options — but
+each block fixes 4 cells × 4 sides = 8 *external* color matches.
+Then encode 2×2-as-CSP and run kissat / SAT.
+
+### 12. "Fast Global Filtering for Eternity II" — UNKNOWN (gated paper)
+
+Title alone suggests a CSP propagator specific to E2 that filters
+infeasible (cell, value) pairs globally (not just local AC-3).
+Worth tracking down — could integrate with our solver-engine.
+
+## Top 3 picks by EV (post-round-2 roam)
+
+1. **2×2 super-block CSP/SAT encoding** (Bourreau et al. 2020). The
+   only genuinely novel encoding axis in the round-2 roam. Builds the
+   2×2 alphabet upfront, then solves on an 8×8 super-grid with much
+   smaller per-super-cell domains. Orthogonal to everything we've
+   tried. Engineering: medium (build alphabet generator + re-encode).
+2. **AlphaMapleSAT-style MCTS-CnC** on our existing kissat encoding.
+   Engineering-heavy but addresses the actual bottleneck.
+3. **Projected model counting** (D4 / GANAK) over border variables.
+   Counts solutions over a projection. Returns 0 = unsolvability proof,
+   > 0 = enumerable list of candidate borders.
+
+### Refuted by literature this roam (so we don't redo)
+
+- **W3 Vandermonde-LP** (Kovalsky-Glasner 2014) — authors explicitly
+  failed on E2. Mark task #59 `wont-do`.
+- **Continuous SDP relaxation** generally — same authors confirmed
+  SDP "limited scalability dominated by the number and dimension of
+  positive definite constraints." Don't reattempt.
+- **Symmetry-break corners** — canonical E2 has no symmetries (vol-27
+  backlog D1 `wont-do DO NOT REVISIT`).
+
+## Backlog cleanup actions
+
+- Mark W3 (`task #59 Vol-123 W3: Kovalsky-Glasner Vandermonde-LP relaxation`)
+  as `wont-do` with reason "authors' own §5.2.3 declared E2 out of reach".
+- Add 2×2-block encoding to INVENTIONS_BACKLOG as new item (E4? J8?).
 
 ## Linked
 
@@ -158,7 +233,16 @@ from breaking [some symmetry]" claim must first verify the symmetry
 - [[../plans/INVENTIONS_BACKLOG]] (add W12-W18 entries)
 - [[sessions/vol-124]] (sister session page)
 
-## Sources
+## Sources (round 2)
+
+- Bourreau et al. "Variable Transformation to 2×2 Domain Space" (IEA/AIE 2020): link.springer.com/chapter/10.1007/978-3-030-55789-8_19 — gated, abstract only
+- Salassa-Vancroonenburg "MILP + Max-Clique for E2": arxiv.org/abs/1709.00252
+- Kovalsky-Glasner-Lipman-Basri "Global approach for edge-matching": arxiv.org/abs/1409.5957 (E2 refuted §5.2.3)
+- Tyburec-Zeman "Bounded Wang tilings": arxiv.org/abs/2205.02295 + nature.com/articles/s41598-023-31786-3 — gated
+- Heule 2008 "SAT for edge-matching": foundational; matches our encoder
+- Wikipedia: Wang tile, Edge-matching puzzle, Eternity II puzzle
+
+## Sources (round 1)
 
 - AlphaMapleSAT: arxiv.org/abs/2401.13770
 - SAT Modulo Symmetries (cube-comp): arxiv.org/abs/2501.17201
