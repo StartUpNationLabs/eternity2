@@ -28,7 +28,7 @@ use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
     BottomBandDestroy, ComponentClusterDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
-    HalfBoardDestroy, HingeDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
+    HalfBoardDestroy, HingeDestroy, LkhChainDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
     RepairKind, SigmaCycleDestroy, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
 
@@ -99,6 +99,21 @@ fn build_ops(preset: &str) -> Vec<Box<dyn DestroyOp>> {
             Box::new(ConflictDriven { max_size: 30 }),
             Box::new(MwpmDefectPair { max_pairs: 12 }),
             Box::new(WorstBand { k_rows: 4 }),
+        ],
+        "basic_lkh" => vec![
+            // Vol-123 W4 — basic + LKH-chain operator (adaptive K=10-15).
+            Box::new(RandomRegion { k: 4 }),
+            Box::new(WorstWindow { k: 5 }),
+            Box::new(ConflictDriven { max_size: 30 }),
+            Box::new(MwpmDefectPair { max_pairs: 12 }),
+            Box::new(WorstBand { k_rows: 4 }),
+            Box::new(LkhChainDestroy { max_size: 12, seed_worst: false }),
+            Box::new(LkhChainDestroy { max_size: 16, seed_worst: true }),
+        ],
+        "lkh_only" => vec![
+            Box::new(LkhChainDestroy { max_size: 12, seed_worst: false }),
+            Box::new(LkhChainDestroy { max_size: 16, seed_worst: true }),
+            Box::new(LkhChainDestroy { max_size: 20, seed_worst: true }),
         ],
         "winning5" => vec![
             // The 5-op set with ConflictDriven{80} added + WB — this is

@@ -877,6 +877,136 @@ impl DestroyOp for BottomBandDestroy {
 ///   - The largest cycles are picked first.
 ///   - Falls back to `RandomRegion{k:4}` when no σ-cycle ≥ min_size
 ///     exists (board is too close to oracle).
+/// Vol-123 W4 — LKH-style adaptive-cardinality chain destroy.
+///
+/// Inspired by Lin-Kernighan-Helsgaun's variable-K k-opt for TSP. Where
+/// ConflictDriven grows BFS from a single seed mismatch with random
+/// neighbor selection (fixed-cardinality reach), LkhChain follows the
+/// "worst-match" direction at each step, building a *chain* of cells
+/// that form a mismatch path.
+///
+/// Algorithm:
+///   1. Pick a seed mismatch (random or worst).
+///   2. Add both endpoints to the chain.
+///   3. At each step:
+///      - From any chain cell, find the neighbor (not already in chain)
+///        with the FEWEST matching edges to its OWN neighbors. This is
+///        the "weakest" cell — most likely to gain from being repaired.
+///      - Add it to the chain.
+///   4. Stop when chain reaches `max_size` OR no candidate has a mismatch.
+///
+/// Compared to ConflictDriven: LkhChain prioritizes growing in the
+/// direction of LOWEST match quality (gain-chained), where ConflictDriven
+/// uses random neighbor selection. This may target the cells that contribute
+/// most to score deficit, breaking the documented K≤5 operator-lock barrier
+/// (vols 20, 65, 99).
+///
+/// Effort: ~1 day (this is the bulk of W4).
+pub struct LkhChainDestroy {
+    pub max_size: u32,
+    /// If true, seed from worst mismatch (highest score deficit at that cell);
+    /// else random.
+    pub seed_worst: bool,
+}
+
+impl DestroyOp for LkhChainDestroy {
+    fn name(&self) -> &str { "lkh_chain" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let mismatches = find_mismatches(puzzle, board);
+        if mismatches.is_empty() {
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+
+        // Pre-compute per-cell match count (number of matched edges incident).
+        let mut cell_match_count = vec![0u8; (w * h) as usize];
+        for y in 0..h {
+            for x in 0..w {
+                let pos = y * w + x;
+                let Some((pid, rot)) = board.get(pos) else { continue };
+                let Some(p) = lookup_piece(puzzle, pid) else { continue };
+                let e = p.edges.rotated(rot).as_array();
+                if x + 1 < w {
+                    if let Some((rpid, rrot)) = board.get(y * w + (x + 1)) {
+                        if let Some(rp) = lookup_piece(puzzle, rpid) {
+                            let re = rp.edges.rotated(rrot).as_array();
+                            if e[1] == re[3] && e[1] != BORDER && e[1] != 0 {
+                                cell_match_count[pos as usize] = cell_match_count[pos as usize].saturating_add(1);
+                                cell_match_count[(y * w + (x + 1)) as usize] = cell_match_count[(y * w + (x + 1)) as usize].saturating_add(1);
+                            }
+                        }
+                    }
+                }
+                if y + 1 < h {
+                    if let Some((bpid, brot)) = board.get((y + 1) * w + x) {
+                        if let Some(bp) = lookup_piece(puzzle, bpid) {
+                            let be = bp.edges.rotated(brot).as_array();
+                            if e[2] == be[0] && e[2] != BORDER && e[2] != 0 {
+                                cell_match_count[pos as usize] = cell_match_count[pos as usize].saturating_add(1);
+                                cell_match_count[((y + 1) * w + x) as usize] = cell_match_count[((y + 1) * w + x) as usize].saturating_add(1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Choose seed mismatch.
+        let seed_idx = if self.seed_worst {
+            // Find mismatch with lowest combined match-count (worst).
+            let mut best = (u32::MAX, 0usize);
+            for (i, m) in mismatches.iter().enumerate() {
+                let a_cnt = cell_match_count[m.cell_a as usize] as u32;
+                let b_cnt = cell_match_count[m.cell_b as usize] as u32;
+                let total = a_cnt + b_cnt;
+                if total < best.0 { best = (total, i); }
+            }
+            best.1
+        } else {
+            rng.range(mismatches.len() as u32) as usize
+        };
+        let m = mismatches[seed_idx];
+
+        let mut chain: BTreeSet<Position> = BTreeSet::new();
+        chain.insert(m.cell_a);
+        chain.insert(m.cell_b);
+
+        // Grow the chain: at each step, find the cell adjacent to ANY chain
+        // cell with the lowest match count.
+        while (chain.len() as u32) < self.max_size {
+            let mut best_pos: Option<Position> = None;
+            let mut best_cnt: u32 = u32::MAX;
+            for &p in &chain {
+                let x = p % w;
+                let y = p / w;
+                let nbrs: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+                for (dx, dy) in &nbrs {
+                    let nx = x as i32 + dx;
+                    let ny = y as i32 + dy;
+                    if nx < 0 || ny < 0 || nx as u32 >= w || ny as u32 >= h { continue; }
+                    let np = ny as u32 * w + nx as u32;
+                    if chain.contains(&np) { continue; }
+                    let cnt = cell_match_count[np as usize] as u32;
+                    if cnt < best_cnt {
+                        best_cnt = cnt;
+                        best_pos = Some(np);
+                    }
+                }
+            }
+            // Stop if no candidate (chain is isolated) OR candidate is fully matched
+            // (no chain growth would gain anything).
+            let Some(p) = best_pos else { break; };
+            // Heuristic: stop if next cell has perfect 4-match (no gain possible)
+            // — except in very small chain (give it room).
+            // Actually let's keep going regardless; the CSP repair will figure it out.
+            chain.insert(p);
+        }
+
+        chain
+    }
+}
+
 pub struct SigmaCycleDestroy {
     pub oracle: Board,
     pub min_size: u32,
