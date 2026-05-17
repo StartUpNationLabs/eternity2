@@ -53,7 +53,8 @@ def _contract_open_cell(args):
     if x < p.size - 1: out_inds.append(f'h_{y}_{x}')
     if y < p.size - 1: out_inds.append(f'v_{y}_{x}')
     if x > 0: out_inds.append(f'h_{y}_{x-1}')
-    result = tn.contract(output_inds=out_inds, optimize='auto-hq')
+    # Use 'greedy' optimizer in workers (no nested parallelism)
+    result = tn.contract(output_inds=out_inds, optimize='greedy')
     if isinstance(result, qtn.Tensor):
         arr = result.transpose(*out_inds).data
     else:
