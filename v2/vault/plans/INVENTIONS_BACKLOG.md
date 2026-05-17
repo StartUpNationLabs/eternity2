@@ -469,6 +469,55 @@ Vol-22 reaches LP score 473 but collapses on integer apply because it tries to a
 
 **Effort.** 1 day to add flag + 30-min runs to measure.
 
+### J6. Frontier-State Memoized CSP (FSMC) — status: `built-poc-positive` (vol-122)
+
+**Idea (user-proposed).** In CSP backtracking, many partial paths diverge
+then CONVERGE to equivalent states: same placed-piece set, same frontier
+color signature. A memoized search can detect convergence and skip
+redundant subtree exploration.
+
+**State key.**
+- bitset of placed piece IDs
+- frontier signature: tuple of (position, side, color) for every
+  placed-cell side facing an unplaced cell
+
+**Why different from existing methods.**
+- Standard backtrack explores each path independently.
+- DLX/Algorithm-X uses linked-list cover but doesn't memoize.
+- FSMC adds CACHING — different placement ORDERS reaching the same
+  PARTIAL CONFIGURATION share the rest of the search.
+
+**Done (vol-122).** Python PoC measured convergence on 3×3 through 7×7
+puzzles. Strong signal: 17–94% convergence rates, 1–9× theoretical
+node savings. Concept: [[../concepts/vol122-fsmc-convergence-measured]].
+
+**Next steps.**
+1. **Rust implementation**: port the Python prototype to a high-perf
+   Rust binary integrated with `solver-engine`. Estimate based on PoC:
+   ~1-2 days of careful coding.
+2. **Storage strategy**: Bloom filter, LRU eviction, or bounded-depth
+   memoization to handle astronomical state count on canonical 16×16.
+3. **Benchmark**: compare nps + nodes-to-solve vs vanilla joe_depth150_par.
+4. **Integrate with score-objective**: store BEST score reached from
+   each state, not just existence. Enables "skip to known-better"
+   pruning for MaxScore CSP.
+
+**EV.** High. The PoC convergence rates suggest 2-5× speedup on canonical
+even with aggressive cache eviction. Combined with existing 232×
+blackwood-fast (vol-106), could push search throughput far enough to
+brute-force-find 469+ basins from many starting points.
+
+**Effort.** 3-5 days.
+- Day 1: Rust port of PoC, validate same convergence on small puzzles.
+- Day 2: Bloom-filter + LRU cache.
+- Day 3-4: Integrate with solver-engine; benchmark.
+- Day 5: Apply to canonical-scale; measure nps gain.
+
+**Concept.** [[../concepts/vol122-fsmc-convergence-measured]].
+**Linked**: [[dlx-e2-implementation-status]] (ZDD is a related encoding —
+both exploit state equivalence; ZDD does it via shared subDAGs at the
+data-structure level, FSMC does it via cache lookups).
+
 ### Open slot for next invention
 
 - (placeholder)
