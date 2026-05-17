@@ -129,6 +129,48 @@ def main():
     if n_improving == 0:
         print(f"  ✓ CONFIRMED LOCKED under K=2 simple swap (no-rotation)")
 
+    # K=2: swap pieces AND rotate both freely (4 × 4 rotations per pair)
+    # Constraints: still pieces must respect border-side type. Skip pairs
+    # where swap+rot violates border-type. SAMPLE 5000 pairs to stay fast.
+    print("\n=== K=2 piece swap + rotate (sample 5000) ===")
+    import random
+    random.seed(42)
+    pairs = [(positions[i], positions[j]) for i in range(len(positions)) for j in range(i + 1, len(positions))]
+    random.shuffle(pairs)
+    sample = pairs[:5000]
+    n_improving = 0
+    n_tested = 0
+
+    def is_valid_at(pid, rot, pos):
+        r, c = pos // side, pos % side
+        edges = rotate(pieces[pid], rot)
+        T, R, B, L = edges
+        if (r == 0) != (T == 0): return False
+        if (r == side - 1) != (B == 0): return False
+        if (c == 0) != (L == 0): return False
+        if (c == side - 1) != (R == 0): return False
+        return True
+
+    for (p1, p2) in sample:
+        pid1, rot1 = placed[p1]
+        pid2, rot2 = placed[p2]
+        for new_rot1 in range(4):
+            if not is_valid_at(pid2, new_rot1, p1): continue
+            for new_rot2 in range(4):
+                if not is_valid_at(pid1, new_rot2, p2): continue
+                placed[p1] = (pid2, new_rot1)
+                placed[p2] = (pid1, new_rot2)
+                s = score(placed)
+                d = s - base_score
+                n_tested += 1
+                if d > 0: n_improving += 1
+        placed[p1] = (pid1, rot1)
+        placed[p2] = (pid2, rot2)
+    print(f"  total swap+rot tested: {n_tested}")
+    print(f"  Δ > 0 (improvements): {n_improving}")
+    if n_improving == 0:
+        print(f"  ✓ CONFIRMED LOCKED under K=2 swap+rotation (sample 5000 pairs)")
+
 
 if __name__ == "__main__":
     main()
