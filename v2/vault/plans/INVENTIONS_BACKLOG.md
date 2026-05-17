@@ -2,7 +2,15 @@
 
 The systematic list of unexplored / partly-explored attacks on canonical 5-clue Selby-Riordan Eternity II.
 
-**Established 2026-05-17** after vol-121 saturated every "anchor on existing 459/469" approach (joint MIPs, ALNS variants, MaxSAT — all Δ=0). The user's explicit directive: **stop mixing existing basins, invent new attack classes**. The user has set aside a MONTH of compute time.
+**Established 2026-05-17** after vol-121 saturated every "anchor on existing 459/469" approach (joint MIPs, ALNS variants, MaxSAT — all Δ=0).
+
+## Binding user directives (2026-05-17)
+
+1. **STOP mixing previous 459 / 469 basins. Really stop.**
+2. **Go engineering / inventor mode. You have a MONTH.**
+3. **Spending 5 days on a single invention is OK.** Don't pre-shrink scope or pre-estimate "too long" — that's the [[../../CLAUDE|CLAUDE.md]] no-limiting-thoughts rule. If an invention seems "weeks-long", just start.
+
+These supersede default "comfort-lottery" tendencies. If a vol task is ALNS-on-existing-basin or MIP-region-of-existing-basin, it violates directive 1 — pivot.
 
 ## How to use this page
 
@@ -370,15 +378,23 @@ Placeholder section — add ideas here as they emerge:
 
 ## Priority recommendation for the autonomous month
 
-**Week 1**: A1 (border-DP) full pipeline — enumerate thousands of borders, ALNS each, B3 per-border interior LP-UB. The most actionable + diverse combination.
+Budgeting at **5 days per invention** per user directive. Total ≈ 6 inventions over 30 days, with compute interleaved.
 
-**Week 2**: H2 (cross-machine SOTA at scale) overnight × 7 nights — explore ~100 corner-perm × seed combinations.
+**Days 1-5 — INVENTION A1 (border-DP) full pipeline.** Goal: enumerate ≥10K piece-unique 60-matched borders, group by interior-color profile, ALNS each profile representative × 4 seeds × 30min, build B3 (per-border interior LP-UB) and rank. Outcome target: identify the top 10 borders by ALNS-final-score and by interior LP-UB.
 
-**Week 3**: A4 (DLX exact-cover) build + test at scale.
+**Days 6-10 — INVENTION A4 (DLX exact-cover).** Build minimal DLX in Rust on 4×4/6×6 (day 6), scale to 8×8/12×12 (day 7-8), adapt for MAX-matched (day 9), canonical 16×16 run (day 10). Outcome: nps comparison vs vanilla_fast 125M pp/s and node-count vs CSP backtracking.
 
-**Week 4**: D4 (RL self-play) PPO implementation start. Even partial progress moves the long-term needle.
+**Days 11-15 — INVENTION A5 (bidirectional search).** Implement corners-in + center-out CSP frontiers meeting at 14-cell ring. Test on 8×8 (day 11-12), scale to 16×16 (day 13-14), measure depth reduction (day 15).
 
-Math/proof work (F2, B1, B4) interleaved as compute waits.
+**Days 16-20 — INVENTION B-cluster (B1+B3+B4): tighter UB attacks.** Per-row LP-UB (day 16), per-border interior LP-UB on A1 outputs (day 17-18), color-pair Hall-condition (day 19), publish a vault concept "tightened UB landscape" (day 20).
+
+**Days 21-25 — INVENTION C1 (GNN message-passing) prototype.** Train on synthetic 6×6/8×8 (day 21-23), adapt for canonical 16×16 (day 24-25). May fail; that's still data.
+
+**Days 26-30 — INVENTION D4 (RL self-play) PPO start.** Multi-week project; days 26-30 cover only setup + first training runs.
+
+H2 (cross-machine SOTA at scale) runs **continuously in background** through the whole month, consuming idle compute. Math/proof work (F2) interleaved as primary compute waits.
+
+If any week's invention finds a ≥460 board: STOP scheduled plan, focus deep on that direction.
 
 ---
 
