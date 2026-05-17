@@ -107,6 +107,7 @@ def main():
 
     # Initialize with hints
     placement = [[None] * SIDE for _ in range(SIDE)]
+    placement_meta = [[None] * SIDE for _ in range(SIDE)]  # tracks (pid, rot)
     hint_data = [
         (34 // SIDE, 34 % SIDE, 207, 1),
         (45 // SIDE, 45 % SIDE, 254, 1),
@@ -118,6 +119,7 @@ def main():
     for r, c, pid, rot in hint_data:
         e = rot_edges(pieces[pid], rot)
         placement[r][c] = e
+        placement_meta[r][c] = (pid, rot)
         placed_pids.add(pid)
 
     iteration = 0
@@ -142,6 +144,7 @@ def main():
                 matches, (r, c), rot = res
                 if matches >= 0:  # at least neutral
                     placement[r][c] = rot_edges(pieces[pid], rot)
+                    placement_meta[r][c] = (pid, rot)
                     placed_pids.add(pid)
                     if iteration % 20 == 0:
                         print(f"  iter {iteration}: placed pid={pid} at ({r},{c}) rot={rot}, matches={matches}")
@@ -167,6 +170,22 @@ def main():
 
     print(f"\n=== QW GREEDY BUILDER RESULT ===")
     print(f"Placed: {placed}/256, matched: {matched}/480")
+
+    # Save using meta tracking
+    placement_out = []
+    for r in range(SIDE):
+        for c in range(SIDE):
+            if placement_meta[r][c] is None: continue
+            pid, rot = placement_meta[r][c]
+            placement_out.append({"pos": r * SIDE + c, "piece_id": pid, "rotation": rot})
+
+    import json
+    out = {"source": "vol122_m17_qw_greedy", "n_placed": len(placement_out),
+           "matched_edges": matched, "placement": placement_out}
+    os.makedirs("output/vol-122", exist_ok=True)
+    with open("output/vol-122/m17_qw_greedy_board.json", 'w') as f:
+        json.dump(out, f, indent=2)
+    print(f"Wrote output/vol-122/m17_qw_greedy_board.json")
 
 
 if __name__ == "__main__":

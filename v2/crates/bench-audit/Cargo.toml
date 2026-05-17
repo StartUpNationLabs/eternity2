@@ -287,3 +287,27 @@ path = "src/bin/n2_four_corner_match.rs"
 [[bin]]
 name = "n3_four_corner_feasibility"
 path = "src/bin/n3_four_corner_feasibility.rs"
+
+[[bin]]
+name = "n4_tight_feasibility"
+path = "src/bin/n4_tight_feasibility.rs"
+
+[[bin]]
+name = "n6_border_ring_completion"
+path = "src/bin/n6_border_ring_completion.rs"
+
+[[bin]]
+name = "n7_path_enumerator"
+path = "src/bin/n7_path_enumerator.rs"
+
+[[bin]]
+name = "n9_center_hint_4x4"
+path = "src/bin/n9_center_hint_4x4.rs"
+
+[[bin]]
+name = "n10_center_hint_3x3"
+path = "src/bin/n10_center_hint_3x3.rs"
+
+[[bin]]
+name = "n10b_raw_writer"
+path = "src/bin/n10b_raw_writer.rs"
