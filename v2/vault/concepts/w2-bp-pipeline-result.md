@@ -38,6 +38,17 @@ Total time: ~50 minutes.
 - Once you commit to wrong cells, downstream BP marginals reinforce errors.
 - ALNS can fix local mistakes but not many at once → +9 to +13 lift.
 
+## Full ALNS lift testing (final results)
+
+| Preset | Time | Start | Best result | Lift |
+|--------|------|-------|-------------|------|
+| basic | 10 min × 4 seeds | 435 | 448 (s=7) | +13 |
+| basic | 30 min × 2 seeds | 448 | 448 (no improvement) | 0 |
+| winning5 | 10 min × 4 seeds | 435 | 447 (s=1) | +12 |
+
+**Plateau confirmed at 448.** ALNS basic 30 min on 448 stuck — 6× more
+iterations gives no improvement. The basin around 448 is operator-locked.
+
 ## Comparison with other methods
 
 | Method | Total time | Best matched | Notes |
