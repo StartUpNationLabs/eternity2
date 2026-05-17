@@ -311,3 +311,8 @@ path = "src/bin/n10_center_hint_3x3.rs"
 [[bin]]
 name = "n10b_raw_writer"
 path = "src/bin/n10b_raw_writer.rs"
+
+
+[[bin]]
+name = "sat_decode_to_board"
+path = "src/bin/sat_decode_to_board.rs"
