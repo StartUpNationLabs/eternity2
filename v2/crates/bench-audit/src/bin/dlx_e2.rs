@@ -181,41 +181,42 @@ impl Dlx {
 
     fn purify(&mut self, p: usize) {
         // XCC purify: column c gets purified to color of node p.
-        // All rows touching column c with a DIFFERENT color get hidden;
-        // rows touching with the SAME color stay but the node itself is
-        // marked "ignored" (color set to -1 in our impl).
+        // Walk DOWN the column; for each node q:
+        //   - if color matches: mark with -1 (this row stays alive but this
+        //     node is "consumed").
+        //   - else: hide its row.
+        // NOTE: we must walk the column carefully — `hide(q)` removes q from
+        // its row's other columns but NOT from c itself. Standard Knuth Alg-C
+        // walks via .down pointer which skips hidden rows.
         let c = self.nodes[p].column;
         let target_color = self.nodes[p].color;
         self.columns[c].purified_color = target_color;
         let mut q = self.nodes[c].down;
         while q != c {
+            let next = self.nodes[q].down;
             if self.nodes[q].color != target_color {
                 self.hide(q);
             } else {
-                self.nodes[q].color = -1;  // mark as "color matched, ignore"
+                self.nodes[q].color = -1;
             }
-            q = self.nodes[q].down;
+            q = next;
         }
     }
 
     fn unpurify(&mut self, p: usize) {
+        // Mirror of purify, walking UP.
         let c = self.nodes[p].column;
         let target_color = self.columns[c].purified_color;
         self.columns[c].purified_color = -1;
         let mut q = self.nodes[c].up;
         while q != c {
+            let next = self.nodes[q].up;
             if self.nodes[q].color == -1 {
-                // Was matched; restore its original color.
-                // We need to recover the original color — store it in row_meta? No.
-                // Workaround: maintain a side-table of (node_idx, original_color)
-                // during purify. For PoC: ignore the restoration of color, and
-                // treat all unpurified nodes' colors as the column's purified one.
-                // This is OK because the next purify will re-do it.
                 self.nodes[q].color = target_color;
             } else {
                 self.unhide(q);
             }
-            q = self.nodes[q].up;
+            q = next;
         }
     }
 
@@ -425,6 +426,9 @@ fn encode_e2(puzzle: &Puzzle) -> Dlx {
                 }
 
                 dlx.add_row(&row_items, n_rows);
+                if std::env::var("DLX_DEBUG").is_ok() {
+                    eprintln!("row #{}: cell={} pid={} rot={:?} items={:?}", n_rows, cell, pid, rot, row_items);
+                }
                 n_rows += 1;
             }
         }
