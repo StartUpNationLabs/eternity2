@@ -36,17 +36,18 @@ Each invention has:
 
 **Why different.** Forward CSP search anchored on hint constraints produces correlated partials. Border-DP enumerates the 60-matched border space independently of hints. Yields combinatorially diverse starting points.
 
-**Done.** vol-122: 24 corner-rot configs admit chain-UB=60; 50 piece-unique 60-borders sampled, all with distinct interior-color profiles; 5 dumped as `output/vol-122/border_partial_perm{0..4}_b{0..4}.json`; first ALNS basic 30min seed=42 running on perm0_b0.
+**Done (vol-122).** 24 corner-rot configs admit chain-UB=60; 50 piece-unique 60-borders sampled, all with distinct interior-color profiles; 5 dumped as `output/vol-122/border_partial_perm{0..4}_b{0..4}.json`. ALNS-direct from border partial = 403/480 (T3 attempt). **PIPELINE MISMATCH IDENTIFIED**: ALNS needs near-complete starting board, not 60-cell sparse partial. Per-border LP-UB on perm0 = 480 (LP allows perfect from this border).
 
-**Next steps.**
-1. ALNS on each of the 5 borders × multiple seeds. Measure max matched.
-2. If ALNS lifts any to ≥460 matched-edges, that's a basin discovery beyond corpus.
-3. Enumerate MANY more (thousands) of 60-borders, group by interior-color profile, ALNS one representative per profile.
-4. For each interior-color profile, compute interior LP-UB. If any LP-UB > 478, that border is record-class.
+**Next steps (revised).**
+1. **Build CSP-fill from border partial as hints.** Wrapper bin that loads 60-cell partial as engine `Hints`, runs `joe_depth150_bp_par` or `vanilla_fast --pin-hints` variant, dumps ~200+cell completed partial.
+2. ALNS basic 30min from each CSP-filled partial × multiple seeds.
+3. If ANY reaches ≥460 matched-edges, that's a basin discovery beyond corpus.
+4. Enumerate MANY more borders (thousands), group by interior-color profile, repeat pipeline per profile representative.
+5. Per-border interior MIP (with full piece freedom on interior) — gives integer ceiling per border config.
 
-**EV.** Medium-high. The 60-border space is huge and basically unexplored.
+**EV.** Medium-high. Border-DP yields combinatorially diverse partials. Bottleneck is the interior solver, not border generation.
 
-**Effort.** 1 day per round (enumerate + ALNS), iterate.
+**Effort.** Wrapper bin: 1 day. Sweep: ongoing.
 
 **Concept**: [[../concepts/inv3-border-dp-seed]].
 
