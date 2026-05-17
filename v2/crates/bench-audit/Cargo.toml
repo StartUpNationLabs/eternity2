@@ -252,3 +252,11 @@ path = "src/bin/j1_stratum_fix.rs"
 [[bin]]
 name = "j1_chain_hinted"
 path = "src/bin/j1_chain_hinted.rs"
+
+[[bin]]
+name = "dump_corners"
+path = "src/bin/dump_corners.rs"
+
+[[bin]]
+name = "dump_free_pieces"
+path = "src/bin/dump_free_pieces.rs"
