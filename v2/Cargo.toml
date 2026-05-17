@@ -15,6 +15,7 @@ members = [
     "crates/generator",
     "crates/localsearch",
     "crates/ml-export",
+    "crates/peps",
     "crates/propagators",
     "crates/puzzle-io",
     "crates/sat-encoder",
