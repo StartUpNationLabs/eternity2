@@ -389,8 +389,13 @@ fn main() {
                 initial_used.set(*pid);
             }
         }
-        // also forbid hint pieces from being used elsewhere
-        // (they're already in fb/ft and will be inserted into used by solve_band)
+        // Reserve all DOWNSTREAM hint pieces (rows > bot_row): they can't
+        // be used in this band — they're committed to a future band.
+        for (&(hr, _), &(hpid, _)) in hint_by_rc.iter() {
+            if hr > bot_row {
+                initial_used.set(hpid);
+            }
+        }
 
         let t0 = Instant::now();
         let result = solve_band(
