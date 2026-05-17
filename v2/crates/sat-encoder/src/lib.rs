@@ -389,29 +389,33 @@ pub fn encode_with_pinned(
             emit_color(&pieces[pi as usize], rot, edge.side_b)
         });
 
-        // Case 1: both pinned. Edge is a constant. Skip all match-vars.
-        // (We could still emit a soft clause as a fixed +1 if matched,
-        // but the match-vars are useless. Just record nothing — score
-        // delta is reflected in the score computation post-hoc.)
+        // Case 1: both pinned. Edge is a CONSTANT.
+        // FIXED 2026-05-17 (vol-123 W-SAT bug):
+        //   For DECISION SAT (soft_edge_match=false), if the two pinned colors
+        //   don't agree, we MUST emit a hard ⊥ (empty clause) to fail the
+        //   whole problem. Previously this case skipped silently, which
+        //   accepted mismatched pinned-pinned edges as satisfying SAT.
+        //
+        //   For MaxSAT (soft_edge_match=true), still emit the soft bonus
+        //   if pinned colors agree (so the objective counts the matched edge).
         if pinned_a_color.is_some() && pinned_b_color.is_some() {
-            // Optionally still emit a soft clause as `m_{e, fixed_color}`
-            // if matched, so the MaxSAT objective counts it. We do this
-            // by: if the two pinned colors agree and aren't BORDER, add
-            // a soft clause that's trivially satisfied (e.g., `1 0`).
-            // BUT: an empty/trivial soft clause has score 0 either way.
-            // To make the MaxSAT objective REFLECT the pinned-pinned
-            // matched edges, add a soft "TRUE" tautology (always-satisfied)
-            // — this is just a +1 bonus.
             let ca = pinned_a_color.unwrap();
             let cb = pinned_b_color.unwrap();
-            if ca == cb && ca != BORDER && opts.soft_edge_match {
-                // Emit soft tautology: a clause [x ∨ ¬x] using a placeholder
-                // var. The simplest is to use match_vars[e_idx][ca as usize]
-                // as a satisfied unit (we hard-fix it true, then make it
-                // a soft +1 in the objective).
-                let m_var = vmap.match_vars[e_idx][ca as usize];
-                cnf.add_hard(vec![m_var as Lit]);  // force true
-                cnf.add_soft(vec![m_var as Lit]);  // contributes +1 to objective
+            if !opts.soft_edge_match {
+                // DECISION SAT: require ca == cb. If not, emit ⊥.
+                if ca != cb || ca == BORDER {
+                    // Pinned-pinned mismatch → SAT problem is unsatisfiable.
+                    // Emit hard contradiction.
+                    cnf.add_hard(vec![]); // empty clause = ⊥
+                }
+                // else: matched pinned-pinned edge — no constraint needed.
+            } else {
+                // MaxSAT: emit soft +1 bonus if matched.
+                if ca == cb && ca != BORDER {
+                    let m_var = vmap.match_vars[e_idx][ca as usize];
+                    cnf.add_hard(vec![m_var as Lit]);
+                    cnf.add_soft(vec![m_var as Lit]);
+                }
             }
             continue;
         }
