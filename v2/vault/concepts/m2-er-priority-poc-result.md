@@ -60,10 +60,27 @@ for one snapshot. For real-time CSP use, need:
 - Update L^+ incrementally with each new cell.
 - Pre-compute and cache.
 
+## Static ER-priority path test (REFUTED)
+
+Built a static path using inverse-Manhattan-distance from hints as
+priority proxy. First 5 cells = hints; next 250 = priority-ordered.
+
+Ran `vanilla_path` with this path on canonical 16×16, 60s budget:
+- Depth reached: 29 (vs border-first MRV ~200+)
+- Matched edges: 26
+
+**REFUTED as a static heuristic**: pre-committing to interior cells
+before propagation shrinks domains causes massive backtracking. Same
+failure mode as vol-14 hint-centric-null.
+
+**What might work**: a DYNAMIC heuristic where ER updates as cells
+fill. Requires engine modification (Rust). Deferred.
+
 ## Status
 
-`built-positive`. ER-priority works as a heuristic. Implementation
-cost is the blocker.
+`PoC-positive-static-refuted`. ER-priority captures structural info
+but doesn't translate to a winning static path. Dynamic version
+needed but multi-day to implement.
 
 ## Next steps
 
