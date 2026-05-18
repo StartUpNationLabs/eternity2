@@ -69,6 +69,7 @@ fn main() {
     opts.time_budget_ms = budget_ms;
     opts.seed = seed;
     opts.hints = hints;
+    opts.batch_hint_application = true;
 
     let mut solver: Box<EngineSolver> = match solver_kind.as_str() {
         "gacolor_ac3_par" => Box::new(EngineSolver::gacolor_ac3_par()),
