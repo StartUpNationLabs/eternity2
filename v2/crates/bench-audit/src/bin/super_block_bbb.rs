@@ -228,6 +228,56 @@ impl State {
         }
     }
 
+    /// Snapshot the search-mutable state (for backtracking).
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            domain: self.domain.clone(),
+            pinned: self.pinned.clone(),
+            used_pieces: self.used_pieces.clone(),
+        }
+    }
+
+    fn restore(&mut self, s: Snapshot) {
+        self.domain = s.domain;
+        self.pinned = s.pinned;
+        self.used_pieces = s.used_pieces;
+    }
+
+    /// Are all cells pinned? If so, we have a 480 solution.
+    fn all_pinned(&self) -> bool {
+        for sr in 0..SW {
+            for sc in 0..SW {
+                if !self.pinned[sr][sc] { return false; }
+            }
+        }
+        true
+    }
+
+    /// Extract the 256-cell placement from a fully-pinned state.
+    fn extract_placement(&self) -> Vec<(u32, u16, u8)> {
+        let mut out = Vec::with_capacity(256);
+        // Each super-cell pins a block of 4 pieces in slots TL, TR, BL, BR.
+        // sr,sc give the super-cell; cells are at:
+        //   TL = (sr*2, sc*2), TR = (sr*2, sc*2+1)
+        //   BL = (sr*2+1, sc*2), BR = (sr*2+1, sc*2+1)
+        for sr in 0..SW {
+            for sc in 0..SW {
+                let local_idx = self.domain[sr][sc][0];
+                let b = self.alphabets[sr][sc][local_idx as usize];
+                let slot_pos = [
+                    ((sr * 2) * 16 + sc * 2) as u32,         // TL
+                    ((sr * 2) * 16 + sc * 2 + 1) as u32,     // TR
+                    ((sr * 2 + 1) * 16 + sc * 2) as u32,     // BL
+                    ((sr * 2 + 1) * 16 + sc * 2 + 1) as u32, // BR
+                ];
+                for slot in 0..4 {
+                    out.push((slot_pos[slot], b.pieces[slot], b.rots[slot]));
+                }
+            }
+        }
+        out
+    }
+
     /// Run AC-3 + uniqueness propagation to fixed point. Returns None on wipeout.
     fn propagate_to_fixpoint(&mut self) -> Option<()> {
         loop {
@@ -276,13 +326,61 @@ impl State {
     }
 }
 
+#[derive(Debug, Clone)]
+struct Snapshot {
+    domain: Vec<Vec<Vec<u32>>>,
+    pinned: Vec<Vec<bool>>,
+    used_pieces: Vec<bool>,
+}
+
+/// DFS search. Returns Some(placement) if a 480 board is found.
+/// max_nodes: stop after this many decisions (for budgets).
+fn dfs(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64, t_start: Instant) -> Option<Vec<(u32, u16, u8)>> {
+    if *nodes >= max_nodes {
+        return None;
+    }
+    *nodes += 1;
+    if state.all_pinned() {
+        return Some(state.extract_placement());
+    }
+    let (sr, sc, dom_size) = match state.min_domain_unpinned() {
+        Some(t) => t,
+        None => return None,
+    };
+    if dom_size == 0 { return None; }
+    if *nodes % 100 == 0 {
+        let elapsed = t_start.elapsed().as_secs_f64();
+        let dom_sum = state.domain_sum();
+        let pinned_count: usize = state.pinned.iter().flat_map(|r| r.iter()).filter(|&&b| b).count();
+        eprintln!("[node {}] depth={} pinned={} dom_sum={} elapsed={:.1}s next=({},{}) dom_size={}",
+                  *nodes, depth, pinned_count, dom_sum, elapsed, sr, sc, dom_size);
+    }
+
+    let candidates = state.domain[sr][sc].clone();
+    for cand_idx in candidates {
+        // Snapshot, pin, propagate, recurse.
+        let snap = state.snapshot();
+        state.pin(sr, sc, cand_idx);
+        if state.propagate_to_fixpoint().is_some() {
+            if let Some(res) = dfs(state, depth + 1, max_nodes, nodes, t_start) {
+                return Some(res);
+            }
+        }
+        state.restore(snap);
+        if *nodes >= max_nodes { return None; }
+    }
+    None
+}
+
 fn main() {
     let mut in_dir: PathBuf = "output/vol-125/w14/alphabet".into();
+    let mut max_nodes: u64 = 1000;
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--in-dir" => { in_dir = args[i + 1].clone().into(); i += 2; }
+            "--max-nodes" => { max_nodes = args[i + 1].parse().unwrap(); i += 2; }
             _ => { eprintln!("Unknown arg: {}", args[i]); std::process::exit(2); }
         }
     }
@@ -359,6 +457,33 @@ fn main() {
         }
         None => {
             eprintln!("  UNSAT: domain wipeout during initial propagation");
+            return;
+        }
+    }
+
+    eprintln!("\n=== DFS search (max_nodes={}) ===", max_nodes);
+    let t_dfs = Instant::now();
+    let mut nodes = 0u64;
+    match dfs(&mut state, 0, max_nodes, &mut nodes, t_dfs) {
+        Some(placement) => {
+            eprintln!("\n🎯 480 SOLUTION FOUND after {} nodes ({:.1}s)",
+                       nodes, t_dfs.elapsed().as_secs_f64());
+            // Dump solution to a JSON
+            let json = serde_json::json!({
+                "matched": 480,
+                "placement": placement.iter().map(|(pos, pid, rot)| {
+                    serde_json::json!({"pos": pos, "piece_id": pid, "rotation": rot})
+                }).collect::<Vec<_>>(),
+                "source": "super_block_bbb"
+            });
+            let path = "output/vol-125/SOLUTION_480.json";
+            std::fs::write(path, serde_json::to_string_pretty(&json).unwrap())
+                .expect("write");
+            eprintln!("Saved to: {}", path);
+        }
+        None => {
+            eprintln!("\nDFS exhausted/exceeded budget without 480.");
+            eprintln!("Nodes explored: {} | Time: {:.1}s", nodes, t_dfs.elapsed().as_secs_f64());
         }
     }
 
