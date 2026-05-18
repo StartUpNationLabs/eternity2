@@ -1,0 +1,1109 @@
+{
+  "bucas_url": "https://e2.bucas.name/#puzzle=size_16_official_eternity&board_w=16&board_h=16&board_edges=abdaachbafhcadofaepdaeueaeseacqeadtcaftdabjfacvbadgcacidacocaadcdhdahunhhmwuorhmphhrusthsphsqgmptnqgtmqnjvomvijvggjiiiwgowuidafwdsdannnswlmnhuqlhsjutgwshhlgmrmhqunrqrluopprjijpjuriwswuutmsfabtdteanlktmtplqvntjqovwlrqlkilmttknpgtlouppstojprsrhkpwmqhmupmbafueibakkgippsknigpommirgtmimhgtlgmgvvluwovtgiwrjkgkqtjqwtqpmiwfaembgbagkogssskgvgsmqlvttlqhjltgwvjvgwwouvgisouknhstjistrujiqoreafqbhcaourhsrtuglorloglllwoljmlhhwjwkuhvkokounkhhruiqphhmkqonpmfacncrbarmortrvmonjrpgnnwqngmqgqwoiqujuoosujntksrqrtpqrqkwhqppvwcacpbveaoknvvulkjsiuntovqiklgmkiijjmushwuvuskvwvrkhvrvwkhunvvpsucadpelfankollqjkiigqomnikrvmkgtrisjghvjsvlwvwmulhjumwgsjnkpgsiukdadifoeaoiqojnvigrinnkvrvtkutpjtlulpjrijwhtrukjhuwoksnqoplsnugoldadgeteaqvgtvitvisoivpnskrwplslrlhwqjqphtjoqjnmpouqnqoqnslgoomnldabmepcagmsptrsmwmmrnthjwhptllkpwoklwmsookqmkntkqwinquiwgsqunhlsbafhckfasmwkujvmminjgtgiphtvkrphkmnrsommqwsotwvwiliwirilqvprlrwvfacrfvcawlwvvhnllsuhgrustrgrpnqrnvjnmjovskqjvrtkilprijjlpppjwnspcaencdaaweadndaeufadufafgfafqfafjbafoeabqbaeteabpbaejbabpcabsbaceaab",
+  "matched": 452,
+  "placement": [
+    {
+      "piece_id": 0,
+      "rotation": 3
+    },
+    {
+      "piece_id": 14,
+      "rotation": 0
+    },
+    {
+      "piece_id": 50,
+      "rotation": 0
+    },
+    {
+      "piece_id": 29,
+      "rotation": 0
+    },
+    {
+      "piece_id": 43,
+      "rotation": 0
+    },
+    {
+      "piece_id": 47,
+      "rotation": 0
+    },
+    {
+      "piece_id": 45,
+      "rotation": 0
+    },
+    {
+      "piece_id": 20,
+      "rotation": 0
+    },
+    {
+      "piece_id": 32,
+      "rotation": 0
+    },
+    {
+      "piece_id": 55,
+      "rotation": 0
+    },
+    {
+      "piece_id": 7,
+      "rotation": 0
+    },
+    {
+      "piece_id": 24,
+      "rotation": 0
+    },
+    {
+      "piece_id": 25,
+      "rotation": 0
+    },
+    {
+      "piece_id": 15,
+      "rotation": 0
+    },
+    {
+      "piece_id": 18,
+      "rotation": 0
+    },
+    {
+      "piece_id": 3,
+      "rotation": 0
+    },
+    {
+      "piece_id": 27,
+      "rotation": 3
+    },
+    {
+      "piece_id": 102,
+      "rotation": 3
+    },
+    {
+      "piece_id": 116,
+      "rotation": 0
+    },
+    {
+      "piece_id": 114,
+      "rotation": 2
+    },
+    {
+      "piece_id": 100,
+      "rotation": 1
+    },
+    {
+      "piece_id": 129,
+      "rotation": 3
+    },
+    {
+      "piece_id": 123,
+      "rotation": 2
+    },
+    {
+      "piece_id": 72,
+      "rotation": 1
+    },
+    {
+      "piece_id": 92,
+      "rotation": 3
+    },
+    {
+      "piece_id": 227,
+      "rotation": 1
+    },
+    {
+      "piece_id": 181,
+      "rotation": 0
+    },
+    {
+      "piece_id": 143,
+      "rotation": 1
+    },
+    {
+      "piece_id": 60,
+      "rotation": 0
+    },
+    {
+      "piece_id": 64,
+      "rotation": 3
+    },
+    {
+      "piece_id": 153,
+      "rotation": 3
+    },
+    {
+      "piece_id": 59,
+      "rotation": 1
+    },
+    {
+      "piece_id": 31,
+      "rotation": 3
+    },
+    {
+      "piece_id": 232,
+      "rotation": 0
+    },
+    {
+      "piece_id": 207,
+      "rotation": 1
+    },
+    {
+      "piece_id": 128,
+      "rotation": 0
+    },
+    {
+      "piece_id": 121,
+      "rotation": 0
+    },
+    {
+      "piece_id": 97,
+      "rotation": 1
+    },
+    {
+      "piece_id": 62,
+      "rotation": 3
+    },
+    {
+      "piece_id": 115,
+      "rotation": 3
+    },
+    {
+      "piece_id": 237,
+      "rotation": 2
+    },
+    {
+      "piece_id": 217,
+      "rotation": 2
+    },
+    {
+      "piece_id": 242,
+      "rotation": 0
+    },
+    {
+      "piece_id": 141,
+      "rotation": 1
+    },
+    {
+      "piece_id": 142,
+      "rotation": 3
+    },
+    {
+      "piece_id": 254,
+      "rotation": 1
+    },
+    {
+      "piece_id": 229,
+      "rotation": 2
+    },
+    {
+      "piece_id": 12,
+      "rotation": 1
+    },
+    {
+      "piece_id": 33,
+      "rotation": 3
+    },
+    {
+      "piece_id": 199,
+      "rotation": 2
+    },
+    {
+      "piece_id": 208,
+      "rotation": 3
+    },
+    {
+      "piece_id": 241,
+      "rotation": 2
+    },
+    {
+      "piece_id": 174,
+      "rotation": 0
+    },
+    {
+      "piece_id": 214,
+      "rotation": 1
+    },
+    {
+      "piece_id": 147,
+      "rotation": 2
+    },
+    {
+      "piece_id": 185,
+      "rotation": 3
+    },
+    {
+      "piece_id": 91,
+      "rotation": 2
+    },
+    {
+      "piece_id": 210,
+      "rotation": 0
+    },
+    {
+      "piece_id": 243,
+      "rotation": 3
+    },
+    {
+      "piece_id": 173,
+      "rotation": 0
+    },
+    {
+      "piece_id": 109,
+      "rotation": 1
+    },
+    {
+      "piece_id": 133,
+      "rotation": 3
+    },
+    {
+      "piece_id": 224,
+      "rotation": 3
+    },
+    {
+      "piece_id": 56,
+      "rotation": 1
+    },
+    {
+      "piece_id": 36,
+      "rotation": 3
+    },
+    {
+      "piece_id": 65,
+      "rotation": 2
+    },
+    {
+      "piece_id": 191,
+      "rotation": 3
+    },
+    {
+      "piece_id": 80,
+      "rotation": 2
+    },
+    {
+      "piece_id": 151,
+      "rotation": 3
+    },
+    {
+      "piece_id": 90,
+      "rotation": 1
+    },
+    {
+      "piece_id": 66,
+      "rotation": 3
+    },
+    {
+      "piece_id": 74,
+      "rotation": 2
+    },
+    {
+      "piece_id": 95,
+      "rotation": 0
+    },
+    {
+      "piece_id": 245,
+      "rotation": 2
+    },
+    {
+      "piece_id": 68,
+      "rotation": 1
+    },
+    {
+      "piece_id": 84,
+      "rotation": 3
+    },
+    {
+      "piece_id": 165,
+      "rotation": 3
+    },
+    {
+      "piece_id": 250,
+      "rotation": 3
+    },
+    {
+      "piece_id": 162,
+      "rotation": 2
+    },
+    {
+      "piece_id": 38,
+      "rotation": 1
+    },
+    {
+      "piece_id": 4,
+      "rotation": 3
+    },
+    {
+      "piece_id": 61,
+      "rotation": 3
+    },
+    {
+      "piece_id": 198,
+      "rotation": 3
+    },
+    {
+      "piece_id": 87,
+      "rotation": 2
+    },
+    {
+      "piece_id": 218,
+      "rotation": 2
+    },
+    {
+      "piece_id": 212,
+      "rotation": 2
+    },
+    {
+      "piece_id": 105,
+      "rotation": 0
+    },
+    {
+      "piece_id": 98,
+      "rotation": 0
+    },
+    {
+      "piece_id": 99,
+      "rotation": 1
+    },
+    {
+      "piece_id": 79,
+      "rotation": 3
+    },
+    {
+      "piece_id": 157,
+      "rotation": 0
+    },
+    {
+      "piece_id": 122,
+      "rotation": 2
+    },
+    {
+      "piece_id": 158,
+      "rotation": 2
+    },
+    {
+      "piece_id": 177,
+      "rotation": 3
+    },
+    {
+      "piece_id": 155,
+      "rotation": 0
+    },
+    {
+      "piece_id": 53,
+      "rotation": 1
+    },
+    {
+      "piece_id": 5,
+      "rotation": 3
+    },
+    {
+      "piece_id": 118,
+      "rotation": 3
+    },
+    {
+      "piece_id": 252,
+      "rotation": 1
+    },
+    {
+      "piece_id": 70,
+      "rotation": 0
+    },
+    {
+      "piece_id": 69,
+      "rotation": 2
+    },
+    {
+      "piece_id": 206,
+      "rotation": 0
+    },
+    {
+      "piece_id": 166,
+      "rotation": 1
+    },
+    {
+      "piece_id": 103,
+      "rotation": 0
+    },
+    {
+      "piece_id": 132,
+      "rotation": 3
+    },
+    {
+      "piece_id": 187,
+      "rotation": 1
+    },
+    {
+      "piece_id": 189,
+      "rotation": 3
+    },
+    {
+      "piece_id": 101,
+      "rotation": 0
+    },
+    {
+      "piece_id": 104,
+      "rotation": 3
+    },
+    {
+      "piece_id": 113,
+      "rotation": 0
+    },
+    {
+      "piece_id": 225,
+      "rotation": 3
+    },
+    {
+      "piece_id": 17,
+      "rotation": 1
+    },
+    {
+      "piece_id": 21,
+      "rotation": 3
+    },
+    {
+      "piece_id": 226,
+      "rotation": 1
+    },
+    {
+      "piece_id": 231,
+      "rotation": 3
+    },
+    {
+      "piece_id": 175,
+      "rotation": 2
+    },
+    {
+      "piece_id": 76,
+      "rotation": 1
+    },
+    {
+      "piece_id": 96,
+      "rotation": 3
+    },
+    {
+      "piece_id": 82,
+      "rotation": 2
+    },
+    {
+      "piece_id": 156,
+      "rotation": 2
+    },
+    {
+      "piece_id": 179,
+      "rotation": 1
+    },
+    {
+      "piece_id": 170,
+      "rotation": 3
+    },
+    {
+      "piece_id": 197,
+      "rotation": 2
+    },
+    {
+      "piece_id": 251,
+      "rotation": 1
+    },
+    {
+      "piece_id": 247,
+      "rotation": 0
+    },
+    {
+      "piece_id": 120,
+      "rotation": 2
+    },
+    {
+      "piece_id": 246,
+      "rotation": 0
+    },
+    {
+      "piece_id": 19,
+      "rotation": 1
+    },
+    {
+      "piece_id": 13,
+      "rotation": 3
+    },
+    {
+      "piece_id": 186,
+      "rotation": 1
+    },
+    {
+      "piece_id": 204,
+      "rotation": 3
+    },
+    {
+      "piece_id": 160,
+      "rotation": 2
+    },
+    {
+      "piece_id": 240,
+      "rotation": 0
+    },
+    {
+      "piece_id": 144,
+      "rotation": 1
+    },
+    {
+      "piece_id": 71,
+      "rotation": 0
+    },
+    {
+      "piece_id": 138,
+      "rotation": 0
+    },
+    {
+      "piece_id": 135,
+      "rotation": 2
+    },
+    {
+      "piece_id": 253,
+      "rotation": 3
+    },
+    {
+      "piece_id": 205,
+      "rotation": 0
+    },
+    {
+      "piece_id": 131,
+      "rotation": 2
+    },
+    {
+      "piece_id": 194,
+      "rotation": 3
+    },
+    {
+      "piece_id": 127,
+      "rotation": 0
+    },
+    {
+      "piece_id": 249,
+      "rotation": 1
+    },
+    {
+      "piece_id": 30,
+      "rotation": 1
+    },
+    {
+      "piece_id": 37,
+      "rotation": 3
+    },
+    {
+      "piece_id": 188,
+      "rotation": 1
+    },
+    {
+      "piece_id": 164,
+      "rotation": 2
+    },
+    {
+      "piece_id": 81,
+      "rotation": 2
+    },
+    {
+      "piece_id": 152,
+      "rotation": 3
+    },
+    {
+      "piece_id": 193,
+      "rotation": 0
+    },
+    {
+      "piece_id": 94,
+      "rotation": 1
+    },
+    {
+      "piece_id": 67,
+      "rotation": 3
+    },
+    {
+      "piece_id": 130,
+      "rotation": 0
+    },
+    {
+      "piece_id": 220,
+      "rotation": 1
+    },
+    {
+      "piece_id": 219,
+      "rotation": 3
+    },
+    {
+      "piece_id": 108,
+      "rotation": 0
+    },
+    {
+      "piece_id": 88,
+      "rotation": 1
+    },
+    {
+      "piece_id": 75,
+      "rotation": 3
+    },
+    {
+      "piece_id": 161,
+      "rotation": 1
+    },
+    {
+      "piece_id": 28,
+      "rotation": 1
+    },
+    {
+      "piece_id": 52,
+      "rotation": 3
+    },
+    {
+      "piece_id": 154,
+      "rotation": 1
+    },
+    {
+      "piece_id": 140,
+      "rotation": 3
+    },
+    {
+      "piece_id": 83,
+      "rotation": 0
+    },
+    {
+      "piece_id": 202,
+      "rotation": 1
+    },
+    {
+      "piece_id": 200,
+      "rotation": 2
+    },
+    {
+      "piece_id": 178,
+      "rotation": 2
+    },
+    {
+      "piece_id": 211,
+      "rotation": 2
+    },
+    {
+      "piece_id": 139,
+      "rotation": 2
+    },
+    {
+      "piece_id": 124,
+      "rotation": 1
+    },
+    {
+      "piece_id": 126,
+      "rotation": 3
+    },
+    {
+      "piece_id": 201,
+      "rotation": 3
+    },
+    {
+      "piece_id": 235,
+      "rotation": 1
+    },
+    {
+      "piece_id": 216,
+      "rotation": 1
+    },
+    {
+      "piece_id": 77,
+      "rotation": 1
+    },
+    {
+      "piece_id": 26,
+      "rotation": 1
+    },
+    {
+      "piece_id": 46,
+      "rotation": 3
+    },
+    {
+      "piece_id": 93,
+      "rotation": 2
+    },
+    {
+      "piece_id": 159,
+      "rotation": 1
+    },
+    {
+      "piece_id": 136,
+      "rotation": 3
+    },
+    {
+      "piece_id": 239,
+      "rotation": 2
+    },
+    {
+      "piece_id": 195,
+      "rotation": 0
+    },
+    {
+      "piece_id": 213,
+      "rotation": 2
+    },
+    {
+      "piece_id": 134,
+      "rotation": 1
+    },
+    {
+      "piece_id": 107,
+      "rotation": 3
+    },
+    {
+      "piece_id": 169,
+      "rotation": 1
+    },
+    {
+      "piece_id": 167,
+      "rotation": 0
+    },
+    {
+      "piece_id": 233,
+      "rotation": 3
+    },
+    {
+      "piece_id": 234,
+      "rotation": 3
+    },
+    {
+      "piece_id": 78,
+      "rotation": 2
+    },
+    {
+      "piece_id": 209,
+      "rotation": 3
+    },
+    {
+      "piece_id": 8,
+      "rotation": 1
+    },
+    {
+      "piece_id": 42,
+      "rotation": 3
+    },
+    {
+      "piece_id": 73,
+      "rotation": 0
+    },
+    {
+      "piece_id": 230,
+      "rotation": 3
+    },
+    {
+      "piece_id": 222,
+      "rotation": 1
+    },
+    {
+      "piece_id": 106,
+      "rotation": 2
+    },
+    {
+      "piece_id": 119,
+      "rotation": 1
+    },
+    {
+      "piece_id": 190,
+      "rotation": 2
+    },
+    {
+      "piece_id": 183,
+      "rotation": 2
+    },
+    {
+      "piece_id": 228,
+      "rotation": 1
+    },
+    {
+      "piece_id": 192,
+      "rotation": 1
+    },
+    {
+      "piece_id": 182,
+      "rotation": 3
+    },
+    {
+      "piece_id": 150,
+      "rotation": 2
+    },
+    {
+      "piece_id": 163,
+      "rotation": 2
+    },
+    {
+      "piece_id": 89,
+      "rotation": 0
+    },
+    {
+      "piece_id": 111,
+      "rotation": 1
+    },
+    {
+      "piece_id": 49,
+      "rotation": 1
+    },
+    {
+      "piece_id": 16,
+      "rotation": 3
+    },
+    {
+      "piece_id": 196,
+      "rotation": 3
+    },
+    {
+      "piece_id": 180,
+      "rotation": 1
+    },
+    {
+      "piece_id": 149,
+      "rotation": 1
+    },
+    {
+      "piece_id": 63,
+      "rotation": 2
+    },
+    {
+      "piece_id": 125,
+      "rotation": 1
+    },
+    {
+      "piece_id": 110,
+      "rotation": 3
+    },
+    {
+      "piece_id": 184,
+      "rotation": 0
+    },
+    {
+      "piece_id": 223,
+      "rotation": 2
+    },
+    {
+      "piece_id": 244,
+      "rotation": 3
+    },
+    {
+      "piece_id": 255,
+      "rotation": 0
+    },
+    {
+      "piece_id": 146,
+      "rotation": 0
+    },
+    {
+      "piece_id": 145,
+      "rotation": 2
+    },
+    {
+      "piece_id": 248,
+      "rotation": 2
+    },
+    {
+      "piece_id": 215,
+      "rotation": 0
+    },
+    {
+      "piece_id": 22,
+      "rotation": 1
+    },
+    {
+      "piece_id": 58,
+      "rotation": 3
+    },
+    {
+      "piece_id": 221,
+      "rotation": 1
+    },
+    {
+      "piece_id": 117,
+      "rotation": 1
+    },
+    {
+      "piece_id": 112,
+      "rotation": 3
+    },
+    {
+      "piece_id": 86,
+      "rotation": 0
+    },
+    {
+      "piece_id": 85,
+      "rotation": 2
+    },
+    {
+      "piece_id": 236,
+      "rotation": 1
+    },
+    {
+      "piece_id": 168,
+      "rotation": 2
+    },
+    {
+      "piece_id": 171,
+      "rotation": 1
+    },
+    {
+      "piece_id": 176,
+      "rotation": 3
+    },
+    {
+      "piece_id": 203,
+      "rotation": 3
+    },
+    {
+      "piece_id": 148,
+      "rotation": 0
+    },
+    {
+      "piece_id": 137,
+      "rotation": 0
+    },
+    {
+      "piece_id": 172,
+      "rotation": 3
+    },
+    {
+      "piece_id": 238,
+      "rotation": 1
+    },
+    {
+      "piece_id": 39,
+      "rotation": 1
+    },
+    {
+      "piece_id": 2,
+      "rotation": 2
+    },
+    {
+      "piece_id": 35,
+      "rotation": 2
+    },
+    {
+      "piece_id": 40,
+      "rotation": 2
+    },
+    {
+      "piece_id": 34,
+      "rotation": 2
+    },
+    {
+      "piece_id": 57,
+      "rotation": 2
+    },
+    {
+      "piece_id": 48,
+      "rotation": 2
+    },
+    {
+      "piece_id": 54,
+      "rotation": 2
+    },
+    {
+      "piece_id": 51,
+      "rotation": 2
+    },
+    {
+      "piece_id": 9,
+      "rotation": 2
+    },
+    {
+      "piece_id": 44,
+      "rotation": 2
+    },
+    {
+      "piece_id": 11,
+      "rotation": 2
+    },
+    {
+      "piece_id": 41,
+      "rotation": 2
+    },
+    {
+      "piece_id": 6,
+      "rotation": 2
+    },
+    {
+      "piece_id": 10,
+      "rotation": 2
+    },
+    {
+      "piece_id": 23,
+      "rotation": 2
+    },
+    {
+      "piece_id": 1,
+      "rotation": 1
+    }
+  ],
+  "source_path": "output/night-archive/pt_e2_1778564891_452of480.json",
+  "puzzle": {
+    "color_count": 23,
+    "height": 16,
+    "name": "size_16_official_eternity",
+    "piece_count": 256,
+    "width": 16
+  },
+  "timestamp_unix": 1778564891,
+  "score": {
+    "matched_edges": 452,
+    "percent": 94.16666666666667,
+    "placed_cells": 256,
+    "total_cells": 256,
+    "total_edges": 480
+  },
+  "details": {
+    "cp": {
+      "budget_s": 60,
+      "elapsed_s": 0.0,
+      "score": 439
+    },
+    "pt": {
+      "best_board_fmm": 0,
+      "budget_s": 90,
+      "elapsed_s": 90.018186958,
+      "final_fmm": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "final_replica_scores": [
+        452,
+        452,
+        451,
+        434,
+        336,
+        236,
+        149,
+        124
+      ],
+      "forbidden_count_configured": 0,
+      "forbidden_k": 0,
+      "inner_iters": 100000,
+      "kick_every": 0,
+      "n_replicas": 8,
+      "pair_accepts": [
+        1108,
+        258,
+        95,
+        0,
+        0,
+        0,
+        14
+      ],
+      "pair_proposals": [
+        1194,
+        1194,
+        1194,
+        1194,
+        1194,
+        1194,
+        1194
+      ],
+      "repair_every": 0,
+      "rounds": 2388,
+      "score": 452,
+      "swap_accepts": 1475,
+      "swap_proposals": 8358,
+      "t_max": 2.0,
+      "t_min": 0.05
+    },
+    "seed": 759
+  }
+}
