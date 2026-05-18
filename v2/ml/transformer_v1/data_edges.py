@@ -19,16 +19,52 @@ N_COLORS = 23
 EMPTY_COLOR = N_COLORS  # = 23, sentinel
 
 
-def generate_edge_board(n_colors: int, rng: random.Random) -> list[tuple]:
+# Canonical E2 color rarity distribution (vol-125 measurement 2026-05-18):
+#   - Colors 1-5 (5 rare): 24 piece-side occurrences each
+#   - Colors 6-10 (5 medium): 48 each
+#   - Colors 11-22 (12 common): 50 each
+# Total interior occurrences = 5*24 + 5*48 + 12*50 = 960.
+# Each interior EDGE is shared by 2 piece-sides, so n_interior_edges = 480.
+# Edge color sampled with frequency proportional to (occurrences / 2).
+CANONICAL_E2_COLOR_FREQ = (
+    [24] * 5 + [48] * 5 + [50] * 12  # for colors 1..22
+)  # = 22 entries, sums to 960
+
+
+def generate_edge_board(n_colors: int, rng: random.Random,
+                        canonical_dist: bool = True) -> list[tuple]:
     """Generate a 256-cell edge-matched board.
+
+    If canonical_dist=True, sample edge colors per the canonical E2
+    rarity distribution (rare 1-5 at 24/960, medium 6-10 at 48/960,
+    common 11-22 at 50/960). This matches the structural asymmetry of
+    Selby-Riordan E2 and should improve transfer to canonical inference.
+
+    If canonical_dist=False, use uniform-random colors (old behavior).
 
     Returns: list of 256 cells, each a tuple (N, E, S, W) of colors.
     """
-    # Interior horizontal/vertical edges.
-    n_horiz = W * (W - 1)
-    n_vert = W * (W - 1)
-    horiz_edges = [rng.randint(1, n_colors) for _ in range(n_horiz)]
-    vert_edges = [rng.randint(1, n_colors) for _ in range(n_vert)]
+    n_horiz = W * (W - 1)  # 240
+    n_vert = W * (W - 1)   # 240
+    n_total = n_horiz + n_vert  # 480 interior edges
+
+    if canonical_dist and n_colors == 22:
+        # Build a target color-occurrence-list, shuffle, assign to edges.
+        # Edges are shared by 2 piece-sides → each interior edge contributes
+        # 2 occurrences. So total occurrences = 2 * n_total = 960.
+        target_occs = []
+        for c, n_occ in enumerate(CANONICAL_E2_COLOR_FREQ, start=1):
+            target_occs.extend([c] * (n_occ // 2))  # n_occ/2 edges with color c
+        # If imbalance, pad with random colors.
+        while len(target_occs) < n_total:
+            target_occs.append(rng.randint(1, n_colors))
+        rng.shuffle(target_occs)
+        target_occs = target_occs[:n_total]
+        horiz_edges = target_occs[:n_horiz]
+        vert_edges = target_occs[n_horiz:]
+    else:
+        horiz_edges = [rng.randint(1, n_colors) for _ in range(n_horiz)]
+        vert_edges = [rng.randint(1, n_colors) for _ in range(n_vert)]
 
     # Ensure all colors appear at least once.
     all_edges = horiz_edges + vert_edges

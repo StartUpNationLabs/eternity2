@@ -55,10 +55,17 @@ def main():
 
     best_val_loss = float("inf")
     for epoch in range(args.epochs):
-        # Curriculum: start with small masks (easier).
+        # Curriculum: start with small masks (easier), accelerate.
+        # New formula: spend first 20% at mask_max=16 (warmup), then linear
+        # ramp to args.mask_max over remaining 80%.
         if args.curriculum:
             frac = (epoch + 1) / args.epochs
-            mask_max = max(args.mask_min + 4, int(args.mask_max * frac))
+            warmup = 0.2
+            if frac < warmup:
+                mask_max = 16
+            else:
+                ramp = (frac - warmup) / (1.0 - warmup)
+                mask_max = int(16 + ramp * (args.mask_max - 16))
         else:
             mask_max = args.mask_max
 
