@@ -157,9 +157,20 @@ pub enum RepairKind {
     /// arc-consistency, so works on plateau states where CP fails.
     /// Cheaper per attempt but doesn't enumerate all completions.
     Sa,
-    /// Iterative Optimal Transport (Hungarian assignment) on the free cells.
+    /// Iterative Optimal Transport (Hungarian / Kuhn-Munkres) on the free cells.
     /// Treats the repair as a linear assignment problem and iterates until fixed point.
     IterativeOt,
+    /// Vol-125 T37: Jonker-Volgenant LAP backend (drop-in for IterativeOt).
+    /// Same outer loop, best-of-rotation memo identical to IterativeOt — only
+    /// the inner LAP call uses lsap (JV) instead of kuhn_munkres. Typically
+    /// 2-10× faster on dense k×k cost matrices.
+    IterativeJv,
+    /// Vol-125 T37: JV LAP with JOINT piece × rotation assignment.
+    /// 4k × 4k block formulation: each piece occupies 4 rows (one per
+    /// rotation). The LAP picks ONE rotation per piece AND assigns it to a
+    /// real position. Globally optimal over both axes (no best-of-4 memo
+    /// sub-optimality).
+    IterativeJvJoint,
 }
 
 /// Pin every cell EXCEPT `free_set` as a Hint; run cell-CP for `budget_ms`.
@@ -278,6 +289,8 @@ pub fn repair(
         RepairKind::Cp => cp_repair(puzzle, board, free_set, budget_ms),
         RepairKind::Sa => Some(sa_repair(puzzle, board, free_set, budget_ms, seed)),
         RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
+        RepairKind::IterativeJv => Some(crate::ot_repair_jv::iterative_jv_repair(puzzle, board, free_set, 50)),
+        RepairKind::IterativeJvJoint => Some(crate::ot_repair_jv::iterative_jv_joint_repair(puzzle, board, free_set, 50)),
     }
 }
 
@@ -297,6 +310,8 @@ pub fn repair_with_opts(
         RepairKind::Cp => cp_repair_with_opts(puzzle, board, free_set, budget_ms, cp_parallel),
         RepairKind::Sa => Some(sa_repair_with_steps(puzzle, board, free_set, budget_ms, sa_step_budget, seed)),
         RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
+        RepairKind::IterativeJv => Some(crate::ot_repair_jv::iterative_jv_repair(puzzle, board, free_set, 50)),
+        RepairKind::IterativeJvJoint => Some(crate::ot_repair_jv::iterative_jv_joint_repair(puzzle, board, free_set, 50)),
     }
 }
 

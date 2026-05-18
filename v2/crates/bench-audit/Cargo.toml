@@ -26,6 +26,8 @@ eternity2-solver-engine = { path = "../solver-engine" }
 eternity2-solver-trait = { path = "../solver-trait" }
 rayon = "1.10"
 good_lp = { version = "1.15", default-features = false, features = ["highs"] }
+pathfinding = "4.9.2"
+lsap = "1.0"
 
 [dependencies.serde]
 version = "1"
