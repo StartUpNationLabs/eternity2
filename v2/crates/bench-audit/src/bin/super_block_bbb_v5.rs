@@ -433,6 +433,46 @@ impl State {
         self.full_piece_uniqueness_pass()
     }
 
+    /// Apply hints with FULL slot+rotation constraints. Each hint is
+    /// (sr, sc, slot, piece_id, rotation): piece_id must be at the given slot
+    /// in the given super-cell with the given rotation. Filters that
+    /// super-cell's domain to only blocks that satisfy this constraint.
+    fn apply_strict_hints(&mut self, hints: &[(usize, usize, u8, u16, u8)]) -> Option<u64> {
+        // 1. Filter each hinted super-cell's domain.
+        let mut total_removed: u64 = 0;
+        for &(sr, sc, slot, piece, rot) in hints {
+            // Collect blocks at (sr,sc) that DO NOT satisfy: block.pieces[slot] == piece && block.rots[slot] == rot
+            let to_remove: Vec<u32> = {
+                let d = &self.domain[sr][sc];
+                let alphabet = &self.alphabets[sr][sc];
+                d.iter_live().iter().copied()
+                    .filter(|&i| {
+                        let b = &alphabet[i as usize];
+                        b.pieces[slot as usize] != piece || b.rots[slot as usize] != rot
+                    })
+                    .collect()
+            };
+            for bi in to_remove {
+                if self.remove(sr as u8, sc as u8, bi) {
+                    total_removed += 1;
+                    if self.domain[sr][sc].len() == 0 {
+                        eprintln!("UNSAT: hint ({},{},slot={},piece={},rot={}) leaves empty domain", sr, sc, slot, piece, rot);
+                        return None;
+                    }
+                }
+            }
+            eprintln!("  hint sr={} sc={} slot={} piece={} rot={}: domain reduced to {} blocks",
+                      sr, sc, slot, piece, rot, self.domain[sr][sc].len());
+        }
+        // 2. Mark hint pieces as used + owned by their super-cell.
+        for &(sr, sc, _slot, piece, _rot) in hints {
+            self.mark_piece_used(piece, sr as u8, sc as u8);
+        }
+        // 3. Propagate piece uniqueness.
+        let extra = self.full_piece_uniqueness_pass()?;
+        Some(total_removed + extra)
+    }
+
     fn init_propagate_to_fixpoint(&mut self) -> Option<()> {
         loop {
             let r1 = self.full_boundary_ac3_pass()?;
@@ -676,16 +716,27 @@ fn main() {
     let init_sum = state.domain_sum();
     eprintln!("Initial domain sum: {}", init_sum);
 
-    let hint_cells: Vec<(usize, usize, u16)> = vec![
-        (4, 3, 138), (6, 1, 180), (1, 1, 207), (6, 6, 248), (1, 6, 254),
+    // STRICT canonical hints: (sr, sc, slot, piece, rot)
+    // Derived from official puzzle CSV:
+    //   piece 138 at (col=7, row=8), rot=0 -> super=(4,3), slot=1 (TR)
+    //   piece 180 at (col=2, row=13), rot=1 -> super=(6,1), slot=2 (BL)
+    //   piece 207 at (col=2, row=2), rot=1 -> super=(1,1), slot=0 (TL)
+    //   piece 248 at (col=13, row=13), rot=2 -> super=(6,6), slot=3 (BR)
+    //   piece 254 at (col=13, row=2), rot=1 -> super=(1,6), slot=1 (TR)
+    let strict_hints: Vec<(usize, usize, u8, u16, u8)> = vec![
+        (4, 3, 1, 138, 0),
+        (6, 1, 2, 180, 1),
+        (1, 1, 0, 207, 1),
+        (6, 6, 3, 248, 2),
+        (1, 6, 1, 254, 1),
     ];
 
-    eprintln!("\nApplying hints...");
+    eprintln!("\nApplying STRICT hints (slot + rotation enforced)...");
     let t = Instant::now();
-    if state.apply_hints(&hint_cells).is_none() {
-        eprintln!("UNSAT applying hints"); return;
+    if state.apply_strict_hints(&strict_hints).is_none() {
+        eprintln!("UNSAT applying strict hints"); return;
     }
-    eprintln!("  domain sum after hints: {} (in {:.1}s)",
+    eprintln!("  domain sum after strict hints: {} (in {:.1}s)",
               state.domain_sum(), t.elapsed().as_secs_f64());
 
     eprintln!("\nFull AC-3 + uniqueness fixpoint...");
