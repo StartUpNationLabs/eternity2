@@ -74,12 +74,37 @@ This 576-cube run took 5 min on 2 cores. To increase coverage:
    use those as decision variables for cubing. This is the original
    AlphaMapleSAT idea.
 
-## Next experiments
+## Wider-cube empirical NULL (2026-05-18 09:23)
 
-- **wider-cube run**: 4 corners + 4 cells × top-8 → ~10k-100k piece-unique
-  cubes × 10s each → ~30k seconds wall on 4 cores = ~2h.
-- **monitor for any unexpected SAT**: if a SAT result emerges from a wider
-  sweep, that's the 480.
+Followup run: top-row 6 contiguous cells (positions 0-5) with adjacency-
+color pre-filter AND piece-uniqueness, all candidates per cell. Produced
+587,808 piece-unique adjacency-feasible cubes.
+
+First 50 cubes with 60s/cube kissat timeout:
+- 12 UNSAT (~1-3s each)
+- 38 UNKNOWN (full 60s timeout)
+
+**Conclusion: smart-cube generation kills the speed of the initial
+576-cube experiment.** The initial cubes were fast BECAUSE adjacency
+was violated (kissat unit-prop catches color mismatch in <1s). Once
+adjacency is pre-filtered, the remaining cubes require deep SAT
+reasoning, mostly hitting 60s timeouts.
+
+At 60s/cube × 587k cubes / 4 cores = ~100 days wall. Not feasible.
+
+Implication: **cube-and-conquer with vanilla kissat on this encoding is
+not viable**. The vol-124 finding stands: kissat cannot decide canonical
+E2 in reasonable time at any cube size that leaves the instance "hard".
+
+Paths still open:
+- **Better SAT solver heuristics**: VSIDS-priority cubing (AlphaMapleSAT's
+  actual idea — pick decision variables based on solver-internal scores
+  after a warm-up run).
+- **Different SAT encoding**: tighter symmetry breaking, super-block
+  encoding (W14), permutation encoding (W16 Codognet 2025).
+- **Approximate methods**: SLS solvers (probSAT, YalSAT) instead of CDCL.
+- **Don't use SAT for the 480 search**: revert to constraint
+  satisfaction at the engine level + invent better algorithms.
 
 ## Linked
 
