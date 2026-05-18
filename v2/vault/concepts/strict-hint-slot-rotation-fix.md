@@ -98,3 +98,27 @@ After AC-3 fixpoint, total domain sum WILL likely be lower than before because A
 - ⏳ Also add to v6 (same fix needed).
 - ⏳ Re-run all BB&B benchmarks with strict hints.
 - ⏳ Re-check whether ALNS basic also obeys hint slot+rotation (it MIGHT — likely separate code path).
+
+---
+
+## CORRECTION 2026-05-18 18:35
+
+After investigation, the "bug" I thought I found is NOT a v5/v6 bug. The W14 alphabet enumerator (`super_block_enum.rs` lines 220-232) **already pre-filters hint super-cells to only blocks where (piece, slot, rotation) matches the canonical hint**. So when v5/v6 loads the alphabet from disk, the hint cells ALREADY have only ~5K hint-compliant blocks, not 1.46M.
+
+My `apply_strict_hints` fix was running on already-filtered alphabets and removing zero additional blocks. Confirmed empirically:
+- Non-strict v5: depth 29/36/40 at nodes 100/200/300.
+- Strict v5: depth 29/36/40 at nodes 100/200/300 (identical).
+
+**The 461 record was found by bf_bw + ALNS, NOT BB&B.** bf_bw uses `solve_blackwood` which does NOT pin canonical hints (the schedule USES hint info for heuristics, but the search itself doesn't pin). ALNS with empty `pinned_positions` also doesn't pin. So bf_bw → ALNS finds matched-edges records on a relaxed puzzle.
+
+The convention split is well-documented in CLAUDE.md and memory:
+- **Matched-edges convention**: just total matched edges, no hint enforcement. Current record 461 (matched-edges).
+- **Strict-canonical-matched**: must obey 5/5 canonical hints. Current record 458 (strict, vol-122).
+
+BB&B with strict-hint W14 alphabet IS running on canonical strict puzzle. Its depth-40 plateau is a real research finding about the canonical-strict puzzle's CSP hardness — and probably explains why the strict record is only 458.
+
+## What to actually do next
+
+Pivot to: how can we either (a) push the matched-edges 461 → 462+ via algorithmic invention, or (b) push the strict 458 → 459+ via deeper BB&B variants.
+
+The strict path is more impressive for community (5/5 hints = canonical record). The matched-edges path is the practical race currently.
