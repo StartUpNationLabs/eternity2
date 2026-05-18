@@ -94,6 +94,28 @@ Seeds 2-7 will complete after seed=1 (~3 more hours). If even one of
 them breaks depth 41, the structural-wall hypothesis is partly refuted.
 If all 7 plateau at 40, the hypothesis is strongly confirmed.
 
+## UPDATE 2026-05-18 — seed=2 RESULT
+
+Seed=2 finished 3000 nodes. **Max depth reached: 41**.
+
+```
+[seed=2 node 2500] depth=41 pinned=41 dom_sum=313905 elapsed=905.7s
+                   rate=2.8 nodes/s next=(5,3) dom_size=1
+```
+
+This is the FIRST observed depth > 40 across all tested seeds (baseline=40,
+seed=1=40, seed=2=41). **Partially refutes** the "hard wall at 40" version
+of the conjecture. The wall is a probabilistic plateau, not a hard barrier.
+
+But depth 41 is still far from 64 (target). The empirical rate is roughly:
+- baseline: 1/3000 nodes reaches max depth = 40
+- seed=2: 1/2500 nodes reaches depth = 41
+
+For depth 50+, we'd need many orders of magnitude more nodes per seed.
+
+The wall conjecture remains MOSTLY supported: search density drops off
+sharply past depth 40, even if the absolute barrier isn't hard.
+
 ## Linked
 
 - [[depth-40-wall-math]] — the mathematical analysis predicting this
