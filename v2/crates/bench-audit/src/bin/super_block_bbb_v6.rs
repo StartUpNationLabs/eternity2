@@ -13,7 +13,23 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
+
+/// Shadow mode: compute SCC and count removals, but don't actually remove.
+/// Lets us check whether the SCC computation is correct without coupling to
+/// removal/propagation side effects.
+static SHADOW: AtomicBool = AtomicBool::new(false);
+/// Counter for "would-have-removed" edges in shadow mode.
+static SHADOW_FILTERED: AtomicU64 = AtomicU64::new(0);
+/// Counter for distinct (p, cs) pairs flagged across all regin_filter calls.
+static REGIN_CALLS: AtomicU64 = AtomicU64::new(0);
+/// Verify perfect matching is preserved after each regin_filter call. If a
+/// removal destroys the perfect matching, that's evidence of the block-vs-
+/// edge soundness gap.
+static VERIFY_AFTER: AtomicBool = AtomicBool::new(false);
+/// Number of regin_filter calls that destroyed the perfect matching.
+static REGIN_BROKE_PM: AtomicU64 = AtomicU64::new(0);
 
 const SW: usize = 8;
 const N: usize = 0;
@@ -677,7 +693,10 @@ impl State {
         // Now find edges (p, cs) NOT in matching where scc_id[p] != scc_id[256+cs].
         // For each such edge, the (piece, slot) pair cannot be in any max matching,
         // so we remove all blocks at supercell using piece in slot.
+        let shadow = SHADOW.load(Ordering::Relaxed);
+        REGIN_CALLS.fetch_add(1, Ordering::Relaxed);
         let mut total_removed: u64 = 0;
+        let mut edges_filtered: u64 = 0;
         for p in 0..256i16 {
             let matched_cs = self.hk_match_p[p as usize];
             let scc_p = self.scc_id[p as usize];
@@ -687,6 +706,11 @@ impl State {
                 if cs as i16 == matched_cs { continue; } // matching edge, keep
                 let scc_cs = self.scc_id[256 + cs as usize];
                 if scc_p != scc_cs {
+                    edges_filtered += 1;
+                    if shadow {
+                        // Don't actually remove anything — just count.
+                        continue;
+                    }
                     // Edge (p, cs) is filtered. Remove all blocks at the cell
                     // using piece p in this slot.
                     let sr = (cs / 32) as u8;
@@ -713,6 +737,19 @@ impl State {
                         }
                     }
                 }
+            }
+        }
+        if shadow {
+            SHADOW_FILTERED.fetch_add(edges_filtered, Ordering::Relaxed);
+        }
+        // DIAGNOSTIC: if VERIFY_AFTER is on and we removed anything, re-run HK
+        // to check whether removal preserved perfect-matchability.
+        if VERIFY_AFTER.load(Ordering::Relaxed) && total_removed > 0 && !shadow {
+            let m_after = self.hopcroft_karp();
+            if m_after < 256 {
+                eprintln!("⚠️  Régin filter destroyed perfect matching: m={} after removing {} blocks (filtered {} edges)",
+                          m_after, total_removed, edges_filtered);
+                REGIN_BROKE_PM.fetch_add(1, Ordering::Relaxed);
             }
         }
         Some(total_removed)
@@ -821,17 +858,26 @@ fn extract_placement(state: &State) -> Vec<(u32, u16, u8)> {
 fn main() {
     let mut in_dir: PathBuf = "output/vol-125/w14/alphabet".into();
     let mut max_nodes: u64 = 10000;
+    let mut shadow = false;
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--in-dir" => { in_dir = args[i + 1].clone().into(); i += 2; }
             "--max-nodes" => { max_nodes = args[i + 1].parse().unwrap(); i += 2; }
+            "--shadow" => { shadow = true; i += 1; }
+            "--verify-after" => { VERIFY_AFTER.store(true, Ordering::Relaxed); i += 1; }
             _ => { eprintln!("Unknown arg: {}", args[i]); std::process::exit(2); }
         }
     }
-
+    SHADOW.store(shadow, Ordering::Relaxed);
     eprintln!("=== Super-block BB&B v6 (Regin filter via SCC + v5 alldiff) ===");
+    if shadow {
+        eprintln!("    SHADOW MODE: SCC computed but no removal — behaves like v5 functionally");
+    }
+    if VERIFY_AFTER.load(Ordering::Relaxed) {
+        eprintln!("    VERIFY MODE: re-running HK after every regin_filter call to check PM preservation");
+    }
     let mut state = State::load(&in_dir);
     let init_sum = state.domain_sum();
     eprintln!("Initial domain sum: {}", init_sum);
@@ -881,5 +927,13 @@ fn main() {
             eprintln!("\nDFS exhausted/exceeded after {} nodes ({:.1}s) without 480.",
                       nodes, t_dfs.elapsed().as_secs_f64());
         }
+    }
+    let regin_calls = REGIN_CALLS.load(Ordering::Relaxed);
+    let regin_broke_pm = REGIN_BROKE_PM.load(Ordering::Relaxed);
+    eprintln!("[stats] regin_filter calls: {}, calls that broke PM: {}",
+              regin_calls, regin_broke_pm);
+    if SHADOW.load(Ordering::Relaxed) {
+        eprintln!("[stats] shadow_filtered edges (would-have-removed): {}",
+                  SHADOW_FILTERED.load(Ordering::Relaxed));
     }
 }

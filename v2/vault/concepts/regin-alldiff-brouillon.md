@@ -249,3 +249,141 @@ Step 3 is the cheapest diagnostic. Let me do that.
 - v6.1: same as v6 but `regin_filter` skips the actual `self.remove()` call. Should behave identically to `check_alldiff` (since no blocks removed) — confirms SCC isn't corrupting state.
 - v6.2: same as v6 but with a recursive (small-input only?) reference SCC. If SCC results match, SCC isn't the bug.
 - v6.3: only remove ONE edge per call (to limit damage). If max-depth recovers, the issue is volume of removal not the algorithm.
+
+---
+
+## Update 2026-05-18 (post-compaction continuation)
+
+### Standalone unit test PASSED
+
+Built `regin_unit_test` at `crates/bench-audit/src/bin/regin_unit_test.rs` to verify the SCC + Régin logic in isolation.
+
+- **Test 1** (1×1 trivial): ✅
+- **Test 2** (2×2, unique max matching, one removable edge): ✅
+- **Test 3** (2×2, dual max matching, no removable edges): ✅
+- **Test 4** (3×3 with 4 max matchings, no removable): ✅
+- **Test 5** (100 random 4×4 perfect-matching graphs vs brute-force): ✅ ALL 100
+
+**Conclusion**: Iterative Tarjan + Régin removable-edge logic are mathematically correct. The bug in v6 must come from **integration** — specifically how removals interact with the rest of the state (`slot_block_count`, `domain`, `pinned`, `piece_occ`).
+
+### Shadow mode added
+
+Added `SHADOW: AtomicBool` to v6 via `--shadow` flag. In shadow mode, `regin_filter` computes the SCC and counts "would-have-removed" edges but does NOT call `self.remove()`. This is the cleanest diagnostic: if shadow-v6 matches v5's depth=40 trajectory, the bug is purely in the actual removal step.
+
+### Remaining hypotheses (after unit-test ruled out algorithm)
+
+- **(A)** Removal targets wrong cell-slot — RULED OUT: cs ↔ (sr, sc, slot) round-trips correctly via `cs = sr*32 + sc*4 + slot`.
+- **(B)** Removal cascades incorrectly — possible: `remove()` decrements `slot_block_count` for ALL 4 (piece, slot) pairs of the removed block, even though only 1 was Régin-filtered. This might cause an unintended chain reaction.
+- **(C)** `slot_block_count` desync with `domain` — possible if any propagator removes blocks without going through `remove()`.
+- **(D)** Régin filter is correct BUT the bipartite relaxation throws away too much info: a piece-slot match that's "alldiff-feasible" might not correspond to ANY block at that cell. We saw this in the math: bipartite matching treats 4 slots of a cell as INDEPENDENT, so it OVER-counts feasibility. Wait — over-counts means the relaxation says "feasible" too often, NOT that it removes too much. So this should make v6 LESS pruning, not more. Confusing.
+
+Wait — re-read (D): bipartite matching is necessary but not sufficient. The set of feasible (piece, slot) assignments under bipartite is a SUPERSET of true-feasible. So Régin removes edges OUTSIDE this superset → also outside the true-feasible set → SOUND removal. So (D) should not cause issues.
+
+**So the leading hypothesis is (B): `remove()` over-decrements `slot_block_count` indirectly.**
+
+Specific scenario: imagine block B at cell (sr,sc) has pieces (p1, p2, p3, p4) at slots (0,1,2,3). Régin says edge (p1, slot 0 at (sr,sc)) is removable. We call `remove(sr, sc, B)`. This decrements `slot_block_count` for ALL 4 pairs:
+  - (p1, slot 0 at (sr,sc)) ← intended
+  - (p2, slot 1 at (sr,sc)) ← unintended (this pair MAY be in some max matching!)
+  - (p3, slot 2 at (sr,sc))
+  - (p4, slot 3 at (sr,sc))
+
+**This is the bug**. When Régin says "(p1, slot 0 at sr/sc) cannot be in a max matching", we should remove all blocks with `b.pieces[0] == p1` at (sr,sc). The block B is one such block, but B ALSO has pieces (p2, p3, p4) which may be valid in their respective slots in OTHER blocks. By removing B, we decrement counts for p2, p3, p4 — which is correct ONLY because B itself is gone.
+
+Actually wait — that IS correct. If block B is gone, then `slot_block_count[(p2, slot 1 at sr/sc)]` should indeed go down by 1 (B contributed 1 to that count). The count remains accurate. There's no over-decrement.
+
+So (B) is not the bug either. Hmm.
+
+### Cleanest next diagnostic: smaller-puzzle test
+
+User suggested 2026-05-18: "do you think it'd be worth it to try our algorithm on smaller puzzle we generate just for the sake of verifying it's possible?"
+
+YES. The cleanest verification:
+1. Generate a known-solvable instance of a smaller puzzle (e.g., 8×8 grid with 64 pieces).
+2. Build W2 super-block alphabet (2×2 super-cells → 16 supercells of 2×2 each).
+3. Run v5 and v6 on this puzzle.
+4. v5 should solve. If v6 doesn't solve or returns UNSAT, that's a smoking gun.
+
+If both solve, the bug is scale-related (e.g., trail overflow, integer aliasing, slot_counter_idx overflow at 256×256=65536). For canonical 16×16, `slot_counter_idx(piece=255, sr=7, sc=7, slot=3) = 255*256 + 7*32 + 7*4 + 3 = 65535`. That fits in u16 boundary. OK.
+
+### Shadow run COMPLETE — bug pinpointed
+
+`./target/bench-fast/super_block_bbb_v6 --max-nodes 300 --shadow` finished 2026-05-18 18:12.
+
+**v5 vs v6-shadow comparison (first 300 nodes):**
+
+| Node | v5 depth | v6-shadow depth | dom_sum | next |
+|---|---|---|---|---|
+| 100 | 29 | 29 | 6222968 | (7,4) |
+| 200 | 36 | 36 | 1525291 | (2,2) |
+| 300 | 40 | 40 | 486947 | (2,6) |
+
+**Bit-for-bit identical** trajectories. **This proves**:
+
+1. ✅ SCC computation is correct
+2. ✅ Adjacency rebuild is correct
+3. ✅ Hopcroft-Karp matching is correct
+4. ✅ No state corruption from running SCC alone
+
+**The bug is 100% in the removal step (`self.remove()` and its cascading effects).**
+
+### Removal-step investigation
+
+`remove(sr, sc, block_idx)` does:
+1. Push trail entry (sr, sc, prev_live).
+2. Decrement `slot_block_count` for all 4 (piece, slot) pairs of the removed block.
+3. Mark block as out of domain (move below `d.live`).
+
+There is no propagation triggered by `remove()` directly. But Régin removes blocks INSIDE its loop, and the loop continues iterating other (p, cs) edges using the SCC computed BEFORE any removal.
+
+Hypothesis 1: **Removing block B reduces `slot_block_count[(p', cs)]` for 3 OTHER pieces of B** (besides the targeted p). This is correct accounting — but the OUTER loop iterates `hk_piece_adj[p]` (snapshot before removal). Inside the loop, we keep removing for the SAME p, then move to p+1 with adjacency NOT REBUILT. So when p=1 is processed, `slot_block_count` reflects all removals from p=0, but `hk_piece_adj[1]` still has STALE edges to cell-slots that may no longer have blocks (since we removed them via p=0's removals).
+
+But that's harmless: we just iterate non-existent edges, find no blocks to remove, no-op.
+
+Hypothesis 2: **Régin removes blocks that are STILL in some max matching, but were RULED OUT BY EARLIER REMOVALS.** Concrete: suppose at the start, edges (p1, cs1) and (p2, cs2) are both in some max matchings. We remove (p1, cs1)'s blocks. Now in the NEW graph (after removal), (p2, cs2) might NOT be in any max matching. But Régin computed SCCs on the OLD graph and decided (p2, cs2) IS in some max matching. So we DON'T remove (p2, cs2) — which is fine: we miss a removal opportunity but don't over-remove.
+
+Hypothesis 3: **`d.iter_live()` returns blocks at cell (sr,sc), and the filter `b.pieces[slot] == p` matches blocks where piece p is in slot s.** Removing them is correct because: edge (p, slot s at sr/sc) is Régin-removable → no block can be at (sr,sc) with piece p in slot s. But the block we remove ALSO has OTHER pieces in OTHER slots. Removing this block means those OTHER (piece, slot) edges lose 1 count — but those OTHER (piece, slot) pairs might be CRITICAL for some other max matching!
+
+WAIT — this is the bug? Let me think harder.
+
+Suppose `slot_block_count[(p2, cs2)] = 1`, contributed by exactly block B. We're at cell (sr,sc), Régin says "(p1, cs1) is removable", where cs1 corresponds to slot 0 at (sr,sc). Block B has p1 at slot 0 and p2 at slot 1. We remove B. Now `slot_block_count[(p2, cs2)] = 0`. So edge (p2, cs2) is GONE.
+
+But was (p2, cs2) in some max matching? Let's check. (p1, cs1) was the matching edge for p1. (p2, cs2) might or might not be in a matching. If p2's matching partner was some OTHER cs, then losing (p2, cs2) doesn't break the matching — just one possibility. The NEW max matching still exists (with p1 finding a different partner, since cs1 still has other partners, or via alternating cycle).
+
+**Hmm. Actually this can break things.** Imagine the bipartite graph has a "bottleneck" where (p2, cs2) is part of the alternating cycle that allows p1 to swap partners. Removing B kills (p2, cs2), breaks the alt cycle, and now the max matching DROPS.
+
+But — this would be detected on the NEXT regin_filter call: HK matching would return < 256, regin_filter returns None, search backtracks. So the over-removal would manifest as PREMATURE backtracks, not as wrong solutions.
+
+That matches the symptom: **v6 backtracks earlier than v5 (depth 30 vs 40)**.
+
+### THE BUG (hypothesis confirmed by analysis):
+
+Régin filter at the block-domain level is **NOT SOUND** because:
+
+- Régin says: "Edge $(p, cs)$ ∉ any max matching → can remove from bipartite graph".
+- At the block-domain level, "remove edge $(p, cs)$" = "remove all blocks at cell (sr,sc) with piece $p$ in slot $s$".
+- But this removes blocks that ALSO contain other (piece, slot) edges. Those edges WERE in some max matching.
+- After removal, the bipartite graph loses those edges → the new max matching may be < 256.
+
+**Régin alldiff is sound for ATOMIC edge removal in a bipartite graph. It is NOT sound at the block-level where one block contributes 4 simultaneous edges.**
+
+### Possible fix
+
+Instead of removing edges via blocks, we can run Régin and use it only as a **necessary-condition check** (like v5's HK alldiff). That's what v5 does already. So Régin doesn't add anything if we only do "remove all blocks containing a forbidden edge".
+
+The CORRECT way to use Régin at the block level: identify forbidden edges → re-filter the block alphabet to only contain blocks where ALL 4 (piece, slot) edges are not forbidden. But removing a block forbids its OTHER (piece, slot) pairs from being satisfied via THIS block. Other blocks with those (piece, slot) pairs may still exist.
+
+Wait, that's exactly what v6 already does. So why does it over-remove?
+
+The issue is **transitivity**. Consider: Régin filter run #1 identifies edges F1 to remove. We remove blocks containing them. NEW slot_block_count → bipartite graph shrunk → run #2 of Régin identifies MORE edges F2 to remove. F2 includes edges (p, cs) that were in some max matching of the ORIGINAL graph but not in the SHRUNK graph.
+
+Within ONE call to `regin_filter`, we run Régin ONCE and remove ALL F1 edges. So we're not transitively over-removing within a call. But the SCC was computed on the ORIGINAL bipartite graph — and we're claiming "any block containing an F1 edge is infeasible".
+
+Hmm — actually that claim is SOUND. If edge (p, cs) is not in any max matching of $G_B$, then there's no perfect matching using (p, cs). So at cell (sr,sc) we can't have piece p in slot s. So no block with `b.pieces[slot] == p` at (sr,sc) can be part of any solution. Removing such blocks IS sound for the original bipartite relaxation.
+
+But removing those blocks ALSO removes their OTHER 3 (piece, slot) edges. These edges might be NECESSARY for the original max matching — and once removed, the bipartite graph no longer has a perfect matching, even though the ORIGINAL puzzle does.
+
+**That's the trap**. Régin sound at edge level → block-level removal not sound.
+
+### Concrete diagnostic
+
+To confirm: run v6 with normal removal, after first regin_filter call, save state and re-run HK. If HK < 256, Régin over-removed → search backtracks falsely. If HK == 256, the removal preserved feasibility and the bug is elsewhere.
