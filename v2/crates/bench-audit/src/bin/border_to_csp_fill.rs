@@ -14,7 +14,7 @@ use eternity2_benchmark::loader::load_puzzle_with_hints;
 use eternity2_core::{Board, Hint, Hints};
 use eternity2_export::{load_board, save_board, BoardMetadata};
 use eternity2_solver_engine::EngineSolver;
-use eternity2_solver_trait::{SolveOpts, SolveOutcome, Solver};
+use eternity2_solver_trait::{Objective, SolveOpts, SolveOutcome, Solver};
 
 fn main() {
     let mut board_path = PathBuf::new();
@@ -23,6 +23,7 @@ fn main() {
     let mut seed: u64 = 1;
     let mut out_path: Option<PathBuf> = None;
     let mut random_fill = false;
+    let mut max_score = false;
 
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -33,6 +34,7 @@ fn main() {
             "--seed" => seed = args.next().unwrap().parse().unwrap(),
             "--out" => out_path = Some(PathBuf::from(args.next().unwrap())),
             "--random-fill-remaining" => random_fill = true,
+            "--max-score" => max_score = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -70,6 +72,9 @@ fn main() {
     opts.seed = seed;
     opts.hints = hints;
     opts.batch_hint_application = true;
+    if max_score {
+        opts.objective = Some(Objective::MaxScore);
+    }
 
     let mut solver: Box<EngineSolver> = match solver_kind.as_str() {
         "gacolor_ac3_par" => Box::new(EngineSolver::gacolor_ac3_par()),

@@ -45,7 +45,7 @@ run_one() {
     # Concatenate base CNF + assumption units. The header in base.cnf says
     # n_clauses = base_count; appending more clauses is technically a
     # malformed DIMACS, but kissat accepts trailing clauses just fine.
-    cat "$base" "$assume" | kissat --time="$TIMEOUT_S" -q > "$out" 2>&1 || true
+    cat "$base" "$assume" | kissat --time="$TIMEOUT_S" --relaxed > "$out" 2>&1 || true
     local t1
     t1=$(date +%s)
     local elapsed=$((t1 - t0))
