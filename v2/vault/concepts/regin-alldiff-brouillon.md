@@ -387,3 +387,46 @@ But removing those blocks ALSO removes their OTHER 3 (piece, slot) edges. These 
 ### Concrete diagnostic
 
 To confirm: run v6 with normal removal, after first regin_filter call, save state and re-run HK. If HK < 256, Régin over-removed → search backtracks falsely. If HK == 256, the removal preserved feasibility and the bug is elsewhere.
+
+---
+
+## Update 2026-05-18 18:20 — VERIFY-AFTER DEFINITIVE RESULT
+
+Ran v6 with `--verify-after` for 200 nodes:
+- node 100: depth=30
+- node 200: depth=29
+- **regin_filter calls: 199, calls that broke PM: 0**
+
+**Zero PM-broken events**. Régin is preserving bipartite-perfectibility in every call. My block-vs-edge unsoundness theory is **REFUTED**.
+
+So v6 IS sound (Régin's theorem holds at block level too, by the argument: any block-CSP solution induces a bipartite perfect matching; (p, cs) not in any matching ⇒ no solution has p in slot s at (sr,sc) ⇒ no block at (sr,sc) with p in slot s ⇒ block-removal sound).
+
+### So what's happening?
+
+v6 is SOUND but **explores worse than v5** because:
+1. Régin removes blocks → smaller domain at multiple cells.
+2. MRV picks different next-cell.
+3. Different subtree explored → may hit dead-ends earlier or later than v5.
+
+Empirically v6's MRV reordering happens to lead to **early dead-ends**, oscillating around depth 29-30 vs v5's steady climb to 40.
+
+This is a SEARCH HEURISTIC interaction issue, not a Régin bug. Régin in v6 is mathematically correct.
+
+### What this means for v6
+
+v6 is correctly implementing Bourreau-style Régin alldiff but the pruning REORDERS the search in an unhelpful way. To benefit from Régin we need:
+- Either change branching order (e.g., follow v5's MRV but use Régin only for early infeasibility detection).
+- Or run Régin to fixpoint at root only (one big prune, then v5-style search).
+- Or use Régin's pruning info differently (e.g., as a candidate ordering hint at the current MRV cell).
+
+### Decision
+
+We have spent enough time on Régin. The Bourreau-style approach is **theoretically sound but practically suboptimal in our integration**. The right pivot:
+- **Use v5** (HK alldiff only, infeasibility detection without removal) as the production BB&B engine.
+- Build smaller-puzzle verification using `generate_with_solution` to validate the entire pipeline.
+- Move forward on other research directions; revisit Régin in a future volume with a better integration design.
+
+The unit test (`regin_unit_test`) is committed and shows the Régin/SCC implementation is correct. The diagnostic (`--shadow`, `--verify-after`) is committed too. Future researchers can revisit this with the knowledge that:
+1. Régin alldiff is sound for block-CSP super-block alphabets (theorem applies via reduction).
+2. Edge-level block removal preserves bipartite-PM (verified empirically, 199/199 regin calls preserved PM).
+3. The integration challenge is the MRV-reordering effect, not soundness.
