@@ -643,8 +643,26 @@ fn rewind_trail(state: &mut State, start: usize) {
     }
 }
 
-fn dfs(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64,
-       t_start: Instant) -> Option<Vec<(u32, u16, u8)>> {
+/// Splittable RNG (LCG). Use a per-(sr,sc) seed derived from search seed
+/// + cell so different searches see different orderings without coordination.
+#[inline]
+fn lcg_next(state: u64) -> u64 {
+    state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407)
+}
+
+/// Fisher-Yates shuffle a Vec in place using LCG.
+fn shuffle_with_seed(v: &mut [u32], seed: u64) {
+    if v.len() < 2 { return; }
+    let mut state = seed.wrapping_add(0x9E3779B97F4A7C15);
+    for i in (1..v.len()).rev() {
+        state = lcg_next(state);
+        let j = (state >> 32) as usize % (i + 1);
+        v.swap(i, j);
+    }
+}
+
+fn dfs_seeded(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64,
+       t_start: Instant, search_seed: u64) -> Option<Vec<(u32, u16, u8)>> {
     if *nodes >= max_nodes { return None; }
     *nodes += 1;
     if state.all_pinned() {
@@ -658,17 +676,25 @@ fn dfs(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64,
         let pinned_count: usize = state.pinned.iter().flat_map(|r| r.iter())
             .filter(|&&b| b).count();
         let rate = *nodes as f64 / elapsed;
-        eprintln!("[node {}] depth={} pinned={} dom_sum={} elapsed={:.1}s rate={:.1} nodes/s next=({},{}) dom_size={}",
-                  *nodes, depth, pinned_count, dom_sum, elapsed, rate, sr, sc, dom_size);
+        eprintln!("[seed={} node {}] depth={} pinned={} dom_sum={} elapsed={:.1}s rate={:.1} nodes/s next=({},{}) dom_size={}",
+                  search_seed, *nodes, depth, pinned_count, dom_sum, elapsed, rate, sr, sc, dom_size);
     }
-    let candidates: Vec<u32> = state.domain[sr][sc].iter_live().to_vec();
+    let mut candidates: Vec<u32> = state.domain[sr][sc].iter_live().to_vec();
+    if search_seed != 0 {
+        // Per-cell seed: hash (sr, sc, depth, search_seed).
+        let cell_seed = search_seed
+            .wrapping_mul(0xDEADBEEFCAFEBABE)
+            .wrapping_add(((sr as u64) << 16) | (sc as u64))
+            .wrapping_add(depth as u64 * 0x123456789ABCDEF);
+        shuffle_with_seed(&mut candidates, cell_seed);
+    }
     for cand_idx in candidates {
         let trail_mark = state.trail.len();
         let ok = state.pin_and_propagate_pieces(sr, sc, cand_idx).is_some()
               && state.boundary_propagate_from_pin(sr, sc, cand_idx).is_some()
               && state.check_alldiff().is_some();
         if ok {
-            if let Some(res) = dfs(state, depth + 1, max_nodes, nodes, t_start) {
+            if let Some(res) = dfs_seeded(state, depth + 1, max_nodes, nodes, t_start, search_seed) {
                 return Some(res);
             }
         }
@@ -676,6 +702,11 @@ fn dfs(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64,
         if *nodes >= max_nodes { return None; }
     }
     None
+}
+
+fn dfs(state: &mut State, depth: usize, max_nodes: u64, nodes: &mut u64,
+       t_start: Instant) -> Option<Vec<(u32, u16, u8)>> {
+    dfs_seeded(state, depth, max_nodes, nodes, t_start, 0)
 }
 
 fn extract_placement(state: &State) -> Vec<(u32, u16, u8)> {
@@ -701,12 +732,14 @@ fn extract_placement(state: &State) -> Vec<(u32, u16, u8)> {
 fn main() {
     let mut in_dir: PathBuf = "output/vol-125/w14/alphabet".into();
     let mut max_nodes: u64 = 10000;
+    let mut seed: u64 = 0;
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--in-dir" => { in_dir = args[i + 1].clone().into(); i += 2; }
             "--max-nodes" => { max_nodes = args[i + 1].parse().unwrap(); i += 2; }
+            "--seed" => { seed = args[i + 1].parse().unwrap(); i += 2; }
             _ => { eprintln!("Unknown arg: {}", args[i]); std::process::exit(2); }
         }
     }
@@ -753,7 +786,7 @@ fn main() {
     eprintln!("\n=== DFS (max_nodes={}) ===", max_nodes);
     let t_dfs = Instant::now();
     let mut nodes = 0u64;
-    match dfs(&mut state, 0, max_nodes, &mut nodes, t_dfs) {
+    match dfs_seeded(&mut state, 0, max_nodes, &mut nodes, t_dfs, seed) {
         Some(placement) => {
             eprintln!("\n🎯 480 SOLUTION found after {} nodes ({:.1}s)",
                       nodes, t_dfs.elapsed().as_secs_f64());
