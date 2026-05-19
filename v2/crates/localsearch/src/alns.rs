@@ -1615,6 +1615,12 @@ pub struct AlnsConfig {
     /// plateaus on iso-score landscapes (vol-17 empirical observation).
     /// Adds O(W*H) cluster computation per iter; cheap on 16×16.
     pub lex_break_isoscore: bool,
+    /// V140 — when true, iso-score moves use FORBIDDEN-2x2 count as
+    /// tie-breaker (fewer forbidden = better). Based on V138-139
+    /// finding that forbidden-count anti-correlates with board score
+    /// (LOW 109, MID 60, HIGH 29 medians). Adds O(225) feasibility
+    /// checks per iter on canonical 16x16.
+    pub lex_break_intaglio: bool,
     /// Vol-17 — fixed-step SA repair for deterministic A/B. When non-zero,
     /// `sa_repair` runs exactly this many SA moves regardless of wall-clock,
     /// instead of `repair_budget_ms`. Eliminates the timing-jitter
@@ -1643,6 +1649,7 @@ impl Default for AlnsConfig {
             pinned_positions: Vec::new(),
             iter_budget: 0,
             lex_break_isoscore: false,
+            lex_break_intaglio: false,
             checkpoint_path: None,
             checkpoint_every_ms: 60_000,
             repair_step_budget: 0,
@@ -1782,15 +1789,23 @@ pub fn run_alns(
         let new_score = score_board(puzzle, &new_board);
         let delta = new_score as i32 - current_score as i32;
 
-        // Vol-17 — lexicographic accept with mismatch-component tiebreak.
-        // When deltaaa == 0, prefer boards with SMALLER largest mismatch
-        // component (easier to repair downstream). When delta > 0, accept
-        // unconditionally as before.
-        let accepted = if cfg.lex_break_isoscore && delta == 0 {
+        // Vol-17 — lex_break_isoscore: iso-score moves use smaller
+        // largest-mismatch-component as tie-breaker.
+        // V140 — lex_break_intaglio: iso-score moves use FEWER forbidden
+        // 2x2 patches as tie-breaker.
+        let accepted = if cfg.lex_break_intaglio && delta == 0 {
+            let cur_intaglio = crate::intaglio::count_forbidden_2x2(puzzle, &current);
+            let new_intaglio = crate::intaglio::count_forbidden_2x2(puzzle, &new_board);
+            if new_intaglio < cur_intaglio {
+                true
+            } else if new_intaglio > cur_intaglio {
+                false
+            } else {
+                cfg.acceptance.accept(delta, &mut rng, best_score, new_score)
+            }
+        } else if cfg.lex_break_isoscore && delta == 0 {
             let cur_lcc = largest_mismatch_component_size(puzzle, &current);
             let new_lcc = largest_mismatch_component_size(puzzle, &new_board);
-            // Accept if new lcc is smaller (better cluster geometry).
-            // Iso-lcc moves: 50/50 via existing acceptance.
             if new_lcc < cur_lcc {
                 true
             } else if new_lcc > cur_lcc {
@@ -2137,6 +2152,7 @@ where
                 pinned_positions: base_cfg.pinned_positions.clone(),
                 iter_budget: base_cfg.iter_budget,
                 lex_break_isoscore: base_cfg.lex_break_isoscore,
+                lex_break_intaglio: base_cfg.lex_break_intaglio,
                 checkpoint_path: None,
                 checkpoint_every_ms: base_cfg.checkpoint_every_ms,
                 repair_step_budget: base_cfg.repair_step_budget,
@@ -2317,6 +2333,7 @@ pub fn run_alns_pt_multi_init(
                     pinned_positions: pinned_positions.clone(),
                     iter_budget: cfg.inner_iters_per_round,
                     lex_break_isoscore: false,
+                    lex_break_intaglio: false,
                     checkpoint_path: None,
                     checkpoint_every_ms: 60_000,
                     repair_step_budget: 0,

@@ -1,24 +1,21 @@
-# Current Volume — Vol-138
+# Current Volume — Vol-140
 
-**Theme**: INTAGLIO — carve forbidden patterns.
+**Theme**: Wire INTAGLIO 2×2 feasibility into Rust ALNS as secondary
+objective.
 
-For each small k-cell subgrid configuration, check feasibility against
-the canonical E2 piece set + constraints. Forbidden subgrids prune
-where they would appear in board search.
-
-Twin of CONCRETION (refuted, V127). CONCRETION found nothing forced;
-INTAGLIO checks if anything is forbidden.
+V138-139 found: 99.72% of random 2×2 piece-tuples are forbidden;
+forbidden count anti-correlates with board score (109/60/29 across
+LOW/MID/HIGH buckets).
 
 ## Binding items (3 max)
 
-1. **2-cell horiz/vert subgrid feasibility**: for each (piece_i, rot_i,
-   piece_j, rot_j) pair adjacent on E or S, is it color-feasible?
-2. **3-cell L-shape feasibility**: add a 3rd cell, check.
-3. **Count forbidden patterns**: how many of N possible 2-cell, 3-cell
-   configurations are impossible? Does it provide useful pruning?
+1. **Rust `count_forbidden_2x2`**: O(225) per board scan; in-board
+   patches only.
+2. **Lexicographic acceptance**: ALNS prefers (matched_edges,
+   -forbidden_count) over just matched_edges.
+3. **Benchmark**: ALNS+INTAGLIO vs vanilla on canonical 60s.
 
 ## Linked
 
-- [[sessions/vol-138]]
-- [[concepts/concretion-rigid-molecules]] (twin, refuted)
-- [[plans/EXTERNAL_BRAINSTORM_2026-05-18]]
+- [[sessions/vol-140]]
+- [[concepts/intaglio-forbidden-patterns]]

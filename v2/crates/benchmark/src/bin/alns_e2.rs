@@ -99,6 +99,10 @@ struct Args {
     /// Verbose progress every 2s.
     #[arg(long, default_value_t = true)]
     verbose: bool,
+
+    /// V140 — enable INTAGLIO 2x2 forbidden-patch tiebreaker on iso-score moves.
+    #[arg(long, default_value_t = false)]
+    lex_break_intaglio: bool,
 }
 
 fn lookup_piece(puzzle: &Puzzle, id: PieceId) -> Option<&Piece> {
@@ -300,6 +304,7 @@ fn main() {
         pinned_positions: file_hints.hints.iter().map(|h| h.position).collect(),
         iter_budget: 0,
             lex_break_isoscore: false,
+        lex_break_intaglio: args.lex_break_intaglio,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
         repair_step_budget: 0,
