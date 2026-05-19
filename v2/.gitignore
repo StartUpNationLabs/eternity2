@@ -1,5 +1,7 @@
 /target
 /output
+__pycache__/
+*.pyc
 **/*.rs.bk
 Cargo.lock.bak
 

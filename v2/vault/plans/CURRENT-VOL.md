@@ -1,121 +1,123 @@
-# Current Volume — Vol-152
+# Current Volume — Vol-153
 
-**Theme**: HARMONICS — Frequency-Domain Edge-Demand Matching.
-A new invention proposed 2026-05-19 evening following V150-V151
-WEAVING line of work hitting a ceiling at 455/480.
+**Theme**: BRAID — Joint Warp-Weft Color-Thread Construction.
+Eighth named invention, building on V147+V149+V152 lessons:
+*layout/matching/propagation are coupled — encode the coupling.*
 
-## Genesis
+## Genesis (the 3 lessons)
 
-V150 (random sweep): 408/480 max.
-V151 (beam-search K≤16384): 455/480 max, saturates.
+1. **V147 INTAGLIO-DFS**: pre-placement pruners on strict DFS are
+   vacuous (placed cells already feasible by construction).
+2. **V149 STRATUM-Budget**: invariants over placed cells likewise
+   vacuous.
+3. **V152 HARMONICS**: match-first construction cannot decouple
+   matching from layout — the right vertex 2-coloring IS the layout.
 
-Both V150/V151 work CELL-FIRST: for each cell, pick a piece. The
-limitation: this ignores the GLOBAL matching structure across the
-whole piece set.
-
-V152 inverts: **match-first construction**. First decide which
-piece-side pairs to MATCH (purely abstract pairings). Then embed
-the resulting structure onto the 16×16 grid.
+**Combined lesson**: canonical E2 resists separation of concerns.
+Inventions must encode the COUPLING.
 
 ## The invention
 
-Stage 1 — **Match Phase**:
-The piece set has 1024 sides (256 × 4). Border (color 0) sides
-must be at perimeter — 64 such sides on canonical. The remaining
-960 interior sides must be partitioned into 480 matched pairs,
-where each pair has the SAME color and the pair's two endpoints
-are sides of DIFFERENT pieces.
+A solved 16×16 board has two natural 1D structures running
+orthogonally:
 
-Each color $c$ contributes $|c| = $ 24, 48, or 50 sides;
-$|c|/2$ pairs of color $c$. Total pairs = $\sum_c |c|/2 = (5\cdot12 + 5\cdot24 + 12\cdot25) = 480$. ✓
+- **16 warp threads** (horizontal): for each row $y$, the sequence of
+  (E-color, W-color) pairs along the row. Specifically: row $y$
+  passes through cells $(y, 0), (y, 1), ..., (y, 15)$. The W-color of
+  cell $(y, x+1)$ must equal the E-color of cell $(y, x)$ (matched
+  edge) for the warp to be "tight". Mismatched edges are warp breaks.
+- **16 weft threads** (vertical): symmetric, for each column $x$,
+  sequence of (N-color, S-color) pairs.
 
-Stage 1 picks an assignment $M$ of 480 same-color pairs. Many such
-assignments exist; we want $M$'s induced piece-pairing graph
-$G(M)$ — nodes = pieces, edges = (piece $p$, piece $q$) for each
-pair (p.side_i, q.side_j) in $M$ — to be ISOMORPHIC to the 16×16
-grid graph.
+Each piece at position $(y, x)$ is a 4-color "knot": $(n, e, s, w)$,
+which simultaneously:
+- contributes $(w, e)$ to warp thread $y$ at index $x$;
+- contributes $(n, s)$ to weft thread $x$ at index $y$.
 
-Stage 2 — **Embed Phase**:
-Given $M$ and $G(M)$, find a bijection $\phi: \text{pieces} \to
-\text{positions in 16×16}$ such that for every edge $(p, q) \in
-G(M)$, the positions $\phi(p), \phi(q)$ are adjacent in the grid.
-Furthermore, for each piece $p$, rotation $r_p$ must align so
-that the four sides match their paired partners.
+**Score = (number of matched warp links) + (number of matched weft links) = 480 max**.
 
-Stage 2 is graph-isomorphism (NP-hard) but **strongly constrained**:
-$G(M)$ already has the right degree sequence (corners=2, edges=3,
-interior=4) if $M$ was built consistently.
+A 480 board ⇔ every warp link matches AND every weft link matches.
+
+## Why BRAID is different from V150/V151
+
+V150/V151 builds CELL-FIRST: for each cell, pick a piece. This implicitly
+constrains both warp and weft simultaneously per cell but doesn't
+EXPLOIT the thread structure.
+
+BRAID encodes the threads as first-class objects:
+- Each warp thread is a sequence of 16 (W, E) pairs.
+- Each weft thread is a sequence of 16 (N, S) pairs.
+- A piece $(n, e, s, w)$ assigned to cell $(y, x)$ projects to:
+  - warp $y$ slot $x$: (W=w, E=e)
+  - weft $x$ slot $y$: (N=n, S=s)
+
+The construction: pick the 16 warp threads and 16 weft threads
+COHERENTLY such that for every cell $(y, x)$, there exists a piece
+with the prescribed (n, e, s, w) AND that piece is used exactly once.
 
 ## Math
 
-Define the demand graph $D$:
-- Nodes: $\{(p, s) : p \in P, s \in \{N, E, S, W\}\}$, 1024 total.
-- Edges: $((p, s_1), (q, s_2))$ if $\text{color}(p, s_1) = \text{color}(q, s_2)$
-  and $p \neq q$.
+Let warp $W_y$ = sequence of $16$ pairs $\{(w_{y,0}, e_{y,0}), (w_{y,1}, e_{y,1}), ..., (w_{y,15}, e_{y,15})\}$ with continuity $e_{y,x} = w_{y,x+1}$ for $x = 0, ..., 14$ (the matched-warp condition).
 
-A perfect interior matching $M$ partitions the 960 non-border nodes
-of $D$ into 480 disjoint edges of $D$, with each matched pair same-color.
+Similarly weft $V_x$ = sequence of pairs $\{(n_{x,y}, s_{x,y})\}_{y=0}^{15}$ with $s_{x,y} = n_{x,y+1}$.
 
-The induced piece-pairing graph $G(M)$ has vertex set $P$ and edge set
-$\{(p, q) : (p, s_1) \sim_M (q, s_2)\}$. For $M$ to be realizable on a
-16×16 grid, $G(M)$ must be isomorphic to the 16×16 grid graph (plus
-border-perimeter edges going to "border" virtual nodes).
+The piece at $(y, x)$ has sides:
+$$n = n_{x,y}, \quad e = e_{y,x}, \quad s = s_{x,y}, \quad w = w_{y,x}$$
 
-The 16×16 grid graph has 4 corner-degree-2 vertices, 56 edge-degree-3
-vertices, 196 interior-degree-4 vertices. So $G(M)$ must have exactly
-this degree sequence — easy to check post-matching.
+Boundary: $w_{y,0} = $ BORDER, $e_{y,15} = $ BORDER, $n_{x,0} = $ BORDER, $s_{x,15} = $ BORDER.
 
-**Necessary conditions on $M$ for grid-isomorphism**:
-1. Degree sequence: corner-pieces × 2, edge-pieces × 3, interior × 4.
-2. **No 3-cycles** (grid is bipartite). Trivial to check.
-3. **4-cycle density** (grid has many 4-cycles around interior cells):
-   $\binom{14}{1} \cdot 14 = 196$ interior 4-cycles. Check $G(M)$
-   has at least this many.
+**Constraint**: there must exist a bijection $\phi: \{(y, x)\} \to \text{pieces}$ such that piece $\phi(y, x)$ has the prescribed sides.
 
-These are NECESSARY but not sufficient. Sufficient is the full grid-iso
-check.
+This is a **product-space search**: warp space × weft space × piece-assignment.
 
-## Binding items (3 max)
+## Search strategy
 
-1. **Stage 1 PoC**: build maximum-weight matching $M$ on the demand
-   graph. Use scipy.sparse + networkx, or hungarian-on-bipartite.
-   Output: set of 480 pairs.
-2. **Check necessary grid-iso conditions** (degree sequence, bipartite,
-   4-cycle count) on the induced graph.
-3. **Stage 2 PoC**: simple heuristic embed of $G(M)$ onto 16×16 (random
-   start + swap improvement OR Knuth-style randomized greedy).
+Encode as a CSP:
+- Variables: 16 warp threads + 16 weft threads + piece-assignment.
+- Domains:
+  - Each warp thread = a tuple of 17 colors $(w_{y,0}, e_{y,0}, e_{y,1}, ..., e_{y,15})$ with $w_{y,0} = 0$ (border) and $e_{y,15} = 0$. Internal colors free.
+  - Each weft analogous.
+- Constraints:
+  - For each cell $(y, x)$: the 4-tuple $(n_{x,y}, e_{y,x}, s_{x,y}, w_{y,x})$ must match the (sides of some) piece, after rotation.
+  - Each piece used exactly once across all 256 cells.
+
+Solve as: enumerate warp configurations (16 × ~22^15 = huge), for each, check if a consistent weft + piece-assignment exists.
+
+Better: **CONSTRAINT PROPAGATION on warp+weft jointly**. Fix one warp thread, propagate constraints on adjacent warps and on weft slots. This is like 2D AC-3 but on the THREAD level, not the cell level.
+
+## Concrete Day 1 plan
+
+PoC at SMALL SCALE: 8×8 puzzle (generated, not canonical). Solve via
+backtracking on warp threads with weft consistency check after each
+thread placement.
+
+If it works on 8×8, scale up. If it doesn't, refute the BRAID search
+strategy (but the math stands).
 
 ## Falsifiable claims
 
-- Stage 1 ALWAYS produces a perfect matching (parity argument shows
-  feasibility).
-- The induced $G(M)$ satisfies degree sequence for SOME matching
-  ordering. We want to enumerate matchings that satisfy this.
-- Stage 2: at least ONE grid-iso exists for the SPECIFIC piece set
-  (the puzzle has a solution, so SOME matching is grid-embeddable).
-  Question: does the maximum-weight matching from Stage 1 lead to a
-  grid-embeddable $G(M)$? Probably NOT — there are exponentially many
-  matchings.
-- **Therefore**: Stage 1 must enumerate matchings, not just compute one.
-  This is the algorithm's complexity bottleneck.
+| Claim | Test |
+|-------|------|
+| BRAID on 8×8/c4 finds a complete 480-equivalent in < 10 sec | Run PoC |
+| BRAID on 12×12/c12 finds ≥95% complete in < 60 sec | Scale up |
+| BRAID on canonical 16×16/c22 finds ≥420 in < 5 min | Scale to canonical |
+| BRAID on canonical reaches > V151's 455 ceiling | Genuine win |
 
 ## Kill-criteria
 
-- If degree-sequence requirement is NEVER satisfied by max-weight
-  matching, HARMONICS is structurally infeasible (Stage 1 dead).
-- If Stage 2 embedding fails on a degree-correct $G(M)$, the matching
-  picked an wrong topology.
-- If end-to-end produces a board scoring < 380, HARMONICS is no
-  better than WEAVING random sweep.
+- 8×8 PoC fails to find a complete board in 5 min → refute warp-first
+  search strategy.
+- Canonical scoring < V150's 408 (random sweep baseline) → refute
+  entire BRAID encoding.
 
 ## Days budget
 
-3-5 days. Day 1: Stage 1 implementation + degree-sequence check.
-Day 2: Stage 2 heuristic embed. Day 3+: enumerate matchings + measure.
+3 days. Day 1: 8×8 PoC + math validation. Day 2: scale to 12×12, 16×16
+canonical. Day 3: measure + refute or commit.
 
 ## Linked
 
-- [[../sessions/vol-152]] (to create)
-- [[../concepts/harmonics-matching]] (to create)
-- [[../sessions/vol-151]] (parent: beam-search saturated at 455)
+- [[../sessions/vol-153]] (to create)
+- [[../concepts/braid-warp-weft]] (to create)
 - [[INVENTION_NAMES_2026-05-19]]
+- [[../sessions/vol-152]] (parent: HARMONICS refuted)

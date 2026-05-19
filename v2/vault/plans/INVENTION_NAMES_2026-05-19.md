@@ -59,7 +59,15 @@ column-population and vice versa (Lotka-Volterra on permutations).
 - PoC: 2-3 days.
 - Vol: 154 if pursued.
 
+### 8. BRAID — Joint Warp-Weft Color-Thread Construction  **[from-scratch]**
+*Status: WONT-DO (V153, 2026-05-19 night)*
+
+Realized mid-vol that the warp-weft framing reduces to V151
+row-shaped-beam at the search primitive level. Renaming concepts
+without changing the algorithm.
+
 ### 7. HARMONICS — Frequency-Domain Edge-Demand Matching  **[from-scratch]**
+*Status: REFUTED (V152).*
 *Added 2026-05-19 evening after V150-V151 ceiling at 455.*
 
 Reverses the V150/V151 approach. Instead of CELL-FIRST construction
