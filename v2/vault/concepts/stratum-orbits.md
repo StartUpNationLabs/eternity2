@@ -1,10 +1,15 @@
 # STRATUM — Color-Class Layered Construction
 
-**Status**: Day-1 (color-orbit hypothesis) refuted |G|=1. Day-2
-STRATUM v2 (color-weight value-order DFS) shipped but **underperforms
-vanilla_fast** (695k nps vs 85M nps, max_depth 86 vs ~250 in 60s).
-Pivoted Day-3 to STRATUM-Budgeted (per-color-class matching-budget
-propagator on top of vanilla DFS) — the actual invention.
+**Status**: `refuted` Day-3 2026-05-19. All three STRATUM variants dead:
+- **v1** (color-permutation orbits → strata): |G|=1, no hidden symmetry.
+- **v2** (color-weight value-order DFS): 100× slower than vanilla_fast,
+  max_depth 86 vs ~250 in 60s. Global value-order uninformative.
+- **v3** (per-color-class matching-budget propagator $U_c \leq R_c$):
+  **vacuous on edge-strict row-major DFS** — 0/15 vanilla_fast
+  snapshots at depths 195-212 trigger the invariant. Same lesson as
+  V147: pruners over "already-placed" partials are vacuous in strict
+  DFS because strict DFS only places cells that can't yet violate the
+  invariant.
 
 ## What was tested
 
