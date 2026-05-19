@@ -52,6 +52,11 @@ impl Default for FilamentConfig {
     }
 }
 
+/// Public wrapper for cell_match_count (used by alns::filament_repair).
+pub fn cell_match_count_pub(puzzle: &Puzzle, board: &Board, pos: Position) -> u32 {
+    cell_match_count(puzzle, board, pos)
+}
+
 /// Compute local match count at a position (number of matched edges
 /// incident to this cell). 0-4.
 fn cell_match_count(puzzle: &Puzzle, board: &Board, pos: Position) -> u32 {

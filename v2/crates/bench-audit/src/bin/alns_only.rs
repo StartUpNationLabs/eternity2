@@ -336,7 +336,8 @@ fn main() {
             "ot" => RepairKind::IterativeOt,
             "jv" => RepairKind::IterativeJv,
             "jv_joint" | "jvjoint" | "jv-joint" => RepairKind::IterativeJvJoint,
-            other => panic!("--repair-kind want sa|cp|ot|jv|jv_joint, got {other}"),
+            "filament" => RepairKind::Filament,
+            other => panic!("--repair-kind want sa|cp|ot|jv|jv_joint|filament, got {other}"),
         },
         cp_fallback_to_sa: true,
         pinned_positions: hints.hints.iter().map(|h| h.position)

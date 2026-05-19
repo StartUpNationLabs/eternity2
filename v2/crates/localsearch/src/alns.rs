@@ -171,6 +171,12 @@ pub enum RepairKind {
     /// real position. Globally optimal over both axes (no best-of-4 memo
     /// sub-optimality).
     IterativeJvJoint,
+    /// Vol-130 FILAMENT: Lin-Kernighan-style variable-depth swap chain.
+    /// Seeds from each cell in `free_set`, builds a swap chain extending
+    /// outside the free-set if needed. Chain extends while cumulative gain
+    /// >= -max_loss; stops at the depth with max gain. Returns the best
+    /// board found across all seed attempts.
+    Filament,
 }
 
 /// Pin every cell EXCEPT `free_set` as a Hint; run cell-CP for `budget_ms`.
@@ -291,7 +297,50 @@ pub fn repair(
         RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
         RepairKind::IterativeJv => Some(crate::ot_repair_jv::iterative_jv_repair(puzzle, board, free_set, 50)),
         RepairKind::IterativeJvJoint => Some(crate::ot_repair_jv::iterative_jv_joint_repair(puzzle, board, free_set, 50)),
+        RepairKind::Filament => Some(filament_repair(puzzle, board, free_set, seed)),
     }
+}
+
+/// Vol-130 FILAMENT repair: for each cell in `free_set`, run an LK swap
+/// chain seeded there. Returns the best board found.
+fn filament_repair(
+    puzzle: &Puzzle,
+    board: &Board,
+    free_set: &BTreeSet<Position>,
+    seed: u64,
+) -> Board {
+    let cfg = crate::filament::FilamentConfig {
+        max_depth: 12,
+        max_loss: 4,
+        seed_worst: false,
+        try_rotations: true,
+        allow_revisit: false,
+    };
+    let mut best = board.clone();
+    let mut best_score = score_board(puzzle, &best);
+    // Try seeds from the free set first; if it's empty, pick globally worst.
+    let seeds: Vec<Position> = if free_set.is_empty() {
+        // Pick the 4 cells with worst local match count.
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let n = (w * h) as usize;
+        let mut cs: Vec<(Position, u32)> = (0..n as u32)
+            .map(|p| (p, crate::filament::cell_match_count_pub(puzzle, board, p))).collect();
+        cs.sort_by_key(|x| x.1);
+        cs.iter().take(4).map(|x| x.0).collect()
+    } else {
+        free_set.iter().copied().collect()
+    };
+    let _ = seed; // could use rng
+    for s in seeds {
+        let (b, _g) = crate::filament::run_filament_chain(puzzle, &best, s, &cfg);
+        let new_score = score_board(puzzle, &b);
+        if new_score > best_score {
+            best_score = new_score;
+            best = b;
+        }
+    }
+    best
 }
 
 /// Vol-17 — repair dispatch with per-kind determinism knobs. `sa_step_budget`
@@ -312,6 +361,7 @@ pub fn repair_with_opts(
         RepairKind::IterativeOt => Some(crate::ot_repair::iterative_ot_repair(puzzle, board, free_set, 50)),
         RepairKind::IterativeJv => Some(crate::ot_repair_jv::iterative_jv_repair(puzzle, board, free_set, 50)),
         RepairKind::IterativeJvJoint => Some(crate::ot_repair_jv::iterative_jv_joint_repair(puzzle, board, free_set, 50)),
+        RepairKind::Filament => Some(filament_repair(puzzle, board, free_set, seed)),
     }
 }
 
