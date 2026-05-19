@@ -1,8 +1,8 @@
 # FILAMENT — Lin-Kernighan on 2D Grid
 
 **Status**: `partial` (Vol-130, 2026-05-19 — built, integrated as
-RepairKind, validated on bad boards; effectiveness on near-optimal
-boards TBD)
+RepairKind, validated on bad boards; LOSES to SA-repair on equal
+budget. Could still help if used in addition to SA, not replacing it.)
 **Origin**: Brainstorm reservoir round-4
 [[plans/EXTERNAL_BRAINSTORM_2026-05-18]] — extending vol-123 W4's
 LkhChainDestroy with TRUE variable-depth gain tracking.
@@ -46,6 +46,10 @@ E2 instantiation:
 
 **FILAMENT as ALNS repair** (`alns_only --repair-kind filament`):
 - 254 base × 60sec budget × ops=basic: 254 → 331 (+77).
+- **SA-repair baseline same setup**: 254 → 380 (+126).
+- **SA wins by 49 points on equal budget.** FILAMENT is more expensive
+  per repair call (multi-seed chain search), so fewer total ALNS
+  iterations complete in the same wall-clock.
 
 ## What works
 
