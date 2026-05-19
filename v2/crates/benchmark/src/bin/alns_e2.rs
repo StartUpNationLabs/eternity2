@@ -282,7 +282,8 @@ fn main() {
     let repair_kind = match args.repair.as_str() {
         "sa" => RepairKind::Sa,
         "cp" => RepairKind::Cp,
-        other => panic!("unknown --repair '{}' (use sa|cp)", other),
+        "filament" => RepairKind::Filament,
+        other => panic!("unknown --repair '{}' (use sa|cp|filament)", other),
     };
     let cfg = AlnsConfig {
         time_budget_ms: args.seconds * 1000,

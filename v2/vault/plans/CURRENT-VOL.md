@@ -1,21 +1,21 @@
-# Current Volume — Vol-132
+# Current Volume — Vol-133
 
-**Theme**: Constraint-density characterization.
+**Theme**: Density saturation test for the +80 ALNS-gap hypothesis.
 
-The vol-131 scaling curve revealed canonical 16×16/22 sits BETWEEN
-7×7/5 (97.6%) and 8×8/6 (92.9%) on the % match curve, despite being
-~16× larger. This suggests constraint density is the real predictor.
+V132 found ALNS extracts ~80 percentage points above random across all
+puzzles tested. But all tests had random% < 20%. Does the gap collapse
+at higher density? Does it widen at lower density?
 
 ## Binding items (3 max)
 
-1. **Define constraint density**: per-piece-side color-multiplicity
-   distribution + per-color edge-pairing graph density.
-2. **Measure**: on canonical E2, vol-131 generated suite, 469 board.
-3. **Predict**: from density, predict solver-wall percentage. Validate
-   on the vol-131 curve.
+1. **High-density puzzles**: small board + few colors → high p_match.
+   Predict ALNS hits 100% trivially.
+2. **Very-low-density puzzles**: small board + many colors → low p_match.
+   Predict ALNS struggles to reach random% + 80.
+3. **Plot p_match vs ALNS gap**: identify the boundary where the +80
+   law breaks.
 
 ## Linked
 
-- [[sessions/vol-132]]
-- [[concepts/scaling-curve-2026-05-19]]
-- [[plans/MONTH_AHEAD_2026-05-19]]
+- [[sessions/vol-133]]
+- [[concepts/constraint-density-vs-alns-gap]]
