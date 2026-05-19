@@ -1,25 +1,22 @@
-# Current Volume — Vol-134
+# Current Volume — Vol-135
 
-**Theme**: FILAMENT vs SA controlled head-to-head on V131 suite.
+**Theme**: GRAIN — polycrystalline E2 search.
 
-V130 had a single-board comparison showing SA beats FILAMENT (+49pp
-at 60s). V134 runs the same comparison across the V131 6-puzzle
-suite × 3 seeds, with proper variance reporting.
+Metallurgy + DNA self-assembly framing. Drop $K$ seeds at random board
+positions. Each seed grows a crystal patch by attaching the best
+piece-rotation from shared piece inventory. Crystals collide → grain
+boundaries become destroy targets.
 
-## Binding items (1 max)
+## Binding items (3 max)
 
-1. **Head-to-head benchmark**: 6 puzzles × 2 repair kinds × 3 seeds
-   × 60s = 36 ALNS runs. Tabulate median scores and gaps.
-
-## Audit-at-open compliance
-
-- Vol-131 (scaling curve) `built`.
-- Vol-132 (density gap +80 law) `built` (later refined).
-- Vol-133 (3-regime characterization) `built`.
-- No McGavin work this month.
+1. **Single-seed crystal growth**: greedy attachment from one seed.
+   Verify it produces a coherent patch.
+2. **Multi-seed competition**: $K$ seeds, shared inventory. Measure
+   grain-boundary energy after collision.
+3. **Recrystallisation destroy + regrow**: ALNS-style outer loop with
+   the grain-boundary as the destroy target.
 
 ## Linked
 
-- [[sessions/vol-134]]
-- [[concepts/filament-lk-2d]]
-- [[concepts/scaling-curve-2026-05-19]]
+- [[sessions/vol-135]]
+- [[plans/EXTERNAL_BRAINSTORM_2026-05-18]] (GRAIN from round-3)

@@ -10,12 +10,11 @@ pivoted away ~halfway. Partial median scores so far:
 | 8×8_c6 | 106 (94.6%) | 105 (93.8%) | -0.8pp |
 | 10×10_c8 | 166 (92.2%) | 159 (88.3%) | -3.9pp |
 | 12×12_c10 | 226 (85.6%) | 230 (87.1%) | **+1.5pp** |
-| 14×14_c12 | (not run) | (not run) | — |
+| 14×14_c12 | 299 (82.1%) | 299 (82.1%) | **0.0pp** ← RESOLVED |
 
-**Tentative finding**: FILAMENT-repair LOSES at small sizes (6-10) but
-slightly WINS at 12×12. Not enough data to claim significance, but
-notable. The 14×14 result would clarify whether FILAMENT's advantage
-GROWS with size.
+**Resolved**: The 12×12 hint was noise. 14×14 with 3 seeds shows
+EXACTLY tied medians. FILAMENT-repair is not better than SA-repair
+on equal budget at 14×14.
 
 Status: `partial`. User explicitly pivoted; do not re-run unless
 specifically requested.
