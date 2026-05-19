@@ -1,28 +1,27 @@
-# Current Volume — Vol-129
+# Current Volume — Vol-131
 
-**Theme**: PALIMPSEST — historical-consensus invariant mining
-+ consensus-trap targeting.
+**Theme**: PRISM — chromatic dual decomposition on SMALL TESTBEDS.
 
-**Per user binding** [[feedback_e2_one_invention_per_volume]]: vol-129
-is dedicated solely to PALIMPSEST.
+**Per user binding 2026-05-19**: "move on from McGavin obsession" +
+"smaller harder testbeds". No 16×16 canonical work, no McGavin-derived
+boards.
 
 ## Binding items (3 max)
 
-1. **Consensus map**: score-weighted per-pair persistence across
-   1278-record DB.
-2. **Consensus-trap targeting**: identify high-persistence pairs that
-   never appear in 462+ boards.
-3. **ALNS with consensus-aware destroy**: implement + run multi-seed.
+1. **Generate small testbeds**: 7×7/7 and 8×8/8 + exact optima via
+   backtracker. Reuse `gen_small_csv`.
+2. **Build PRISM iteration**: per-colour Lagrangian decomposition
+   in Python, with subgradient on dual prices.
+3. **Measure**: dual bound tightness + primal heuristic quality vs
+   ALNS on 7×7/7, 8×8/8, 12×12/12.
 
 ## Audit-at-open compliance
 
-- Vol-126 (CONCORD) `partial` — deferred.
-- Vol-127 (CONCRETION) `refuted`.
-- Vol-128 (ATLAS) `refuted`.
-- Vol-125 (FPL probe) still in flight.
-- No other inventions bound here.
+- Vol-129 closed `built` (PALIMPSEST + 463 record).
+- Vol-130 FILAMENT `partial`.
+- No McGavin/canonical work in vol-131.
 
 ## Linked
 
-- [[sessions/vol-129]]
-- [[concepts/palimpsest-historical-consensus]] (to be created)
+- [[sessions/vol-131]]
+- [[concepts/prism-chromatic-decomp]] (to be created)
