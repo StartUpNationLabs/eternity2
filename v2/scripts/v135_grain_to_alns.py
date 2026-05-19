@@ -37,6 +37,8 @@ def grain_to_board_json(board, size, n_pieces, out_path):
 
 
 def grain_to_board_with_rot(board, size, pieces, out_path):
+    """Convert GRAIN board to JSON. Python rotation index r corresponds to
+    Rust rotation index (4-r) % 4, because Python rotates CCW and Rust CW."""
     from v135_grain_poc import rotate_piece
     placement = []
     for pos in range(size*size):
@@ -45,10 +47,12 @@ def grain_to_board_with_rot(board, size, pieces, out_path):
         pid = cell[0]
         rotated = cell[1]
         original = pieces[pid]
-        # Find rotation r such that rotate_piece(original, r) == rotated.
-        for r in range(4):
-            if rotate_piece(original, r) == rotated:
-                placement.append({"pos": pos, "piece_id": int(pid), "rotation": r})
+        # Find Python rotation r_py such that rotate_piece(original, r_py) == rotated.
+        for r_py in range(4):
+            if rotate_piece(original, r_py) == rotated:
+                # Convert to Rust convention: Python r_py == Rust (4 - r_py) % 4
+                r_rust = (4 - r_py) % 4
+                placement.append({"pos": pos, "piece_id": int(pid), "rotation": r_rust})
                 break
     with open(out_path, "w") as f:
         json.dump({"matched": -1, "placement": placement}, f, indent=2)
