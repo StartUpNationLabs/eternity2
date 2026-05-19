@@ -30,7 +30,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget-ms", type=int, default=7_200_000,
                     help="ALNS budget per job in ms (default 2h)")
-    ap.add_argument("--max-parallel", type=int, default=7)
+    ap.add_argument("--max-parallel", type=int, default=8)
     ap.add_argument("--seeds", type=str, default="1,7,42")
     ap.add_argument("--ops", type=str, default="basic,basic_lkh")
     ap.add_argument("--out-dir", type=str, default=None)

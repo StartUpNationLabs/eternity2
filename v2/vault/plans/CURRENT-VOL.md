@@ -1,57 +1,71 @@
-# Current Volume — Vol-148
+# Current Volume — Vol-149
 
-**Theme**: Multi-basin compute campaign Tier-1A — scale V129-T12's proven
-recipe to all 18 basin families × 3 seeds × 2 ops × 4h budget.
+**Theme**: STRATUM — Layered-Algebra Decomposition.
+Constructive-from-scratch builder using piece orbit equivalence under
+color-permutation symmetries of the Selby-Riordan generator.
 
-V147 closed in day 1 (forbidden-2×2 post-placement DFS pruner refuted
-by edge-strict-implies-feasibility analysis). Pivot to compute, which
-is the only attack class with a proven record-breaking precedent
-in this autonomous arc (V129-T12 → 463).
+User preference (2026-05-19 evening): "those allowing to build better
+puzzle from scratch faster feels good" → STRATUM ranks #1 of 6 named
+inventions.
 
-## Why this vol
+## The invention in one paragraph
 
-V129-T12 found **463** via 18 × 30min ALNS basic seed=42 on different
-basins. Three knobs untried:
+The Selby-Riordan piece-set generator produced 256 pieces using a
+specific algorithm. We hypothesize the generator left a **fingerprint**
+— a hidden equivalence relation on pieces under color-permutation
+orbits. Two pieces are in the same **stratum** iff their 4-color
+multiset is in the same orbit under some color-permutation π. A solved
+board respects stratum structure: certain stratum-pairs cannot be
+adjacent. Building stratum-by-stratum is **combinatorially cheaper**
+than per-piece DFS by a factor of `n_strata * (avg orbit size)!`.
 
-1. **Longer budget per job** (30min → 4h, 8× compute per attempt).
-2. **Multiple seeds** (s=1, s=7, s=42 — V125-T19 showed
-   different seeds reach different ceilings, and 42 was just lucky).
-3. **LKH-chain ops** (`basic_lkh` from W4, never deep-tested per basin).
+## Why it might work
 
-Total: 18 basins × 3 seeds × 2 ops = 108 jobs × 4h = 432 CPU-hr.
-On 7 cores: ~62 wallclock hours ≈ 2.6 days.
+Vol-65 measured: no rotation-symmetric pieces (256 size-4 orbits under
+rotation), 5 multiset-twin pairs (10 pieces sharing edge-color
+multiset). The multiset-twin finding hints at **deeper hidden orbits
+under generator-internal symmetries**.
 
-Kill-criterion: any new ≥464 record → record + analyze + commit.
-At minimum: distribution of (basin, seed, ops) final scores —
-a structural map of what each basin can reach under longer compute.
+If we find ≥ 8 strata of size ~32 pieces each, we can:
+1. Place strata in a fixed order (border-first × stratum-rank).
+2. Within each stratum, the piece sub-problem is 32!/32^k vs 256!/256^k —
+   millions of times smaller.
+3. Build from scratch with stratum-CSP much faster than vanilla DFS.
 
 ## Binding items (3 max)
 
-1. **Build basin manifest**: 18 boards from V129-T11 clustering.
-   Generate `scripts/v148_basin_sweep/manifest.json` with paths +
-   corner-perm + init score.
-2. **Sweep driver**: bash launcher that runs 7-job batches under
-   `parallel` or sequential `&` with wait-for-N. Logs each to a
-   timestamped subdir.
-3. **Result analyzer**: per (basin, seed, ops), report
-   (init, max, time-to-max). Aggregate: # ≥460, # ≥463, any ≥464.
+1. **Build the equivalence relation**: enumerate all color-permutations
+   of the 22 interior colors that map the piece SET to itself. The
+   group of such π is the **piece-set automorphism group** $G$. Pieces
+   in the same $G$-orbit are stratum-equivalent.
+2. **Measure stratum structure on canonical 16×16**: compute |G|, the
+   orbit sizes, and whether the 463/469 records respect any orbit
+   constraint. Falsifiable: if records ignore orbits, STRATUM is dead.
+3. **Build stratum-DFS PoC**: backtracker that places one full stratum
+   before moving to the next, vs vanilla DFS. Compare wallclock-to-100
+   placements on canonical.
 
 ## Kill-criterion
 
-- Time-budget cap: 4 wallclock days. If by then no ≥464, accept the
-  sweep result as a distributional finding (not a record-break) and
-  move to V149.
-- Any ≥464 → record + commit + reorient remaining sweep around the
-  new basin.
+- If |G| = 1 (i.e., no color-permutation preserves the piece set),
+  STRATUM fingerprint hypothesis is refuted on canonical E2. Document
+  + close.
+- If |G| > 1 but records violate orbit constraints (no fingerprint
+  visible), refute as "fingerprint exists but doesn't transfer to
+  solutions".
+- If |G| > 1 AND records respect orbits AND stratum-DFS is no faster
+  than vanilla — refute as engineering loss.
 
 ## Days budget
 
-4 wallclock days. Mostly compute; the driver + analyzer are <1 day.
+3 days. Day 1: compute $G$ and orbit decomposition. Day 2: measure
+record-board adherence + design stratum-DFS. Day 3: prototype + compare
+to vanilla_fast.
 
 ## Linked
 
-- [[../sessions/vol-148]] (to be created)
-- [[../sessions/vol-147]] (closed)
-- [[../concepts/forbidden-patch-theorem-2026-05-19]]
-- [[MULTI_VOL_PLAN_2026-05-19]]
-- [[../basins/basin-463]] (to be created with sweep results)
+- [[../sessions/vol-149]] (to be created)
+- [[../concepts/stratum-orbits]] (to be created)
+- [[INVENTION_NAMES_2026-05-19]]
+- [[../concepts/k11-cross-domain-brainstorm]] (related: piece-set automorphism)
+- [[../concepts/piece-set-symmetries]] (vol-65 measured no rotation symmetries)
