@@ -330,3 +330,7 @@ path = "src/bin/v150_weaving.rs"
 [[bin]]
 name = "v151_weaving_beam"
 path = "src/bin/v151_weaving_beam.rs"
+
+[[bin]]
+name = "v155_weaving_prior"
+path = "src/bin/v155_weaving_prior.rs"
