@@ -39,11 +39,25 @@ The 461→480 gap (19 edges) corresponds to ~36 forbidden 2x3 patches.
 Forbidden-count is a search-progress diagnostic even when matched-
 edges plateau.
 
-## V140 wiring outcome
+## V140 + V143 wiring outcomes — ALL INERT from 461 at 5min
 
-ALNS lex-break on forbidden-2x2 count: zero improvement from 461
-(deep local min). Tiebreaker only fires on iso-score moves; in 461's
-basin, iso-score forbidden-count is already locally min.
+| Approach | Result |
+|----------|--------|
+| V140 lex-break on iso-score (forbidden-2x2 count) | 461 → 461 (no change) |
+| V143 ForbidDestroy operator (destroy forbidden 2x3) | 461 → 461 (no change) |
+
+Both approaches yielded zero improvement. The 461 plateau is
+impenetrable by these direct integrations. Consistent with σ-cycle
+indecomposability (vol-65): 461→469 requires a coupled 255-cell
+permutation, not local moves.
+
+Other 5min attacks from 461 in this session:
+- FILAMENT-repair (V130, V134): tied with SA, no escape
+- TUNNEL PT destroy-aggressiveness ladder (V141): all chains
+  converged to 461
+
+The forbidden-patch theorem remains valuable as a DIAGNOSTIC but
+does not translate to a search improvement at this integration level.
 
 ## What's open
 
