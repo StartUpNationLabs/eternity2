@@ -124,13 +124,19 @@ impl Dlx {
     }
 
     fn hide(&mut self, p: usize) {
-        // Remove node p from its column
+        // Remove node p's row-mates from their columns. Knuth Alg-C
+        // semantics: skip nodes whose column has been PURIFIED and the
+        // node's color was consumed (marked -1) by that purify. The
+        // node-color=-1 from the original encoding (no-color secondary)
+        // is NOT a purify result — only skip when column is also purified.
         let mut q = self.nodes[p].right;
         while q != p {
             let col = self.nodes[q].column;
-            // Only hide if this row's node has uncompatible color, otherwise keep
-            // For XCC: hide only when standard cover; "purify" handles secondaries.
-            // Simplified: always hide (per Knuth Alg-C basic version).
+            // "Consumed by purify" iff column purified AND node color == -1.
+            if self.columns[col].purified_color >= 0 && self.nodes[q].color < 0 {
+                q = self.nodes[q].right;
+                continue;
+            }
             let up = self.nodes[q].up;
             let dn = self.nodes[q].down;
             self.nodes[up].down = dn;
@@ -144,6 +150,10 @@ impl Dlx {
         let mut q = self.nodes[p].left;
         while q != p {
             let col = self.nodes[q].column;
+            if self.columns[col].purified_color >= 0 && self.nodes[q].color < 0 {
+                q = self.nodes[q].left;
+                continue;
+            }
             let up = self.nodes[q].up;
             let dn = self.nodes[q].down;
             self.nodes[up].down = q;
@@ -220,8 +230,37 @@ impl Dlx {
         }
     }
 
+    /// Validate that column sizes match the actual count of linked nodes.
+    /// Returns the first mismatch found, or None if all match.
+    #[allow(dead_code)]
+    fn validate_sizes(&self) -> Option<(usize, u32, u32)> {
+        for c in 1..self.columns.len() {
+            // Skip secondaries hidden via detached header chains — they may
+            // legitimately have size = number of linked rows.
+            let mut count: u32 = 0;
+            let mut q = self.nodes[c].down;
+            while q != c {
+                count += 1;
+                if count > 10000 { break; }  // safety
+                q = self.nodes[q].down;
+            }
+            if count != self.columns[c].size {
+                return Some((c, self.columns[c].size, count));
+            }
+        }
+        None
+    }
+
     fn search(&mut self) -> bool {
         self.nodes_visited += 1;
+        let dbg = std::env::var("DLX_TRACE").is_ok();
+        let validate = std::env::var("DLX_VALIDATE").is_ok();
+        if validate {
+            if let Some((c, claimed, actual)) = self.validate_sizes() {
+                eprintln!("[VALIDATE] col {} size={} but {} actual nodes at depth {}",
+                    c, claimed, actual, self.solution.len());
+            }
+        }
         if self.nodes[self.header].right == self.header {
             let rows: Vec<usize> = self.solution.iter()
                 .map(|&n| self.nodes[n].row_meta)
@@ -242,52 +281,61 @@ impl Dlx {
             }
             c = self.nodes[c].right;
         }
+        if dbg {
+            eprintln!("[depth={}] chose col={} size={}", self.solution.len(), chosen, min_size);
+        }
         if min_size == 0 { return false; }
 
         self.cover(chosen);
         let mut r = self.nodes[chosen].down;
         while r != chosen {
             self.solution.push(r);
-            // For each node in this row, cover/purify its column
+            if dbg {
+                eprintln!("[depth={}] try row r={} row_id={}", self.solution.len() - 1, r, self.nodes[r].row_meta);
+            }
+            // For each node in this row, cover/purify its column.
+            // Track ops as (node_idx, op) where op = 0 (cover) | 1 (purify).
             let mut feasible = true;
-            let mut covered_so_far: Vec<usize> = Vec::new();
+            let mut covered_so_far: Vec<(usize, u8)> = Vec::new();
             let mut j = self.nodes[r].right;
             while j != r {
                 let col = self.nodes[j].column;
                 if self.columns[col].primary {
                     self.cover(col);
-                    covered_so_far.push(j);
+                    covered_so_far.push((j, 0));
                 } else if self.nodes[j].color == -1 {
+                    // Original-no-color secondary: cover.
                     self.cover(col);
-                    covered_so_far.push(j);
+                    covered_so_far.push((j, 0));
                 } else {
                     let cur = self.columns[col].purified_color;
                     if cur == -1 {
                         self.purify(j);
-                        covered_so_far.push(j);
+                        covered_so_far.push((j, 1));
                     } else if cur == self.nodes[j].color {
-                        // Already purified to matching color — nothing to do
+                        // Already purified to matching color — nothing to do.
                     } else {
-                        // Conflict — this row is infeasible
+                        // Conflict — this row is infeasible.
                         feasible = false;
                         break;
                     }
                 }
                 j = self.nodes[j].right;
             }
+            if dbg {
+                eprintln!("[depth={}] feasible={} covered_count={}", self.solution.len() - 1, feasible, covered_so_far.len());
+            }
             if feasible {
                 if self.search() { return true; }
             }
             self.solution.pop();
-            // Unwind only what we covered, in reverse.
-            for &k in covered_so_far.iter().rev() {
+            // Unwind in reverse using the recorded op.
+            for &(k, op) in covered_so_far.iter().rev() {
                 let col = self.nodes[k].column;
-                if self.columns[col].primary {
-                    self.uncover(col);
-                } else if self.nodes[k].color == -1 {
-                    self.uncover(col);
-                } else {
-                    self.unpurify(k);
+                match op {
+                    0 => self.uncover(col),
+                    1 => self.unpurify(k),
+                    _ => unreachable!(),
                 }
             }
             r = self.nodes[r].down;
