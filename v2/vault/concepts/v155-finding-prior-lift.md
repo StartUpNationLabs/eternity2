@@ -38,14 +38,26 @@ Optionally a continuous blend: `combined = score * 1e6 + alpha * prior_sum`.
 | V151 K=1024 plain | 453 | 18s |
 | V151 K=4096 plain | 449 | 85s |
 | V151 K=16384 path-dedup-8 | 455 | 21min |
-| V155 K=1024 + prior | 454 | 23s |
-| V155 K=4096 + prior + path-dedup-4 | **456** | 117s |
-| V155 K=8192 + prior + path-dedup-8 | 456 | 295s |
-| V157 K=4096 + rotation-prior + path-dedup-4 | 456 | 159s |
+| V155 K=1024 + prior(440) | 454 | 23s |
+| V155 K=4096 + prior(440) + path-dedup-4 | 456 | 117s |
+| V155 K=8192 + prior(440) + path-dedup-8 | 456 | 295s |
+| V157 K=4096 + rotation-prior(440) + path-dedup-4 | 456 | 159s |
+| **V155 K=4096 + prior(459) + path-dedup-4** | **460** | 238s |
 
-**Best**: V155 K=4096 + prior + path-dedup-4 = 456/480 in 117s.
+**Best**: V155 K=4096 + sharper prior (≥459 threshold, 26 boards) +
+path-dedup-4 = **460/480** in 238s. Verified via `rescore_board`.
+Corner perm (1, 0, 3, 2) — matches existing basin family.
 
-All results verified via `rescore_board`.
+## Critical observation: prior SHARPNESS dominates
+
+Increasing prior detail (V157 rotation-aware: 2D → 3D) did NOT lift
+beyond 456. But **sharpening the prior threshold** (940 boards →
+26 boards) lifted +4 to 460.
+
+Interpretation: the 440-thresh prior is dominated by 440-459 patterns
+(mostly canonical-hint placements + corner pieces). The 459-thresh
+prior reveals record-tier piece-position patterns. Beam-search converges
+to "common record-tier" structure, not "common all-boards" structure.
 
 ## Why 456 is a ceiling
 
