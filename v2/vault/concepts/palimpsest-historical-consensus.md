@@ -1,6 +1,6 @@
 # PALIMPSEST — Historical-Consensus Invariant Mining
 
-**Status**: `partial` (Vol-129, 2026-05-19 — analysis built, escape-pinning attack in progress)
+**Status**: `partial` (Vol-129, 2026-05-19 — analysis useful; consensus-trap mining is informative, but escape-pinning attack REFUTED. PALIMPSEST as a DATA-ANALYSIS tool is valuable; PALIMPSEST as a SEARCH OPERATOR via hard-pinning is refuted.)
 **Origin**: Brainstorm reservoir round-3
 [[plans/EXTERNAL_BRAINSTORM_2026-05-18]]
 **Files**:
@@ -71,10 +71,27 @@ the search into a sub-optimal basin.
   461 records: the trap-piece-replacement procedure rebuilds
   McGavin's basin almost completely.
 
-**Attack 2 — K-pin sweep** (V129-T7, in flight):
+**Attack 2 — K-pin sweep** (V129-T7, completed 08:13):
 - Pin only top-K escape pieces by trap strength. $K \in \{16, 32, 64\}$.
 - Starting boards: K=16 → 415/480, K=32 → 382/480, K=64 → 298/480.
-- ALNS basic 30min × 2 seeds per K. Results pending ~08:13 CEST.
+- ALNS basic 30min × 2 seeds per K. Results:
+
+| K  | seed | start | best | Δ |
+|----|------|-------|------|---|
+| 16 | 1    | 415   | 435  | +20 |
+| 16 | 42   | 415   | 439  | +24 |
+| 32 | 1    | 382   | 419  | +37 |
+| 32 | 42   | 382   | 419  | +37 |
+| 64 | 1    | 298   | 394  | +96 |
+| 64 | 42   | 298   | 385  | +87 |
+
+**ALL scores are FAR BELOW 461 (the original base).** Pinning escape
+pieces damages the search; ALNS only partially recovers. Even the
+best result (K=16 seed=42: 439) is 22 below 461.
+
+**PALIMPSEST escape-pinning is therefore REFUTED on canonical E2 at
+this implementation level.** Hard-pinning specific pieces destroys
+basin coherence without providing a path to a higher basin.
 
 **Attack 3 — top-row cycle-destroy** (V129-T9, queued):
 - Cycle-permute pieces in rows 0-3 to break the trap consensus
