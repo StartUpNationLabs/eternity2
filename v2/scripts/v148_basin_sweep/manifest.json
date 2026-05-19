@@ -1,0 +1,200 @@
+[
+  {
+    "cp": [
+      3,
+      2,
+      0,
+      1
+    ],
+    "base_score": 469,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/469_NEW_469_swap_pieces_234_235_at_pos_73_75_a8330e6c.json",
+    "name": "469_NEW_469_swap_pieces_234_235_at_pos_73_75_a8330e6c.json"
+  },
+  {
+    "cp": [
+      2,
+      3,
+      0,
+      1
+    ],
+    "base_score": 462,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/462_vol82_bottom14_462_bd8595a9.json",
+    "name": "462_vol82_bottom14_462_bd8595a9.json"
+  },
+  {
+    "cp": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "base_score": 461,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/461_RECORD_461_off225_seed1_basinD_5e761a85.json",
+    "name": "461_RECORD_461_off225_seed1_basinD_5e761a85.json"
+  },
+  {
+    "cp": [
+      1,
+      2,
+      0,
+      3
+    ],
+    "base_score": 461,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/461_RECORD_461_off110_seed142_8d461802.json",
+    "name": "461_RECORD_461_off110_seed142_8d461802.json"
+  },
+  {
+    "cp": [
+      1,
+      2,
+      3,
+      0
+    ],
+    "base_score": 461,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/461_RECORD_461_off110_seed1_8e88ff5a.json",
+    "name": "461_RECORD_461_off110_seed1_8e88ff5a.json"
+  },
+  {
+    "cp": [
+      2,
+      3,
+      1,
+      0
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_seed140_460_52acd2dd.json",
+    "name": "460_seed140_460_52acd2dd.json"
+  },
+  {
+    "cp": [
+      1,
+      0,
+      3,
+      2
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_cluster_A_bseed9_score460_aacd9ee0.json",
+    "name": "460_cluster_A_bseed9_score460_aacd9ee0.json"
+  },
+  {
+    "cp": [
+      1,
+      3,
+      2,
+      0
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_seed120_460_beee88c9.json",
+    "name": "460_seed120_460_beee88c9.json"
+  },
+  {
+    "cp": [
+      3,
+      1,
+      0,
+      2
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_seed325_460_8c793424.json",
+    "name": "460_seed325_460_8c793424.json"
+  },
+  {
+    "cp": [
+      3,
+      1,
+      2,
+      0
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_RECORD_460_bf_bw_off125_seed42_156f0832.json",
+    "name": "460_RECORD_460_bf_bw_off125_seed42_156f0832.json"
+  },
+  {
+    "cp": [
+      3,
+      0,
+      2,
+      1
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_seed50_460_c66a21fd.json",
+    "name": "460_seed50_460_c66a21fd.json"
+  },
+  {
+    "cp": [
+      0,
+      1,
+      3,
+      2
+    ],
+    "base_score": 460,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/460_RECORD_460_bf_bw_off350_seed42_basin2_1e08ec31.json",
+    "name": "460_RECORD_460_bf_bw_off350_seed42_basin2_1e08ec31.json"
+  },
+  {
+    "cp": [
+      2,
+      1,
+      0,
+      3
+    ],
+    "base_score": 459,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/459_basic_sa_t1_s42_747641000_p37954_724c2aea.json",
+    "name": "459_basic_sa_t1_s42_747641000_p37954_724c2aea.json"
+  },
+  {
+    "cp": [
+      1,
+      0,
+      2,
+      3
+    ],
+    "base_score": 459,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/459_basic_sa_t1_s42_889541000_p43138_78f534a9.json",
+    "name": "459_basic_sa_t1_s42_889541000_p43138_78f534a9.json"
+  },
+  {
+    "cp": [
+      0,
+      3,
+      1,
+      2
+    ],
+    "base_score": 459,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/459_NEW_459_bf_bw_off100_seed42_basin3_efa85782.json",
+    "name": "459_NEW_459_bf_bw_off100_seed42_basin3_efa85782.json"
+  },
+  {
+    "cp": [
+      0,
+      2,
+      3,
+      1
+    ],
+    "base_score": 458,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/458_basic_sa_t1_s42_131745000_p61093_bf4e121e.json",
+    "name": "458_basic_sa_t1_s42_131745000_p61093_bf4e121e.json"
+  },
+  {
+    "cp": [
+      1,
+      3,
+      0,
+      2
+    ],
+    "base_score": 458,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/458_basic_sa_t1_s42_285009000_p27836_84a92cf6.json",
+    "name": "458_basic_sa_t1_s42_285009000_p27836_84a92cf6.json"
+  },
+  {
+    "cp": [
+      2,
+      0,
+      1,
+      3
+    ],
+    "base_score": 458,
+    "path": "/Users/raphaelanjou/Documents/dev-projects/polytech/eternity2/v2/database-400-480/458_basic_sa_t1_s42_357042000_p7627_60658d38.json",
+    "name": "458_basic_sa_t1_s42_357042000_p7627_60658d38.json"
+  }
+]

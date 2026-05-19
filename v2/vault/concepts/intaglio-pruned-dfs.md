@@ -1,69 +1,109 @@
 # INTAGLIO-pruned DFS
 
-**Status**: `unbuilt` (Vol-147, planned 2026-05-19)
+**Status**: `refuted` (Vol-147, 2026-05-19). Empirically verified on 24 boards × 5400 patches: 0 cases of `forbidden + full-edge-match`. Post-placement DFS pruner is vacuous on edge-strict DFS.
 
-## Idea
+## Original idea (vacuous)
 
-Deterministic backtracking DFS over (cell, piece, rotation) with a
-post-placement check that rejects any partial board containing a
-forbidden 2×2 patch.
+Post-placement 2×2 forbidden-patch check during DFS. At every placement,
+check whether the partial 2×2 patch (the one just completed) is in the
+forbidden-2×2 set.
 
-## Definition
+## Why vacuous
 
-After placing piece $p$ with rotation $r$ at cell position $c$, for
-every 2×2 patch fully inside the partial board that contains $c$
-(at most 4 patches), check the patch against a precomputed forbidden
-table. If forbidden under all 4 rotational orientations of the patch,
-prune the subtree.
+The forbidden-2×2 theorem (V138-V142) tests: "given 4 piece IDs, does
+ANY rotation assignment yield 4-internally-matching edges?"
 
-The forbidden-2×2 table is a function:
-$$f : (p_1, r_1, p_2, r_2, p_3, r_3, p_4, r_4) \to \{0, 1\}$$
-where 1 means **forbidden**. This is too large to store densely
-(1024⁴ entries) — must be:
-- (a) computed on-the-fly from edge-color matching, OR
-- (b) keyed only on the relevant boundary colors (8 colors per patch
-  = 23⁸ = 78B → still too large), OR
-- (c) keyed on the *piece set induced by the patch* (much smaller).
+In edge-strict DFS (like `vanilla_fast`):
+- Every placement requires N color = previous-row S color, W color = previous-col E color.
+- By the time a 2×2 patch is complete, all 4 internal edges match by construction.
+- So **every completed 2×2 in a vanilla DFS partial is feasible**, by definition.
+- The forbidden-2×2 check would NEVER fire post-placement.
 
-The right encoding is option (c): the patch is forbidden iff **no
-rotation assignment to its 4 pieces makes all 4 internal edges match**.
-This is checkable in O(4⁴=256) by enumeration; the forbidden table can
-then memoize (sorted_piece_id_tuple) → bool. The table is keyed on
-$\binom{256}{4} \approx 175M$ entries — too large; defer to on-the-fly.
+The theorem's discriminatory power comes from *piece subsets*, not
+edge-match — and the DFS already enforces edge-match strictly.
 
-## Why this is the right pruner
+## Redesign: forward-check propagator (INTAGLIO-FC)
 
-V138-V142 measured forbidden 2×2 rates:
-- 99.72% of random 2×2 patches are forbidden under any rotation.
-- Real boards: LOW score (<440) median 109 forbidden patches/board.
-  HIGH (≥460): median 29 patches. The 463 record: 26 forbidden patches.
-- A perfect 480 board has 0 forbidden patches.
+Place pos $p = (y, x)$. Consider the **as-yet-unplaced** 2×2 patches
+that will eventually include $p$. Specifically, the patch with $p$ as
+TL, where TR=(y, x+1), BL=(y+1, x), BR=(y+1, x+1) are all unplaced.
 
-If DFS allows any forbidden 2×2 to be placed, it commits to a subtree
-that **cannot** reach 480. Pruning at first forbidden-2×2 violation
-collapses the search space dramatically — IF the check is cheap enough.
+For each candidate piece $\pi$ for TR (i.e., currently in the bucket
+for pos $(y, x+1)$ given N-W constraints), and for each candidate
+$\pi'$ for BL, check: **does there exist a feasible 2×2 for (p, π, π',
+*)** — i.e., is there ANY 4th piece (for BR) and ANY rotations such
+that all 4 internal edges match?
 
-## What we measure
+If NO, $\pi$ for TR is a dead-end given $\pi'$ for BL (and vice versa).
 
-- **nodes/sec with vs without patch-check** — overhead factor.
-- **subtree pruning fraction** — how often does the check reject.
-- **max-matched at fixed wallclock** vs `vanilla_fast` baseline.
+**This is non-vacuous** because it propagates *information about the
+piece subset already committed to* down to unplaced cells.
 
-## Open questions
+## Cost analysis
 
-1. Is the patch-check fast enough? On-the-fly is 4×4×4×4=256 ops per
-   check; with bit-tricks, ~10ns. Per-node cost is ~4 checks ⇒ ~40ns
-   added per node. vanilla_fast is ~85M nps single-thread → 11.7ns/node.
-   This is **~4× slowdown** — borderline.
+At depth d in canonical 16×16/22:
+- Placed-pos $p$ has up to 1-4 future-2×2 patches involving it.
+- For each future patch with 1 placed cell: candidates for the other 3
+  cells = bucket sizes × $(N-d)$ remaining pieces. Too many to enumerate.
+- For each future patch with 2 placed cells: candidates for the other 2
+  cells = (bucket × remaining pieces). Still expensive.
+- For each future patch with 3 placed cells: candidates for the 4th = 1
+  bucket. **This is the cheap case.**
 
-2. Does the check prune enough to overcome the slowdown? If 50% of
-   subtrees are pruned at the patch level, that's a 2× nodes-saved.
-   Net: 4× × 0.5 = 2× slowdown. Need pruning rate > 75% to break even.
+The 3-placed-1-unplaced case is **trivially the next row's first
+unplaced cell** in row-major DFS. We get this check FOR FREE inside the
+bucket-lookup machinery: bucket for next-cell already filters by
+N-color and W-color of the two placed neighbors. So **the existing
+bucket structure ALREADY does forward-check on the immediately-next
+cell**. Nothing new to add.
 
-3. **Combine with 2×3 patches?** V142: 100% of random 2×3 patches
-   forbidden. 2×3 patches contain 6 pieces — more discriminatory but
-   the patch-check is more expensive (6×4=24 ops vs 4×4=16). Defer to
-   V147-followup.
+## The actually-valuable propagator: 2-placed-2-unplaced
+
+Consider the partial 2×2 with TL and BL placed, TR and BR unplaced.
+TR's bucket requires N = TL.s and W = BL.e. BR's bucket requires N =
+TR.s and W = BL.s.
+
+The 2×2 is feasible iff **there exist $π_{TR}$ in bucket(N=TL.s,
+W=fresh) and $π_{BR}$ in bucket(N=π_{TR}.s, W=BL.s) such that
+$π_{TR} \ne π_{BL}, π_{TR} \ne π_{TL}, π_{BR} \ne π_{TR}, π_{BR} \ne
+π_{BL}, π_{BR} \ne π_{TL}$.**
+
+In column-major DFS, this state arises naturally between columns. In
+row-major DFS, this state DOESN'T arise: BL is placed only AFTER TR
+in row-major.
+
+So **INTAGLIO-FC requires column-major or other scan order to be useful.**
+
+## Verdict
+
+Original vacuous; redesign requires changing DFS scan order. This is
+a much larger surgery than V147's day-budget allows.
+
+**Pivot.** The 2×2 theorem is right; the DFS integration is wrong.
+Instead, use the forbidden-2×2 theorem as **piece-subset pruning** at
+the *piece-supply level*: for each (color_pair × rotation_count)
+budget, check feasibility against forbidden-piece-set bounds. This is
+closer to an LP-side bound than a DFS pruner.
+
+## What V147 actually does (revised binding)
+
+Given the redesign, V147 pivots to measuring **how often the 4-tuple
+of pieces currently placed at a 2×2 patch in real partial boards is in
+the forbidden set**. This is the empirical sanity check that
+post-placement check is indeed vacuous on edge-strict DFS — i.e., test
+my reasoning above.
+
+**Concrete experiment.**
+1. Take 100 partial boards from `database-400-480/` at scores [440, 480].
+2. For each complete 2×2 patch (15×15 = 225 patches per board), check
+   `is_forbidden_2x2`.
+3. Confirm: 0 forbidden patches in *complete* 2×2 patches of real
+   edge-strict partials.
+
+If confirmed (expected): document that V147 must be done via piece-supply
+LP. If FALSIFIED (unexpected): real ALNS-final boards have edge mismatches,
+so the patch-check WOULD fire. Then V147 day 2-3 proceeds as originally
+planned but only against ALNS-init boards (not edge-strict DFS partials).
 
 ## Linked
 
