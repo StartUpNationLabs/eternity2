@@ -62,10 +62,14 @@ the search into a sub-optimal basin.
 **Attack 1 — full escape overlay** (V129-T6):
 - Pin top escape piece at every trap-heavy position (251 positions
   after excluding canonical hints).
-- Result: starting board has **corner perm $(3, 2, 0, 1)$ = McGavin's
-  basin**, score 451/480.
-- This rediscovers McGavin's basin via consensus mining — interesting
-  validation but no novel basin.
+- Result: starting board has corner perm $(3, 2, 0, 1)$ = McGavin's
+  basin, score 451/480.
+- **5/256 cells diff vs McGavin 469** — locations: 2 in row 2, 1 in
+  row 8, 2 in row 13. The 18-point score gap corresponds to those 5
+  positions causing edge mismatches.
+- This is essentially a CONSENSUS-RECONSTRUCTION of McGavin from our
+  461 records: the trap-piece-replacement procedure rebuilds
+  McGavin's basin almost completely.
 
 **Attack 2 — K-pin sweep** (V129-T7, in flight):
 - Pin only top-K escape pieces by trap strength. $K \in \{16, 32, 64\}$.
