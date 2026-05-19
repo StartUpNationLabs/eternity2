@@ -2,6 +2,9 @@
 /output
 __pycache__/
 *.pyc
+# V155 prior matrices: regeneratable from build scripts
+scripts/v155_prior/prior_matrix*.json
+scripts/v155_prior/pair_prior.json
 **/*.rs.bk
 Cargo.lock.bak
 

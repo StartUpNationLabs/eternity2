@@ -218,6 +218,7 @@ fn main() {
     let mut dedup_path_flag = false;
     let mut dedup_recent_k: usize = 4;
     let mut prior_alpha: f64 = 0.0;  // weight of prior_sum in combined score
+    let mut save_best_path: Option<PathBuf> = None;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -230,6 +231,7 @@ fn main() {
             "--dedup-path" => { dedup_path_flag = true; i += 1; }
             "--dedup-recent" => { dedup_recent_k = raw[i + 1].parse().expect("dedup-recent"); i += 2; }
             "--prior-alpha" => { prior_alpha = raw[i + 1].parse().expect("prior-alpha"); i += 2; }
+            "--save-best" => { save_best_path = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--verbose" => { verbose = true; i += 1; }
             other => { eprintln!("unknown arg {other}"); std::process::exit(2); }
         }
@@ -374,6 +376,29 @@ fn main() {
         eprintln!("[stats] beam_final={} best={}", beam.len(), b.score);
         for (i, s) in beam.iter().take(10).enumerate() {
             eprintln!("  [{}] score={} prior_sum={}", i, s.score, s.prior_sum);
+        }
+        // Save best as JSON for ALNS feed (placement format compatible
+        // with alns_only --cp-board).
+        if let Some(path) = save_best_path {
+            let mut placement_json = String::from("{\"placement\":[");
+            for pos in 0..N_POS {
+                if pos > 0 { placement_json.push(','); }
+                if b.chosen[pos] == u32::MAX {
+                    placement_json.push_str("null");
+                } else {
+                    let pr = piece_rots[b.chosen[pos] as usize];
+                    placement_json.push_str(&format!(
+                        "{{\"piece_id\":{},\"rotation\":{},\"pos\":{}}}",
+                        pr.piece_id, pr.rot, pos
+                    ));
+                }
+            }
+            placement_json.push_str(&format!("], \"matched\":{}}}", b.score));
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+            std::fs::write(&path, &placement_json).expect("write save-best");
+            eprintln!("[save-best] {} (score={})", path.display(), b.score);
         }
     } else {
         println!("{{\"profile\":\"weaving_prior_v155\",\"elapsed_ms\":{},\"best_score\":0,\"error\":\"empty_beam\"}}",
