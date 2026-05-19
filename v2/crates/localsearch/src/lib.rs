@@ -48,7 +48,7 @@ pub use alns::{run_alns, run_alns_portfolio, run_alns_pt, run_alns_pt_multi_init
                MwpmDefectPair, ComponentDestroy, ComponentPlusHaloDestroy,
                ComponentClusterDestroy, HingeDestroy,
                MegaBand, WorstColumn, WorstColumnBand, HalfBoardDestroy, RandomScatter,
-               SigmaCycleDestroy, LkhChainDestroy,
+               SigmaCycleDestroy, LkhChainDestroy, ForbidDestroy,
                RepairKind};
 pub use forbidden::{ForbiddenEdge, ForbiddenContext, parse_forbidden_json,
                     build_edges_by_cell, fmm_full, fmm_touched};

@@ -1,36 +1,23 @@
-# Current Volume — Vol-141
+# Current Volume — Vol-143
 
-**Theme**: TUNNEL — path-integral quantum annealing replacement for SA.
+**Theme**: ForbidDestroy — destroy 2x3 forbidden patches, repair.
 
-Standard SA crosses barriers by climbing — exponentially unlikely if
-barriers are tall. QA "tunnels" — probability depends on barrier WIDTH
-not HEIGHT. E2's basins (e.g. 461 plateau) are walled by tall-but-thin
-barriers (sigma-cycle indecomposability says single moves degrade
-score, but full transitions reach 469). Tunnel home turf.
+V142 established: forbidden 2x3 count is a strong inverse correlate
+of matched-edge score (LOW 137, MID 66, HIGH 36, McGavin 26).
 
-## Implementation sketch
-
-Path-integral QA: maintain $P$ replicas of the board (P=8 say).
-Replicas are coupled by a transverse-field term $J$. Standard SA
-update on each replica + an INTER-REPLICA correlation term that
-makes replicas "want" the same state.
-
-Schedule: start with high $J$ (replicas decorrelated) + high $T$
-(thermal), anneal both toward zero. Tunneling happens when replicas
-disagree on which side of a barrier they're on.
-
-For E2: replicas are 256-cell boards. Update each replica with a
-random ALNS-style swap, accept by (thermal + transverse) probability.
+V140's tiebreaker integration was inert. New approach: use forbidden-
+2x3 patches as DESTROY TARGETS. Pick one of the (currently
+forbidden) 2x3 patches on the board, destroy its 6 cells, let
+repair fill with feasible pieces.
 
 ## Binding items (3 max)
 
-1. **Rust replica stack**: maintain $P$ boards in parallel.
-2. **Transverse coupling**: penalty for replicas disagreeing on
-   piece-positions.
-3. **Benchmark**: TUNNEL vs SA on canonical from empty + from 461.
+1. **Rust ForbidDestroy operator**: enumerate forbidden 2x3 patches,
+   pick one (random or worst-cost), output destroy-set of 6 positions.
+2. **Wire into ALNS**: add to operator portfolio.
+3. **Benchmark**: 461 base + ForbidDestroy 5min vs vanilla ALNS.
 
 ## Linked
 
-- [[sessions/vol-141]]
-- [[plans/EXTERNAL_BRAINSTORM_2026-05-18]] (TUNNEL from round-4)
-- [[concepts/intaglio-forbidden-patterns]] (informs cluster geometry)
+- [[sessions/vol-143]]
+- [[concepts/forbidden-patch-theorem-2026-05-19]]

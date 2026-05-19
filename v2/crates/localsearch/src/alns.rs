@@ -377,6 +377,30 @@ pub trait DestroyOp: Send {
     fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position>;
 }
 
+/// V143 ForbidDestroy: pick a forbidden 2x3 patch on the board and
+/// destroy its 6 cells. Repair will refill them, ideally producing a
+/// feasible patch.
+pub struct ForbidDestroy;
+impl DestroyOp for ForbidDestroy {
+    fn name(&self) -> &str { "forbid_destroy" }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let forbidden = crate::intaglio::enumerate_forbidden_2x3(puzzle, board);
+        if forbidden.is_empty() {
+            // Fallback to a random 2x3 region.
+            let w = puzzle.width;
+            let h = puzzle.height;
+            let x0 = rng.range(w.saturating_sub(3) + 1);
+            let y0 = rng.range(h.saturating_sub(2) + 1);
+            let mut s = BTreeSet::new();
+            for dy in 0..2 { for dx in 0..3 { s.insert((y0+dy)*w + (x0+dx)); } }
+            return s;
+        }
+        let idx = rng.range(forbidden.len() as u32) as usize;
+        let (_tl, positions) = &forbidden[idx];
+        positions.iter().copied().collect()
+    }
+}
+
 pub struct RandomRegion { pub k: u32 }
 impl DestroyOp for RandomRegion {
     fn name(&self) -> &str { "random_region" }

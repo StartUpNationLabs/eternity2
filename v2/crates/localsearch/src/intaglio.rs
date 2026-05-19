@@ -103,6 +103,83 @@ pub fn count_forbidden_2x2_near(
     forbidden
 }
 
+/// Check if a 2x3 (2 rows × 3 cols) patch is feasible under some rotation.
+pub fn is_forbidden_2x3(
+    puzzle: &Puzzle,
+    p_tl: PieceId, p_tm: PieceId, p_tr: PieceId,
+    p_bl: PieceId, p_bm: PieceId, p_br: PieceId,
+) -> bool {
+    let tl_p = match puzzle.piece(p_tl) { Some(p) => p, None => return true };
+    let tm_p = match puzzle.piece(p_tm) { Some(p) => p, None => return true };
+    let tr_p = match puzzle.piece(p_tr) { Some(p) => p, None => return true };
+    let bl_p = match puzzle.piece(p_bl) { Some(p) => p, None => return true };
+    let bm_p = match puzzle.piece(p_bm) { Some(p) => p, None => return true };
+    let br_p = match puzzle.piece(p_br) { Some(p) => p, None => return true };
+    for r_tl in 0..4u8 {
+        let tl = tl_p.edges.rotated(Rotation::from_u8(r_tl).unwrap()).as_array();
+        if tl[1] == BORDER || tl[2] == BORDER { continue; }
+        for r_tm in 0..4u8 {
+            let tm = tm_p.edges.rotated(Rotation::from_u8(r_tm).unwrap()).as_array();
+            if tl[1] != tm[3] { continue; }
+            if tm[1] == BORDER || tm[2] == BORDER { continue; }
+            for r_tr in 0..4u8 {
+                let tr = tr_p.edges.rotated(Rotation::from_u8(r_tr).unwrap()).as_array();
+                if tm[1] != tr[3] { continue; }
+                if tr[2] == BORDER { continue; }
+                for r_bl in 0..4u8 {
+                    let bl = bl_p.edges.rotated(Rotation::from_u8(r_bl).unwrap()).as_array();
+                    if tl[2] != bl[0] { continue; }
+                    if bl[1] == BORDER { continue; }
+                    for r_bm in 0..4u8 {
+                        let bm = bm_p.edges.rotated(Rotation::from_u8(r_bm).unwrap()).as_array();
+                        if tm[2] != bm[0] { continue; }
+                        if bl[1] != bm[3] { continue; }
+                        if bm[1] == BORDER { continue; }
+                        for r_br in 0..4u8 {
+                            let br = br_p.edges.rotated(Rotation::from_u8(r_br).unwrap()).as_array();
+                            if tr[2] != br[0] { continue; }
+                            if bm[1] != br[3] { continue; }
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    true
+}
+
+/// Enumerate all forbidden 2x3 patches on the board. Returns (top-left
+/// position, set of 6 positions that form the patch).
+pub fn enumerate_forbidden_2x3(
+    puzzle: &Puzzle,
+    board: &Board,
+) -> Vec<(u32, [u32; 6])> {
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let mut out = Vec::new();
+    for y in 0..(h - 1) {
+        for x in 0..(w - 2) {
+            let tl_pos = y * w + x;
+            let tm_pos = y * w + x + 1;
+            let tr_pos = y * w + x + 2;
+            let bl_pos = (y + 1) * w + x;
+            let bm_pos = (y + 1) * w + x + 1;
+            let br_pos = (y + 1) * w + x + 2;
+            let p_tl = match board.get(tl_pos) { Some((p, _)) => p, None => continue };
+            let p_tm = match board.get(tm_pos) { Some((p, _)) => p, None => continue };
+            let p_tr = match board.get(tr_pos) { Some((p, _)) => p, None => continue };
+            let p_bl = match board.get(bl_pos) { Some((p, _)) => p, None => continue };
+            let p_bm = match board.get(bm_pos) { Some((p, _)) => p, None => continue };
+            let p_br = match board.get(br_pos) { Some((p, _)) => p, None => continue };
+            if is_forbidden_2x3(puzzle, p_tl, p_tm, p_tr, p_bl, p_bm, p_br) {
+                out.push((tl_pos, [tl_pos, tm_pos, tr_pos, bl_pos, bm_pos, br_pos]));
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

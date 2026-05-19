@@ -194,8 +194,9 @@ fn parse_ops(spec: &str, args: &Args) -> Vec<Box<dyn DestroyOp>> {
             "ww" => out.push(Box::new(WorstWindow { k: args.ww_k })),
             "cd" => out.push(Box::new(ConflictDriven { max_size: args.cd_max })),
             "mwpm" => out.push(Box::new(MwpmDefectPair { max_pairs: args.mwpm_max })),
+            "forbid" => out.push(Box::new(eternity2_localsearch::ForbidDestroy)),
             "" => {}
-            other => panic!("unknown op '{}' in --ops (use rr,ww,cd,mwpm)", other),
+            other => panic!("unknown op '{}' in --ops (use rr,ww,cd,mwpm,forbid)", other),
         }
     }
     out
