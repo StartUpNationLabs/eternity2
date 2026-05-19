@@ -1,7 +1,7 @@
 # Frozen-Pair Lifting (FPL)
 
-**Status**: `partial` (Vol-125 — analysis built, cross-basin probe in
-progress)
+**Status**: `refuted` (Vol-125 — cross-basin probe completed
+2026-05-19; max recovery 374/480 from 254/480 start, well below 461)
 **Origin**: Vol-125 V125-T34, 2026-05-19
 **Files**:
 - `scripts/v125_fpl_analysis.py` — basic log-odds analysis
@@ -62,7 +62,26 @@ search landscape. Three possible outcomes:
 destroys most matches), then ALNS basic 30min × 6 seeds with
 `--extra-hint` on every pinned position.
 
-**Results**: TBD (jobs running 2026-05-19 07:11 CEST).
+**Results** (jobs completed 2026-05-19 07:41 CEST):
+
+| seed | best matched |
+|------|--------------|
+| 1    | 363          |
+| 42   | 365          |
+| 7    | 364          |
+| 99   | 367          |
+| 142  | 374          |
+| 5257 | 374          |
+
+**Max: 374/480 — far below 461. Outcome 3 (basin transport
+infeasible).**
+
+Pinning 61 McGavin-only pair pieces onto our 461 base destroyed the
+board to 254/480, and 30min ALNS could only recover to ~374. The two
+basins are NOT bridgeable by per-piece pinning. This is consistent
+with σ-cycle indecomposability (vol-65, vol-99): the permutation
+between local-459 and McGavin-469 has 11 cycles of lengths up to 154;
+applying any proper subset REDUCES score.
 
 ## What this rules in / out
 
