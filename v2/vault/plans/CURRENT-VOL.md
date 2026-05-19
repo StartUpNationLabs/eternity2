@@ -1,26 +1,28 @@
-# Current Volume — Vol-128
+# Current Volume — Vol-129
 
-**Theme**: ATLAS — Korf-style pattern-database heuristic.
+**Theme**: PALIMPSEST — historical-consensus invariant mining
++ consensus-trap targeting.
 
-**Per user binding** [[feedback_e2_one_invention_per_volume]]: vol-128
-is dedicated solely to ATLAS.
+**Per user binding** [[feedback_e2_one_invention_per_volume]]: vol-129
+is dedicated solely to PALIMPSEST.
 
 ## Binding items (3 max)
 
-1. **Patch enumeration**: define 2×2 patches over the 15×15 grid of
-   patches.
-2. **Pattern-DB**: per-patch mismatch lookup via hash table (lazy).
-3. **Online use**: score boards with $h(B)$ and compare to naive
-   mismatch count on the 1278-board DB.
+1. **Consensus map**: score-weighted per-pair persistence across
+   1278-record DB.
+2. **Consensus-trap targeting**: identify high-persistence pairs that
+   never appear in 462+ boards.
+3. **ALNS with consensus-aware destroy**: implement + run multi-seed.
 
 ## Audit-at-open compliance
 
-- Vol-127 (CONCRETION) closed `refuted`.
 - Vol-126 (CONCORD) `partial` — deferred.
-- Vol-125 (FPL probe) results pending.
+- Vol-127 (CONCRETION) `refuted`.
+- Vol-128 (ATLAS) `refuted`.
+- Vol-125 (FPL probe) still in flight.
 - No other inventions bound here.
 
 ## Linked
 
-- [[sessions/vol-128]]
-- [[concepts/atlas-pattern-database]] (to be created)
+- [[sessions/vol-129]]
+- [[concepts/palimpsest-historical-consensus]] (to be created)
