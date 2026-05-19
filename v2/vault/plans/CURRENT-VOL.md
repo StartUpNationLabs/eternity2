@@ -1,27 +1,21 @@
-# Current Volume — Vol-131
+# Current Volume — Vol-132
 
-**Theme**: PRISM — chromatic dual decomposition on SMALL TESTBEDS.
+**Theme**: Constraint-density characterization.
 
-**Per user binding 2026-05-19**: "move on from McGavin obsession" +
-"smaller harder testbeds". No 16×16 canonical work, no McGavin-derived
-boards.
+The vol-131 scaling curve revealed canonical 16×16/22 sits BETWEEN
+7×7/5 (97.6%) and 8×8/6 (92.9%) on the % match curve, despite being
+~16× larger. This suggests constraint density is the real predictor.
 
 ## Binding items (3 max)
 
-1. **Generate small testbeds**: 7×7/7 and 8×8/8 + exact optima via
-   backtracker. Reuse `gen_small_csv`.
-2. **Build PRISM iteration**: per-colour Lagrangian decomposition
-   in Python, with subgradient on dual prices.
-3. **Measure**: dual bound tightness + primal heuristic quality vs
-   ALNS on 7×7/7, 8×8/8, 12×12/12.
-
-## Audit-at-open compliance
-
-- Vol-129 closed `built` (PALIMPSEST + 463 record).
-- Vol-130 FILAMENT `partial`.
-- No McGavin/canonical work in vol-131.
+1. **Define constraint density**: per-piece-side color-multiplicity
+   distribution + per-color edge-pairing graph density.
+2. **Measure**: on canonical E2, vol-131 generated suite, 469 board.
+3. **Predict**: from density, predict solver-wall percentage. Validate
+   on the vol-131 curve.
 
 ## Linked
 
-- [[sessions/vol-131]]
-- [[concepts/prism-chromatic-decomp]] (to be created)
+- [[sessions/vol-132]]
+- [[concepts/scaling-curve-2026-05-19]]
+- [[plans/MONTH_AHEAD_2026-05-19]]
