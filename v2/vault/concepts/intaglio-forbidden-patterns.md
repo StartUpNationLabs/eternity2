@@ -87,10 +87,38 @@ has a TIGHT 2×2 structure.
 
 ## What's still open
 
-- Rust impl of the 2×2 feasibility check.
-- Wire into alns_e2 as a repair filter (compare to baseline).
+- ~~Rust impl of the 2×2 feasibility check.~~ DONE (V140)
+- ~~Wire into alns_e2 as a repair filter.~~ DONE; result below.
 - 3-cell L-shape / 2×3 / 3×3 patches: probably stronger pruning.
 - Build a hash table of feasible patches; query in constant time.
+- **NEW direction**: use forbidden-count as a destroy-target signal
+  (destroy positions in many forbidden patches) — not just iso-score
+  tiebreaker.
+
+## V140 wiring result (HONEST)
+
+Wired INTAGLIO 2×2 forbidden-count into ALNS as iso-score
+lexicographic tiebreaker. Benchmark on canonical 16×16/22:
+
+| Start | Repair | Budget | Vanilla | +INTAGLIO |
+|-------|--------|--------|---------|-----------|
+| empty | SA | 60s | 370/480 | 370/480 |
+| 461 record | SA | 5min | 461/480 | 461/480 |
+
+**INTAGLIO tiebreaker gives ZERO improvement in both regimes.**
+
+Why: the tiebreaker only fires on iso-score moves. In low-quality
+regimes (370), every board has 130+ forbidden patches; the tiebreak
+has nothing to discriminate. In high-quality regimes (461), the
+search is in a deep local minimum where iso-score moves are rare
+AND the forbidden-count is already locally minimized.
+
+INTAGLIO as iso-score tiebreaker is **inert in practice**.
+
+The finding (forbidden-count anti-correlates with score) is real and
+publishable as a diagnostic, but doesn't translate to a search
+improvement at this integration level. Next try: use forbidden-count
+as a DESTROY-TARGET signal (different operator, not a tiebreaker).
 
 ## Linked
 
