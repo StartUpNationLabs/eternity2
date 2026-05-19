@@ -1,6 +1,6 @@
 # GRAIN — Polycrystalline E2 Search
 
-**Status**: `built` (Vol-135 + 136, 2026-05-19)
+**Status**: `built` (Vol-135 → 137, 2026-05-19)
 **Origin**: Brainstorm reservoir round-3
 **Files**:
 - `scripts/v135_grain_poc.py`
@@ -9,13 +9,13 @@
 
 ## Algorithm
 
-1. Drop $K$ seeds at random interior positions, each with a random
-   interior piece + rotation.
-2. Round-robin growth: each crystal picks best (piece, rotation) from
-   shared inventory at one of its boundary cells, maximizing matched
-   edges with the current crystal.
-3. Continue until all cells covered or inventory exhausted.
-4. Fallback: any leftover unmatched-class slot gets any valid piece.
+1. Drop $K$ seeds at random interior positions with random interior
+   pieces + rotations.
+2. Round-robin growth: each crystal attaches best (piece, rotation)
+   from shared inventory at one of its boundary cells, maximizing
+   matched edges.
+3. Continue until all cells covered.
+4. Fallback: any leftover slot gets any valid piece.
 
 ## Measurements
 
@@ -26,51 +26,61 @@
 | 7×7/c5 | 72.6% | 97.6% |
 | 10×10/c8 | 75.6% | 91.1% |
 | 14×14/c12 | 77.5% | 81.6% |
-| **canonical 16×16/22** | **77.1%** | 96.0% (best record) |
+| canonical 16×16/22 | 77.1% | 96.0% (best record) |
 
-GRAIN scales UPWARD (72→78%), ALNS scales DOWN (97→81%). Crossing
-near 14×14.
+GRAIN scales UPWARD with size; ALNS scales DOWN. Cross near 14×14.
 
-### GRAIN-vs-ALNS at canonical 60s budget (V136)
+### GRAIN-vs-ALNS 60s budget on canonical (V136)
 
 | Strategy | Score |
 |----------|-------|
-| GRAIN 60s (101 trials) | **373/480 (77.7%)** |
-| GRAIN→ALNS 60s | 368/480 (76.7%) |
-| ALNS baseline 60s (empty) | 359/480 (74.8%) |
+| GRAIN 60s (101 trials, plateau at trial 6) | 373/480 (77.7%) |
+| GRAIN→ALNS 60s | 368/480 (76.7%) ← buggy |
+| ALNS baseline 60s | 359/480 (74.8%) |
 
-**GRAIN alone beats ALNS baseline by 14 edges in same wallclock.**
+GRAIN alone beat ALNS baseline by +14 at 60s.
 
-### Plateau behavior
+### GRAIN→ALNS 30min on canonical (V137, after rotation bugfix)
 
-GRAIN at K=8 plateaus at 77.7% within the first ~5 trials. After 3.7s
-of compute, additional trials don't help. The search space of (seed-
-position, random-rotation, greedy-attachment) is small and quickly
-saturated.
+| Strategy | Initial | Final | Δ |
+|----------|---------|-------|---|
+| **GRAIN→ALNS 30min** | 373 | **392/480 (81.7%)** | +19 |
+| ALNS baseline 30min | 0 | 376/480 (78.3%) | +376 |
 
-## Interpretation
+**GRAIN seeding gives +16 over empty-start ALNS at 30min budget.**
 
-GRAIN provides a strong constructive baseline that ALNS-from-empty
-can't match in 60s. But GRAIN's plateau is real: greedy growth from
-random seeds converges to a similar score across many runs.
+## Critical bugfix during V137
 
-The ALNS-degrades-GRAIN finding (370 → 368) suggests grain-boundary
-defects are the residual: ALNS destroys the boundary, but the
-destroyed pieces are no longer in the inventory pool of the original
-crystals.
+Original V137 (V135 unfixed) showed GRAIN seed loading at 141/480
+instead of 370. Cause: Python `rotate_piece(p, r)` does CCW rotation
+while Rust `Edges::rotated(r)` does CW. The same `r` index means
+different rotations in each language. Fix: write
+`r_rust = (4 - r_py) % 4` to placement JSON.
+
+After fix: GRAIN's 373 in-memory ↔ 373 after JSON round-trip rescore.
+
+## Where GRAIN sits in the landscape
+
+- **vs ALNS-from-empty**: GRAIN seed helps (+9 at 60s, +16 at 30min).
+- **vs state-of-the-art canonical pipeline (bf_bw + ALNS)**: GRAIN
+  alone is far worse. Our 461 record needed the canonical-aware
+  bf_bw partial as seed; GRAIN's random crystallization produces
+  inferior seeds.
+- **vs FILAMENT**: GRAIN constructs from scratch; FILAMENT polishes.
+  Not directly comparable.
 
 ## What's still open
 
-- Recrystallisation outer loop: only-destroy-grain-boundary, regrow
-  with full inventory of those cells.
 - $K$ sweep (4, 8, 16, 32 crystals).
-- Hybrid GRAIN+SA inside ALNS: SA-fill empty cells, then GRAIN-
-  reorder pieces in crystal patches.
-- Multi-restart: 1000 GRAIN trials with stochastic attachment
-  (random vs best-match).
+- Recrystallisation outer loop (only-destroy-grain-boundary).
+- GRAIN seeded by canonical hints (currently ignores them).
+- Stochastic attachment (random rotation among top-K candidates).
+- GRAIN at MUCH longer ALNS budget (2-4h) to see if asymptote
+  surpasses the canonical pipeline.
 
 ## Linked
 
-- [[concepts/filament-lk-2d]] (refuted as repair)
+- [[concepts/filament-lk-2d]]
 - [[concepts/scaling-curve-2026-05-19]]
+- [[concepts/constraint-density-vs-alns-gap]]
 - [[plans/EXTERNAL_BRAINSTORM_2026-05-18]]
