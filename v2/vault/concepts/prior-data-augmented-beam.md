@@ -1,6 +1,6 @@
 # PRIOR — Data-Augmented Beam Value Ordering
 
-**Status**: `designed` 2026-05-19 (Vol-155).
+**Status**: `built-measured` 2026-05-19 (Vol-155). **From-scratch ceiling lifted to 456/480** (from V151's 453).
 
 ## Genesis
 
