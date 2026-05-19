@@ -334,3 +334,7 @@ path = "src/bin/v151_weaving_beam.rs"
 [[bin]]
 name = "v155_weaving_prior"
 path = "src/bin/v155_weaving_prior.rs"
+
+[[bin]]
+name = "v157_weaving_prior_rot"
+path = "src/bin/v157_weaving_prior_rot.rs"
