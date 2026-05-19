@@ -1,23 +1,28 @@
-# Current Volume — Vol-143
+# Current Volume — Vol-145
 
-**Theme**: ForbidDestroy — destroy 2x3 forbidden patches, repair.
+**Theme**: ICEBERG — constructive heuristic that MINIMIZES forbidden
+2x3 count (not matched edges).
 
-V142 established: forbidden 2x3 count is a strong inverse correlate
-of matched-edge score (LOW 137, MID 66, HIGH 36, McGavin 26).
+V140/V143 found: forbidden-count tweaks don't help ALNS escape 461.
+But maybe forbidden-count helps with **starting positions**.
 
-V140's tiebreaker integration was inert. New approach: use forbidden-
-2x3 patches as DESTROY TARGETS. Pick one of the (currently
-forbidden) 2x3 patches on the board, destroy its 6 cells, let
-repair fill with feasible pieces.
+New invention: a GRAIN-like constructive heuristic that greedily
+places pieces to minimize NEW forbidden 2x3 patches, not to maximize
+matched edges. The output may have LOWER matched score than GRAIN but
+FEWER forbidden patches — a structurally cleaner seed for ALNS.
 
 ## Binding items (3 max)
 
-1. **Rust ForbidDestroy operator**: enumerate forbidden 2x3 patches,
-   pick one (random or worst-cost), output destroy-set of 6 positions.
-2. **Wire into ALNS**: add to operator portfolio.
-3. **Benchmark**: 461 base + ForbidDestroy 5min vs vanilla ALNS.
+1. **ICEBERG constructive**: GRAIN-like (random seeds + greedy growth),
+   but the attachment criterion is "minimize forbidden 2x3 count
+   contribution".
+2. **Compare to GRAIN seed quality**: same wallclock, compare both
+   (matched-edges, forbidden 2x3 count).
+3. **ICEBERG → ALNS pipeline vs GRAIN → ALNS**: which seeder produces
+   better 60s ALNS finals?
 
 ## Linked
 
-- [[sessions/vol-143]]
+- [[concepts/grain-polycrystalline]]
 - [[concepts/forbidden-patch-theorem-2026-05-19]]
+- [[sessions/vol-145]]
