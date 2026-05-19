@@ -176,6 +176,19 @@ fn state_hash(used_mask: &[u64; 4], score: u32) -> u64 {
     h
 }
 
+/// Seeded tiebreak comparator for two state-hashes. If seed==0, deterministic
+/// (just compare hashes). If seed!=0, mix seed into each side and compare —
+/// gives different orderings for different seeds.
+fn seeded_tiebreak(a: u64, b: u64, seed: u64) -> std::cmp::Ordering {
+    if seed == 0 {
+        a.cmp(&b)
+    } else {
+        let ka = a.wrapping_mul(seed).wrapping_add(seed);
+        let kb = b.wrapping_mul(seed).wrapping_add(seed);
+        ka.cmp(&kb)
+    }
+}
+
 fn path_hash(used_mask: &[u64; 4], chosen: &[u32], scan_order: &[usize], depth: usize, recent_k: usize) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
     for &m in used_mask {
@@ -219,6 +232,7 @@ fn main() {
     let mut dedup_recent_k: usize = 4;
     let mut prior_alpha: f64 = 0.0;  // weight of prior_sum in combined score
     let mut save_best_path: Option<PathBuf> = None;
+    let mut tiebreak_seed: u64 = 0;  // 0 = deterministic; nonzero = randomized tiebreak
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -232,6 +246,7 @@ fn main() {
             "--dedup-recent" => { dedup_recent_k = raw[i + 1].parse().expect("dedup-recent"); i += 2; }
             "--prior-alpha" => { prior_alpha = raw[i + 1].parse().expect("prior-alpha"); i += 2; }
             "--save-best" => { save_best_path = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--seed" => { tiebreak_seed = raw[i + 1].parse().expect("seed"); i += 2; }
             "--verbose" => { verbose = true; i += 1; }
             other => { eprintln!("unknown arg {other}"); std::process::exit(2); }
         }
@@ -336,16 +351,20 @@ fn main() {
         // Sort: combined score = score + alpha * prior_sum / max_prior_norm.
         // Default alpha=0 → pure score with prior tiebreak. alpha>0 → blends.
         // We use integer arithmetic for stability: combined = score * 1000000 + alpha_int * prior_sum.
+        // Tiebreak: if seed != 0, use seeded state_hash to randomize ties;
+        // if seed == 0, deterministic (state_hash ordering).
         if prior_alpha > 0.0 {
             let alpha_int = (prior_alpha * 1000.0) as i64;
             children.sort_unstable_by(|a, b| {
                 let ka = (a.score as i64) * 1_000_000 + alpha_int * (a.prior_sum as i64);
                 let kb = (b.score as i64) * 1_000_000 + alpha_int * (b.prior_sum as i64);
-                kb.cmp(&ka)
+                kb.cmp(&ka).then(seeded_tiebreak(a.state_hash, b.state_hash, tiebreak_seed))
             });
         } else {
             children.sort_unstable_by(|a, b| {
-                b.score.cmp(&a.score).then(b.prior_sum.cmp(&a.prior_sum))
+                b.score.cmp(&a.score)
+                    .then(b.prior_sum.cmp(&a.prior_sum))
+                    .then(seeded_tiebreak(a.state_hash, b.state_hash, tiebreak_seed))
             });
         }
 
