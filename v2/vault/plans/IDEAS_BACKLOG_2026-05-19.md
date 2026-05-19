@@ -111,6 +111,73 @@ a single CSV/table. Currently each vol writes its own ad-hoc analysis.
   beam-diversity-collapse or score-ceiling. Probably both. Larger K
   alone won't break through.
 
+## V155 "Bending" — 7 promising extensions (added 2026-05-19 late evening)
+
+User observation: "very impressed we have an algorithm getting to 450 range
+in ≈1 sec; do you plan on digging that idea?". Below: 7 concrete ways to
+bend V155.
+
+### V163 GRADIENT-DESCENDED PRIOR  (highest novelty)
+After running V155 with prior, identify cells whose placed-piece had LOW
+prior(p, c). Re-weight the prior to penalize those cells → re-run V155.
+The prior "learns" what V155 itself can't fit, sharpens iteratively.
+
+Implementation: 1 day. Build a Python loop that calls V155 N times,
+each time updating the prior matrix.
+
+### V164 CONFLICT-AWARE PRIOR (factor model)
+Current prior is unary (piece-position). Add pair-prior (piece-piece adjacency)
+and triple-prior. Or train a small probabilistic model (NMF, RBM, embedding)
+on the corpus and use its likelihood as the beam ranking.
+
+### V165 STOCHASTIC BEAM (softmax)
+Replace top-K hard cutoff with: at each depth, sample K children with
+P ∝ exp((score + alpha * prior_sum) / temperature). High temperature
+→ exploration; low → exploitation (V155 default).
+
+### V166 BACKTRACKING BEAM
+If beam score growth slows below the prior's predicted rate, backtrack
+by 32 depths, drop worst K/2 states, re-expand. Beam-with-restarts.
+
+### V167 MULTI-OBJECTIVE BEAM
+Maximize (matched_edges, -forbidden_2x2). Pareto-optimal beam.
+Forbidden-2x2 minimization (V138) was inert as ALNS objective; might
+work as construction objective.
+
+### V168 NEURAL VALUE FUNCTION
+Train a small NN (~10k params) on (partial_board → final_score) using
+the corpus. Use as ranking signal in beam. The NN learns implicit
+patterns the empirical prior misses (e.g., "this corner config tends
+to limit interior matching").
+
+### V169 PRIOR-GUIDED ALNS  ← highest leverage
+Modify ALNS's destroy operator to prefer cells with LOW prior_sum from
+the V155 pipeline. The 460 ceiling held because random destroy doesn't
+target "unusual" placements. Prior-guided destroy:
+  - destroy(target_cells) where target_cells = top-K low-prior cells
+  - or destroy(weighted_random) where P(destroy(c)) ∝ 1 - prior_sum(c)
+This is the most direct path to break 460 with existing infrastructure.
+
+### V170 SHARP+DIFFUSED PRIOR
+Combine the 459-thresh prior (sharp) with the 440-thresh prior (diffuse)
+at different weights per cell. Cells where 459-prior is informative use
+sharp; cells where it's near-zero use diffuse. Two-mode prior.
+
+## Why V169 is most leverage
+
+The 460 lift used the corpus prior ONCE at construction. ALNS then
+worked blindly on the constructed board. Standard ALNS destroy is
+spatially-random; it doesn't know which cells V155 trusted vs guessed.
+
+Prior-guided destroy:
+- targets V155's "weak" cells specifically
+- preserves V155's "strong" cells (corners, hints, common pairings)
+- in 30min, explores neighborhood of trust-weakly-supported cells
+- could find 461+ where random ALNS got stuck at 460
+
+Implementation: 1 day. Modify alns_only with `--prior-destroy <path>`
+flag; in destroy phase, sample by inverse prior weight.
+
 ## Linked
 
 - [[CURRENT-VOL]] (V156 in progress)
