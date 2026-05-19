@@ -326,3 +326,7 @@ path = "src/bin/v149_stratum_dfs.rs"
 [[bin]]
 name = "v150_weaving"
 path = "src/bin/v150_weaving.rs"
+
+[[bin]]
+name = "v151_weaving_beam"
+path = "src/bin/v151_weaving_beam.rs"
