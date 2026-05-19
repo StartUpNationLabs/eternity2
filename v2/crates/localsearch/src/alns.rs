@@ -301,14 +301,21 @@ pub fn repair(
     }
 }
 
-/// Vol-130 FILAMENT repair: for each cell in `free_set`, run an LK swap
-/// chain seeded there. Returns the best board found.
+/// Vol-130 FILAMENT repair: SA-repair to fill, then FILAMENT chains to polish.
+///
+/// FILAMENT alone only swaps pieces; it can't fill empty cells. So if the
+/// free_set has empty cells (typical after destroy), we MUST first run
+/// SA-repair to fill them. Then FILAMENT polishes via LK swap chains.
 fn filament_repair(
     puzzle: &Puzzle,
     board: &Board,
     free_set: &BTreeSet<Position>,
     seed: u64,
 ) -> Board {
+    // Step 1: SA-repair to fill empty cells.
+    let sa_filled = sa_repair(puzzle, board, free_set, 200, seed);
+
+    // Step 2: FILAMENT polish via LK chains seeded from worst cells.
     let cfg = crate::filament::FilamentConfig {
         max_depth: 12,
         max_loss: 4,
@@ -316,22 +323,20 @@ fn filament_repair(
         try_rotations: true,
         allow_revisit: false,
     };
-    let mut best = board.clone();
+    let mut best = sa_filled.clone();
     let mut best_score = score_board(puzzle, &best);
-    // Try seeds from the free set first; if it's empty, pick globally worst.
-    let seeds: Vec<Position> = if free_set.is_empty() {
-        // Pick the 4 cells with worst local match count.
-        let w = puzzle.width;
-        let h = puzzle.height;
-        let n = (w * h) as usize;
-        let mut cs: Vec<(Position, u32)> = (0..n as u32)
-            .map(|p| (p, crate::filament::cell_match_count_pub(puzzle, board, p))).collect();
-        cs.sort_by_key(|x| x.1);
-        cs.iter().take(4).map(|x| x.0).collect()
-    } else {
-        free_set.iter().copied().collect()
-    };
-    let _ = seed; // could use rng
+
+    // Seed FILAMENT from cells in free_set + a few worst cells globally.
+    let w = puzzle.width;
+    let h = puzzle.height;
+    let n = (w * h) as usize;
+    let mut cs: Vec<(Position, u32)> = (0..n as u32)
+        .map(|p| (p, crate::filament::cell_match_count_pub(puzzle, &best, p))).collect();
+    cs.sort_by_key(|x| x.1);
+    let mut seeds: Vec<Position> = cs.iter().take(4).map(|x| x.0).collect();
+    seeds.extend(free_set.iter().copied().take(8));
+
+    let _ = seed;
     for s in seeds {
         let (b, _g) = crate::filament::run_filament_chain(puzzle, &best, s, &cfg);
         let new_score = score_board(puzzle, &b);

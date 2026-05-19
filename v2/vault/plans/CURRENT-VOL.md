@@ -1,21 +1,25 @@
-# Current Volume — Vol-133
+# Current Volume — Vol-134
 
-**Theme**: Density saturation test for the +80 ALNS-gap hypothesis.
+**Theme**: FILAMENT vs SA controlled head-to-head on V131 suite.
 
-V132 found ALNS extracts ~80 percentage points above random across all
-puzzles tested. But all tests had random% < 20%. Does the gap collapse
-at higher density? Does it widen at lower density?
+V130 had a single-board comparison showing SA beats FILAMENT (+49pp
+at 60s). V134 runs the same comparison across the V131 6-puzzle
+suite × 3 seeds, with proper variance reporting.
 
-## Binding items (3 max)
+## Binding items (1 max)
 
-1. **High-density puzzles**: small board + few colors → high p_match.
-   Predict ALNS hits 100% trivially.
-2. **Very-low-density puzzles**: small board + many colors → low p_match.
-   Predict ALNS struggles to reach random% + 80.
-3. **Plot p_match vs ALNS gap**: identify the boundary where the +80
-   law breaks.
+1. **Head-to-head benchmark**: 6 puzzles × 2 repair kinds × 3 seeds
+   × 60s = 36 ALNS runs. Tabulate median scores and gaps.
+
+## Audit-at-open compliance
+
+- Vol-131 (scaling curve) `built`.
+- Vol-132 (density gap +80 law) `built` (later refined).
+- Vol-133 (3-regime characterization) `built`.
+- No McGavin work this month.
 
 ## Linked
 
-- [[sessions/vol-133]]
-- [[concepts/constraint-density-vs-alns-gap]]
+- [[sessions/vol-134]]
+- [[concepts/filament-lk-2d]]
+- [[concepts/scaling-curve-2026-05-19]]
