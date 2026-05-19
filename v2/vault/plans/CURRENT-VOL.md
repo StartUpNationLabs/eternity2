@@ -1,71 +1,68 @@
-# Current Volume — Vol-149
+# Current Volume — Vol-150
 
-**Theme**: STRATUM — Layered-Algebra Decomposition.
-Constructive-from-scratch builder using piece orbit equivalence under
-color-permutation symmetries of the Selby-Riordan generator.
+**Theme**: WEAVING — Two-Axis Consensus Construction. The second
+constructive-from-scratch invention from the 6 named on 2026-05-19.
 
-User preference (2026-05-19 evening): "those allowing to build better
-puzzle from scratch faster feels good" → STRATUM ranks #1 of 6 named
-inventions.
+V149 STRATUM (all 3 variants) closed in 1 vol with the universal
+lesson: pruners over already-placed state are vacuous in edge-strict
+DFS. WEAVING avoids that trap entirely by operating on **completed
+boards** (mismatches allowed) and **two coupled construction passes**.
 
 ## The invention in one paragraph
 
-The Selby-Riordan piece-set generator produced 256 pieces using a
-specific algorithm. We hypothesize the generator left a **fingerprint**
-— a hidden equivalence relation on pieces under color-permutation
-orbits. Two pieces are in the same **stratum** iff their 4-color
-multiset is in the same orbit under some color-permutation π. A solved
-board respects stratum structure: certain stratum-pairs cannot be
-adjacent. Building stratum-by-stratum is **combinatorially cheaper**
-than per-piece DFS by a factor of `n_strata * (avg orbit size)!`.
+Run two independent constructive builders in parallel: ROW-greedy
+(build row-by-row, each row maximizing horizontal edge matches) and
+COL-greedy (build col-by-col, each column maximizing vertical edge
+matches). Both share a piece-inventory abstraction. After both
+complete, compute **per-cell tension** = 1 if the two boards
+disagree about which piece goes at $(y, x)$, else 0. Iteratively swap
+disagreed-on pieces between the two boards, accepting if both scores
+stay above a threshold. The output is a single board where row-
+evidence and col-evidence AGREE.
 
-## Why it might work
+## Why genuinely different
 
-Vol-65 measured: no rotation-symmetric pieces (256 size-4 orbits under
-rotation), 5 multiset-twin pairs (10 pieces sharing edge-color
-multiset). The multiset-twin finding hints at **deeper hidden orbits
-under generator-internal symmetries**.
-
-If we find ≥ 8 strata of size ~32 pieces each, we can:
-1. Place strata in a fixed order (border-first × stratum-rank).
-2. Within each stratum, the piece sub-problem is 32!/32^k vs 256!/256^k —
-   millions of times smaller.
-3. Build from scratch with stratum-CSP much faster than vanilla DFS.
+- GRAIN (vol-135) is isotropic crystal growth: greedy attach with no
+  axis preference. Single greedy path.
+- ALNS basic / lkh: local search on a single board, no axis decomposition.
+- DFS row-major: uses one axis (rows) implicitly, no consensus.
+- WEAVING explicitly maintains two boards optimized for orthogonal
+  axes + a consensus mechanism. **Cross-correlation between axes is
+  the new signal** nobody has used.
 
 ## Binding items (3 max)
 
-1. **Build the equivalence relation**: enumerate all color-permutations
-   of the 22 interior colors that map the piece SET to itself. The
-   group of such π is the **piece-set automorphism group** $G$. Pieces
-   in the same $G$-orbit are stratum-equivalent.
-2. **Measure stratum structure on canonical 16×16**: compute |G|, the
-   orbit sizes, and whether the 463/469 records respect any orbit
-   constraint. Falsifiable: if records ignore orbits, STRATUM is dead.
-3. **Build stratum-DFS PoC**: backtracker that places one full stratum
-   before moving to the next, vs vanilla DFS. Compare wallclock-to-100
-   placements on canonical.
+1. **Math + design** in [[../concepts/weaving-consensus]] including:
+   - Definition of $B_R, B_C$ boards.
+   - Tension metric.
+   - Convergence criterion.
+   - Falsifiable hypothesis: does WEAVING beat GRAIN (373/480) and
+     edge-strict row-major DFS (~250-cell-depth at 60s) at equal
+     wallclock?
+2. **Python PoC** — write it Python first since we have GRAIN's helpers
+   and don't yet know whether WEAVING is even tractable at 16×16.
+3. **Measure** with variance reporting (5 seeds × 2 board sizes).
 
-## Kill-criterion
+## Kill-criteria
 
-- If |G| = 1 (i.e., no color-permutation preserves the piece set),
-  STRATUM fingerprint hypothesis is refuted on canonical E2. Document
-  + close.
-- If |G| > 1 but records violate orbit constraints (no fingerprint
-  visible), refute as "fingerprint exists but doesn't transfer to
-  solutions".
-- If |G| > 1 AND records respect orbits AND stratum-DFS is no faster
-  than vanilla — refute as engineering loss.
+- If row-greedy alone scores < 100/240 horizontal matches (or
+  col-greedy similar), the individual builders are too weak; refute
+  before integration.
+- If after tension-swap iteration the merged board scores LESS than
+  max(row-board, col-board), the consensus step destroys value.
+- If WEAVING < GRAIN at canonical 16×16/22 across all seeds, refute.
 
 ## Days budget
 
-3 days. Day 1: compute $G$ and orbit decomposition. Day 2: measure
-record-board adherence + design stratum-DFS. Day 3: prototype + compare
-to vanilla_fast.
+Day 1: math + Python PoC of row-greedy + col-greedy individually.
+Day 2: tension-swap iteration + measure.
+Day 3: write up findings, possibly extend with Rust impl if Day-2
+results are promising.
 
 ## Linked
 
-- [[../sessions/vol-149]] (to be created)
-- [[../concepts/stratum-orbits]] (to be created)
+- [[../sessions/vol-150]] (to create)
+- [[../concepts/weaving-consensus]] (to create)
+- [[../sessions/vol-149]] (universal-lesson source)
 - [[INVENTION_NAMES_2026-05-19]]
-- [[../concepts/k11-cross-domain-brainstorm]] (related: piece-set automorphism)
-- [[../concepts/piece-set-symmetries]] (vol-65 measured no rotation symmetries)
+- [[../concepts/grain-polycrystalline]] (V135 baseline)
