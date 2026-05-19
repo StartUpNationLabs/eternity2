@@ -59,4 +59,57 @@ Port to E2's 2D grid:
 - `vault/concepts/filament-lk-2d.md`
 - `scripts/v130_filament_bench.sh` (multi-seed sweep on canonical E2)
 
+## Detailed algorithm pseudocode
+
+```
+function lk_chain(board, max_depth, max_gain_loss):
+    initial_score = score(board)
+    best_board = board.clone()
+    best_gain = 0
+    
+    seed = pick_worst_mismatch_position(board)
+    chain = [seed]
+    visited = {seed}
+    current_board = board.clone()
+    cumulative_gain = 0
+    
+    for depth in 1..max_depth:
+        next_pos = find_best_swap_partner(current_board, chain[-1], visited)
+        if next_pos is None: break
+        
+        # Compute gain of swapping chain[-1] and next_pos
+        new_board = current_board.swap(chain[-1], next_pos)
+        delta = score(new_board) - score(current_board)
+        
+        cumulative_gain += delta
+        if cumulative_gain < -max_gain_loss:
+            # Chain has lost too much, unwind
+            break
+        
+        chain.append(next_pos)
+        visited.add(next_pos)
+        current_board = new_board
+        
+        # Check if cumulative gain is positive → close chain here
+        if cumulative_gain > best_gain:
+            best_gain = cumulative_gain
+            best_board = current_board.clone()
+    
+    return best_board, best_gain
+```
+
+## How this differs from existing `LkhChainDestroy`
+
+| Aspect              | Existing                        | Vol-130 FILAMENT                 |
+|---------------------|---------------------------------|----------------------------------|
+| Output              | Set of cells to destroy         | Modified board (swap chain applied) |
+| Gain tracking       | None (just cell selection)      | Per-step gain, with backtracking |
+| Pieces moved        | After SA repair                 | During chain construction        |
+| Variable depth      | Fixed max_size                  | Cuts when cumulative gain < 0    |
+| Close condition     | Reaches max_size                | Best-gain prefix of chain        |
+
+Vol-130 FILAMENT is a STANDALONE repair-like operator, not a destroy.
+Conceptually: it's "depth-limited best-improvement local search with
+backtracking", not "ALNS destroy followed by SA".
+
 ## Open at close of vol-129 → vol-130 open
