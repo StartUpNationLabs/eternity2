@@ -1,22 +1,24 @@
-# Current Volume — Vol-135
+# Current Volume — Vol-138
 
-**Theme**: GRAIN — polycrystalline E2 search.
+**Theme**: INTAGLIO — carve forbidden patterns.
 
-Metallurgy + DNA self-assembly framing. Drop $K$ seeds at random board
-positions. Each seed grows a crystal patch by attaching the best
-piece-rotation from shared piece inventory. Crystals collide → grain
-boundaries become destroy targets.
+For each small k-cell subgrid configuration, check feasibility against
+the canonical E2 piece set + constraints. Forbidden subgrids prune
+where they would appear in board search.
+
+Twin of CONCRETION (refuted, V127). CONCRETION found nothing forced;
+INTAGLIO checks if anything is forbidden.
 
 ## Binding items (3 max)
 
-1. **Single-seed crystal growth**: greedy attachment from one seed.
-   Verify it produces a coherent patch.
-2. **Multi-seed competition**: $K$ seeds, shared inventory. Measure
-   grain-boundary energy after collision.
-3. **Recrystallisation destroy + regrow**: ALNS-style outer loop with
-   the grain-boundary as the destroy target.
+1. **2-cell horiz/vert subgrid feasibility**: for each (piece_i, rot_i,
+   piece_j, rot_j) pair adjacent on E or S, is it color-feasible?
+2. **3-cell L-shape feasibility**: add a 3rd cell, check.
+3. **Count forbidden patterns**: how many of N possible 2-cell, 3-cell
+   configurations are impossible? Does it provide useful pruning?
 
 ## Linked
 
-- [[sessions/vol-135]]
-- [[plans/EXTERNAL_BRAINSTORM_2026-05-18]] (GRAIN from round-3)
+- [[sessions/vol-138]]
+- [[concepts/concretion-rigid-molecules]] (twin, refuted)
+- [[plans/EXTERNAL_BRAINSTORM_2026-05-18]]
