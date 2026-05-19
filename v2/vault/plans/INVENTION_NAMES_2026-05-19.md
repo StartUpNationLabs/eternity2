@@ -59,6 +59,20 @@ column-population and vice versa (Lotka-Volterra on permutations).
 - PoC: 2-3 days.
 - Vol: 154 if pursued.
 
+### 7. HARMONICS — Frequency-Domain Edge-Demand Matching  **[from-scratch]**
+*Added 2026-05-19 evening after V150-V151 ceiling at 455.*
+
+Reverses the V150/V151 approach. Instead of CELL-FIRST construction
+(pick piece for each cell), do MATCH-FIRST: solve the global matching
+problem on the demand graph (1024 piece-sides → 480 same-color pairs),
+THEN embed the resulting piece-pairing graph onto the 16×16 grid.
+
+- Stage 1: max-weight matching on demand graph. Polynomial.
+- Stage 2: grid-graph isomorphism heuristic. NP-hard but constrained.
+
+- PoC: 3-5 days.
+- Vol: 152 (active 2026-05-19).
+
 ## User-preference re-ranking (2026-05-19 directive: from-scratch faster)
 
 Top picks under the **from-scratch / build-faster** preference:
