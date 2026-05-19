@@ -322,3 +322,7 @@ path = "src/bin/sat_decode_to_board.rs"
 [[bin]]
 name = "v149_stratum_dfs"
 path = "src/bin/v149_stratum_dfs.rs"
+
+[[bin]]
+name = "v150_weaving"
+path = "src/bin/v150_weaving.rs"
