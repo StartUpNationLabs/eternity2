@@ -39,6 +39,7 @@ pub mod zobrist;
 pub mod ot_repair;
 pub mod ot_repair_jv;
 pub mod oracle_swap;
+pub mod filament;
 pub use alns::{run_alns, run_alns_portfolio, run_alns_pt, run_alns_pt_multi_init,
                polish_rotations, piece_swap_hillclimb, find_mismatches, Mismatch, AlnsConfig,
                AlnsStats, PtAlnsConfig, PtAlnsStats, AdaptiveWeights, Acceptance, DestroyOp,
