@@ -342,3 +342,7 @@ path = "src/bin/v157_weaving_prior_rot.rs"
 [[bin]]
 name = "v175_gauntlet"
 path = "src/bin/v175_gauntlet.rs"
+
+[[bin]]
+name = "v178_stigma"
+path = "src/bin/v178_stigma.rs"
