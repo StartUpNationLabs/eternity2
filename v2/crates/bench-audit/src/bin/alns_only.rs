@@ -87,6 +87,21 @@ fn build_prior_ops(
             pinned: pinned.clone(),
             variant: "prior_attract_b-1.0_k8",
         }),
+        // V179 LARGE-K variants — escape iso-460 basin via huge destroy.
+        Box::new(PriorDestroy {
+            support: prior.to_vec(),
+            beta: 1.0,
+            max_size: 32,
+            pinned: pinned.clone(),
+            variant: "prior_huge_b1.0_k32",
+        }),
+        Box::new(PriorDestroy {
+            support: prior.to_vec(),
+            beta: 4.0,
+            max_size: 48,
+            pinned: pinned.clone(),
+            variant: "prior_huge_b4.0_k48",
+        }),
     ]
 }
 
