@@ -346,3 +346,7 @@ path = "src/bin/v175_gauntlet.rs"
 [[bin]]
 name = "v178_stigma"
 path = "src/bin/v178_stigma.rs"
+
+[[bin]]
+name = "v181_keyring"
+path = "src/bin/v181_keyring.rs"
