@@ -1,33 +1,49 @@
-# Current Volume — Vol-188 — TRANSLATION: Cross-Basin σ-Transport
+# Current Volume — Vol-189 — CORTEZ: Corner-Perm-Targeted Search
 
-**Theme**: directly compute σ-permutations between V181 460 and McGavin 469, find the SHORTEST partial-cycle that lifts V181's bottom band while keeping its top band intact.
+**Theme**: directly target corner-perm signatures that have ≥458 in DB but NO ≥460. There are 15 such cps; finding even ONE ≥460 in a new cp validates that the algorithm pipeline reaches new basins given the right cp target.
 
-## Why now
+## Naming
 
-V187 closed with MIP-proven rigidity on every 2-row band and the 6×5 box in V181's mismatch region. ALL local structural search exhausted. The vol-65 finding said σ-cycles are indecomposable for FULL board transport (sum of cycle lengths = 255). But the converse hasn't been tested rigorously: **the SHORTEST σ that maps V181 bottom rows to McGavin bottom rows might be SMALLER than full σ**.
+**CORTEZ** — for the "explorer searching unknown shores" metaphor: each unexplored corner-perm is a basin not yet visited at ≥460 quality.
 
-If the *partial-band* σ-transport works, V181 → 460 + (Δ where Δ = score of McGavin bottom rows minus V181 bottom rows).
+## Why this angle
 
-## Mathematical setup
+Per vol-129 PALIMPSEST: 18 corner-perms carry ≥458 boards. Of these, only 3 have ≥460 in the DB:
+- cp=(3,2,0,1) — McGavin 469
+- cp=(1,2,0,3) — V125 461
+- cp=(0,3,1,2) — V181 460
 
-Let $b_1$ = V181's 460 (cp=(0,3,1,2)), $b_2$ = McGavin's 469 (cp=(3,2,0,1)).
+**15 corner-perms have ≥458 but no ≥460**. These are unexplored basin families. The V181 KEYRING pipeline successfully reaches NEW ≥460 basins — V181's 460 was the first ever in its cp. There's no a-priori reason it can't do the same in the 15 other cps.
 
-The two boards have DIFFERENT corner perms — straight σ doesn't apply. First step: **canonicalise** by rotating one to match the other's corner orientation.
+But V155/V175/V181 builders DON'T select for cp — they go where the corpus prior + scan order leads. To force exploration of a target cp, we need:
 
-After canonicalisation:
-- Let σ : positions → positions be the bijection that maps $b_1$'s piece at position $p$ to $b_2$'s piece at position $\sigma(p)$. But pieces themselves differ in placement.
-- Actually σ is a permutation OF PIECES: $\pi(\text{piece}(b_1, p)) = \text{piece}(b_2, p)$.
-- π is the piece-relabelling that turns $b_1$ into $b_2$.
+1. **Corner-perm-fixed beam search**: place corners FIRST (at positions 0, 15, 240, 255) before any interior placement, and pin them to the target cp.
+2. **Continue with V181 KEYRING** ranker: patch + pheromone + position prior.
+3. **Sweep**: target each of the 15 cps × 3-4 seeds.
 
-For row-band transport: consider only rows 11-15. Compute the **restricted π** = the mapping of pieces in $b_1$'s rows 11-15 to pieces at the same positions in $b_2$'s rows 11-15.
+## Math (KEYRING-FRESH builder)
 
-The cycle decomposition of restricted π reveals: which pieces form independent cycles within the band? If there's a cycle of length 8 that maps $b_1$'s bottom-pattern to $b_2$'s bottom-pattern WITHOUT touching $b_1$'s top rows, applying just that cycle lifts $b_1$ to a hybrid basin.
+Standard V155 beam visits positions in scan order. We modify:
+
+1. First placement decisions: corners 0, 15, 240, 255. Beam state = (4 chosen corner pieces in target cp, rotations).
+2. Subsequent placements: same as V181 KEYRING with the corner-constrained edge propagation.
+
+For each target cp = (p_NW, p_NE, p_SW, p_SE):
+- Force piece p_NW at position 0 with valid rotation (W=BORDER, N=BORDER).
+- Same for p_NE at 15 (E=BORDER, N=BORDER), p_SW at 240 (S=BORDER, W=BORDER), p_SE at 255 (S=BORDER, E=BORDER).
+- These are exactly the 4 corner pieces; each has a unique rotation that places the borders correctly.
+
+Then beam search continues over remaining 252 positions.
 
 ## Binding items (3 max)
 
-1. Compute restricted π between V181 460 and McGavin 469 (post-canonicalisation). Report cycle lengths.
-2. For each independent cycle, apply it as a piece-substitution to V181 and rescore.
-3. If any cycle yields ≥461, document. If all reduce score, refute partial σ-transport.
+1. Build V189 CORTEZ builder = V181 KEYRING + corner-perm pinning.
+2. Sweep 15 unexplored cps × 4 seeds × 30min ALNS = 60 jobs (parallel 8 at a time).
+3. Any ≥460 in new cp → record. Any ≥461 → BREAKTHROUGH.
+
+## Compute estimate
+
+60 builds × ~5 min each + 60 ALNS × 30 min = 5 hours × 8 cores = ~40 wall-clock minutes if all parallel. Realistic: 1-2h.
 
 ## Days budget
 
@@ -35,8 +51,7 @@ The cycle decomposition of restricted π reveals: which pieces form independent 
 
 ## Linked
 
-- [[../sessions/vol-188]] (TBD)
-- [[../concepts/sigma-cycle-indecomposability]]
+- [[../concepts/cortez-corner-perm-targeted]] (TBD)
+- [[../sessions/vol-188]]
+- [[../sessions/vol-181]] (V181 KEYRING)
 - [[../basins/basin-460-cp0312-v181]]
-- [[../basins/basin-mcgavin-469]]
-- [[../sessions/vol-187]]
