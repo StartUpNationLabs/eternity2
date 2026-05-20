@@ -113,16 +113,33 @@ mismatch band. The original 2-row chains are the **unique best**
 
 Strengthens the row-local rigidity result.
 
+## Three-row joint swap result (V186-T8, vol-186)
+
+Extended further to JOINT 3-row chains: rows (r, r+1, r+2)
+simultaneously. 48 free pieces.
+
+| Row triple | beam K | #chains | Best score | Orig | Lift |
+|---|---|---|---|---|---|
+| (11, 12, 13) | 2000 | 0 | — | 94 | infeasible |
+| (12, 13, 14) | 2000 | 0 | — | 89 | infeasible |
+
+**V181's 460 is 3-row-locally rigid** for both 3-row spans on the
+mismatch band. Zero alternative chains exist at beam K=2000.
+
+This is a stronger structural result than any previously documented
+local-optimality in the vault: the basin is 1-row, 2-row, AND 3-row
+rigid in the mismatch band.
+
 ## Open angles
 
-1. **Three-row joint swap on the mismatch band** (rows 11+12+13 or
-   12+13+14). State space ~32x larger; needs MIP or aggressive beam.
-2. **Full mismatch-band swap**: rows 11+12+13+14 (64 cells, 64 free pieces).
-   Probably needs MIP — too large for beam-DP.
-3. **MIP-exact 2-row swap**: replace beam-DP with HiGHS MIP for sound
-   optimality on the (11,12), (12,13), (13,14) swaps.
-4. **Cross-column swap**: instead of rows, swap a column-band on the
-   mismatch geometry (if any vertical mismatches exist).
+1. **MIP-exact 1/2/3-row swap**: replace beam-DP with HiGHS MIP for
+   sound optimality. Beam might be missing valid chains.
+2. **Cross-column swap**: same idea but on column-bands (if any
+   vertical mismatches exist in V181's 460).
+3. **Full mismatch-band joint swap**: rows 11+12+13+14 (64 cells,
+   64 free pieces). Beam-DP intractable; would need MIP.
+4. **Diagonal/L-shape swap**: not row-aligned but covering the
+   mismatch geometry.
 
 ## Linked
 
