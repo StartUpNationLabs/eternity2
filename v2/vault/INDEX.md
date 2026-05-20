@@ -94,6 +94,12 @@ The Obsidian landing page. Click any wikilink to navigate.
 | 105 | 459 | — | **Vol-105 closed early (user redirect)**: rows-12-15 LP-UB on local-459 = 121.14 (conditional global UB ≤ 477 if outside pinned). σ-cycle MIP infrastructure prepared (T1 never launched). Audit found canonical ceiling is 469 (McGavin), NOT 470 — corpus 470s are 1-clue Blackwood variant. PAPER UB claim corrected (subset-bound, not unconditional). **New directive issued for vols 106-115**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]]. User-invented [[concepts/relax-and-cross-cvc\|CVC]] algorithm reserved. [[sessions/vol-105]]. |  |
 | 119 | 459 | — | **Vol-119 closed**: INVENTION shipped — [[concepts/corpus-restricted-region-mip-locked\|corpus-restricted region MIP]]. Locks 459/460/469 at halo-8/12/15 with 191-256 free cells in <1min. NEW 458 basin discovered (sweep_p18_s2, 3/5 hints, structurally distinct from vol-32 458). σ-subset bound [[concepts/sigma-subset-bound-empirically-tight\|empirically tight]] across 30-board corpus. Vol-112 basin-pick MIP [[concepts/corpus-restricted-mip-doesnt-scale\|doesn't scale]] past N=5. 30-board basin corpus assembled. Records UNCHANGED. [[sessions/vol-119]]. |  |
 | 120 | 459 | — | **Vol-120 closed**: THEOREM proved — strict-canonical 457 + matched-edges 459 BOTH corpus-MIP-LOCKED across full board interior with 25-30 board corpus. New `vol120_strict_canonical_region_mip.py` script enforces 5/5 hint compliance + halo-K region MIP. T1 (vanilla_path basin hunt) NULL: 60s budget too small for ALNS recovery. The 478 LP-UB → 459 INT gap (19 pts) represents the basin-discovery deficit. Records UNCHANGED. [[sessions/vol-120]]. |  |
+| 122 | **458** strict | — | strict-canonical record-break ALNS basic 30min seed=42 + λ_2 signature pick. |  |
+| 125 | **461** | — | bf_bw off=110 + ALNS basic 30min seed=42 → 461/480 (matched-edges). New 18-basin family analysis. |  |
+| 129 | **463** | — | 15-basin attack on (2,3,0,1)@462 base → 463/480, never seen in 1278-board DB. |  |
+| 155–156 | 460 | — | V155 PRIOR data-augmented beam (from-scratch 460 in 238s); V155→ALNS pipeline. |  |
+| 171–181 | 460 | — | 13 inventions across 10 vols (OPHIDIA, MURMURATION, CHIASMUS, GAUNTLET, STIGMA, LARGE-K, INTAGLIO, KEYRING, ENGRAVE, SEMAPHORE, LIGHTHOUSE, etc.). New 460 basin cp=(0,3,1,2) + new 458 basin cp=(3,0,1,2). |  |
+| 185 | 460 | — | **Vol-185 cleanup**: vault catchup, BACKLOG audit, MEMORY trim. No new search. [[concepts/three-basin-iso-plateau]] documents universal local rigidity on 3 distinct ≥458 basins. |  |
 
 
 ## Concepts — by category
@@ -124,6 +130,11 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[oracle-cycle-swap]] — vol-18 cold-record producer (with hot-PT)
 - [[basin-escape-recipe]] — vol-22 bound+Hungarian+ALNS pipeline
 - [[ot-hungarian-repair]] — used inside basin-escape recipe
+- [[prior-guided-alns]] — V169 OPHIDIA PriorDestroy
+- [[v179-large-k-destroy]] — V179 LARGE-K destroy variants (k∈{32,48})
+- [[intaglio-attack-lex]] — V180 lex-ordered acceptance on forbidden-2x2
+- [[chiasmus-basin-crossover]] — V172 cross-basin row-interleave (refuted as record-mover)
+- [[three-basin-iso-plateau]] — universal local rigidity at 458–460 (vol-181 finding)
 
 ### Value-orders / message-passing
 - [[bp-marginals]] — cell-encoding (refuted as standalone)
@@ -131,6 +142,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[survey-propagation]] — refuted (cavity-method block)
 - [[boundary-mps]] — vol-13 tensor network (refuted, 10¹⁰¹ overcounting)
 - [[learned-value-order]] — vol-26 imitation-learning gate (540× engine-node reduction at 6×6/5c; bridge eats wall-clock)
+- [[prior-data-augmented-beam]] — V155 PRIOR corpus position prior
+- [[stigma-pheromone-adjacency]] — V178 STIGMA pheromone adjacency
+- [[keyring-patch-prior]] — V181 KEYRING patch+pheromone+prior
 
 ### Structural / measurement
 - [[mismatch-geometry]] — where errors live (universal mismatches, fracture threshold)
@@ -183,6 +197,9 @@ The Obsidian landing page. Click any wikilink to navigate.
 - [[w11-sat-verified-border-enum]] — SAT-screen invention (border-pin filter)
 - [[w11-sat-correctness-validated]] — 2026-05-17 round-trip + sabotage validation
 - [[w11-border-screen-unviable]] — primary-engine retirement (border space ~10^7-10^9)
+- [[semaphore-row-hungarian]] — V183 row-10 piece-starvation wall
+- [[lighthouse-bidirectional-row]] — V184 MERGE interface infeasible
+- [[v182-engrave-csp-fill]] — V182 K∈{2,4} band-fill refutes local 460 lift
 
 ## Basins — notable boards
 
@@ -198,6 +215,8 @@ The Obsidian landing page. Click any wikilink to navigate.
 | [[basin-440-469]] | 440 | vol-22 fresh, ceiling 469 |
 | [[basin-blackwood-470]] | 470 | community, 1-clue variant (NOT canonical) |
 | [[basin-mcgavin-469]] | 469 | **community canonical 5-clue ceiling** |
+| [[basins/basin-458-cp3012-v175]] | 458 | vol-175, new cp=(3,0,1,2) |
+| [[basins/basin-460-cp0312-v181]] | 460 | vol-181, new cp=(0,3,1,2) |
 
 ## Sessions
 

@@ -372,6 +372,29 @@ schedule, break-index, and supply tracking.
 
 ---
 
+## Vol-169 to vol-184 audit (vol-185 cleanup)
+
+Status of every invention shipped vols 169–184:
+
+| Vol | Name | Status | Notes |
+|---|---|---|---|
+| V169 | OPHIDIA — PriorDestroy escape | `partial` | refuted as plateau-breaker on V155→ALNS 460 base |
+| V171 | MURMURATION — multi-basin sampling | `partial` | stochastic-T builder works; full sweep not run |
+| V172 | CHIASMUS — cross-basin row interleave | `refuted` | "461" was σ-related-basin artefact |
+| V173 | SPECTRA — spectral border signature | `partial` | signal too weak to integrate as ranker |
+| V174 | PERTURBATION CURVE | `wont-do` | superseded by V175 scan diversity |
+| V175 | GAUNTLET — multi-scan beam | `built` | 18 unique cps from 36 builds; new 458 basin |
+| V177 | NEURONIC — tiny NN ranker | `partial` → `wont-do` | MLP R²=−9, GBM R²=0.40; superseded by V181 KEYRING |
+| V178 | STIGMA — pheromone adjacency | `built` | λ=1e-7 calibrated; used in V181 |
+| V179 | LARGE-K destroy variants | `built` | k∈{32,48} ops added; refuted as escape alone |
+| V180 | INTAGLIO-ATTACK lex acceptance | `built` | flag wired; refuted as plateau-breaker alone |
+| V181 | KEYRING — patch+pheromone+prior | `built` | best builder; new 460 cp=(0,3,1,2) + new 459 |
+| V182 | ENGRAVE — CSP-fill row band | `partial` | K∈{2,4} probes refute local 460 lift |
+| V183 | SEMAPHORE — per-row chain-DP | `refuted` | row-10 piece-starvation wall |
+| V184 | LIGHTHOUSE — bidirectional row | `refuted` | MERGE interface infeasible |
+
+Universal finding from vols 179/180/181: [[../concepts/three-basin-iso-plateau]] — three distinct ≥458 basins all locked under 30min ALNS basic_lkh + V179 + V180. Path to 461+ requires structural / cross-basin moves.
+
 ## Concepts catalog (status pages)
 
 See `concepts/` for the durable knowledge:
@@ -385,3 +408,8 @@ See `concepts/` for the durable knowledge:
 - `basin-escape-recipe.md`
 - `color-relabel.md`
 - `exact-joint-bound.md`
+- `three-basin-iso-plateau.md` (NEW vol-185)
+- `keyring-patch-prior.md` (NEW vol-185)
+- `v179-large-k-destroy.md` (NEW vol-185)
+- `v182-engrave-csp-fill.md` (NEW vol-185)
+- `lighthouse-bidirectional-row.md` (NEW vol-185)

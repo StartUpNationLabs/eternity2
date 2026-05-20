@@ -1,6 +1,6 @@
 # V183 SEMAPHORE — Per-Row Hungarian Optimization
 
-Status: `unbuilt-rust` (Python PoC, 2026-05-20)
+Status: **refuted** (Python PoC + beam K=32 both hit row-10 piece-starvation wall, 2026-05-20)
 Origin: vol-183 (this volume)
 Naming: **SEMAPHORE** — Greek for "sign-bearer"; per-row signals from above propagate to determine below.
 
@@ -70,14 +70,36 @@ H2: Iterating row-by-row top-to-bottom, the cumulative match count exceeds V175 
 
 H3: With piece-set tracking, rows 0-11 fill cleanly; rows 12-15 may starve (only 16 × 4 = 64 pieces left, narrow choice space). This is the EXACT KIND of problem that breaks V182 ENGRAVE (CSP-rigidity in bottom rows).
 
+## What was measured (vol-183 close)
+
+| Row | Python PoC | Beam K=32 |
+|---|---|---|
+| 0 | OK (border) | OK |
+| 1–9 | OK | OK |
+| 10 | **wall**: piece-starvation | wall persists |
+| 11+ | infeasible | infeasible |
+| Total score | 294/480 | similar |
+
+## Refutation
+
+Greedy row commit (PoC) and beam K=32 BOTH hit a piece-starvation wall at
+row 10. The wall persists because all top-K rows pull from the same pool of
+"promising" pieces — beam-K doesn't help when K boards converge on the same
+pool.
+
+H1 (single-row improvement vs V155): not validated.
+H2 (cumulative match exceeds V175): not validated.
+H3 (rows 12–15 starve): manifests **earlier than expected** (row 10 starves,
+not 12–15).
+
 ## What's still open
 
-- How to handle piece-uniqueness elegantly. ILP would do this exactly; chain-DP greedy across rows is approximate.
-- Should we solve multiple rows JOINTLY (column-DP up + row-DP within)?
-- Backtracking when row $r$ becomes infeasible — try alternative row $r-1$ from a stack of options.
+- Larger K (256, 1024) — likely same wall.
+- Backtracking when row $r$ becomes infeasible — try alternative row $r-1$ from a stack of options. Equivalent to switching back to a global beam.
+- The wall is structurally the same as the V184 LIGHTHOUSE interface obstruction (16-edge match against constrained pool); see [[lighthouse-bidirectional-row]].
 
 ## Linked
 
-- [[../sessions/vol-183]] (planned)
-- [[prior-data-augmented-beam]] (V155 — what SEMAPHORE replaces)
-- [[../plans/INVENTIONS_BACKLOG]] (A6 iterative widening — related row-based idea)
+- [[../sessions/vol-183]]
+- [[lighthouse-bidirectional-row]] (V184 — same wall, different formulation)
+- [[prior-data-augmented-beam]] (V155 — what SEMAPHORE tried to replace; remains the better builder)
