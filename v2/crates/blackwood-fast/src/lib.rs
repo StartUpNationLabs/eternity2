@@ -457,6 +457,35 @@ impl RowMajorIndex {
         &self.entries[lo..hi - 1]
     }
 
+    /// V195 PILGRIM: deterministically permute the candidate entries within
+    /// each (tbl, key) bucket using a seeded RNG (xorshift64). This changes
+    /// the DFS value-order without changing the search space.
+    pub fn permute_entries_seeded(&mut self, seed: u64) {
+        if seed == 0 { return; }
+        const N_FLAT_KEYS: usize = 4 * 65536;
+        let mut state: u64 = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        if state == 0 { state = 1; }
+        let mut next_u64 = || -> u64 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        for k in 0..N_FLAT_KEYS {
+            let lo = self.offsets[k] as usize;
+            let hi = self.offsets[k + 1] as usize;
+            // hi - 1 excludes the sentinel; permute only the real entries.
+            if hi <= lo + 2 { continue; }
+            let real_hi = hi - 1;
+            // Fisher-Yates shuffle on entries[lo..real_hi].
+            let n = real_hi - lo;
+            for i in (1..n).rev() {
+                let j = (next_u64() as usize) % (i + 1);
+                self.entries.swap(lo + i, lo + j);
+            }
+        }
+    }
+
     /// Lookup the rotated edges for (piece_idx, rot).
     #[must_use]
     #[inline(always)]
@@ -823,6 +852,19 @@ pub fn solve_raw_with_hints(
     // Generic path: ignore hints, use base raw DFS. (Hint-preserving
     // generic is vol-114+ if needed.)
     solve_raw_generic(&index, puzzle, time_budget_us)
+}
+
+/// V192: public wrapper for solve_raw_sized_pinned — allows caller to
+/// pre-place arbitrary cells (not just hints) and have DFS resume on the
+/// remaining unplaced cells with strict edge matching.
+pub fn solve_raw_with_initial_board(
+    index: &RowMajorIndex,
+    initial_board: [PieceRot; 256],
+    is_pinned: [bool; 256],
+    initial_pieces_used: [u64; 4],
+    time_budget_us: u64,
+) -> (SearchStats, Vec<(PieceId, Rotation)>) {
+    solve_raw_sized_pinned::<256, 256, 4>(index, initial_board, is_pinned, initial_pieces_used, time_budget_us)
 }
 
 fn solve_raw_sized_pinned<const WH: usize, const NPIECES: usize, const BITSET_WORDS: usize>(
