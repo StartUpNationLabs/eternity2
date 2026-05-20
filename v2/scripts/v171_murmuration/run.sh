@@ -34,7 +34,7 @@ PRIORS=(high457 high459 high460)
 SCANS=(row col)
 SEEDS=(1 2 3 7 13 42 99 142)
 BATCH=8
-TEMP=0.1
+TEMP=0.05
 
 # Stage 1: builds.
 echo "[v171] STAGE 1: $((${#PRIORS[@]}*${#SCANS[@]}*${#SEEDS[@]})) V155 builds, T=$TEMP" | tee -a "$OUT/_meta.log"
