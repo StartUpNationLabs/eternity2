@@ -331,6 +331,7 @@ fn main() {
     let mut repair_kind = "sa".to_string();
     let mut t: f64 = 1.0;
     let mut lex = false;
+    let mut lex_intaglio = false;
     let mut repair_step_budget: u64 = 0;
     let mut cp_repair_parallel = true;
     // Vol-60 — extra-hint support (mirrors vanilla_fast). These are
@@ -374,6 +375,7 @@ fn main() {
                 extra_pins.push(pos);
             }
             "--prior-destroy" => prior_path = Some(PathBuf::from(args.next().unwrap())),
+            "--lex-intaglio" => lex_intaglio = true,
             other => panic!("unknown arg {other}"),
         }
     }
@@ -438,7 +440,7 @@ fn main() {
             .collect(),
         iter_budget: 0,
         lex_break_isoscore: lex,
-        lex_break_intaglio: false,
+        lex_break_intaglio: lex_intaglio,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
         repair_step_budget,

@@ -60,6 +60,7 @@ for build in $TOP_BUILDS; do
       --seed "$seed" \
       --ops basic_lkh \
       --prior-destroy "$PRIOR" \
+      --lex-intaglio \
       --repair-kind sa --t 1.0 \
       > "$log" 2>&1 &
     n=$((n + 1))

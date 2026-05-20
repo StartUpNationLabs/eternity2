@@ -33,6 +33,7 @@ for seed in "${SEEDS[@]}"; do
     --seed "$seed" \
     --ops basic_lkh \
     --prior-destroy "$PRIOR" \
+    --lex-intaglio \
     --repair-kind sa --t 1.0 \
     > "$log" 2>&1 &
 done
