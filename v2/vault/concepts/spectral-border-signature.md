@@ -30,18 +30,22 @@ The 469-tier signature shows much higher amplitude across the board (peak 1.5+, 
 
 ### Discriminating frequencies (≥460 vs <460)
 
-Pairing 23 high-score boards vs 915 below-460:
+**Original 2026-05-20 probe with WRONG `BORDER='0000000000000000'`** had incorrect ring extraction (interior matches were not filtered). Recomputed 2026-05-20 with corrected `BORDER='1111111111111111'`:
+
+n=23 high vs n=1255 low:
 
 | k | Δmedian | high med | low med |
 |---|---|---|---|
-| **29** | **+0.316** | 0.905 | 0.590 |
-| 16 | +0.211 | 0.806 | 0.595 |
-| 12 | +0.208 | 0.762 | 0.553 |
-| 5 | +0.197 | 0.836 | 0.638 |
-| 7 | +0.193 | 0.871 | 0.678 |
-| 19 | −0.197 | 0.437 | 0.634 |
-| 13 | −0.156 | 0.556 | 0.712 |
-| 26 | −0.142 | 0.481 | 0.623 |
+| **12** | **+0.321** | 0.766 | 0.446 |
+| 7 | +0.283 | 0.765 | 0.482 |
+| 13 | +0.202 | 0.756 | 0.555 |
+| 16 | −0.151 | 0.420 | 0.571 |
+| 26 | −0.134 | 0.441 | 0.575 |
+| 29 | −0.029 | 0.494 | 0.523 |
+| 5 | −0.021 | 0.511 | 0.531 |
+| 19 | +0.010 | 0.606 | 0.596 |
+
+Key signal: **k=12 and k=7 amplitudes are HIGHER in ≥460 boards**. k=12 corresponds to a period-5 oscillation around the 60-cell border ring (60/12 = 5). k=7 ≈ period-8.6.
 
 High-score boards over-express short-period structure (k=29 ≈ alternating period-2 pattern around the border) and under-express k=19 / k=13.
 
