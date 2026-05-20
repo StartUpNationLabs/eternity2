@@ -392,10 +392,23 @@ def main():
             row_vals = [1.0] + [-1.0] * len(v2_xs)
             h.addRow(-highspy.kHighsInf, 0.0, len(row_idxs), np.array(row_idxs, dtype=np.int32), np.array(row_vals))
 
+    # Sanity check: is the original placement IN the candidate set for each cell?
+    # If not, candidate filter excluded it (a bug).
+    print("Sanity check: original placement vs candidates...")
+    orig_in_cands = True
+    for v in target_cells:
+        pid, rot = pl[v]
+        if (v, pid, rot) not in x_col:
+            print(f"  v=({v//16},{v%16}): ORIGINAL ({pid},{rot}) NOT IN CANDIDATES")
+            orig_in_cands = False
+    print(f"original in candidates: {orig_in_cands}")
+
     # Sense: maximize.
     h.changeObjectiveSense(highspy.ObjSense.kMaximize)
     h.setOptionValue('time_limit', float(args.time_limit))
     h.setOptionValue('parallel', 'on')
+    h.setOptionValue('mip_heuristic_effort', 0.5)
+    h.setOptionValue('threads', 6)
 
     print(f"Constraints: {h.getNumRow()}, vars: {h.getNumCol()}")
     print(f"Solving (time_limit={args.time_limit}s)...")
