@@ -1,6 +1,6 @@
 # Prior-Guided ALNS (V169 / "OPHIDIA")
 
-Status: `partial` (math written 2026-05-20, implementation in progress)
+Status: `partial` — built + tested (escape variant refuted at β ≤ 2.0 on V155→ALNS 460 base, 2026-05-20)
 Origin: vol-169 (this volume)
 Files: `crates/localsearch/src/alns.rs::PriorDestroy`, `crates/bench-audit/src/bin/alns_only.rs` (flag `--prior-destroy`).
 Naming: **OPHIDIA** — the destroy operator slithers along weakly-supported cells.
