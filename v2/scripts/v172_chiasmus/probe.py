@@ -76,7 +76,7 @@ def score_hybrid(hybrid, puzzle_csv=None, size=16):
         # Use string hash to compare. Strings are unique per color.
         edges_by_pid[pid] = parts[:4]
 
-    BORDER = '0000000000000000'
+    BORDER = '1111111111111111'
     matched = 0
     for y in range(size):
         for x in range(size):
