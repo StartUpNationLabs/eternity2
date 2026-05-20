@@ -1,0 +1,122 @@
+{
+  "0_3_2_1": {
+    "n_boards": 179,
+    "max_score": 457,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_3_2_1.json"
+  },
+  "1_0_3_2": {
+    "n_boards": 65,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_0_3_2.json"
+  },
+  "0_3_1_2": {
+    "n_boards": 61,
+    "max_score": 459,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_3_1_2.json"
+  },
+  "2_1_0_3": {
+    "n_boards": 61,
+    "max_score": 459,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_1_0_3.json"
+  },
+  "3_0_2_1": {
+    "n_boards": 55,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_0_2_1.json"
+  },
+  "0_1_2_3": {
+    "n_boards": 47,
+    "max_score": 461,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_1_2_3.json"
+  },
+  "2_0_1_3": {
+    "n_boards": 47,
+    "max_score": 458,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_0_1_3.json"
+  },
+  "2_1_3_0": {
+    "n_boards": 41,
+    "max_score": 457,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_1_3_0.json"
+  },
+  "1_0_2_3": {
+    "n_boards": 41,
+    "max_score": 459,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_0_2_3.json"
+  },
+  "2_3_1_0": {
+    "n_boards": 40,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_3_1_0.json"
+  },
+  "3_1_2_0": {
+    "n_boards": 39,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_1_2_0.json"
+  },
+  "3_0_1_2": {
+    "n_boards": 33,
+    "max_score": 457,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_0_1_2.json"
+  },
+  "2_3_0_1": {
+    "n_boards": 29,
+    "max_score": 462,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_3_0_1.json"
+  },
+  "2_0_3_1": {
+    "n_boards": 28,
+    "max_score": 457,
+    "path": "scripts/v155_prior/per_basin/prior_cp2_0_3_1.json"
+  },
+  "3_2_0_1": {
+    "n_boards": 26,
+    "max_score": 469,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_2_0_1.json"
+  },
+  "0_2_1_3": {
+    "n_boards": 25,
+    "max_score": 457,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_2_1_3.json"
+  },
+  "1_3_0_2": {
+    "n_boards": 22,
+    "max_score": 458,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_3_0_2.json"
+  },
+  "1_2_0_3": {
+    "n_boards": 21,
+    "max_score": 461,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_2_0_3.json"
+  },
+  "3_1_0_2": {
+    "n_boards": 20,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_1_0_2.json"
+  },
+  "1_3_2_0": {
+    "n_boards": 17,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_3_2_0.json"
+  },
+  "3_2_1_0": {
+    "n_boards": 13,
+    "max_score": 456,
+    "path": "scripts/v155_prior/per_basin/prior_cp3_2_1_0.json"
+  },
+  "0_1_3_2": {
+    "n_boards": 12,
+    "max_score": 460,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_1_3_2.json"
+  },
+  "0_2_3_1": {
+    "n_boards": 10,
+    "max_score": 458,
+    "path": "scripts/v155_prior/per_basin/prior_cp0_2_3_1.json"
+  },
+  "1_2_3_0": {
+    "n_boards": 5,
+    "max_score": 461,
+    "path": "scripts/v155_prior/per_basin/prior_cp1_2_3_0.json"
+  }
+}
