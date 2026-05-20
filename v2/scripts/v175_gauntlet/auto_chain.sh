@@ -29,7 +29,13 @@ echo "[chain] launching V175-LONG-LIFT at $(date)" | tee -a "$LOG"
 bash scripts/v175_gauntlet/run_long_lift.sh >> "$LOG" 2>&1
 echo "[chain] V175-LONG-LIFT done at $(date)" | tee -a "$LOG"
 
-# Then V172 CHIASMUS on V175 outputs.
+# V178 STIGMA sweep (higher EV than V172 — fresh pheromone-biased
+# basins vs remixing existing ones).
+echo "[chain] launching V178 STIGMA at $(date)" | tee -a "$LOG"
+bash scripts/v178_stigma/run.sh >> "$LOG" 2>&1
+echo "[chain] V178 STIGMA done at $(date)" | tee -a "$LOG"
+
+# Then V172 CHIASMUS on combined V175 + V178 outputs.
 echo "[chain] launching V172 CHIASMUS at $(date)" | tee -a "$LOG"
 bash scripts/v172_chiasmus/run_clean.sh >> "$LOG" 2>&1
 echo "[chain] V172 done at $(date)" | tee -a "$LOG"
