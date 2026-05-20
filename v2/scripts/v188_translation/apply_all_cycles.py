@@ -13,9 +13,14 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--board-a', default='output/vol-181/RECORD_460_NEW_BASIN_row_s42_cp0312.json')
+    ap.add_argument('--board-b', default='database-400-480/469_mcgavin_469_6c9a2448.json')
+    args = ap.parse_args()
     pieces = load_pieces()
-    pl_a, score_a = load_placement(REPO / 'output/vol-181/RECORD_460_NEW_BASIN_row_s42_cp0312.json')
-    pl_b, score_b = load_placement(REPO / 'database-400-480/469_mcgavin_469_6c9a2448.json')
+    pl_a, score_a = load_placement(REPO / args.board_a)
+    pl_b, score_b = load_placement(REPO / args.board_b)
     pi = {pl_a[p][0]: pl_b[p][0] for p in range(256)}
     cycles = cycle_decomposition(pi)
     pos_a = {pl_a[p][0]: p for p in range(256)}

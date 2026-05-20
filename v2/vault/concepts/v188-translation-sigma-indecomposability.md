@@ -64,11 +64,21 @@ The remaining angles for V181 460 → 461+:
    corner-perm signatures.
 3. **Multi-board hybrid** — take pieces from N>2 source boards.
 
-## Sister-basin testing (open)
+## Sister-basin testing (vol-188 close, completed)
 
-If we have access to a 461, 462, 463 board (from our DB), compute π between
-V181 460 and each. CLOSER basins (e.g., 461) might have shorter σ-cycles, some
-of which might decompose into positive lifts.
+Tested π between V181 460 and:
+- 461 (RECORD_461_off110_seed1): 16 cycles. Best single-cycle Δ = **−4**.
+  Bottom-confined: 0.
+- 462 (winning5 s7): 14 cycles. Best single-cycle Δ = **0** (only fixed points).
+  Best non-trivial Δ = −4 (length-2).
+- 463 (RECORD_463 corner2301): 18 cycles. Best single-cycle Δ = **0** (fixed points).
+  Best non-trivial Δ = −4.
+
+**No partial-σ lift found between V181 460 and any of {461, 462, 463, 469}.**
+
+The σ-indecomposability holds universally — even for the **closest** possible
+basin (just +1 score apart, e.g. V181 460 vs an existing 461). The
+"sister basin closer cycles might decompose" hypothesis is **refuted**.
 
 ## Linked
 
