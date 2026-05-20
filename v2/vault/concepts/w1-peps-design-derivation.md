@@ -3,6 +3,7 @@ name: w1-peps-design-derivation
 description: "W1 design derivation. Hyperoptimized 2D PEPS contraction for E2. Confronts the vol-13 piece-uniqueness obstruction: local-message-passing cannot capture global permutation. Designs a *factor-augmented* PEPS where piece-pool sites enforce supply constraints. Three candidate encodings analyzed. Picks encoding C (piece-pool augmented PEPS with Lagrangian relaxation)."
 metadata:
   type: project
+status: partial
 ---
 
 # W1 — PEPS contraction design for E2 (math derivation)

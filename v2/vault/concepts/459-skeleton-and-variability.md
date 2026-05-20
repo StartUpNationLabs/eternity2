@@ -3,6 +3,7 @@ name: 459-skeleton-and-variability
 description: "Vol-111 follow-up. Analysed cell-level variability across 4 distinct 459 basins. Finding: 3 cells are invariant (top-left, top-right corners + position 31 = end of row 1 = border ring). 212 cells have 2 distinct placements (most pieces have a 'swap pair'). 24 cells are FULLY VARIABLE across all 4 basins — concentrated in rows 13-15 (9, 10, 5 cells respectively). The 459-level set's structural diversity is concentrated at the BOTTOM of the board, matching the project_e2_vol68 memory that 'rows 12-15 are 3× more diverse'."
 metadata:
   type: project
+status: built
 ---
 
 # 459-basin skeleton and variability geometry (vol-111)
@@ -97,4 +98,4 @@ shuffle).
 
 - [[multiple-459-basins-rigid]] — the 4-basin corpus.
 - [[sigma-cycle-predicts-alns]] — σ-cycle structure analysis.
-- [[../MATH_NOTES_2026-05-16_459_LEVEL_SET]] — theoretical framing.
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — theoretical framing.

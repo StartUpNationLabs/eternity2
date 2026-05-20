@@ -1,3 +1,10 @@
+---
+name: delta-regularized-search
+description: A search algorithm that minimizes Δ in addition to maximizing
+status: unbuilt
+metadata:
+  type: concept
+---
 # Δ-Regularized Search (vol-72 spec)
 
 **Status**: `design` — vol-72 (2026-05-15).

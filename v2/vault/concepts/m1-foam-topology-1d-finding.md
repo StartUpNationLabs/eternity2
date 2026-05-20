@@ -3,6 +3,7 @@ name: m1-foam-topology-1d-finding
 description: "M1 foam topology: max junction degree is 2 across ALL E2 boards measured. Mismatch graph is 1D (paths/cycles, not branched). 459 record has 237 K=0 cells; 458 has 227; J1 has 212-218. Cell K=0 count is monotonic with score."
 metadata:
   type: project
+status: built
 ---
 
 # M1 — Foam topology / 1D mismatch fabric

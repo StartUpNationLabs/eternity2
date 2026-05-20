@@ -3,6 +3,7 @@ name: k11-4-mismatch-zlib-signature
 description: "K11.4 result: zlib compression length of the MISMATCH MAP (binary array of which edges fail to match) is highly discriminative. 459 = 29 bytes, 458 = 39 bytes, J1 boards = 42-52 bytes. Lower = more structure."
 metadata:
   type: project
+status: built
 ---
 
 # K11.4 — Mismatch-map zlib compression as basin signature

@@ -3,6 +3,7 @@ name: local459-halo1-joint-proven
 description: Local 459 PROVEN joint-MIP locally optimal at halo r=1 over 59-cell region. Adds to corpus alongside vol-83's McGavin proof. BOTH high-score records now rigorously proven halo-1-rigid.
 metadata:
   type: project
+status: built
 ---
 
 # Local 459 — joint-MIP locally optimal at halo r=1 (vol-90)

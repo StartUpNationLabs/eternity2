@@ -3,6 +3,7 @@ name: rotation-locally-optimal
 description: "Vol-117 T2 — every tested high-score board (454, 457, 459, 460) is rotation-locally optimal: rotating any single piece in place (while keeping all others fixed) NEVER improves the score. 768 alt-rotation tests per board × 12 boards = 9216 tests, ZERO improvements. The rotation degree of freedom is fully frozen at the 459 level set."
 metadata:
   type: project
+status: built
 ---
 
 # Rotation-locally optimal (vol-117 T2)
@@ -92,4 +93,4 @@ a new datapoint for σ-cycle / basin work.
 
 - [[multiple-459-basins-rigid]] — MIP halo-1 rigidity (broader test).
 - [[basin-rigidity-refutation]] — earlier basin rigidity work.
-- [[../sessions/vol-117]].
+- [[vol-117]].

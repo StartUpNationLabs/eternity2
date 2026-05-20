@@ -3,6 +3,7 @@ name: n-series-enumeration-deadend
 description: "Vol-122 evening N-series (N1-N11) explored exhaustive enumeration of 3×3/4×4 corner/center clusters. Bottom-line: spaces are too large to enumerate, cross-products too large to store. Pipeline cap: ~50M 3×3 around-hint per positioning. Session closed with cleanup."
 metadata:
   type: project
+status: refuted
 ---
 
 # N-series enumeration → computational dead end

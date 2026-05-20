@@ -230,7 +230,7 @@ Worth tracking down — could integrate with our solver-engine.
 ## Linked
 
 - [[w11-border-screen-unviable]] (why we're here)
-- [[../plans/INVENTIONS_BACKLOG]] (add W12-W18 entries)
+- [[INVENTIONS_BACKLOG]] (add W12-W18 entries)
 - [[sessions/vol-124]] (sister session page)
 
 ## Sources (round 2)

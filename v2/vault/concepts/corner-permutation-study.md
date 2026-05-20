@@ -1,3 +1,10 @@
+---
+name: corner-permutation-study
+description: \"by considering that we have something like 16 known starting positions
+status: built
+metadata:
+  type: concept
+---
 # Corner-permutation study — basin-quality across 24 corner assignments
 
 **Status**: in-progress (ALNS phase running for empirical scores).
@@ -244,7 +251,7 @@ all 4 corners. The score-per-perm distribution will distinguish:
 ## Cross-reference: the new 459 SOTA — IT USES p20!
 
 Independent cross-machine result imported 2026-05-15: 459 achieved
-via border-first vanilla_path DFS → ALNS pipeline ([[../basins/basin-459-pt]]).
+via border-first vanilla_path DFS → ALNS pipeline ([[basin-459-pt]]).
 
 **The 459 board's corners decoded from its bucas URL**:
 - TL = piece 3 (rot 3)
@@ -322,7 +329,7 @@ ALNS basic seed=42. Our 5min × 4-seed sweep is a quicker scout.
 
 ## Linked
 
-- [[../sessions/vol-60]] — sweep session
-- [[../basins/basin-459-pt]] — new SOTA, cross-machine
-- [[../basins/basin-mcgavin-469]] — community ceiling on p22 perm
+- [[vol-60]] — sweep session
+- [[basin-459-pt]] — new SOTA, cross-machine
+- [[basin-mcgavin-469]] — community ceiling on p22 perm
 - [[relaxed-bound]] — bound function used

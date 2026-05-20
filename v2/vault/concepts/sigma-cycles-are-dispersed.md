@@ -3,6 +3,7 @@ name: sigma-cycles-are-dispersed
 description: σ-cycles between basins (458 → McGavin, etc.) are geometrically DISPERSED across rows 1-14 cols 1-14, not localized in any region. Confirms board-spanning requirement is geometric, not just topological.
 metadata:
   type: project
+status: built
 ---
 
 # σ-cycles between basins are board-spanning (vol-97)

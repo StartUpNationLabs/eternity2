@@ -1,3 +1,10 @@
+---
+name: basin-permutation-group
+description: The two 458 boards vol-61-stage3-seed17 and vol-61-stage3-seed200
+status: built
+metadata:
+  type: concept
+---
 # Basin-permutation-group on 458 sister basins (vol-65 day 3.5)
 
 **Status**: `built` (empirical observation), `unbuilt` (theory) — vol-65 (2026-05-15).
@@ -147,7 +154,7 @@ What might work:
 
 - [[piece-side-matching]] (parent PSM concept)
 - [[piece-orbit-structure]] (group-theoretic context)
-- [[../sessions/vol-65]]
+- [[vol-65]]
 - [[mip-local-optimality-459]] (complementary — local MIP at score-improving)
 - vol-22 basin-escape recipe (sister-basin discovery via bound-ascent;
   this is now refined as σ-orbit structure)

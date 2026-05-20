@@ -1,3 +1,10 @@
+---
+name: v188-translation-sigma-indecomposability
+description: V188 TRANSLATION — σ-Indecomposability Theorem Re-Verified on V181↔McGavin
+status: built
+metadata:
+  type: concept
+---
 # V188 TRANSLATION — σ-Indecomposability Theorem Re-Verified on V181↔McGavin
 
 Status: `built` — refuted as record-mover; **theoretically confirms σ-cycle indecomposability** on this basin pair.
@@ -82,12 +89,12 @@ basin (just +1 score apart, e.g. V181 460 vs an existing 461). The
 
 ## Linked
 
-- [[sigma-cycle-indecomposability]]
-- [[../basins/basin-460-cp0312-v181]]
-- [[../basins/basin-mcgavin-469]]
+- [[sigma-cycle-universal-indecomposable]]
+- [[basin-460-cp0312-v181]]
+- [[basin-mcgavin-469]]
 - [[three-basin-iso-plateau]]
-- [[../sessions/vol-65]] (original σ-indecomposability finding)
-- [[../sessions/vol-99]] (sister-basin σ extension)
+- [[vol-65]] (original σ-indecomposability finding)
+- [[vol-99]] (sister-basin σ extension)
 
 ## Linked memory
 

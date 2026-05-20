@@ -3,6 +3,7 @@ name: j1-hinted-v2-band-score-decomp
 description: "J1-hinted v2 band-by-band score decomposition on canonical E2: hint constraints + downstream piece reservation cost (J1-FLH 447 → J1-hinted v2 414, Δ = -33). Band-13 hint is the largest single drag."
 metadata:
   type: project
+status: built
 ---
 
 # J1-hinted v2 — band score decomposition

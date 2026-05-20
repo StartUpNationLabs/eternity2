@@ -1,3 +1,10 @@
+---
+name: murmuration-basin-sampling
+description: The E2 score landscape has a 460-tier basin family. Volumes 122 and 129 found 18 distinct corner-perms with boards sc...
+status: partial
+metadata:
+  type: concept
+---
 # Murmuration — Basin Sampling at Scale (V171)
 
 Status: `partial` (V155 stochastic-beam built 2026-05-20; sweep pending V169 finish)
@@ -73,7 +80,7 @@ The valuable output is the basin atlas (corner_perm → lifted score), not the s
 
 ## Linked
 
-- [[../sessions/vol-171]]
+- [[vol-171]]
 - [[prior-data-augmented-beam]] (V155 base)
 - [[prior-guided-alns]] (V169, complementary on the lift side)
-- [[../plans/IDEAS_BACKLOG_2026-05-19]] (V165 STOCHASTIC BEAM was the seed idea)
+- [[IDEAS_BACKLOG_2026-05-19]] (V165 STOCHASTIC BEAM was the seed idea)

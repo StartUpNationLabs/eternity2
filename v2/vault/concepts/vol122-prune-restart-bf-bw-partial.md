@@ -3,6 +3,7 @@ name: vol122-prune-restart-bf-bw-partial
 description: "Vol-122 prune_restart with MaxScore on bf_bw 5min 236-cell partial (424 start): stagnates at round 2 with 399. The vol-22 'score collapse after bound-ascent' pattern reproduced."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — prune_restart on bf_bw partial
@@ -55,7 +56,7 @@ starting ALNS-fill score on 234+ partials.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../concepts/vol122-a1-pipeline-result]]
+- [[vol-122]]
+- [[vol122-a1-pipeline-result]]
 - [[bf-bw-schedule-hinted]] (if exists)
 - vol-22 prune_restart-stagnation note (memory)

@@ -1,3 +1,10 @@
+---
+name: bidirectional-meet-in-middle
+description: Naming: GAUNTLET — two armies converging on a single combat zone.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Bidirectional Meet-in-Middle (V175 GAUNTLET)
 
 Status: `unbuilt` (design 2026-05-20)
@@ -75,7 +82,7 @@ H3: at K = 256 per beam, joint K² = 65k — manageable. Cross-check prune may r
 
 ## Linked
 
-- [[../sessions/vol-175]] (planned)
+- [[vol-175]] (planned)
 - [[prior-data-augmented-beam]] (V155 forward beam, the base)
 - [[murmuration-basin-sampling]] (V171, complementary basin discovery)
-- [[../plans/INVENTIONS_BACKLOG]] (A5)
+- [[INVENTIONS_BACKLOG]] (A5)

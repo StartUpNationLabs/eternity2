@@ -3,6 +3,7 @@ name: sigma-cycle-predicts-alns
 description: "Vol-107 T2 finding (N=6, hypothesis WEAKENED) — initial N=4 suggested max-σ-cycle to 459 predicts ALNS-liftability, but extension to N=6 shows mixed signal. offset=50 has smallest max-cyc (23) but LOW ALNS lift (444); offset=100 has largest max-cyc (71) and LOW lift (446) — consistent. But the relationship isn't monotonic. May still hold within sub-clusters; further work needed."
 metadata:
   type: project
+status: partial
 ---
 
 # σ-cycle predicts ALNS-liftability (vol-107 T2)
@@ -118,8 +119,8 @@ this hypothesis is at best "partially supported".
 
 ## Linked
 
-- [[../sessions/vol-106|vol-106 T13.c (origin)]]
-- [[../sessions/vol-107|vol-107 T2 (this measurement)]]
+- [[vol-106|vol-106 T13.c (origin)]]
+- [[vol-107|vol-107 T2 (this measurement)]]
 - [[blackwood-fast]] — pipeline producing the partials.
 - [[sigma-cycle-topology-3-basins]] (vol-65) — σ-cycle theory.
 - [[basin-escape-recipe]] (vol-22) — predecessor of structural-

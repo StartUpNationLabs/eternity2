@@ -3,6 +3,7 @@ name: oracle-aware-alns-repair
 description: "Vol-109 T1 — analytical concern EMPIRICALLY CONFIRMED. The cheap test (`vol109_oracle_graft.py`) grafted the oracle's pieces at σ-cycle positions into offset=100's partial. Result: score DROPPED from 442 to 271 (-171). Cumulative grafting through top-6 cycles never exceeds 271. The boundary mismatch from partial graft dominates. The multi-day oracle-aware-repair infra would face the SAME problem and is NOT justified."
 metadata:
   type: project
+status: refuted
 ---
 
 # Oracle-aware ALNS repair (vol-109 T1 — REFUTED EMPIRICALLY)

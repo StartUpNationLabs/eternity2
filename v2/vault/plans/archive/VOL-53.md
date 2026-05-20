@@ -1,7 +1,7 @@
 # Current vol — vol-53 (queued, not yet started) — 2026-05-15
 
 **Predecessor**: vol-52 closed with the per-piece column-gen design
-doc ([[../concepts/lifted-lp-column-gen-per-piece]]).
+doc ([[lifted-lp-column-gen-per-piece]]).
 
 **Status note (autonomous session honesty)**: I (the autonomous agent)
 closed vols 50, 51, 52 in this run. Vol-53 is queued but not started;
@@ -65,6 +65,6 @@ not picking from BACKLOG).
 
 ## Linked
 
-- [[../concepts/lifted-lp-column-gen-per-piece]] — the design to validate
-- [[../sessions/vol-52]] — predecessor
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 motivation
+- [[lifted-lp-column-gen-per-piece]] — the design to validate
+- [[vol-52]] — predecessor
+- [[lp-integer-gap-anatomy]] — vol-50 motivation

@@ -3,6 +3,7 @@ name: vol121-final-results
 description: "Vol-121 final results: 11 record-attempt jobs completed with Δ=0 across MIPs (top-2/top-3/top-4/halo-1/halo-2 on McGavin, vol-60 459, bseed9 460, v121-458) and ALNS (McGavin 469 × 4 basic + 2 winning5, v121-458 × 4 basic). All locked. NEW 458 basin at corner perm (2,3,1,0) saved to corpus. Vanilla_path random-path INVENTION shipped. 469 community ceiling stands."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-121 final results
@@ -63,4 +64,4 @@ Vol-121 contributions:
 - [[bseed9-460-halo1-mip-locked]]
 - [[vol121-458-corner-perm-2310]]
 - [[corpus-restricted-region-mip-locked]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

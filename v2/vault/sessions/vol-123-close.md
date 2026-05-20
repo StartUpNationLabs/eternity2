@@ -133,7 +133,7 @@ enough to get marginals strong enough to drive CSP to completion.
 ## Linked
 
 - [[vol-122]] (previous session)
-- [[../plans/SOLVING-E2-VISION]]
-- [[../plans/INVENTIONS_BACKLOG]]
-- [[../concepts/w1-was-it-promising]]
-- [[../concepts/method-vs-record-divergence]]
+- [[SOLVING-E2-VISION]]
+- [[INVENTIONS_BACKLOG]]
+- [[w1-was-it-promising]]
+- [[method-vs-record-divergence]]

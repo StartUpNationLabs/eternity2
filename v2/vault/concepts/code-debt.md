@@ -1,3 +1,10 @@
+---
+name: code-debt
+description: A prioritized refactor plan for the v2 Rust workspace, surfacing god files, duplicate utilities, and modularity smell...
+status: unbuilt
+metadata:
+  type: concept
+---
 # Code restructure proposal (vol-25 audit, 2026-05-13)
 
 **Status**: `unbuilt` — audit complete, no extractions shipped.

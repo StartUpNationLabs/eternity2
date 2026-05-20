@@ -1,3 +1,10 @@
+---
+name: basin-escape-recipe
+description: 1. Bound-ascent N iters from any board → output/v21boundascentb<bound>s<score>.json
+status: built
+metadata:
+  type: concept
+---
 # Basin-escape recipe (bound + Hungarian + ALNS)
 
 **Status**: `built` (vol-22)

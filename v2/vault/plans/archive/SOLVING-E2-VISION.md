@@ -191,7 +191,7 @@ the probability of *some* of A+B+C+E succeeding is higher.
 
 ## Linked
 
-- [[../concepts/web-roam-2026-05-17]] (W-series candidates)
-- [[../concepts/w1-was-it-promising]] (W1 honest assessment)
+- [[web-roam-2026-05-17]] (W-series candidates)
+- [[w1-was-it-promising]] (W1 honest assessment)
 - [[INVENTIONS_BACKLOG]] (W1-W8 + others)
 - [[CURRENT-VOL]]

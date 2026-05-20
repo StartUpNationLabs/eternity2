@@ -3,6 +3,7 @@ name: depth-40-phase-transition
 description: "Vol-125 mathematical derivation: BB&B's depth-40 plateau on W14 super-grid IS a constraint-density phase transition (analog of random k-SAT). Predicts the critical depth from first principles using pin-fraction p and edge-multiplicative shrink rate."
 metadata:
   type: project
+status: built
 ---
 
 # The depth-40 wall IS a phase transition

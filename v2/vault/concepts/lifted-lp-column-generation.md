@@ -1,3 +1,10 @@
+---
+name: lifted-lp-column-generation
+description: intractable for HiGHS. Need column generation.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Lifted LP via column generation (vol-47 refinement)
 
 **Status**: design.

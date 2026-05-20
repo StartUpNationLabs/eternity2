@@ -1,3 +1,10 @@
+---
+name: color-multiset-bound
+description: Each piece has 4 sides. Sides are coloured (1..22 = interior colours;
+status: built
+metadata:
+  type: concept
+---
 # Color multiset bound on canonical E2 (vol-44)
 
 **Status**: measurement + derivation.

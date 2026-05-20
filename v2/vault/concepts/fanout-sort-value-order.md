@@ -3,6 +3,7 @@ name: fanout-sort-value-order
 description: "Vol-108 T2 — static value-ordering heuristic for blackwood-fast buckets: sort each candidate bucket by descending 'fanout' (sum of bucket sizes the candidate's bottom + right edges would create downstream). Free at runtime. REFUTED: same trajectory at strict v17a (same max_depth 192, score 344) but 5-6% nps regression (80M vs 85M PGO+T1)."
 metadata:
   type: project
+status: refuted
 ---
 
 # Fanout-sort value ordering (vol-108 T2 — REFUTED)
@@ -72,6 +73,6 @@ Not pursued further; refuted for the canonical-E2 v17a path.
 ## Linked
 
 - [[blackwood-fast]] — the engine this was applied to.
-- [[../sessions/vol-108]] — origin.
+- [[vol-108]] — origin.
 - [[rust-perf-at-scale]] — perf log; T2 doesn't make it onto the
   table.

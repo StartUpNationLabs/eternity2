@@ -1,3 +1,10 @@
+---
+name: scaling-curve-2026-05-19
+description: For each $(\text{size}, n{\text{colors}})$ pair, generate 3 puzzles
+status: built
+metadata:
+  type: concept
+---
 # ALNS Scaling Curve (V131-T2, 2026-05-19)
 
 **Status**: `built`

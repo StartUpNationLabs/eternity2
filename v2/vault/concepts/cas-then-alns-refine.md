@@ -1,3 +1,10 @@
+---
+name: cas-then-alns-refine
+description: Take CAS-greedy's 433/480 output (output/vol-74/casfullfixedsolution.json),
+status: built
+metadata:
+  type: concept
+---
 # CAS-then-ALNS refine: 437-439 — vol-78b (2026-05-15)
 
 **Status**: `built` (negative) — vol-78b.

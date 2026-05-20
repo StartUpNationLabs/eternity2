@@ -3,6 +3,7 @@ name: universal-mismatch-heatmap
 description: Across 1964 high-score (≥455) canonical E2 boards in our corpus, the universal mismatch heatmap shows vertical edges between rows 11/12, 12/13, 13/14 fail in 38-49% of cases. Confirms our pipeline has a "rows 11-13 universal hard band" structural feature.
 metadata:
   type: project
+status: built
 ---
 
 # Universal mismatch heatmap — rows 11-13 (vol-99 finding)

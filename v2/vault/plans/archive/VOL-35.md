@@ -36,7 +36,7 @@ User-proposed (vol-34 mid-vol). Systematically enumerate local
 optima and basin properties at 4×4 / 6×6 / 8×8, look for
 transferable structural invariants.
 
-See [[../concepts/fitness-landscape-mapping]] for the 5-phase plan
+See [[fitness-landscape-mapping]] for the 5-phase plan
 (enumerate LOs, measure basin properties, compute FDC, test
 transferability, predict + exploit at 16×16).
 

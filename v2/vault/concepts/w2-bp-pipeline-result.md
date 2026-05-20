@@ -3,6 +3,7 @@ name: w2-bp-pipeline-result
 description: "W2 BP-decimation pipeline: validated end-to-end on canonical 16×16 Eternity II. BP-decim gives 435/480 in 11 min; ALNS basic lifts to 448 in 10 min more. The full pipeline (~50 min) gives 448 matched. Not a record but a real CANDIDATE METHOD."
 metadata:
   type: project
+status: built
 ---
 
 # W2 BP-decimation pipeline — canonical 16×16 result

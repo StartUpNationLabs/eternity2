@@ -3,11 +3,19 @@ name: beam-search-on-e2
 description: "Vol-109 T2 — analytical refutation. Beam-search engine variant was sketched as a possible 'different trajectory' source vs DFS. Analysis: beam search doesn't change the underlying constraint structure; at depth 200 only candidates matching (top,left) get expanded and pieces_used prevents reuse — same as DFS. The 'diverse trajectory' claim reduces to 'DFS with random tiebreak' which is already covered by seed_offset multi-thread."
 metadata:
   type: project
+status: refuted
 ---
 
 # Beam search on E2 — analytical refutation (vol-109 T2)
 
 **Status**: `refuted-analytical` — not built. 2026-05-16 ~12:30.
+
+## Refutation
+
+- **Refuted**: vol-109 T2 (analytical, not empirical — no code built).
+- **Evidence**: Beam search at depth 200 uses the same `(top,left)` color-match + `pieces_used` constraints as DFS. The "diverse trajectory" claim reduces to "DFS with random tiebreak" — already covered by seed-offset multi-thread runs.
+- **What's refuted**: beam search as a genuinely different operator class for canonical E2 DFS. It's not different; it's DFS at scale K.
+- **What's NOT refuted**: prior-aware beam search (V155+ uses corpus prior as a value signal). That IS different; see [[prior-data-augmented-beam]] and [[keyring-patch-prior]]. Plain beam search alone offers nothing over DFS.
 
 ## The idea
 
@@ -72,6 +80,6 @@ Refute without building. Pivot to other vol-109 candidates:
 
 ## Linked
 
-- [[../sessions/vol-109]] (when opened).
+- [[vol-109]] (when opened).
 - [[blackwood-fast]] — engine reference.
-- [[../sessions/vol-106]] — T10 measurement of trajectory diversity.
+- [[vol-106]] — T10 measurement of trajectory diversity.

@@ -3,6 +3,7 @@ name: local459-mip-bottom-rigid
 description: Local 459 PROVEN rigidly optimal in row 13 alone (16 cells) AND rows 14-15 (32 cells). vol-87's apparent "+7 slack" in rows 13-15 was LP-relaxation looseness, NOT real improvement potential.
 metadata:
   type: project
+status: built
 ---
 
 # Local 459 — bottom-region MIP-locally-rigid (vols 87-89)

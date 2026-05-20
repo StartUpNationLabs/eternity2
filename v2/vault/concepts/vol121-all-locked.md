@@ -3,6 +3,7 @@ name: vol121-all-locked
 description: "Vol-121 final close — ALL 23+ record-attempt jobs (MIPs, MaxSAT, ALNS) completed with Δ=0. McGavin 469 is LOCKED across every operator tested: 15-cell joint, halo-2 joint (53 cells, 1800s), top-2/top-3/top-4/top-5 rows (28/42/56/70 cells), ALNS basic/winning5/minimal × multiple seeds × 30min each. bseed9 460 LOCKED at halo-1/halo-2. vol-60 459 LOCKED at halo-2. vol-121 458 LOCKED at halo-1 + ALNS × 4 seeds. The community 469 ceiling stands."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-121 — ALL record-attempts locked at Δ=0
@@ -86,4 +87,4 @@ scales, a verified new 458 basin, and a new path-mode invention.
 - [[corpus-restricted-region-mip-locked]]
 - [[honest-status-vol121]]
 - [[vol121-final-results]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

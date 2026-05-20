@@ -3,6 +3,7 @@ name: j1-hinted-v2-corner-color-bug
 description: "J1-hinted v2 fails at band 14 NOT due to piece supply randomness but due to a STRUCTURAL constraint: row 14 corner-adjacent bottoms must match the unique color of the remaining row-15 corner pieces. v3 fix: reserve corner-color constraints upstream."
 metadata:
   type: project
+status: refuted
 ---
 
 # J1-hinted v2 — Corner-color structural failure
@@ -132,7 +133,7 @@ multiset is a SUBSET of the row-15 piece's top-color multiset (when those
 pieces are rotated for bottom-border). This is a MULTISET-MATCHING
 constraint that propagates back to band 13's piece-choice freedom.
 
-This is exactly the SP/NS-1 deficit invariant ([[../concepts/ns1-deficit-invariant]])
+This is exactly the SP/NS-1 deficit invariant ([[ns1-deficit-invariant]])
 applied at the row-14/15 interface.
 
 ## v3 fix sketch

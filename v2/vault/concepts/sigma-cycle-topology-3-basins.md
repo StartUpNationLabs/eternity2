@@ -3,6 +3,7 @@ name: sigma-cycle-topology-3-basins
 description: σ-cycle topology between 3 canonical E2 basins (local 459, vol-32 458, McGavin 469). Local transitions have balanced cycles; cross-McGavin transitions have ONE giant 80-154 cell cycle. Quantifies "board-spanning" requirement to reach McGavin.
 metadata:
   type: project
+status: built
 ---
 
 # σ-cycle topology — local-vs-McGavin (vol-97)

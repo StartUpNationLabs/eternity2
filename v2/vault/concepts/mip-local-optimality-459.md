@@ -1,3 +1,10 @@
+---
+name: mip-local-optimality-459
+description: A basin B (configuration of a board) is MIP-local-optimal at
+status: built
+metadata:
+  type: concept
+---
 # 459 basin MIP-local-optimality (vol-62 proof)
 
 **Status**: `built` — vol-62 (2026-05-15).
@@ -91,7 +98,7 @@ cells cannot escape the 459 basin. Concretely refuted:
 ## Linked
 
 - [[component-quotient-destroy]] (refuted at radius ≤ 2)
-- [[../sessions/vol-62]]
+- [[vol-62]]
 - memory: `feedback_no_false_metrics` (this IS a sound bound, unlike
   greedy_relaxed_score)
 

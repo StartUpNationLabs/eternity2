@@ -3,6 +3,7 @@ name: j1-rust-beam100k-first-complete-board
 description: "J1 Rust chain with beam=100000 produces FIRST COMPLETE 256/256 board: 444 matched. 8 perfect bands (0-7), decay through band 14, but completes. Verified LEGAL_COMPLETE-shape (no border violations)."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — First complete board (beam=100000)

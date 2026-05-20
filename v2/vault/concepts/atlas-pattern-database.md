@@ -1,3 +1,10 @@
+---
+name: atlas-pattern-database
+description: plans/EXTERNALBRAINSTORM2026-05-18
+status: refuted
+metadata:
+  type: concept
+---
 # ATLAS — Pattern-Database Heuristic
 
 **Status**: `refuted` (Vol-128, 2026-05-19)

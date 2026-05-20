@@ -3,6 +3,7 @@ name: vol122-three-basin-structural-overlap
 description: "Vol-122 cross-basin analysis: McGavin 469, vol-60 459, and vol-122 perm0_444 share only 0-1 cells pairwise (except vol-60↔perm0 share 21). Three distinct basin families."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — three-basin structural overlap
@@ -68,7 +69,7 @@ enumeration.
 
 ## Linked
 
-- [[../sessions/vol-122]]
+- [[vol-122]]
 - [[vol122-25-edge-gap-is-all-interior]]
 - [[vol122-sigma-perm0-444-to-mcgavin-indecomposable]]
 - vol-65 σ-cycle indecomposability (memory)

@@ -3,6 +3,7 @@ name: f2-k-lock-analytical-attempt
 description: "F2 attempt: analytical proof of K-cell-move lock on high-score E2 boards. Senior-researcher math work per CLAUDE.md directive. K=1 lock proven by parity; K=2 lock conjectured via supply-conservation argument."
 metadata:
   type: project
+status: built
 ---
 
 # F2 — Analytical K-Lock Proof Attempt

@@ -1,3 +1,10 @@
+---
+name: reinforce-plackett-luce-value-order
+description: the cheap \"no engine change\" path is dead (vol-50, 2026-05-15).
+status: partial
+metadata:
+  type: concept
+---
 # REINFORCE via Plackett-Luce on engine value-order
 
 **Status**: `partial` — math drafted, infrastructure probe revealed
@@ -131,7 +138,7 @@ REINFORCE gradient: `∇θ = (R − b) · ∇θ log P(π | z(θ))`. The
 
 - [[learned-value-order]]
 - [[rl-es-pipeline]] — refuted predecessor (vol-48/49)
-- [[../sessions/vol-50]] — vol-50 session
+- [[vol-50]] — vol-50 session
 
 ## Open questions before building
 

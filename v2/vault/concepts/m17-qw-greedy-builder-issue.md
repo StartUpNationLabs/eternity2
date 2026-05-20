@@ -3,6 +3,7 @@ name: m17-qw-greedy-builder-issue
 description: "QW Greedy Builder result CORRECTED via verify_board: 251/256 placed, 5/5 hints, but only 75/466 matched. Python parser bug propagated. The QW heuristic does NOT produce competitive boards from clean slate."
 metadata:
   type: project
+status: built
 ---
 
 # M17 — QW Greedy Builder corrected result

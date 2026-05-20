@@ -3,6 +3,7 @@ name: j1-poc-perfect-band-results
 description: "J1 column-DP PoC achieves PERFECT band-0 score on every puzzle size tested (4x4 through canonical 16x16). Beam=5000 finds optimal 2-row arrangement maximizing all adjacencies."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — PoC PERFECT-band results
@@ -112,5 +113,5 @@ Next:
 ## Linked
 
 - [[j1-column-dp-design]] (algorithm design)
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] J1 entry
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] J1 entry

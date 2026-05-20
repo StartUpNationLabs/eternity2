@@ -1,3 +1,10 @@
+---
+name: per-color-lp-ub-458
+description: Per-color LP UB on vol-32 458 board (vol-45)
+status: built
+metadata:
+  type: concept
+---
 # Per-color LP UB on vol-32 458 board (vol-45)
 
 **Status**: measurement.

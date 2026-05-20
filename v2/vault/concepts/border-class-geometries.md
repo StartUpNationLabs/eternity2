@@ -1,3 +1,10 @@
+---
+name: border-class-geometries
+description: The three border-classes identified in vol-44 have structurally
+status: built
+metadata:
+  type: concept
+---
 # Border-class mismatch geometries (vol-44)
 
 **Status**: measurement.

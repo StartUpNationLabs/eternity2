@@ -1,3 +1,10 @@
+---
+name: color-relabel
+description: Joint search space: (placement, color-permutation π ∈ S23). Apply π to all piece edges. Physics unchanged (score is p...
+status: unbuilt
+metadata:
+  type: concept
+---
 # Color-relabel as search variable
 
 **Status**: `unbuilt`

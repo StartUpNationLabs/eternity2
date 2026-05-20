@@ -3,6 +3,7 @@ name: k5-multiset-deterministic-filling
 description: "K5 = MDF: Multiset-Deterministic Filling. Given a partial board, for each unfilled cell compute its 4-color multiset constraint from filled neighbors. 192/196 interior pieces have UNIQUE multiset — many cells are forced to a single piece. Iteratively fill forced cells. Genuinely new propagator."
 metadata:
   type: project
+status: built
 ---
 
 # K5 — Multiset-Deterministic Filling (MDF)
@@ -96,5 +97,5 @@ candidates anywhere), we've identified a structural infeasibility.
 ## Linked
 
 - [[j1-hinted-v2-corner-color-bug]] (motivation)
-- [[../concepts/piece-set-symmetries]] (background)
+- [[piece-set-symmetries]] (background)
 - [[j1-backward-multiset-constraint]] (similar but at the chain level)

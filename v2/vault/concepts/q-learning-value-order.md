@@ -1,3 +1,10 @@
+---
+name: q-learning-value-order
+description: Instead of training a policy network whose argmax is used as the
+status: unbuilt
+metadata:
+  type: concept
+---
 # Q-learning for E2 value-ordering
 
 **Status**: `unbuilt` — vol-50 binding item (2026-05-15).
@@ -95,6 +102,6 @@ sets (currently logs only the chosen action).
 
 ## Linked sessions
 
-- [[../sessions/vol-48]] — ES vanilla
-- [[../sessions/vol-49]] — ES adaptive
-- [[../sessions/vol-29]] — imitation baseline (Δ=−1)
+- [[vol-48]] — ES vanilla
+- [[vol-49]] — ES adaptive
+- [[vol-29]] — imitation baseline (Δ=−1)

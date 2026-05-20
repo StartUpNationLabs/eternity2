@@ -1,3 +1,10 @@
+---
+name: piece-spectral-fiedler
+description: Edges: weight w(p1, p2) = number of (k1, k2, side1, side2) tuples
+status: built
+metadata:
+  type: concept
+---
 # Spectral analysis of E2 piece-compatibility graph
 
 **Status**: `built` — vol-65 (2026-05-15).
@@ -98,5 +105,5 @@ TODO: run this check. Expected outcome: ~1-3 (frame-adjacent).
 
 - [[piece-side-matching]] (parent PSM concept)
 - [[piece-orbit-structure]]
-- [[../sessions/vol-65]]
-- [[../plans/AUTONOMOUS-MONTH-PLAN.md]] gap-list item 5
+- [[vol-65]]
+- [[AUTONOMOUS-MONTH-PLAN]] gap-list item 5

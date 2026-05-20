@@ -3,6 +3,7 @@ name: v125-border-dp-stage-a
 description: "Vol-125 Stage A — 100 diverse border-DP partials × CSP-fill 60s × ALNS basic 60s seed=1. Top score 436. Distribution clusters 420-432. Conclusion: border-DP partials, despite combinatorial diversity, do NOT lead to McGavin-class basins (455+); the 459 ceiling requires bf_bw-style seed generation, not border-DP."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-125 Stage A close — border-DP basin generation REFUTED for record-track
@@ -65,4 +66,4 @@ But NOT for record-track ALNS.
 
 - [[record-460-2026-05-18]] (the 460 record from bf_bw, not border-DP)
 - [[v125-third-459-basin]] (also from bf_bw)
-- [[../sessions/vol-125]]
+- [[vol-125]]

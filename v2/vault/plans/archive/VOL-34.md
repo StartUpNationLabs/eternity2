@@ -112,6 +112,6 @@ caps at 458.
 
 ## Linked concepts
 
-- [[../concepts/unsat-clause-propagator]] — vol-32 prototype, vol-34 build target.
-- [[../sessions/vol-32-458-NEW-RECORD]] — what we're trying to break.
-- [[../sessions/vol-32-blackwood-mrv-discovery]] — alt cold-start path (456 ceiling).
+- [[unsat-clause-propagator]] — vol-32 prototype, vol-34 build target.
+- [[vol-32-458-NEW-RECORD]] — what we're trying to break.
+- [[vol-32-blackwood-mrv-discovery]] — alt cold-start path (456 ceiling).

@@ -212,11 +212,11 @@ typically 1.5-3× too large; actual will likely be 5-7 hr).
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — Vol-26..31 history; tonight
+- [[learned-value-order]] — Vol-26..31 history; tonight
   amends with Vol-32 measurement.
-- [[../sessions/vol-31]] — direct predecessor.
+- [[vol-31]] — direct predecessor.
 
 ## Linked sessions
 
-- [[../sessions/vol-31]] — score lift result.
-- [[../sessions/vol-30]] — +9 depth invariance across models.
+- [[vol-31]] — score lift result.
+- [[vol-30]] — +9 depth invariance across models.

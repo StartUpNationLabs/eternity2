@@ -1,3 +1,10 @@
+---
+name: relaxed-bound
+description: For a board B, relaxedbound(B) = iterate cell-by-cell argmax{(piece, rot)} kmatches(pos) WITHOUT piece-uniqueness con...
+status: built
+metadata:
+  type: concept
+---
 # Relaxed bound (edge-relax)
 
 **Status**: `built` (vol-21)

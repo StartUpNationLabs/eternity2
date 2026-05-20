@@ -3,6 +3,7 @@ name: universal-match-backbone
 description: Dual of mismatch heatmap. 116 edges (24% of board) match in ALL 1964 high-score boards. 413 edges (86%) match in ≥95% of boards. The universally-matched backbone concentrates in rows 4-10 (middle band).
 metadata:
   type: project
+status: built
 ---
 
 # Universal-match backbone — middle rows 4-10 (vol-99 finding)

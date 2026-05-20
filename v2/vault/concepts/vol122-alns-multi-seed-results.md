@@ -3,6 +3,7 @@ name: vol122-alns-multi-seed-results
 description: "Vol-122 ALNS multi-seed sweep results: perm0 / perm3 / McGavin boards × seeds {1, 7, 42, 100, 13} × {basic, winning5} × {30min, 60min}. Best = 447 (winning5 60min McGavin s42). All ≤ 447, far from 459 standing."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — ALNS multi-seed sweep results
@@ -73,4 +74,4 @@ clean-slate boards.
 - [[vol122-25-edge-gap-is-all-interior]]
 - [[vol122-mcgavin-border-our-stack-435]]
 - [[vol122-a1-pipeline-result]]
-- [[../sessions/vol-122]]
+- [[vol-122]]

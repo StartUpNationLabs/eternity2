@@ -1,3 +1,10 @@
+---
+name: fpl-frozen-pair-lifting
+description: 2026-05-19; max recovery 374/480 from 254/480 start, well below 461)
+status: refuted
+metadata:
+  type: concept
+---
 # Frozen-Pair Lifting (FPL)
 
 **Status**: `refuted` (Vol-125 — cross-basin probe completed

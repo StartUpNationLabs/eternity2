@@ -237,7 +237,7 @@ with valid boards only.
 
 ## Linked
 
-- [[../sessions/vol-32]] — original 458 record + 457 ties
-- [[../sessions/vol-34]] — 4-basin discovery via T3
+- [[vol-32]] — original 458 record + 457 ties
+- [[vol-34]] — 4-basin discovery via T3
 - [[vol-35-t1b-family-lottery]] — family-255 458 attempt
 - [[../../../../Users/raphaelanjou/.claude/projects/-Users-raphaelanjou-Documents-dev-projects-polytech-eternity2-v2/memory/project_e2_vol20_operator_lock.md|memory:vol20-operator-lock]]

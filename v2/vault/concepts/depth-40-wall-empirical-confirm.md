@@ -3,6 +3,7 @@ name: depth-40-wall-empirical-confirm
 description: "Vol-125 empirical confirmation: the depth-40 plateau in W14 super-block BB&B is invariant under candidate-iteration-order shuffling. Multiple seeds (1, ..., 7) all plateau at depth 40 despite exploring different cells. The wall is structural, not heuristic-dependent."
 metadata:
   type: project
+status: built
 ---
 
 # Empirical confirmation: depth-40 wall is structural

@@ -3,11 +3,19 @@ name: intra-cluster-sigma-subset-refuted
 description: "Vol-118 — even intra-Cluster-A σ-cycle subset application with δ=+1 target (459→460) cannot escape via ALNS. Tested 3-cycle decomposition between bseed1_459 and bseed9_460: cycles sized 21, 14, 4 (total 39 cells). Individual cycles drop score by 9-11. Pairs reach 442-454. Even from a 451 partial (after applying 2 of 3 cycles), 15 ALNS configs (5 seeds × 3 ops) recover to 459 max. The bseed9 460 is an outlier; not reliably reproducible from cycle-subset application + ALNS."
 metadata:
   type: project
+status: refuted
 ---
 
 # Intra-cluster σ-subset bridge — REFUTED (vol-118)
 
 **Status**: `refuted` 2026-05-16.
+
+## Refutation
+
+- **Refuted**: vol-118 T1.
+- **Evidence**: 3-cycle decomposition between bseed1_459 and bseed9_460 (sizes 21+14+4=39 cells). Individual cycles drop −9 to −11. Pairs reach 442-454. Even from the 451 partial (after 2 of 3 cycles), 15 ALNS configs (5 seeds × 3 ops × 30s) recovered to **459 max, none to 460**.
+- **What's refuted**: the hypothesis that *intra-cluster* σ-cycle subsets (small cycles within one cluster) could escape the σ-cycle indecomposability that holds *across* clusters. They can't — the indecomposability extends to the smallest cycle (size 4).
+- **What's NOT refuted**: that bseed9_460 exists (it does, as a one-off serendipitous ALNS find). But it's not reliably reproducible from subset-application + ALNS.
 
 ## Hypothesis
 
@@ -86,4 +94,4 @@ under partial application is different (deeper in score).
 - [[459-level-set-two-cluster-confirmed]] — defines cluster structure.
 - [[min-boundary-subset-bridge-refuted]] — parallel cross-cluster refutation.
 - [[multiple-459-basins-rigid]] — broader rigidity context.
-- [[../sessions/vol-118]].
+- [[vol-118]].

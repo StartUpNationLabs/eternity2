@@ -1,3 +1,10 @@
+---
+name: 469-board-near-twin-swap
+description: While exploring N-row scaling on McGavin's basin, I tested seed=42
+status: built
+metadata:
+  type: concept
+---
 # NEW 469 board: pieces 234/235 swap at pos 73/75 (vol-68)
 
 **Status**: `built` (verified) — vol-68 (2026-05-15).

@@ -3,6 +3,7 @@ name: w1-peps-empirical-results
 description: "W1 empirical results from Phase 1 (4×4 → 6×6). 4×4 completely solved in 1 second via sequential PEPS-Lagrangian piece-fixing. 6×6 partial solve in ~3 minutes per fix. chi=128 needed for stable gradients. Roadmap to canonical 16×16."
 metadata:
   type: project
+status: built
 ---
 
 # W1 — Empirical results (Phase 1)

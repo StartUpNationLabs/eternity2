@@ -1,3 +1,10 @@
+---
+name: cdcl-engine-integration
+description: addresses the concrete Rust solver-engine refactor for the vol-57 build.
+status: unbuilt
+metadata:
+  type: concept
+---
 # CDCL no-good learning — solver-engine integration design
 
 **Status**: `design` — vol-56 T6 (2026-05-15).
@@ -295,5 +302,5 @@ minimisation.
 ## Linked
 
 - [[cdcl-no-good-e2]] — math design (this is engine companion)
-- [[../sessions/vol-56]] — measurement + decision-to-build
-- [[../sessions/vol-25]] — perf push that constrains the hot path
+- [[vol-56]] — measurement + decision-to-build
+- [[vol-25]] — perf push that constrains the hot path

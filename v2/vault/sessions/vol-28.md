@@ -77,7 +77,7 @@ Two distribution mismatches:
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] (amended vol-28): adds the
+- [[learned-value-order]] (amended vol-28): adds the
   cross-domain-transfer REFUTED section + the 6×6 regression sanity
   check.
 

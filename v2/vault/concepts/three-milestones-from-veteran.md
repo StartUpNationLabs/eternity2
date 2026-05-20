@@ -3,6 +3,7 @@ name: three-milestones-from-veteran
 description: "Vol-121 — three intermediate milestones identified by an Eternity II veteran researcher (years of work): (1) 471/480 matched-edges, (2) 231/258 linear placement adjacencies, (3) complete internal 14×14 no matter the border. These are different angles on the same problem. The 14×14 complete-interior decomposition is the structurally cleanest attack."
 metadata:
   type: project
+status: built
 ---
 
 # Three veteran-suggested milestones (vol-121)
@@ -84,7 +85,7 @@ The veteran's framing suggests vol-122+ should:
 
 ## Tasks
 
-Open as candidate items in [[../plans/BACKLOG]]:
+Open as candidate items in [[BACKLOG]]:
 - `interior-14x14-lp-ub` — compute LP UB for the standalone interior.
 - `interior-14x14-mip` — vol-44-style MIP but restricted to interior.
 - `interior-14x14-maxsat` — full MaxSAT enumeration on interior.
@@ -97,4 +98,4 @@ Open as candidate items in [[../plans/BACKLOG]]:
 - [[lp-ub-478-basins]]
 - [[blackwood-algorithm]]
 - [[basin-mcgavin-469]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

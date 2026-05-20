@@ -3,6 +3,7 @@ name: p18-s2-458-new-basin-family
 description: "Vol-119 T1 discovered a NEW 458 basin (sweep_p18_s2_alns.json) from corner perm p18 (3,0,2,1) — exact REVERSAL of vol-32 458's (0,3,1,2). 3/5 hint compliance. Only 1.6% cell agreement with vol-32 458. Structurally distinct basin family. Demonstrates basin space includes mirror-symmetric corner perms not yet exploited."
 metadata:
   type: project
+status: built
 ---
 
 # p18_s2 458 — NEW basin family (vol-119)
@@ -59,4 +60,4 @@ corner perms with good ALNS budgets, not just a handful.
 
 - [[corpus-restricted-region-mip-locked]]
 - [[basin-mix-mip-refuted]]
-- [[../sessions/vol-119]]
+- [[vol-119]]

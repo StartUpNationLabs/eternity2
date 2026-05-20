@@ -1,3 +1,10 @@
+---
+name: prune-restart
+description: 1. Treat the current partial as locked-in pieces 0..d-1 with their domains.
+status: built
+metadata:
+  type: concept
+---
 # Prune-restart (McGavin in-place)
 
 **Status**: `built` (vol-23 driver + engine batch hints)

@@ -3,6 +3,7 @@ name: hint-compliance-clarification
 description: "Vol-112 — clarification on hint-compliance conventions across our records. Strict-canonical 5-clue (5/5 hints obeyed): ceiling 457 (blackwood_mrv). Matched-edges 4/5: 459 (vol-60). Matched-edges 0/5 (our pipeline): 459-460. Different puzzle variants; not directly comparable."
 metadata:
   type: project
+status: built
 ---
 
 # Hint compliance conventions (vol-112 clarification)
@@ -65,4 +66,4 @@ clarification.
 - [[new-459-from-bf-pipeline]] — has the retraction note.
 - [[basin-mix-mip-refuted]] — MIP refutation across 4 basins
   (all 0/5 hints).
-- [[../sessions/vol-112]].
+- [[vol-112]].

@@ -1,7 +1,7 @@
 # Session — vol-15
 
 **Theme**: Blackwood algorithm shipped. Cliff bug fixed. BLACKWOOD_RAW 47× speedup. Schedule-wall structural.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_15|RESEARCH_NOTES_15.md]], [[../sessions/archive/raw/RESEARCH_NOTES_15_PLAN|RESEARCH_NOTES_15_PLAN.md]], [[../sessions/archive/raw/V15_BLACKWOOD_SPEC|V15_BLACKWOOD_SPEC.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_15|RESEARCH_NOTES_15.md]], [[archive/raw/RESEARCH_NOTES_15_PLAN|RESEARCH_NOTES_15_PLAN.md]], [[archive/raw/V15_BLACKWOOD_SPEC|V15_BLACKWOOD_SPEC.md]]
 
 ## What was attempted
 

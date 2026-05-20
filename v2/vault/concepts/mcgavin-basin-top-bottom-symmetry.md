@@ -3,6 +3,7 @@ name: mcgavin-basin-top-bottom-symmetry
 description: Test whether McGavin's 469 basin admits BOTTOM-N row reconstruction with same sharp threshold as top-N. Hypothesis pre-registered 2026-05-16 00:24, before vol-82 results.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin basin top/bottom symmetry test (vol-82, pre-registered)

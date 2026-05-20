@@ -3,6 +3,7 @@ name: mip-tightness-depends-on-defect-density
 description: cluster_repair LP relaxation is informative ONLY when centered on defect cells. Random 80-cell interior block (vol-98) gives 1308% gap; defect-centric 64-cell (vol-86) gives 6% gap. Implications for MIP design.
 metadata:
   type: project
+status: built
 ---
 
 # MIP LP-relaxation tightness depends on defect density (vol-98)

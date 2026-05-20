@@ -1,7 +1,7 @@
 # Session — vol-04
 
 **Theme**: Frame-first decomposition; first break of the 449 plateau (+1 → 450).
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_4|RESEARCH_NOTES_4.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_4|RESEARCH_NOTES_4.md]]
 
 ## What was attempted
 

@@ -3,6 +3,7 @@ name: basin-mix-mip-refuted
 description: "Vol-112 T1 — MIP-PROVEN refutation. Given 4 distinct 459 basins, formulated an MIP picking one of the 4 basin assignments per cell, subject to piece-uniqueness, maximising matched edges. HiGHS-CBC solved to OPTIMAL = 459 in 16s. No mix of these 4 basins exceeds 459. Rigorous mathematical confirmation of vol-110/111 heuristic findings."
 metadata:
   type: project
+status: refuted
 ---
 
 # Basin-mix MIP refuted (vol-112 T1)
@@ -43,6 +44,13 @@ The mix ITSELF is a 459 board — distinct from any single basin but
 sharing their score. This is a **new way to construct 459 boards**
 but not a way to exceed 459.
 
+## Refutation
+
+- **Refuted**: vol-112 T1 (2026-05-16 ~14:35).
+- **Evidence**: HiGHS-CBC MIP-OPTIMAL at 459 in 17s on the 4-basin dataset.
+- **What's refuted**: the hypothesis that some cell-wise mix of the 4 observed 459 basins could exceed 459. MIP-PROVEN: it cannot.
+- **What's NOT refuted**: that a basin-mix MIP on a *larger* corpus could exceed 459. The 459-ceiling on this 4-basin set is tight; it's not a general statement.
+
 ## Significance
 
 - **Strengthens vol-110 T2.b's heuristic finding** (σ-cycle subset
@@ -51,7 +59,7 @@ but not a way to exceed 459.
 - **Generalises vol-99 / vol-65 indecomposability**: not only do
   σ-cycle subsets fail to break 459, but ANY cell-wise mix of
   observed basin placements also fails.
-- **Refutes Path B** ([[../MATH_NOTES_2026-05-16_459_LEVEL_SET]])
+- **Refutes Path B** ([[MATH_NOTES_2026-05-16_459_LEVEL_SET]])
   for this 4-basin dataset.
 
 ## What this proves vs doesn't
@@ -89,5 +97,5 @@ apple-m1 for 4 basins. Scales linearly in N (number of basins).
 
 - [[multiple-459-basins-rigid]] — basin corpus.
 - [[459-skeleton-and-variability]] — what cells vary across basins.
-- [[../MATH_NOTES_2026-05-16_459_LEVEL_SET]] — Path B framing.
-- [[../sessions/vol-112]].
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — Path B framing.
+- [[vol-112]].

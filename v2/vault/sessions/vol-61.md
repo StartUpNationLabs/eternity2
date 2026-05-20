@@ -68,7 +68,7 @@ The empirical 459-break rate at 8 seeds × 30min was 0/8.
 
 ## Concepts touched
 
-- [[../concepts/mip-local-optimality-459]] (amended): vol-61's
+- [[mip-local-optimality-459]] (amended): vol-61's
   seed17 and seed200 458 records ALSO joint-MIP-locally-optimal at
   halo-1. The conjecture now holds across 4 boards / 2 score bands.
 

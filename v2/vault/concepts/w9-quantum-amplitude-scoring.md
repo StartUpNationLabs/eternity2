@@ -3,6 +3,7 @@ name: w9-quantum-amplitude-scoring
 description: "W9 INVENTION: encode color matching via complex amplitudes. Each interior edge contributes e^(i*θ_c) for color c. Board score = |sum of amplitudes|². Mismatched edges contribute partial interference; matched edges fully constructive. Enables continuous optimization + new objective function."
 metadata:
   type: project
+status: built
 ---
 
 # W9 — Quantum-amplitude scoring (NEW INVENTION, vol-123 close)
@@ -109,5 +110,5 @@ ones, enabling new ALNS heuristics.
 
 - [[rare-color-rule]] (vol-13 phase-of-color analog)
 - [[w1-peps-design-derivation]] (PEPS extension natural)
-- [[../plans/INVENTIONS_BACKLOG]] (will be added as W9)
-- [[../plans/SOLVING-E2-VISION]] (alternative path)
+- [[INVENTIONS_BACKLOG]] (will be added as W9)
+- [[SOLVING-E2-VISION]] (alternative path)

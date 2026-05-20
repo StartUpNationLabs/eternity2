@@ -78,8 +78,8 @@ permanently. The pivot is sequencing:
   with calibrated expectations.
 
 ## Linked
-- [[../plans/CURRENT-VOL|CURRENT-VOL]]
-- [[../concepts/reinforce-plackett-luce-value-order]] — math + probe
-- [[../concepts/q-learning-value-order]] — earlier design
-- [[../concepts/prune-restart]] — existing infra
+- [[CURRENT-VOL|CURRENT-VOL]]
+- [[reinforce-plackett-luce-value-order]] — math + probe
+- [[q-learning-value-order]] — earlier design
+- [[prune-restart]] — existing infra
 - [[vol-48]], [[vol-49]] — ES negative-result predecessors

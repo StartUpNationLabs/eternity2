@@ -1,3 +1,10 @@
+---
+name: harmonics-matching
+description: Match-first stage fails: perfect matching exists with right degree
+status: refuted
+metadata:
+  type: concept
+---
 # HARMONICS — Edge-Demand Matching + Grid Embedding
 
 **Status**: `refuted` 2026-05-19 (Vol-152, same day).
@@ -13,7 +20,7 @@ graph is so restrictive that ONLY the actual puzzle solution's
 (layout) — the two stages are inseparable. HARMONICS as designed (a
 priori match-then-embed) is infeasible.
 
-See [[../plans/CURRENT-VOL]] for the design narrative and binding items.
+See [[CURRENT-VOL]] for the design narrative and binding items.
 
 ## Why this is genuinely different
 
@@ -70,7 +77,7 @@ Both can be addressed by enumerating Stage 1 matchings.
 
 ## Linked
 
-- [[../sessions/vol-152]]
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[vol-152]]
+- [[INVENTION_NAMES_2026-05-19]]
 - [[weaving-beam]] (V151 parent; ceiling 455)
 - [[k11-cross-domain-brainstorm]] (related: spectral piece-graph)

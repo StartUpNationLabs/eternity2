@@ -3,6 +3,7 @@ name: hint-pin-conflict-propagation-fix
 description: "Vol-118 T5 — fixes a bug in vol-117 T1's solve_blackwood_sized_pinned where pinned cells' forced mismatches were propagated into conf[depth], causing depth-35 wedge under any non-trivial schedule with conflicts_allowed[0..200]=0. Fix: carry conf forward unchanged at pinned cells (forced mismatches are structural, not chargeable to the break-index budget). Unlocks the full schedule+pin path. Empirical: v17a max_depth jumps from 35 (wedge) to 192 (full board minus 64)."
 metadata:
   type: project
+status: built
 ---
 
 # Hint-pin conflict propagation fix (vol-118 T5)
@@ -91,4 +92,4 @@ the bottleneck is now ALNS recovery from the partial.
 - [[schedule-hint-interaction]] — the vol-117 T1 finding this fixes.
 - [[blackwood-schedule-calibration]] — schedule origins.
 - [[hint-compliance-clarification]] — strict-canonical convention.
-- [[../sessions/vol-118]].
+- [[vol-118]].

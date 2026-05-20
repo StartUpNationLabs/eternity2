@@ -2,7 +2,7 @@
 
 **Predecessor**: vol-50 closed with net negative result on records (best
 ALNS lift was +4 over vol-23 baseline; blackwood_raw 1h × 4 FAILED due
-to CPU oversubscription). See [[../sessions/vol-50]].
+to CPU oversubscription). See [[vol-50]].
 
 This page started life as a vol-51 draft written DURING vol-50 to
 ensure the autonomous loop had a next step. Branches A/B/C below

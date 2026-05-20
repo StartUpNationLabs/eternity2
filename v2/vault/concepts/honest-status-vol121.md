@@ -3,6 +3,7 @@ name: honest-status-vol121
 description: "Vol-121 honest status snapshot — 15 parallel record-attempt jobs (MIPs + MaxSAT + ALNS) running concurrently on canonical E2; the community 469 ceiling has stood for 5+ years; vol-44/83/95/100 already proved McGavin halo-4 per-component locally optimal under full piece freedom; the joint halo-2 MIP at 53 cells is the strongest new attack but the LP gap (BestBound=120.93, BestSol=113) hasn't been closed in 15 min of CBC B&B. Multi-week compute likely required; a single autonomous session is statistically unlikely to break the ceiling."
 metadata:
   type: project
+status: built
 ---
 
 # Honest status — vol-121 record attempts
@@ -53,4 +54,4 @@ basin (vol-121 corner-perm 2,3,1,0) added to the corpus.
 - [[corpus-restricted-region-mip-locked]]
 - [[vol121-458-corner-perm-2310]]
 - [[three-milestones-from-veteran]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

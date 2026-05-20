@@ -3,6 +3,7 @@ name: vol121-458-corner-perm-2310
 description: "Vol-121 T1b: THIRD distinct 458 basin found. Corner perm (2,3,1,0) — different from vol-32 458's (0,3,1,2) and vol-119 p18 458's (3,0,2,1). 0/5 hints (1-clue convention). Source: vanilla_path border-first NO --pin-hints × 8 threads × 30min → 222-cell partial, then ALNS basic 30min seed=42 → 458/480. Verified piece-unique, no border violations. Diff against vol-32 458 = 4/256 same; diff against vol-119 p18 458 = 0/256 same — three structurally disjoint 458 basins now in corpus."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-121 458 at corner perm (2,3,1,0) — NEW basin
@@ -74,4 +75,4 @@ perms, 18 remain unprobed at high-budget ALNS.
 - [[corpus-restricted-region-mip-locked]]
 - [[p18-s2-458-new-basin-family]]
 - [[vanilla-path-pin-hints-depth-wall]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

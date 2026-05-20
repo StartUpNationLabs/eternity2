@@ -1,3 +1,10 @@
+---
+name: no-cross-record-backbone
+description: For each of 256 cell positions, what's the agreement on (piece, rotation)?
+status: built
+metadata:
+  type: concept
+---
 # No cross-record piece-position backbone — vol-68 (2026-05-15)
 
 **Status**: `built` — vol-68.

@@ -1,7 +1,7 @@
 # Session — vol-12
 
 **Theme**: Bitset engine rewrite. NS-1 propagator. Edge-color BP. Hamilton frame enumeration.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_12|RESEARCH_NOTES_12.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_12|RESEARCH_NOTES_12.md]]
 
 ## What was attempted
 

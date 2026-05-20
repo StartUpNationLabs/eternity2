@@ -3,6 +3,7 @@ name: j1-column-dp-design
 description: "J1 Double-Row Column-DP with Beam Search — design + math. Solve E2 as a column-by-column sliding band, with state = (column index, top/bottom boundary colors). Per CLAUDE.md senior-researcher directive."
 metadata:
   type: project
+status: partial
 ---
 
 # J1 — Double-Row Column-DP with Beam Search
@@ -154,6 +155,6 @@ Worth building to discover.
 
 ## Linked
 
-- [[../plans/INVENTIONS_BACKLOG]] J1 entry
+- [[INVENTIONS_BACKLOG]] J1 entry
 - vol-4 iterative widening (related but different)
 - vol-15 Blackwood (related schedule-based)

@@ -3,6 +3,7 @@ name: j1-forward-look-heuristic
 description: "J1 forward-look heuristic: instead of greedy current-band-score, weight each chain state by a 'remaining color supply' compatibility score. Could prevent the band 12-14 decay."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — Forward-Look Heuristic

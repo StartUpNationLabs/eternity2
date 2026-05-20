@@ -145,11 +145,11 @@ After vol-27:
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — vol-26 gate result, baseline.
-- [[../concepts/synthetic-puzzle-generator]] — data source, unchanged.
-- [[../concepts/edge-bp-marginals]] — historical analog (BP-as-value-order).
+- [[learned-value-order]] — vol-26 gate result, baseline.
+- [[synthetic-puzzle-generator]] — data source, unchanged.
+- [[edge-bp-marginals]] — historical analog (BP-as-value-order).
 
 ## Linked sessions
 
-- [[../sessions/vol-26]] — direct predecessor.
-- [[../sessions/vol-25]] — the parallel engine-perf push.
+- [[vol-26]] — direct predecessor.
+- [[vol-25]] — the parallel engine-perf push.

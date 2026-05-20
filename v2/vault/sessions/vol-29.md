@@ -74,7 +74,7 @@ T1 — train v3 model on canonical-E2 expert trajectories from
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] — Vol-29 measurement section
+- [[learned-value-order]] — Vol-29 measurement section
   added. Direction status: imitation closed (cannot beat teacher);
   LearnedOnTies + RL self-play remain open paths.
 

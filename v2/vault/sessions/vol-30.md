@@ -100,7 +100,7 @@ depth, exactly as vol-29's imitation ceiling predicts.
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] — vol-30 measurement section
+- [[learned-value-order]] — vol-30 measurement section
   added. First Δ > 0 from ML at canonical.
 
 ## Linked memory

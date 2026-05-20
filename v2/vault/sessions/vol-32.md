@@ -15,7 +15,7 @@ move on".
 
 ## What was attempted
 
-Per [[../plans/VOL-32]]: hyperparameter / model-size / score-axis
+Per [[VOL-32]]: hyperparameter / model-size / score-axis
 investigation of vol-30/31's claimed ML lift.
 
 1. **T1** — 49-config EPS × MAX_K sweep on LearnedOnTies (15 min wall-clock).
@@ -197,9 +197,9 @@ engine consumption.
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] — major vol-32 amendment at
+- [[learned-value-order]] — major vol-32 amendment at
   bottom of page; status flipped to `built` (6×6) / `partial` (canonical).
-- [[../concepts/unsat-clause-propagator]] — NEW concept page (status:
+- [[unsat-clause-propagator]] — NEW concept page (status:
   partial, Python prototype only).
 
 ## Open at close

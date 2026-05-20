@@ -72,5 +72,5 @@ No record broken today, but two end-to-end candidate METHODS validated:
 
 - [[vol-123]] (full session journal)
 - [[vol-123-close]] (definitive close)
-- [[../plans/SOLVING-E2-VISION]]
-- [[../concepts/method-vs-record-divergence]]
+- [[SOLVING-E2-VISION]]
+- [[method-vs-record-divergence]]

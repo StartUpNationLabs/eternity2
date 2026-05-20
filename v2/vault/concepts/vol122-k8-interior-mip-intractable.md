@@ -3,6 +3,7 @@ name: vol122-k8-interior-mip-intractable
 description: "Vol-122 K8 TIMF (Targeted Interior MIP) result: 30min HiGHS timeout. No feasible integer solution found. MIP intractable at canonical scale."
 metadata:
   type: project
+status: refuted
 ---
 
 # Vol-122 K8 — Interior MIP intractable at canonical scale

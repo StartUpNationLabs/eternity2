@@ -3,6 +3,7 @@ name: joint-cell-piece-set-mip
 description: T1 (vol-105) - MIP on a non-contiguous σ-cycle cell set, asking whether MIP can find a > 0 permutation when outside-of-cycle pieces are pinned. Tests the rigidity theorem on a 80-cell board-spanning region.
 metadata:
   type: project
+status: built
 ---
 
 # Joint cell-set + piece-set MIP (vol-105 T1)
@@ -83,4 +84,4 @@ from a target basin, MIP-optimize that cell-set, iterate. Could lift
 - [[sigma-cycle-indecomposable-vol32-458]]
 - [[mcgavin-mip-local-optimal-halo1]]
 - [[mcgavin-halo4-comp0-proven]]
-- [[../sessions/vol-105]]
+- [[vol-105]]

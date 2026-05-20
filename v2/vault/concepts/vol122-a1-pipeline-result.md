@@ -3,6 +3,7 @@ name: vol122-a1-pipeline-result
 description: "Vol-122 A1 border-DP → CSP-fill → ALNS basic 30min result. Best 439/480 across 3 clean-slate borders (perm0/2/3). Far below 459 standing and 469 community ceiling."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 A1 — full pipeline result
@@ -64,7 +65,7 @@ find an outlier.
 
 ## Linked
 
-- [[../sessions/vol-122]]
+- [[vol-122]]
 - [[inv3-border-dp-seed]] — A1 source
 - [[vol122-pcls-poc-result]] — J4 LP supply-UB observation
-- [[../plans/INVENTIONS_BACKLOG]] — A1 entry update
+- [[INVENTIONS_BACKLOG]] — A1 entry update

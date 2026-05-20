@@ -1,3 +1,10 @@
+---
+name: intaglio-pruned-dfs
+description: Post-placement 2×2 forbidden-patch check during DFS. At every placement,
+status: refuted
+metadata:
+  type: concept
+---
 # INTAGLIO-pruned DFS
 
 **Status**: `refuted` (Vol-147, 2026-05-19). Empirically verified on 24 boards × 5400 patches: 0 cases of `forbidden + full-edge-match`. Post-placement DFS pruner is vacuous on edge-strict DFS.
@@ -108,5 +115,5 @@ planned but only against ALNS-init boards (not edge-strict DFS partials).
 ## Linked
 
 - [[forbidden-patch-theorem-2026-05-19]]
-- [[../sessions/vol-147]]
-- [[../plans/MULTI_VOL_PLAN_2026-05-19]]
+- [[vol-147]]
+- [[MULTI_VOL_PLAN_2026-05-19]]

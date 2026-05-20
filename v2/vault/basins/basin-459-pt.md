@@ -132,6 +132,6 @@ the actual contribution.
 
 ## Linked
 
-- [[../sessions/SESSION_2026-05-15_summary]] — this autonomous session
+- [[SESSION_2026-05-15_summary]] — this autonomous session
 - [[basin-blackwood-470]] — 1-clue Blackwood record (not canonical 5-clue)
 - [[basin-mcgavin-469]] — previous canonical 5-clue community ceiling

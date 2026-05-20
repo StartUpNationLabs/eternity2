@@ -1,7 +1,7 @@
 # Session — vol-19
 
 **Theme**: Structural measurement — homology and MI. Fracture threshold characterization.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_19|RESEARCH_NOTES_19.md]] (short, append-only)
+**Raw**: [[archive/raw/RESEARCH_NOTES_19|RESEARCH_NOTES_19.md]] (short, append-only)
 
 ## What was attempted
 

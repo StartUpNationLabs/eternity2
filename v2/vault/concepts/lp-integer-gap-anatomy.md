@@ -1,3 +1,10 @@
+---
+name: lp-integer-gap-anatomy
+description: Anatomy of the LP-integer gap on vol-32 458 board
+status: built
+metadata:
+  type: concept
+---
 # Anatomy of the LP-integer gap on vol-32 458 board
 
 **Status**: math analysis, no new code shipped.
@@ -149,4 +156,4 @@ vol-54 made it tight.
 - [[exact-joint-bound]] — kissat path (wont-do)
 - [[per-color-lp-ub-458]] — the existing measurement that this analyses
 - [[y-linearisation-cell-fractional-gap]] — **vol-54 successor: precise mechanism**
-- [[../sessions/vol-54]] — vol-54 session producing this table
+- [[vol-54]] — vol-54 session producing this table

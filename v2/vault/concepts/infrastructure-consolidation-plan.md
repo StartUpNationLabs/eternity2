@@ -3,6 +3,7 @@ name: infrastructure-consolidation-plan
 description: "Vol-118 user-requested cleanup. The project has accumulated 7 scoring functions, 3 board-JSON formats, 14+ load_board implementations across bins, and 5+ render/export helpers. Each is a potential source of subtle bugs (vol-118 bf-bucket bug, vol-35 piece-uniqueness, vol-14 hint-pin bug, etc.). Plan: consolidate to ONE canonical scorer, ONE board I/O module, ONE verifier, ONE export format — with a documented JSON+CSV schema."
 metadata:
   type: project
+status: unbuilt
 ---
 
 # Infrastructure consolidation plan (vol-118 cleanup)
@@ -174,4 +175,4 @@ work to prevent accumulating more bugs.
 
 - [[bf-candidate-bucket-bug]] — example of bug enabled by missing verifier.
 - [[code-debt]] — earlier code-debt audit (vol-25).
-- [[../sessions/vol-118]].
+- [[vol-118]].

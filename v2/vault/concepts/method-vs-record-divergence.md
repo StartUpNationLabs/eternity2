@@ -3,6 +3,7 @@ name: method-vs-record-divergence
 description: "Vol-123 insight: record-breaking and method-finding diverge. McGavin's 469 uses Blackwood, a heuristic that won't generalize to 480. The path to SOLVING is to make marginals progressively more accurate. W1 PEPS + cloud compute is the leading candidate."
 metadata:
   type: project
+status: built
 ---
 
 # Method-vs-record divergence

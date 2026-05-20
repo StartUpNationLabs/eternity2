@@ -3,6 +3,7 @@ name: inv3-border-dp-seed
 description: "Vol-122 INVENTION 3 — decompose the puzzle as (corner-perm × corner-rot × border-ring-DP) → 60-matched border partial → interior-only ALNS. Genuinely novel: prior vols anchor on existing 459/469 basins; this generates 60-matched starting partials FROM SCRATCH via per-side chain DP. Already demonstrated 24 corner-rot configs admit chain-UB=60 and 50+ distinct piece-unique 60-borders exist with all-distinct interior-color profiles."
 metadata:
   type: project
+status: built
 ---
 
 # INVENTION 3 — Border-DP basin generation (vol-122)
@@ -56,5 +57,5 @@ interior LP is the future step.
 
 ## Linked
 
-- [[../sessions/vol-122]]
+- [[vol-122]]
 - [[corpus-restricted-region-mip-locked]]

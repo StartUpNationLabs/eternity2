@@ -18,7 +18,7 @@ puzzles produce a value-ordering that strictly outperforms
 `BorderFirstMRV + LeastConstraining` on held-out synthetic puzzles at
 6×6/5-color?
 
-## Gate spec (per [[../plans/VOL-26|VOL-26.md]])
+## Gate spec (per [[VOL-26|VOL-26.md]])
 
 ALL THREE conditions must hold:
 - **(a)** Learned solves ≥ 95% of MRV's solved set (no regression).
@@ -273,7 +273,7 @@ would have given.
 
 ## Vol-28 measurement — cross-domain transfer REFUTED (2026-05-13)
 
-Vol-28 picked variable-size architecture (T1A from the [[../plans/VOL-28|VOL-28 plan]])
+Vol-28 picked variable-size architecture (T1A from the [[VOL-28|VOL-28 plan]])
 in the hope that transfer to canonical 16×16 would be real. Three
 deliverables shipped:
 - `ml/model_v2.py` — `PositionRelativeModel`. Size-agnostic (nb_idx +
@@ -393,7 +393,7 @@ hypothesis "the imitation signal transfers cross-domain" is `refuted`.
 
 ## Vol-29 measurement — distribution-matched training reaches the imitation ceiling (2026-05-13)
 
-Vol-29 picked T1 from the [[../plans/VOL-29|VOL-29 plan]]: train a v3
+Vol-29 picked T1 from the [[VOL-29|VOL-29 plan]]: train a v3
 model on canonical-E2 expert trajectories from our own engine's
 `joe_depth150_bp` runs (20 seeds × 60 s), so train and inference
 distributions match by construction. The model architecture is

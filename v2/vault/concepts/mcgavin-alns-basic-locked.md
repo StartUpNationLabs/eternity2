@@ -3,6 +3,7 @@ name: mcgavin-alns-basic-locked
 description: "Vol-121 T6 — McGavin 469 is ALNS-basic-locally-optimal under 30-min × 4 seeds. All 4 ALNS runs (basic ops, seeds 1, 7, 42, 100, 1800s each) returned 469/480, no improvement. Consistent with vol-44/95/100 MIP rigidity proofs."
 metadata:
   type: project
+status: built
 ---
 
 # McGavin ALNS-basic-locked (vol-121 T6)
@@ -40,4 +41,4 @@ multiple operator types.
 - [[mcgavin-top3-mip-locked]]
 - [[mcgavin-joint-halo2-mip-result]]
 - [[honest-status-vol121]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

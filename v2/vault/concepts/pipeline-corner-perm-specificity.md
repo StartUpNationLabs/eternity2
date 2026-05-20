@@ -3,6 +3,7 @@ name: pipeline-corner-perm-specificity
 description: "Vol-118 T2 — our pipeline (bound-ascent + Hungarian + ALNS) is corner-perm-specific. On McGavin's perm (3,2,0,1), pipeline reaches only 396/480 strict-canonical, vs 459/480 on our native (1,0,2,3) perm. Confirms vol-68 finding that McGavin's 469 is inaccessible to our algorithm — basins are corner-perm-locked under our search."
 metadata:
   type: project
+status: built
 ---
 
 # Pipeline corner-perm specificity (vol-118 T2)
@@ -52,4 +53,4 @@ Worth doing as a corpus-growth experiment.
 
 - [[basin-corner-permutations]] — vol-99 corner perm enumeration.
 - [[multiple-459-basins-rigid]] — basin corpus.
-- [[../sessions/vol-118]].
+- [[vol-118]].

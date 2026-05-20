@@ -3,6 +3,7 @@ name: v125-bbb-progression
 description: "Vol-125 T10 BB&B progression v1→v2→v3→v4. Final state: v3 fastest (0.3s/node), reaches depth 39-40 of 59 search-cells. 1M-node overnight run in flight to test whether 480 lies past depth 40."
 metadata:
   type: project
+status: built
 ---
 
 # Super-block BB&B progression

@@ -1,3 +1,10 @@
+---
+name: standing-458-record-status
+description: record across vols 54-58 (one autonomous session, 2026-05-15).
+status: built
+metadata:
+  type: concept
+---
 # Standing 458 record — comprehensive status after vols 54-58
 
 **Status**: stable, locally optimal across many measurements — vol-58.
@@ -123,8 +130,8 @@ This vol-54-58 session demonstrated:
 
 ## Linked
 
-- [[../sessions/vol-54]], [[../sessions/vol-55]], [[../sessions/vol-56]],
-  [[../sessions/vol-57]], [[../sessions/vol-58]]
+- [[vol-54]], [[vol-55]], [[vol-56]],
+  [[vol-57]], [[vol-58]]
 - [[cdcl-no-good-e2]], [[cdcl-engine-integration]]
 - [[y-linearisation-cell-fractional-gap]]
 - [[lp-integer-gap-anatomy]]

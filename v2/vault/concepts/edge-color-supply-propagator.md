@@ -3,6 +3,7 @@ name: edge-color-supply-propagator
 description: "Vol-106 T8 SKETCH then REFUTED. New propagator idea (maintain remaining edge-color supply, check frontier feasibility). Implemented + measured 2026-05-16: ZERO PRUNING, ~40% nps slowdown. The check is REDUNDANT with the existing (top, left)-keyed candidate bucket structure. Documented as a dead-end."
 metadata:
   type: project
+status: refuted
 ---
 
 # Edge-color supply propagator (vol-106 T8 — REFUTED)
@@ -169,6 +170,6 @@ depth would be cut entirely. Hypothesis: 1.5-3× faster CP partials
 ## Linked
 
 - [[blackwood-fast]] — where this would integrate.
-- [[../sessions/vol-106|vol-106]] — sketch origin.
-- [[../sessions/vol-11|vol-11 NS-1 measurement]] — earlier multi-set
+- [[vol-106|vol-106]] — sketch origin.
+- [[vol-11|vol-11 NS-1 measurement]] — earlier multi-set
   equality work this generalises.

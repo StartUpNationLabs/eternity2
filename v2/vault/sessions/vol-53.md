@@ -94,7 +94,7 @@ certificates, not records.
 
 ## Linked
 
-- [[../concepts/per-piece-column-gen-6x6-worked]] — vol-53 refutation analysis
-- [[../concepts/lifted-lp-column-gen-per-piece]] — vol-52 design (status updated to partially-refuted)
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 motivation
+- [[per-piece-column-gen-6x6-worked]] — vol-53 refutation analysis
+- [[lifted-lp-column-gen-per-piece]] — vol-52 design (status updated to partially-refuted)
+- [[lp-integer-gap-anatomy]] — vol-50 motivation
 - [[vol-52]], [[vol-51]], [[vol-50]] — predecessor sessions

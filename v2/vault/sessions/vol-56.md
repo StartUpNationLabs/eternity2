@@ -396,6 +396,6 @@ Closing this vol; vol-57 picks up with the row-11 multi-row variants
 
 ## Linked
 
-- [[../concepts/cdcl-no-good-e2.md]]
-- [[../sessions/vol-55]] — predecessor
+- [[cdcl-no-good-e2]]
+- [[vol-55]] — predecessor
 - memory: `feedback_autonomous_dont_wait.md`

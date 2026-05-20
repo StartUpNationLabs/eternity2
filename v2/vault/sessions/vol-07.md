@@ -1,7 +1,7 @@
 # Session — vol-07
 
 **Theme**: Structural characterization without score breakthrough. MaxSAT-locally-optimal 45-cell defect zone.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_7|RESEARCH_NOTES_7.md]], [[../sessions/archive/raw/NIGHT7_SUMMARY|NIGHT7_SUMMARY.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_7|RESEARCH_NOTES_7.md]], [[archive/raw/NIGHT7_SUMMARY|NIGHT7_SUMMARY.md]]
 
 ## What was attempted
 

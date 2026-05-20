@@ -1,3 +1,10 @@
+---
+name: engine-perf-hot-paths
+description: The per-node hot path of the CSP engine. Joe-class profiles (gacolor + AC-3 + multisetequality + depth-gate, the cano...
+status: partial
+metadata:
+  type: concept
+---
 # Engine perf — hot paths and remaining wins
 
 **Status**: `partial` — 7 fixes shipped vol-25 (2026-05-13), 4 more identified.

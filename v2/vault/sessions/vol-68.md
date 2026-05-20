@@ -57,10 +57,10 @@ rows (224 pieces) → ALNS reconstructs 469 in 60s. Pinning top 13
 
 ## Concepts touched
 
-- [[../concepts/top-row-determines-basin]] — refuted strong hypothesis
-- [[../concepts/mcgavin-n-row-scaling]] — NEW concept, sharp threshold
-- [[../concepts/basin-component-landscape]] (parent)
-- [[../concepts/e2-maximally-adversarial-thesis]]
+- [[top-row-determines-basin]] — refuted strong hypothesis
+- [[mcgavin-n-row-scaling]] — NEW concept, sharp threshold
+- [[basin-component-landscape]] (parent)
+- [[e2-maximally-adversarial-thesis]]
 
 ## Open at close
 

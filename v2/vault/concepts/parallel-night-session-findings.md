@@ -1,3 +1,10 @@
+---
+name: parallel-night-session-findings
+description: (10 cores; our main session is on 8 cores) while the main agent
+status: built
+metadata:
+  type: concept
+---
 # Parallel-night-session findings (2026-05-14/15)
 
 **Status**: future-work reference page. Not currently active.
@@ -15,7 +22,7 @@ worked vol-44..vol-48. Findings archived for later integration.
 - All numbers are observational from that report; cannot be reproduced
   locally without the puzzles and the other machine's logs.
 
-**Raw**: [[../sessions/archive/raw/NIGHT_2026-05-14-15_color_sweep|raw report]].
+**Raw**: [[archive/raw/NIGHT_2026-05-14-15_color_sweep|raw report]].
 
 ## Headline findings
 
@@ -97,7 +104,7 @@ genuinely novel structural information we hadn't measured.
 
 ## Linked
 
-- [[../sessions/archive/raw/NIGHT_2026-05-14-15_color_sweep|raw night report]]
+- [[archive/raw/NIGHT_2026-05-14-15_color_sweep|raw night report]]
 - [[lp-ub-478-basins]] — main agent's basin-locking evidence
 - [[458-class-A-mismatch-structure]] — main agent's 458 anatomy
 - `project_e2_vol14_mismatch_geometry_universal` — memory entry on

@@ -3,6 +3,7 @@ name: local459-halo2-percomp-proven
 description: Local 459 PROVEN per-component MIP-optimal at halo r=2 across all 4 components. Matches McGavin pattern (vol-92). Confirms basin asymmetry doesn't affect rigidity.
 metadata:
   type: project
+status: built
 ---
 
 # Local 459 — per-component halo-2 PROVEN (vol-93)

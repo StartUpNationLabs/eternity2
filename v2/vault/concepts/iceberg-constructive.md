@@ -1,3 +1,10 @@
+---
+name: iceberg-constructive
+description: Like GRAIN but greedy-attach to MINIMIZE forbidden 2×3 patches rather
+status: refuted
+metadata:
+  type: concept
+---
 # ICEBERG — Forbidden-Minimizing Constructive Heuristic
 
 **Status**: `refuted` (Vol-145, 2026-05-19)

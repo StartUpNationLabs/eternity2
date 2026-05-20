@@ -102,7 +102,7 @@ Vol-61 (faithful SOTA replay) launched at vol-60 close:
 
 ## Linked
 
-- [[../basins/basin-459-pt]] — cross-machine SOTA
-- [[../basins/basin-459-p06]] — local tie
-- [[../concepts/corner-permutation-study]] — full 24-perm study
+- [[basin-459-pt]] — cross-machine SOTA
+- [[basin-459-p06]] — local tie
+- [[corner-permutation-study]] — full 24-perm study
 - memory: `project_e2_459_sota_cross_machine`, `feedback_no_false_metrics`

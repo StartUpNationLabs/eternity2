@@ -50,5 +50,5 @@ Cost: 8 hours wall.
 ## Linked
 
 - [[vol-36]] — predecessor (vanilla_path + canonical-compliance finding)
-- [[../concepts/prune-restart]] — used to make-canonical
-- [[../concepts/score-optimizing-cp]] — MaxScore objective in prune_restart
+- [[prune-restart]] — used to make-canonical
+- [[score-optimizing-cp]] — MaxScore objective in prune_restart

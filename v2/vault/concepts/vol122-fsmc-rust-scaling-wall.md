@@ -3,6 +3,7 @@ name: vol122-fsmc-rust-scaling-wall
 description: "Vol-122 J6 v2 Rust port: FSMC works for low-color puzzles (5×5/c3 → 10.8× node reduction; 7×7/c4 → 9× and FLIPS solvable; 8×8/c5 → 2.3×). But hit rate plummets to ≤1.4% on 10×10/c10 and 12×12/c12. Scaling wall identified."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 J6 v2 — FSMC Rust port + scaling test
@@ -114,5 +115,5 @@ coarser bins (e.g., supply // 4). Trades correctness for collision rate.
 ## Linked
 
 - [[vol122-fsmc-convergence-measured]] (Python PoC)
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] J6 entry
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] J6 entry

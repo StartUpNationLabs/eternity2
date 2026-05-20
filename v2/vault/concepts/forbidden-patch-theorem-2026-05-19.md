@@ -1,3 +1,10 @@
+---
+name: forbidden-patch-theorem-2026-05-19
+description: For canonical Selby-Riordan Eternity II, for each k-cell patch shape,
+status: built
+metadata:
+  type: concept
+---
 # Forbidden-Patch Anti-Correlation Theorem
 
 **Status**: `built` (Vols 138-142, 2026-05-19)

@@ -54,7 +54,7 @@ Day 3-5 (vol-58):
 
 ## Linked
 
-- [[../concepts/cdcl-no-good-e2]] — math design
-- [[../concepts/cdcl-engine-integration]] — engine refactor sketch
-- [[../sessions/vol-56]] — empirical justification
-- [[../sessions/vol-57]] — this vol's journal
+- [[cdcl-no-good-e2]] — math design
+- [[cdcl-engine-integration]] — engine refactor sketch
+- [[vol-56]] — empirical justification
+- [[vol-57]] — this vol's journal

@@ -3,6 +3,7 @@ name: vol122-j3-spectral-discovery
 description: "Vol-122 J3 — spectral piece-graph Laplacian Fiedler vector EXACTLY recovers the border-vs-interior partition (60/196). Higher eigenvectors are degenerate; no deeper interior clustering visible."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 J3 — spectral piece-graph discovery
@@ -62,7 +63,7 @@ matches the geometric one.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] J3 entry
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] J3 entry
 - [[vol122-pcls-poc-result]] (also color-related)
-- [[../concepts/rare-color-geography]] (vol-13 prior finding)
+- [[rare-color-geography]] (vol-13 prior finding)

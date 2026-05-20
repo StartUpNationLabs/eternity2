@@ -3,6 +3,7 @@ name: corner-perm-not-sufficient
 description: REFUTATION — forcing McGavin's corner perm (3,2,0,1) on our pipeline gives only 427/480, not 460+. The perm choice ALONE is not sufficient to reach McGavin's 469. Confirms his algorithm's PATH matters, not just perm class.
 metadata:
   type: project
+status: built
 ---
 
 # Corner perm (3,2,0,1) is NOT sufficient to reach 469 (vol-103)

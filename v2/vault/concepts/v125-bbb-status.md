@@ -3,6 +3,7 @@ name: v125-bbb-status
 description: "Vol-125 T10 super-block BB&B: Day-1 init + Day-2 DFS skeleton built. AC-3 + hint propagation gets 17.5% reduction (127.6M → 105.3M blocks). DFS works but 13s/node due to snapshot/restore cloning 420MB per pin. Needs trail-based undo + bitset domains + incremental AC-3 for real performance."
 metadata:
   type: project
+status: built
 ---
 
 # Super-block BB&B — vol-125 status
@@ -47,4 +48,4 @@ So the propagation IS strong; the bottleneck is per-node overhead.
 
 - [[super-block-bbb]] (design)
 - [[v125-cube-conquer-finding]] (related SAT exploration)
-- [[../sessions/vol-125]]
+- [[vol-125]]

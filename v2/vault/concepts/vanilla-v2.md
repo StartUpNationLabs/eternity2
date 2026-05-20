@@ -3,6 +3,7 @@ name: vanilla-v2
 description: Vol-106 T3 — vanilla DFS rewritten using blackwood-fast's optimization patterns. 92-93M pp/s single-thread on canonical 16x16 (vs vanilla_fastest's 72-73M, +27%). Per-position bucketing + sentinel-terminated lists + u64 bitset + unsafe inner loop.
 metadata:
   type: project
+status: built
 ---
 
 # vanilla-v2 (vol-106 T3)
@@ -110,4 +111,4 @@ back into vanilla_fastest).
 ## Linked
 
 - [[blackwood-fast]] — the sibling crate where the patterns came from.
-- [[../sessions/vol-106|vol-106 session]].
+- [[vol-106|vol-106 session]].

@@ -3,6 +3,7 @@ name: blackwood-triple-sweep
 description: 7-triple Blackwood heuristic-color sweep on canonical E2 — REFUTES Blackwood's stated "lots of overlap" rationale for 470 attempt; top-overlap triples score WORST in our color encoding.
 metadata:
   type: project
+status: built
 ---
 
 # Blackwood heuristic-triple sweep (vol-80, 2026-05-15)

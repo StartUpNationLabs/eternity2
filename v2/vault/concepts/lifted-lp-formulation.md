@@ -1,3 +1,10 @@
+---
+name: lifted-lp-formulation
+description: ~20-point integer gap on every sampled basin. To break records we
+status: unbuilt
+metadata:
+  type: concept
+---
 # Polyhedral lifting of the E2 LP relaxation (vol-47)
 
 **Status**: design phase.

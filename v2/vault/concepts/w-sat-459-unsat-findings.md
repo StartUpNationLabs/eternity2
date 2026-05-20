@@ -3,6 +3,7 @@ name: w-sat-459-unsat-findings
 description: "W-SAT 2026-05-17: PROVEN via kissat that the 459 board's local neighborhood (mismatch cells + halo-1, halo-2, halo-3, halo-5) is UNSAT for the 480/480 decision problem. The 459 basin is exactly trapped — to reach 480 requires moving beyond the halo-5 region. Currently running: full interior SAT to test if 459's border ring is compatible with any 480 solution."
 metadata:
   type: project
+status: built
 ---
 
 # W-SAT 459 UNSAT findings (vol-123, 2026-05-17)
@@ -118,4 +119,4 @@ The W-SAT findings sharpen our understanding:
 - [[basin-rigidity-refutation]]
 - [[459-level-set-two-cluster-confirmed]]
 - [[bseed9-460-halo1-mip-locked]] (prior MIP-locked finding)
-- [[../plans/SOLVING-E2-VISION]]
+- [[SOLVING-E2-VISION]]

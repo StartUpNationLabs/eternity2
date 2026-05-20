@@ -3,6 +3,7 @@ name: regin-alldiff-brouillon
 description: "Vol-125 brouillon: math + pseudocode for Régin 1994 alldiff filter applied to Eternity II super-block BB&B. Written carefully to debug v6 bug (max-depth dropped from 39 -> 30 when Régin filter was active, suggesting over-removal)."
 metadata:
   type: project
+status: partial
 ---
 
 # Régin's alldiff filter — math from first principles

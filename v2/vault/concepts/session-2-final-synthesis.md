@@ -1,3 +1,10 @@
+---
+name: session-2-final-synthesis
+description: Session 2 final synthesis — 2026-05-15 (~3h45min autonomous)
+status: built
+metadata:
+  type: concept
+---
 # Session 2 final synthesis — 2026-05-15 (~3h45min autonomous)
 
 **Period**: 19:25 → 23:25 CEST (user "1 month away" signal to now).

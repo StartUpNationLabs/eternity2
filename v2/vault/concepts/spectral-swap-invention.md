@@ -3,6 +3,7 @@ name: spectral-swap-invention
 description: "Vol-125 INVENTION (2026-05-18): SPECTRAL-SWAP ALNS — use the top eigenvectors of the piece-similarity matrix to bias swap operations. Pieces clustered by the same eigenvector are interchangeable near optima; concentrating destroy moves on between-cluster swaps escapes basins that within-cluster swaps cannot."
 metadata:
   type: project
+status: unbuilt
 ---
 
 # SPECTRAL-SWAP ALNS
@@ -104,7 +105,7 @@ ALNS misses.
 - [[piece-set-symmetries]] (vol-65 finding: Selby-Riordan has zero
   rotation-symmetric pieces, 5 multiset-twin pairs — non-trivial
   spectral structure expected)
-- [[sigma-cycle-indecomposability]] (vol-65 finding: σ between basins
+- [[sigma-cycle-universal-indecomposable]] (vol-65 finding: σ between basins
   has indecomposable cycles — suggests spectral clusters MAY correspond
   to σ-orbits)
 

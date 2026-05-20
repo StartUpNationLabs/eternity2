@@ -3,6 +3,7 @@ name: j1-loss-localization-math
 description: "J1 chain loss is ENTIRELY in vertical color matches between rows 8-14, not in horizontal matches. All 14 inner rows have PERFECT horizontals matched. Mathematically derived from total-edge accounting."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — Localization of chain loss

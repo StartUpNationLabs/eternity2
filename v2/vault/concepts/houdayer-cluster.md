@@ -1,3 +1,10 @@
+---
+name: houdayer-cluster
+description: Two replicas X, Y of a search state. Define overlap function qi = 1 if X and Y agree at cell i, else 0. Cluster = con...
+status: refuted
+metadata:
+  type: concept
+---
 # Houdayer cluster swap
 
 **Status**: `refuted` (vol-22)

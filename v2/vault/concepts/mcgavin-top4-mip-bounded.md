@@ -3,6 +3,7 @@ name: mcgavin-top4-mip-bounded
 description: vol-86 top-4-rows MIP on McGavin gave SOUND BOUND — dual=123, best feasible=116, gap=6%. Means McGavin's top-4 cannot exceed 123 under LP relaxation but no improvement found in 1200s. First non-trivial sound bound BELOW 480 on canonical E2.
 metadata:
   type: project
+status: partial
 ---
 
 # McGavin top-4-rows — SOUND BOUND 123 (vol-86)

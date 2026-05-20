@@ -3,6 +3,7 @@ name: k9-mismatch-topology-finding
 description: "K9 = Mismatch graph topology. NEW observation: 458 records all have identical 2-component mismatch topology (17 mis, max comp = 25); 459 record has 4 small components (max 10). Suggests basin signature."
 metadata:
   type: project
+status: built
 ---
 
 # K9 — Mismatch-graph topology (NEW finding)
@@ -80,4 +81,4 @@ operator could traverse the score-saturation barrier.
 ## Linked
 
 - [[k8-fft-signature-refuted]] (refined from)
-- [[../sessions/vol-122]] (today)
+- [[vol-122]] (today)

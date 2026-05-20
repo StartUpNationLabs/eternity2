@@ -3,6 +3,7 @@ name: mcgavin-top3-mip-proven
 description: McGavin's top-3 rows (48 cells, rows 0-2) PROVEN MIP-optimal. Gap 0% after 70s HiGHS. Extends vol-83's halo-1 proof to a meaningfully larger region — strongest local-optimality result yet on canonical E2.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin top-3-rows — MIP-OPTIMAL (vol-85)

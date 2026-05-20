@@ -1,3 +1,10 @@
+---
+name: intaglio-forbidden-patterns
+description: For each small subgrid configuration (k cells, specific piece IDs
+status: built
+metadata:
+  type: concept
+---
 # INTAGLIO — Carve Forbidden Patterns
 
 **Status**: `built` (Vol-138 + 139, 2026-05-19)

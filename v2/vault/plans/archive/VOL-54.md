@@ -105,7 +105,7 @@ gives a 2x2 outcome matrix that decides direction unambiguously.
 
 ## Linked
 
-- [[../sessions/vol-50]], [[../sessions/vol-53]] — the conflicting claims
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 table to fill
-- [[../concepts/per-piece-column-gen-6x6-worked]] — vol-53 refutation
-- [[../concepts/lifted-lp-column-gen-per-piece]] — what's at stake
+- [[vol-50]], [[vol-53]] — the conflicting claims
+- [[lp-integer-gap-anatomy]] — vol-50 table to fill
+- [[per-piece-column-gen-6x6-worked]] — vol-53 refutation
+- [[lifted-lp-column-gen-per-piece]] — what's at stake

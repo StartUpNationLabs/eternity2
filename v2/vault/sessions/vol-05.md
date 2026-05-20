@@ -1,7 +1,7 @@
 # Session — vol-05
 
 **Theme**: GA crossover (450 → 453); rare-color 100% invariant; 30-mismatch budget.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_5|RESEARCH_NOTES_5.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_5|RESEARCH_NOTES_5.md]]
 
 ## What was attempted
 

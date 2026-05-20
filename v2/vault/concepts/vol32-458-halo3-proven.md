@@ -3,6 +3,7 @@ name: vol32-458-halo3-proven
 description: Vol-32 458 halo-3 per-component MIP-optimal — comp 0 79-cell region PROVEN +0 in 1200s. Largest single-component MIP-optimal region proven on canonical E2 to date.
 metadata:
   type: project
+status: built
 ---
 
 # Vol-32 458 halo-3 per-component — PROVEN (vol-102)

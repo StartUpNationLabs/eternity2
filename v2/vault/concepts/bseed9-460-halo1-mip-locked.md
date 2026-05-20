@@ -3,6 +3,7 @@ name: bseed9-460-halo1-mip-locked
 description: "Vol-121 T4 — bseed9 (1-clue 460) PROVEN MIP-LOCALLY-OPTIMAL at halo-1 joint with full piece freedom. 42 free cells, 900s HiGHS solve, Δ=0. To break the 1-clue 460 ceiling on this basin needs region ≥ halo-2 OR different basin."
 metadata:
   type: project
+status: built
 ---
 
 # bseed9 460 — halo-1 joint MIP-locked (vol-121 T4)
@@ -37,4 +38,4 @@ halo-1 joint scale.
 
 - [[corpus-restricted-region-mip-locked]]
 - [[honest-status-vol121]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

@@ -79,6 +79,6 @@ Compute: 32 seeds × 30 min / 8 cores = 2 hours wall.
 ## Linked
 
 - BACKLOG `joe-iteration-budgeted-prune`
-- [[../concepts/prune-restart]]
-- [[../sessions/vol-58]] — predecessor
+- [[prune-restart]]
+- [[vol-58]] — predecessor
 - memory: `feedback_autonomous_dont_wait`

@@ -3,6 +3,7 @@ name: v125-third-459-basin
 description: "Vol-125 2026-05-18 09:57: bf_bw seed-offset=100 → ALNS basic 30min seed=42 reaches 459/480 from a DIFFERENT corner perm than vol-60 or vol-110. Diff: 0/256 piece-match vs vol-60 RECORD_TIE_459_p06, 5/256 vs vol-110 NEW_459. This is a THIRD distinct 459-score-level basin."
 metadata:
   type: project
+status: built
 ---
 
 # Third 459 basin discovered
@@ -73,4 +74,4 @@ Different corner pieces at each corner. **This is a third distinct 459 basin.**
 
 - [[new-459-from-bf-pipeline]] (vol-110 NEW_459)
 - [[basin-459-rigidity-halo-10]]
-- [[../sessions/vol-125]]
+- [[vol-125]]

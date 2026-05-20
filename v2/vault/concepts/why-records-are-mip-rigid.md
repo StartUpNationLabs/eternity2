@@ -3,6 +3,7 @@ name: why-records-are-mip-rigid
 description: Structural mechanism analysis for why ALL tested high-score canonical E2 records are halo-1 joint-MIP-locally-optimal. Mathematical conjecture: piece-uniqueness × color-balance creates a "rigidity trap" where any high-density-of-matches configuration cannot be locally improved.
 metadata:
   type: project
+status: built
 ---
 
 # Why are all tested records MIP-locally-rigid? (structural analysis)

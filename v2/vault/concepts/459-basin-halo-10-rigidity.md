@@ -3,6 +3,7 @@ name: 459-basin-halo-10-rigidity
 description: "Vol-124 2026-05-18: extended the vol-123 halo-N rigidity proofs. Confirmed via kissat that the 459 basin (RECORD_TIE_459_p06) is UNSAT for 480 even at halo-10 — 218 free cells, only 38 cells pinned (essentially the TOP 2 rows of the 459 record). The 480 (if it exists) must differ from this 459 in at least one of those 38 cells."
 metadata:
   type: project
+status: built
 ---
 
 # 459 basin — halo-10 rigidity (vol-124 extension)
@@ -86,4 +87,4 @@ these 38 cells.
 
 - [[w-sat-459-unsat-findings]] (the vol-123 base)
 - [[w11-sat-correctness-validated]] (kissat encoder validated)
-- [[../sessions/vol-124-portfolio-results]] (vol-124 broader attack)
+- [[vol-124-portfolio-results]] (vol-124 broader attack)

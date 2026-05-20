@@ -3,6 +3,7 @@ name: mcgavin-top3-mip-locked
 description: "Vol-121 T5 — McGavin 469's top-3 rows (42-cell joint region) PROVEN MIP-LOCALLY-OPTIMAL under full piece freedom. HiGHS MIP closed in 818s, Δ=0 with optimality certificate. To break McGavin via top-3-rows rearrangement is provably IMPOSSIBLE within full puzzle's piece set. The 10 II-mismatches in McGavin's top rows are joint-locally rigid."
 metadata:
   type: project
+status: built
 ---
 
 # McGavin top-3 rows MIP-locked (vol-121 T5)
@@ -44,4 +45,4 @@ This (vol-121 T5): McGavin top-3 rows joint 42-cell, Δ=0, optimality
 
 - [[corpus-restricted-region-mip-locked]]
 - [[honest-status-vol121]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

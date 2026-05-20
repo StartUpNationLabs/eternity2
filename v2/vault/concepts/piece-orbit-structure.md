@@ -1,3 +1,10 @@
+---
+name: piece-orbit-structure
+description: Built the rotation-orbit + edge-multiset analysis of the canonical
+status: built
+metadata:
+  type: concept
+---
 # Piece-orbit & multiset structure of canonical E2 (vol-65 day 3.5)
 
 **Status**: `built` — vol-65 (2026-05-15).
@@ -105,5 +112,5 @@ fewer structural shortcuts.
 ## Linked
 
 - [[piece-side-matching]] — the PSM polytope (parent concept)
-- [[../sessions/vol-65]]
+- [[vol-65]]
 - memory: vol-65 piece-orbit & multiset-twins

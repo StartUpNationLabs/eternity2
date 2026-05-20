@@ -3,6 +3,7 @@ name: vol122-bf-bw-alns-pipeline-452
 description: "Vol-122 — bf_bw_schedule_hinted (5min × 8 threads, seed-offset 2000) → 236-cell legal partial @ 424 → ALNS basic 30min × 6 seeds → 448-452 with 5/5 hints obeyed. Best 452 (3 seeds tied)."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — bf_bw → ALNS pipeline @ 452 (5/5 hints)
@@ -63,7 +64,7 @@ records.
 
 ## Linked
 
-- [[../sessions/vol-122]]
+- [[vol-122]]
 - [[vol122-a1-pipeline-result]] (random-fill baseline was 444)
 - [[vol122-alns-multi-seed-results]] (clean-slate ALNS results)
 - [[vol122-three-basin-structural-overlap]]

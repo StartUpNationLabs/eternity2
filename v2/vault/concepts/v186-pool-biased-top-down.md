@@ -1,3 +1,10 @@
+---
+name: v186-pool-biased-top-down
+description: V184 LIGHTHOUSE (hard interface) failed: 0/1024 valid pairs.
+status: refuted
+metadata:
+  type: concept
+---
 # V186 Pool-Biased Top-Down — LIGHTHOUSE wall fix design
 
 Status: **refuted** — built + tested at γ ∈ {0.5, 2.0}; pool-bias shifts which pieces top consumes but does NOT fix the structural row-12 wall.

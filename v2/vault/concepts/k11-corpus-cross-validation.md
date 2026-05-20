@@ -3,6 +3,7 @@ name: k11-corpus-cross-validation
 description: "Corpus-wide K11.2 (λ_2) + K11.4 (mismatch-zlib) validation on 14 RECORD_TIE boards. KEY FINDING: a 5/5-hint 457 record has HIGHER algebraic connectivity (0.0377) than the 4/5-hint 459 (0.0369). 458 records cluster identically (0.0345, mz=39 — single basin). 457 records show high variance."
 metadata:
   type: project
+status: built
 ---
 
 # K11 — Corpus cross-validation (NEW finding)

@@ -3,6 +3,7 @@ name: near-twin-edge-pair-adjacencies
 description: Across 421 high-score boards, top-19 piece-pair adjacencies are EDGE-EDGE pairs (1 border each); only 1 interior pair in top-20. Most common pair is V 26-27 (49.4%) — near-twin edges differing in one color.
 metadata:
   type: project
+status: built
 ---
 
 # Near-twin edge-pair adjacencies (vol-99 finding)

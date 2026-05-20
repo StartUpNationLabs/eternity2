@@ -1,3 +1,10 @@
+---
+name: lp-ub-478-basins
+description: high-score class representatives → LP UB computed for each.
+status: built
+metadata:
+  type: concept
+---
 # Multiple LP UB 478 basins discovered (vol-44)
 
 **Status**: measurement.

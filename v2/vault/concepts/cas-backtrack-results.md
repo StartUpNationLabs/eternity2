@@ -1,3 +1,10 @@
+---
+name: cas-backtrack-results
+description: Ran CAS-BACKTRACK from frame0 (CAS-greedy best, 436). Final: 434/480.
+status: built
+metadata:
+  type: concept
+---
 # CAS-BACKTRACK results: 434/480 — vol-78 (2026-05-15)
 
 **Status**: `built` (negative — same-shell-retry doesn't help) — vol-78.

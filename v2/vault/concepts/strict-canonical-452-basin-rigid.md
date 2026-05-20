@@ -3,6 +3,7 @@ name: strict-canonical-452-basin-rigid
 description: "Vol-118 — the 452/480 strict-canonical board from par-pipeline is basin-rigid. Bound-ascent UB=455 (only +3 above score). Hungarian re-pass yields Δ=0. ALNS polish from bound-ascent output stays at 452. The 452-basin's structural ceiling is 455. To exceed strict-canonical 457 record, need a different basin (par-bf with different seed-offset, OR different starting partial)."
 metadata:
   type: project
+status: built
 ---
 
 # Strict-canonical 452 basin rigidity (vol-118)
@@ -58,4 +59,4 @@ strict-canonical record work.
 - [[parallel-hint-preserving-bf]] — the pipeline.
 - [[bound-ascent]] — the UB measurement tool.
 - [[hint-pin-conflict-propagation-fix]] — what unblocked this work.
-- [[../sessions/vol-118]].
+- [[vol-118]].

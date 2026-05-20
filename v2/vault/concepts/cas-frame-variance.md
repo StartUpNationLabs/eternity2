@@ -1,3 +1,10 @@
+---
+name: cas-frame-variance
+description: For each of the first ~20 enumerated 60/60 frames, run CAS shells 1-7.
+status: built
+metadata:
+  type: concept
+---
 # CAS frame variance: 430-436 across frames (vol-76)
 
 **Status**: `built` (preliminary, ongoing) — vol-76 (2026-05-15).

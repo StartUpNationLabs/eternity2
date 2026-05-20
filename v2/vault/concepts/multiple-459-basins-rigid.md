@@ -3,6 +3,7 @@ name: multiple-459-basins-rigid
 description: "Vol-110 T2 follow-up. The NEW 459 basin found by bf+pipeline composition is MIP-halo-1 locally optimal (same as vol-60's 459 basin). 2 components instead of 4. Cell-diff = 253/256 from vol-60 (essentially disjoint). Strong evidence the 459-level set has MULTIPLE structurally-distinct basins, all halo-1-rigid. To exceed 459 requires board-spanning σ-cycle moves, not local ALNS."
 metadata:
   type: project
+status: built
 ---
 
 # Multiple 459 basins, all halo-1 rigid (vol-110 follow-up)
@@ -147,6 +148,6 @@ Decoded McGavin 469 saved at: `output/vol-110/mcgavin_469.placement.json`.
 - [[new-459-from-bf-pipeline]] — origin of the new 459.
 - [[local459-halo1-joint-proven]] — vol-90 vol-60 459 rigidity.
 - [[local459-halo2-percomp-proven]] — vol-93 vol-60 459 halo-2 rigidity.
-- [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem]] — full rigidity
+- [[PAPER_2026-05-16_canonical_E2_rigidity_theorem]] — full rigidity
   theorem from vols 80-101.
-- [[../sessions/vol-110]] — session journal.
+- [[vol-110]] — session journal.

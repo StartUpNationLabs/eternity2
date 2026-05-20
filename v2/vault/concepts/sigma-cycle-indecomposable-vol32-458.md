@@ -3,6 +3,7 @@ name: sigma-cycle-indecomposable-vol32-458
 description: Confirmed σ-cycle indecomposability between vol-32 458 → McGavin 469. Every cycle subset (sizes 2-80) REDUCES score from 458. Matches vol-65 finding for 459 → McGavin. Universal pattern across local basins.
 metadata:
   type: project
+status: built
 ---
 
 # σ-cycle indecomposable: vol-32 458 → McGavin 469 (vol-99)

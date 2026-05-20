@@ -1,7 +1,7 @@
 # Session — NIGHT 7 (vol-7 closing distillation)
 
 **Theme**: Vol-7 close: 11 structural/methodological achievements, no score push past 454.
-**Raw**: [[../sessions/archive/raw/NIGHT7_SUMMARY|NIGHT7_SUMMARY.md]]
+**Raw**: [[archive/raw/NIGHT7_SUMMARY|NIGHT7_SUMMARY.md]]
 
 ## 11 achievements
 

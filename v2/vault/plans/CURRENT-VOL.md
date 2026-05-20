@@ -51,7 +51,7 @@ Then beam search continues over remaining 252 positions.
 
 ## Linked
 
-- [[../concepts/cortez-corner-perm-targeted]] (TBD)
-- [[../sessions/vol-188]]
-- [[../sessions/vol-181]] (V181 KEYRING)
-- [[../basins/basin-460-cp0312-v181]]
+- [[cortez-corner-perm-targeted]] (TBD)
+- [[vol-188]]
+- [[vol-181]] (V181 KEYRING)
+- [[basin-460-cp0312-v181]]

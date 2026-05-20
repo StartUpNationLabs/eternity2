@@ -1,3 +1,10 @@
+---
+name: mcgavin-basin-rigidity
+description: Pinning top N rows of each basin's source + running our ALNS (60s,
+status: built
+metadata:
+  type: concept
+---
 # McGavin's basin has unique rigidity: bottom-2-rows determined by top-14
 
 **Status**: `built` — vol-68 (2026-05-15).

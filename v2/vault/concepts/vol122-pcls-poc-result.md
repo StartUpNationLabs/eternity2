@@ -3,6 +3,7 @@ name: vol122-pcls-poc-result
 description: "Vol-122 J4 PCLS PoC. Per-color edge-LP with piece-supply caps gives identical UB=480 for McGavin border AND our 5 clean-slate borders. Supply-LP doesn't distinguish good vs bad borders."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 J4 — PCLS PoC (per-color edge-LP)
@@ -57,7 +58,7 @@ That motivates **B3** (per-border interior LP-UB with positional constraints) at
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] — J4 status update
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] — J4 status update
 - [[inv3-border-dp-seed]] — A1 motivation
 - [[inv-b4-hall-color-pair-refuted]] — sister supply-LP refutation

@@ -47,7 +47,7 @@ across three independent top-score records:
 - **Local 459 row-13** (16 cells, 0.1s, gap=0%): +0 PROVEN [vol-89]
 - **Local 459 rows 14-15** (32 cells, 1.2s, gap=0%): +0 PROVEN [vol-88]
 
-## 2. First Sound Upper Bound below 480
+## 2. First Sound Upper Bound below 480 (subset-bound, see caveat)
 
 [vol-86] McGavin top-4 rows MIP, 64 cells, 18.7k binary vars,
 1200s: **dual bound 123, current 116, gap 6.03%**.
@@ -55,6 +55,15 @@ across three independent top-score records:
 Implication: McGavin's top-4 contribution is bounded above by 123
 under LP relaxation. If achievable, total ≤ 476. First non-trivial
 structural UB below 480 on canonical E2.
+
+> **Caveat (vol-105 retraction, 2026-05-16):** this is a **subset
+> bound** that holds *conditional* on the rest of the board being
+> fixed to McGavin's configuration. It is NOT an unconditional UB on
+> the global 480 score. A different completion of the lower 12 rows
+> could in principle compensate. The claim "first sound UB below 480
+> on canonical E2 *unconditionally*" was overreach; the correct claim
+> is "first sound subset-UB below the trivial 480, conditional on
+> McGavin's lower-board fix." See [[concepts/board-wide-ub-derivation]].
 
 ## 3. σ-Cycle Indecomposability — Universal Across Basins
 
@@ -132,17 +141,12 @@ must operate at the σ-cycle scale, not the local-search scale.
 ## 7. Standing Result
 
 After 8 hours of autonomous research on 2026-05-15/16:
-- **Standing record on canonical E2: 459/480** (unchanged from
-  pre-session).
-- **6+ MIP-proven local-optimal regions, 3 basins.**
-- **1 first non-trivial sound upper bound below 480 (≤ 123 on
-  top-4).**
-- **Universal σ-cycle indecomposability confirmed on 2 cross-basin
-  transitions.**
+- **Standing record on canonical E2 (at time of writing): 459/480** (now superseded by vol-129's 463 matched-edges; see [[E2_KNOWN_FACTS]] and [[SYNTHESIS_VOL_188]]).
+- **6+ MIP-proven local-optimal regions, 3 basins.** (Strengthened to ≥17 MIP proofs across 4 basins through vol-187.)
+- **1 first non-trivial sound SUBSET upper bound below 480 (≤ 123 on top-4)** — see §2 caveat: this is conditional on McGavin's lower-board fix, not an unconditional UB.
+- **Universal σ-cycle indecomposability confirmed on 2 cross-basin transitions.** (Strengthened to 4 basin pairs by vol-188; see [[v188-translation-sigma-indecomposability]].)
 
-Standing 459 is structurally explained, mathematically. Beating it
-requires a fundamentally new algorithm class operating at the
-σ-cycle scale.
+Standing 459 was structurally explained, mathematically. The record has since advanced to 463 (vol-129 PALIMPSEST) via a fundamentally different angle — corpus-consensus mining of historical records, not σ-cycle decomposition. The σ-cycle indecomposability theorem still holds; it just turned out that the 459 → 463 lift came from finding a *new basin in a different corner-perm*, not from breaking the σ-cycle obstruction.
 
 ## Linked
 

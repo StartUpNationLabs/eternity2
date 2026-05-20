@@ -94,5 +94,5 @@ corner assignment. T3+T4 is strictly more diverse.
 
 ## Linked
 
-- [[../sessions/vol-59]] — predecessor
-- [[../sessions/SESSION_2026-05-15_summary]] — session summary
+- [[vol-59]] — predecessor
+- [[SESSION_2026-05-15_summary]] — session summary

@@ -3,6 +3,7 @@ name: basin-corner-permutations
 description: Three top records on canonical E2 have THREE DIFFERENT corner permutations. McGavin (3,2,0,1), local 459 (1,0,2,3), vol-32 458 (0,3,1,2). Only piece 138 at center (pos 135) is shared. Explains why basins are Hamming-far.
 metadata:
   type: project
+status: built
 ---
 
 # Basin corner permutations (vol-99 finding, 2026-05-16)

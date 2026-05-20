@@ -3,6 +3,7 @@ name: bf-candidate-bucket-bug
 description: "Vol-118 CRITICAL bug found by user 2026-05-16. The blackwood-fast candidate-bucket index incorrectly pushed every (piece, rotation) into tbl=0 (interior fit), allowing edge pieces to be placed at interior positions with BORDER edges facing inward. Bug found by visual inspection of 232-cell partial bucas render. Fixed by routing each piece-rotation to EXACTLY ONE bucket based on its (right_is_border, bottom_is_border) pair. Existing complete-board records (459, 469) immune; bf PARTIAL outputs before ALNS were affected."
 metadata:
   type: project
+status: refuted
 ---
 
 # bf candidate-bucket bug (vol-118 CRITICAL)
@@ -122,4 +123,4 @@ Future safeguards:
 
 - [[blackwood-fast]] — affected crate.
 - [[hint-pin-conflict-propagation-fix]] — another vol-117/118 bf bug.
-- [[../sessions/vol-118]].
+- [[vol-118]].

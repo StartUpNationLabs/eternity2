@@ -1,3 +1,10 @@
+---
+name: bound-ascent
+description: Optimize the relaxed-bound (see relaxed-bound) instead of score. 2-piece swap mutations; accept moves that strictly i...
+status: built
+metadata:
+  type: concept
+---
 # Bound-ascent
 
 **Status**: `built` (vol-21), single-swap variant only

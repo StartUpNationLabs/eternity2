@@ -1,3 +1,10 @@
+---
+name: vol22-471-bound-reinterpretation
+description: The \"ceiling 471\" comes from edgeboundascent's output — relaxed
+status: built
+metadata:
+  type: concept
+---
 # Vol-22 "471-bound" basins reinterpretation — vol-73 (2026-05-15)
 
 **Status**: `built` (corrects vol-22 over-interpretation).

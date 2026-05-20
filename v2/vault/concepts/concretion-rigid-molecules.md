@@ -1,3 +1,10 @@
+---
+name: concretion-rigid-molecules
+description: plans/EXTERNALBRAINSTORM2026-05-18
+status: refuted
+metadata:
+  type: concept
+---
 # CONCRETION — Rigid-Molecule Preprocessor
 
 **Status**: `refuted` (Vol-127, 2026-05-19)

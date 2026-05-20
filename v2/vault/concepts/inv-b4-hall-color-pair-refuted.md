@@ -3,9 +3,17 @@ name: inv-b4-hall-color-pair-refuted
 description: "Vol-122 INVENTION B4 — color-pair Hall-condition LP. Refined vol-44's color-UB=480 by adding per-side rotation choice. LP optimum = 480.0; integer MIP optimum = 480.0. Hall does NOT tighten."
 metadata:
   type: project
+status: refuted
 ---
 
 # INVENTION B4 — Hall-condition refuted (vol-122)
+
+## Refutation
+
+- **Refuted**: vol-122.
+- **Evidence**: LP optimum 480.0, MIP integer optimum 480.0. Per-color, each k achieves floor(N_k/2) at optimum.
+- **What's refuted**: the hypothesis that vol-44's bound (UB ≈ 478) is loose because of per-side rotation slack. **It's not** — rotation flexibility is fully sufficient to achieve the 480 LP bound.
+- **What's NOT refuted**: vol-44's 478 from per-cell-pair geometric constraints. The Hall-condition is just orthogonal to that source of looseness.
 
 ## Method
 
@@ -41,5 +49,5 @@ Vol-44's UB-478 comes from per-cell-pair geometric constraints. B4 with just sid
 ## Linked
 
 - [[lp-ub-478-basins]]
-- [[../plans/INVENTIONS_BACKLOG]]
-- [[../sessions/vol-122]]
+- [[INVENTIONS_BACKLOG]]
+- [[vol-122]]

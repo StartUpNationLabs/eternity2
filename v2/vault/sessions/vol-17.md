@@ -1,7 +1,7 @@
 # Session — vol-17
 
 **Theme**: Blackwood schedule calibration. ALNS portfolio of 10 ops. Cold-start record 455/480.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_17|RESEARCH_NOTES_17.md]], [[../sessions/archive/raw/RESEARCH_NOTES_17_PLAN|RESEARCH_NOTES_17_PLAN.md]], [[../sessions/archive/raw/RESEARCH_NOTES_17_REFRAMING|RESEARCH_NOTES_17_REFRAMING.md]], [[../sessions/archive/raw/RESEARCH_NOTES_17_OVERNIGHT|RESEARCH_NOTES_17_OVERNIGHT.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_17|RESEARCH_NOTES_17.md]], [[archive/raw/RESEARCH_NOTES_17_PLAN|RESEARCH_NOTES_17_PLAN.md]], [[archive/raw/RESEARCH_NOTES_17_REFRAMING|RESEARCH_NOTES_17_REFRAMING.md]], [[archive/raw/RESEARCH_NOTES_17_OVERNIGHT|RESEARCH_NOTES_17_OVERNIGHT.md]]
 
 ## What was attempted
 

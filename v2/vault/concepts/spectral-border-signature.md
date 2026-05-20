@@ -1,3 +1,10 @@
+---
+name: spectral-border-signature
+description: Naming: SPECTRA — Latin \"image\", as in spectrum.
+status: partial
+metadata:
+  type: concept
+---
 # Spectral Border Signature (V173 SPECTRA)
 
 Status: `partial` (signature measured 2026-05-20; predictive use unbuilt)
@@ -49,7 +56,7 @@ Key signal: **k=12 and k=7 amplitudes are HIGHER in ≥460 boards**. k=12 corres
 
 High-score boards over-express short-period structure (k=29 ≈ alternating period-2 pattern around the border) and under-express k=19 / k=13.
 
-**Interpretation**: a specific alternating color pattern around the border ring is associated with high-score basins. This is consistent with the [[../concepts/rare-color-geography]] finding (vol-13: all 120 rare-color slots are on the border ring's interior matchings) — rare colors create constraints that ripple through specific frequencies.
+**Interpretation**: a specific alternating color pattern around the border ring is associated with high-score basins. This is consistent with the [[rare-color-geography]] finding (vol-13: all 120 rare-color slots are on the border ring's interior matchings) — rare colors create constraints that ripple through specific frequencies.
 
 ## Application — predictive use
 
@@ -74,5 +81,5 @@ Two boards are spectrally close if their border spectra are L2-close. Use as a b
 
 ## Linked
 
-- [[../sessions/vol-173]]
+- [[vol-173]]
 - [[rare-color-geography]] (vol-13)

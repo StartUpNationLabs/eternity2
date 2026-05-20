@@ -3,6 +3,7 @@ name: blackwood-fast
 description: Hyper-optimized Rust port of libblackwood's per-cell-unrolled DFS shape, achieving 65-68M nps single-thread on canonical 16x16/22c (~175x speedup over existing solver-engine BLACKWOOD_RAW, ~22% of Bucas's C engine's 295M nps). Vol-106 T1.
 metadata:
   type: project
+status: built
 ---
 
 # blackwood-fast (vol-106 T1)
@@ -160,5 +161,5 @@ intrinsics. The remaining gap is split across:
 - [[mcgavin-blackwood-gap-analysis]] — quantifies the 800×
   throughput gap.
 - [[blackwood-schedule-calibration]] — what to integrate next.
-- [[../sessions/vol-106|vol-106 session]].
-- [[../IDEAS_FROM_BLANK_2026-05-16]] item #1.
+- [[vol-106|vol-106 session]].
+- [[IDEAS_FROM_BLANK_2026-05-16]] item #1.

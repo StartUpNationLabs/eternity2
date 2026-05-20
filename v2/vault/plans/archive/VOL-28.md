@@ -103,7 +103,7 @@ adapt the binding item scope — don't expand to additional builds.
 
 Standard:
 1. Update BACKLOG status of chosen T1.
-2. Amend [[../concepts/learned-value-order]] with the new measurement.
+2. Amend [[learned-value-order]] with the new measurement.
 3. Write `sessions/vol-28.md`.
 4. Draft `VOL-29.md` gated on T1 result.
 5. Memory entry if the result is gate-significant (PASS at canonical →
@@ -136,11 +136,11 @@ and the direction is harder than vol-26's lift suggested.
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — vol-26 + vol-27 measurement.
-- [[../concepts/scan-order]] — variable-order families.
-- [[../concepts/edge-bp-marginals]] — earlier learned-from-data attempt.
+- [[learned-value-order]] — vol-26 + vol-27 measurement.
+- [[scan-order]] — variable-order families.
+- [[edge-bp-marginals]] — earlier learned-from-data attempt.
 
 ## Linked sessions
 
-- [[../sessions/vol-27]] — direct predecessor.
-- [[../sessions/vol-26]] — the original gate.
+- [[vol-27]] — direct predecessor.
+- [[vol-26]] — the original gate.

@@ -3,6 +3,7 @@ name: mcgavin-halo4-comp0-proven
 description: McGavin component 0 PROVEN halo-4 MIP-optimal at 57 cells in 1200s. Comp 1 attempted but killed during run; partial result. Extends McGavin local-optimality to halo r=4 for at least one component.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin component 0 halo-4 — PROVEN (vol-96 partial)

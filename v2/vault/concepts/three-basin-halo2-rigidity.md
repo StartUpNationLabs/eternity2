@@ -3,6 +3,7 @@ name: three-basin-halo2-rigidity
 description: Halo-2 per-component MIP-rigidity now confirmed across THREE distinct top-score canonical E2 basins (McGavin 469, local 459, vol-32 458). Empirical evidence for universal halo-2 rigidity pattern.
 metadata:
   type: project
+status: built
 ---
 
 # Halo-2 rigidity across 3 basins (vols 92, 93, 95)

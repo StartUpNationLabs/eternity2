@@ -3,6 +3,7 @@ name: strict-canonical-pipeline-honest-446
 description: "Vol-118 — HONEST strict-canonical pipeline ceiling after vol-118 bf-bucket bug fix. Initial sample (n=8): max 446. EXTENDED sample (T6 restart, more trials before kill): max 452, median ~447. The 452 board is LEGAL_COMPLETE with 5/5 hints AND zero border violations — so the pre-fix 452 wasn't entirely a contamination artifact, it's reachable with the fixed engine too (just rarely). `basic` preset beats `winning5` uniformly in paired comparisons."
 metadata:
   type: project
+status: built
 ---
 
 # Strict-canonical pipeline — honest 446 ceiling (vol-118)
@@ -106,4 +107,4 @@ unique pieces, 0 border violations, 5/5 canonical hints OK.
   unblocked the schedule path.
 - [[parallel-hint-preserving-bf]] — the parallel variant.
 - [[strict-canonical-452-basin-rigid]] — earlier (pre-fix) UB analysis.
-- [[../sessions/vol-118]].
+- [[vol-118]].

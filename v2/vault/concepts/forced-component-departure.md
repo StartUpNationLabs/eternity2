@@ -1,3 +1,10 @@
+---
+name: forced-component-departure
+description: Codebase search: no existing ALNS variant tracks basin-component
+status: unbuilt
+metadata:
+  type: concept
+---
 # Forced-Component-Departure ALNS (vol-67 design)
 
 **Status**: `design` — vol-67 (2026-05-15).
@@ -131,4 +138,4 @@ should sample MANY components, including potentially McGavin's.
 - [[basin-permutation-group]] — σ-cycle context
 - [[basin-level-genetic-search]] — vol-66 precursor (refuted at
   reaching McGavin)
-- [[../sessions/vol-67]] (TBD)
+- [[vol-67]] (TBD)

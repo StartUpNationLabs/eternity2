@@ -3,6 +3,7 @@ name: w11-sat-verified-border-enum
 description: "W11 INVENTION: with the fixed W-SAT encoder, we can verify in <1 second whether a candidate border configuration admits any 480 interior solution. Combined with vol-122 N1's 12,958 corner clusters or border-DP enumerations, we get a per-border feasibility filter — a NEW pruning tool for canonical E2 attacks."
 metadata:
   type: project
+status: built
 ---
 
 # W11 — SAT-verified border enumeration
@@ -144,4 +145,4 @@ should yield ~5 border partials. Test each via W11 screen. That's
 - [[w-sat-459-unsat-findings]] (the verification tool)
 - [[n-series-enumeration-deadend]] (vol-122 N1 input data)
 - [[inv3-border-dp-seed]] (border-DP enumeration)
-- [[../plans/INVENTIONS_BACKLOG]] (W-series)
+- [[INVENTIONS_BACKLOG]] (W-series)

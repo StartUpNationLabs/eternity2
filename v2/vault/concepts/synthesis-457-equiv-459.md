@@ -3,6 +3,7 @@ name: synthesis-457-equiv-459
 description: "SYNTHESIS: 7 independent cross-domain structural metrics ALL identify RECORD_TIE_457_blackwood_mrv_5min_seed10 as topologically equivalent to (or superior to) the 4/5-hint 459 record. The 2-edge difference is entirely due to position-210 hint constraint."
 metadata:
   type: project
+status: built
 ---
 
 # Synthesis — The 457 ≈ 459 Topological Equivalence Discovery

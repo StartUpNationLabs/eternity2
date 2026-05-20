@@ -1,7 +1,14 @@
 # Vol-122 — Basin Diversity & Rigidity in Canonical Eternity II
 
 **Date:** 2026-05-17  
-**Status:** Working paper. **No record discovered** (best 452 < 459 standing). Documents the structural findings of the autonomous session.
+**Status:** Working paper. **No record discovered IN THIS VOLUME** (vol-122 best 452 < 459 standing at the time). Documents the structural findings of the autonomous session.
+
+> **Update (2026-05-20, vol-188):** the 459 ceiling cited throughout this
+> paper was broken to **463 matched-edges** at vol-129 (PALIMPSEST) and
+> to **458 strict-canonical** at vol-122 itself (algorithm-produced) plus
+> **459 strict** (DB find). The basin diversity and rigidity findings
+> here still stand; the records have advanced. See [[E2_KNOWN_FACTS]]
+> for current state.
 
 ## Abstract
 

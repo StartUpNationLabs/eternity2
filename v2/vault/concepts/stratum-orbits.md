@@ -1,3 +1,10 @@
+---
+name: stratum-orbits
+description: maxdepth 86 vs ~250 in 60s. Global value-order uninformative.
+status: refuted
+metadata:
+  type: concept
+---
 # STRATUM — Color-Class Layered Construction
 
 **Status**: `refuted` Day-3 2026-05-19. All three STRATUM variants dead:
@@ -68,7 +75,7 @@ without measuring during DFS — saving the MRV lookup.
 
 More importantly: by placing color-class 1 pieces first, the DFS
 *locks in* the rare-color edge structure of the board EARLY. Vol-14
-finding ([[../sessions/vol-14]]) was that the 764-domain "plateau"
+finding ([[vol-14]]) was that the 764-domain "plateau"
 in interior cells is the actual search bottleneck; placing
 rare-color pieces first reduces this plateau because rare-color
 constraints are tight.
@@ -175,7 +182,7 @@ fire AFTER damage-done are vacuous).
 
 ## Linked
 
-- [[../sessions/vol-149]]
+- [[vol-149]]
 - [[rare-color-geography]] (vol-13: rare colors on border ring)
 - [[piece-set-symmetries]] (vol-65: zero rotation symmetries, 5 twin pairs)
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[INVENTION_NAMES_2026-05-19]]

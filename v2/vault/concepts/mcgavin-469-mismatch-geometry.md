@@ -3,6 +3,7 @@ name: mcgavin-469-mismatch-geometry
 description: McGavin's 469 has all 11 mismatches concentrated in rows 0-4 (top 5 rows). Rows 5-15 are locally perfect. Implies basin is top-determining and explains why top-N pinning works at smaller N than bottom-N pinning would.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin 469 — mismatch geometry (top-concentrated)

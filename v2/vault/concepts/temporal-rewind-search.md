@@ -1,3 +1,10 @@
+---
+name: temporal-rewind-search
+description: Before writing the algorithm, audit the codebase for similar
+status: unbuilt
+metadata:
+  type: concept
+---
 # Temporal-Rewind-Search (vol-63 draft)
 
 **Status**: `design` — vol-63 (2026-05-15).

@@ -3,6 +3,7 @@ name: j1-center-sweep-failure
 description: "J1 center-out sweep FAILED at center band 7 in 130s with beam=5000. Center band has NO border constraints, so state space is too large for the beam to navigate."
 metadata:
   type: project
+status: refuted
 ---
 
 # J1 — Center-Sweep failure

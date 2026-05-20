@@ -49,7 +49,7 @@ Each invention has:
 
 **Effort.** Wrapper bin: 1 day. Sweep: ongoing.
 
-**Concept**: [[../concepts/inv3-border-dp-seed]].
+**Concept**: [[inv3-border-dp-seed]].
 
 ### A2. Random-path basin sweep — status: `built-untested` (vol-121 T2 invention, vol-122 T1 first use)
 
@@ -183,7 +183,7 @@ Each invention has:
 
 **Refutation.** Side-imbalance hypothesis (vol-44 loose because of rotation-side mismatch) is refuted.
 
-Concept: [[../concepts/inv-b4-hall-color-pair-refuted]]. Script: `scripts/vol122_inv_b4_color_pair_hall.py`.
+Concept: [[inv-b4-hall-color-pair-refuted]]. Script: `scripts/vol122_inv_b4_color_pair_hall.py`.
 
 **Future directions still open:**
 - 3-cell column Hall (intra-piece constraints across two stacked adjacencies)
@@ -367,7 +367,7 @@ The veteran researcher's three intermediate targets:
 
 #3 is the cleanest decomposition and the same target as A1+B3 above (border + interior decomposition).
 
-**Concept**: [[../concepts/three-milestones-from-veteran]], [[../concepts/interior-14x14-parity-feasible]].
+**Concept**: [[three-milestones-from-veteran]], [[interior-14x14-parity-feasible]].
 
 ---
 
@@ -446,13 +446,13 @@ The veteran researcher's three intermediate targets:
 **Why this might work where vol-22 didn't.**
 Vol-22 reaches LP score 473 but collapses on integer apply because it tries to apply ALL color relaxations at once. PCLS locks ONE integer per step, so the LP stays feasible at each step. The lock prevents the rollback that broke vol-22.
 
-**Linked.** [[../concepts/vol-22-bound-ascent]] (if exists), [[../concepts/inv3-border-dp-seed]], [[../concepts/inv-b4-hall-color-pair-refuted]].
+**Linked.** [[vol-22-bound-ascent]] (if exists), [[inv3-border-dp-seed]], [[inv-b4-hall-color-pair-refuted]].
 
 **EV.** Medium-high. Synthesizes vol-22's reach (LP UB 473) with vol-122 A1's locking discipline. Independent of any existing 459/469 basin → respects directive 1.
 
 **Effort.** 1-2 days PoC; 1 week full attack.
 
-**Result (vol-122 2026-05-17).** Built PoC v3. **PCLS supply-LP gives identical UB=480 for McGavin border AND all 5 clean-slate borders** — supply isn't the binding constraint at the per-color level. Concept: [[../concepts/vol122-pcls-poc-result]]. Refutes the supply-LP version; future PCLS must use per-cell-pair LP (vol-44 / B3).
+**Result (vol-122 2026-05-17).** Built PoC v3. **PCLS supply-LP gives identical UB=480 for McGavin border AND all 5 clean-slate borders** — supply isn't the binding constraint at the per-color level. Concept: [[vol122-pcls-poc-result]]. Refutes the supply-LP version; future PCLS must use per-cell-pair LP (vol-44 / B3).
 
 ### J5. Interior-only ALNS with cyclic border freezing — status: `unbuilt` (added 2026-05-17)
 
@@ -489,7 +489,7 @@ redundant subtree exploration.
 
 **Done (vol-122).** Python PoC measured convergence on 3×3 through 7×7
 puzzles. Strong signal: 17–94% convergence rates, 1–9× theoretical
-node savings. Concept: [[../concepts/vol122-fsmc-convergence-measured]].
+node savings. Concept: [[vol122-fsmc-convergence-measured]].
 
 **Next steps.**
 1. **Rust implementation**: port the Python prototype to a high-perf
@@ -513,7 +513,7 @@ brute-force-find 469+ basins from many starting points.
 - Day 3-4: Integrate with solver-engine; benchmark.
 - Day 5: Apply to canonical-scale; measure nps gain.
 
-**Concept.** [[../concepts/vol122-fsmc-convergence-measured]].
+**Concept.** [[vol122-fsmc-convergence-measured]].
 **Linked**: [[dlx-e2-implementation-status]] (ZDD is a related encoding —
 both exploit state equivalence; ZDD does it via shared subDAGs at the
 data-structure level, FSMC does it via cache lookups).
@@ -528,7 +528,7 @@ sides). For each piece, find color-pairs it UNIQUELY provides.
 color pair. All 4 corner pieces and most edge pieces are in this set.
 No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 
-**Concept**: [[../concepts/vol122-hffm-forced-pieces]].
+**Concept**: [[vol122-hffm-forced-pieces]].
 
 **Next steps.**
 1. Adjacency-pair MIP for tighter UB (vs vol-44 per-color = 480).
@@ -554,7 +554,7 @@ No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 
 **Why different.** Continuous-spectral analysis of a piece-piece graph is novel for E2. (Vol-122 J3 did spectral on the COUPLING graph; here we add the energy Hamiltonian of the assigned configuration.)
 
-**Effort.** 1 day. Spec page: [[../concepts/k11-cross-domain-brainstorm]] section 1.
+**Effort.** 1 day. Spec page: [[k11-cross-domain-brainstorm]] section 1.
 
 **EV.** Medium. The wave-packet dynamics (vol-122 K10 cousin) is the novel hook.
 
@@ -570,7 +570,7 @@ No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 
 **Effort.** 1h PoC + 1 day analysis.
 
-**Concept**: [[../concepts/k11-cross-domain-brainstorm]] section 2.
+**Concept**: [[k11-cross-domain-brainstorm]] section 2.
 
 ### K11.4. Information-theoretic compression scoring — status: `unbuilt` (added 2026-05-17)
 
@@ -584,7 +584,7 @@ No supply=1 (true singleton) pairs; minimum supply = 4 = 1 piece × 4 rotations.
 
 **Effort.** 30 min - 1 day.
 
-**Concept**: [[../concepts/k11-cross-domain-brainstorm]] section 4.
+**Concept**: [[k11-cross-domain-brainstorm]] section 4.
 
 ## M-series — Completely Different Models (added 2026-05-17, K12 brainstorm)
 
@@ -596,7 +596,7 @@ Per user directive "model the puzzle as something completely different". All UNB
 
 **Concrete first step.** Identify junctions in 459/458/J1 boards, measure angles. ~1h Python.
 
-**Concept:** [[../concepts/k12-completely-different-models]] M1.
+**Concept:** [[k12-completely-different-models]] M1.
 
 ### M2. Electrical circuit / impedance — `unbuilt`
 
@@ -759,7 +759,7 @@ Too similar to M2/M4.
 
 Origin: vol-122 session-resume web roam after N-series dead-end. User
 directive: "roam around online... see what exists in the world we could
-bring in there". Concept page: [[../concepts/web-roam-2026-05-17]].
+bring in there". Concept page: [[web-roam-2026-05-17]].
 
 ### W1. Hyperoptimized approximate tensor-network contraction — `built-tested` (vol-123)
 
@@ -996,8 +996,8 @@ If any week's invention finds a ≥460 board: STOP scheduled plan, focus deep on
 
 - [[CURRENT-VOL]]
 - [[BACKLOG]]
-- [[../sessions/vol-121]] (what was tried and didn't work)
-- [[../sessions/vol-122]] (current)
-- [[../concepts/inv3-border-dp-seed]] (A1 detail)
-- [[../concepts/vol121-all-locked]] (exhaustively proven locked)
-- [[../concepts/three-milestones-from-veteran]] (veteran hints)
+- [[vol-121]] (what was tried and didn't work)
+- [[vol-122]] (current)
+- [[inv3-border-dp-seed]] (A1 detail)
+- [[vol121-all-locked]] (exhaustively proven locked)
+- [[three-milestones-from-veteran]] (veteran hints)

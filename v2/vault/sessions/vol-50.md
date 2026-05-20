@@ -108,7 +108,7 @@ better partials. Refuted.
 
 **Lesson for vol-51+**: parallel runs of already-parallel solvers
 need either (a) sequential scheduling at full CPU, or (b) explicit
-per-instance output dirs. Both filed in [[../plans/VOL-51-DRAFT]].
+per-instance output dirs. Both filed in [[VOL-51-DRAFT]].
 
 ### F6. LP-integer gap anatomy (math write-up shipped)
 
@@ -123,7 +123,7 @@ The binding constraint is x-piece-uniqueness; **lifted LP variants on x
 products are the only LP-cut approach with potential**, but vol-47 proved
 the naive McCormick lifting intractable at 16×16.
 
-See [[../concepts/lp-integer-gap-anatomy]] for the full math.
+See [[lp-integer-gap-anatomy]] for the full math.
 
 ### F4. Q-learning + ONNX-Gumbel-trick are dead ends
 
@@ -153,7 +153,7 @@ See [[vol-50-pivot-trail]] for the full reasoning chain.
 
 ## Linked
 
-- [[../plans/CURRENT-VOL|CURRENT-VOL]]
-- [[../concepts/prune-restart]] — existing infra
+- [[CURRENT-VOL|CURRENT-VOL]]
+- [[prune-restart]] — existing infra
 - [[vol-48]], [[vol-49]] — ES predecessor sessions
 - [[vol-50-pivot-trail]] — decision trail

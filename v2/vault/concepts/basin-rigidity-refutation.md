@@ -1,3 +1,10 @@
+---
+name: basin-rigidity-refutation
+description: For each basin-component rep, pin top-14 rows + run ALNS with 4
+status: built
+metadata:
+  type: concept
+---
 # Basin rigidity finding REFINED — vol-70 day 1 refutation
 
 **Status**: `refined` — vol-70 (2026-05-15).

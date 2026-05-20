@@ -1,3 +1,10 @@
+---
+name: homotopy-alns
+description: empirically refuted before implementation.
+status: refuted
+metadata:
+  type: concept
+---
 # Homotopy-ALNS — β₁-targeted defect-cycle destroy operator
 
 **Status**: `refuted` — vol-62 (2026-05-15) — see `## Refutation` below.
@@ -215,6 +222,6 @@ Where:
 
 ## Linked
 
-- [[../sessions/vol-62]] — will exist once vol-62 starts
+- [[vol-62]] — will exist once vol-62 starts
 - vol-18 R5 (homology measurements, diagnostic only)
 - memory: `feedback_vols_61_to_70_invented_algos`

@@ -3,6 +3,7 @@ name: corner-perm-score-distribution
 description: Across 1156 stored canonical E2 boards, max scores by corner permutation. McGavin's (3,2,0,1) is the ONLY perm reaching 469. Other perms cap at 462 or below. Suggests corner permutation may partly determine achievable max score.
 metadata:
   type: project
+status: built
 ---
 
 # Corner-permutation × max-score distribution (vol-99 finding)

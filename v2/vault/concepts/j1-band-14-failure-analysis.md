@@ -3,6 +3,7 @@ name: j1-band-14-failure-analysis
 description: "J1 chain fails at band 14 (rows 14, 15) due to color-constraint incompatibility between row 14's committed bottom edges and the remaining bottom-border pieces. Supply is correct (2 corners + 14 edges remaining); colors don't match."
 metadata:
   type: project
+status: refuted
 ---
 
 # J1 — Band 14 failure analysis

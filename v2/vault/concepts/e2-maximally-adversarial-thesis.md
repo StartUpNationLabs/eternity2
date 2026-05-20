@@ -1,3 +1,10 @@
+---
+name: e2-maximally-adversarial-thesis
+description: The canonical Eternity II piece set, designed by Christopher Monckton
+status: built
+metadata:
+  type: concept
+---
 # Eternity II's Piece Set is Maximally Adversarial — vol-65 synthesis
 
 **Status**: `built` (synthesis of vol-65 structural findings) — 2026-05-15.
@@ -198,5 +205,5 @@ seven walls.
 ## Linked
 
 - All vol-65 concept pages
-- [[../sessions/vol-65]]
-- [[../plans/AUTONOMOUS-MONTH-PLAN.md]]
+- [[vol-65]]
+- [[AUTONOMOUS-MONTH-PLAN]]

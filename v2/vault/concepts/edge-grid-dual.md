@@ -1,3 +1,10 @@
+---
+name: edge-grid-dual
+description: Switch search variables from CELLS (256, each with ~1024 piece-rot values) to EDGES (480 internal, each with 23 color...
+status: partial
+metadata:
+  type: concept
+---
 # Edge-grid dual
 
 **Status**: `partial` — Kempe-chain probe was null, full reformulation not built

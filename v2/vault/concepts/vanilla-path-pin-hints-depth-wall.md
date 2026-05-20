@@ -3,6 +3,7 @@ name: vanilla-path-pin-hints-depth-wall
 description: "Vol-121 T1a — vanilla_path with --pin-hints + border-first path has a CSP DEPTH WALL at ~86. 30min × 8-thread × ~938G placements stays at depth 86. The cross-machine 459 SOTA recipe must NOT have used --pin-hints (459 record only obeys 4/5 hints anyway)."
 metadata:
   type: project
+status: built
 ---
 
 # vanilla_path --pin-hints depth wall (vol-121 T1a)
@@ -43,4 +44,4 @@ Vol-121 T1b drops --pin-hints to test.
 ## Linked
 
 - [[blackwood-layered-depth-wall]] (similar structural wall)
-- [[../sessions/vol-121]]
+- [[vol-121]]

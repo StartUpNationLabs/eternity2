@@ -3,6 +3,7 @@ name: corpus-restricted-mip-doesnt-scale
 description: "Vol-119 T2 — Vol-112's basin-mix MIP formulation (binary x[c,b] per cell-basin) doesn't scale beyond N=5 basins. CBC at N=9 timed out at 30min with NO feasible integer solution (LP-UB 1094, far from any integer). The REGIONAL formulation (T5, vault/concepts/corpus-restricted-region-mip-locked) is the correct approach: fewer y-vars, much faster."
 metadata:
   type: project
+status: refuted
 ---
 
 # Corpus-restricted basin-mix MIP doesn't scale (vol-119 T2)
@@ -59,4 +60,4 @@ is a vol-112 historic, not scalable.
 
 - [[basin-mix-mip-refuted]] (vol-112 original)
 - [[corpus-restricted-region-mip-locked]] (vol-119 T5 invention)
-- [[../sessions/vol-119]]
+- [[vol-119]]

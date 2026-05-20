@@ -3,6 +3,7 @@ name: mcgavin-469-near-twin-orbit
 description: Comprehensive single- and double-near-twin-swap test on McGavin 469. Single swaps: only 1/114 preserves 469. Double swaps: 0/6441 give 470+. The 469 score-level set under near-twin perturbations contains exactly 2 boards.
 metadata:
   type: project
+status: built
 ---
 
 # 469-level set under near-twin perturbations (vols 68 + 99)
@@ -21,7 +22,7 @@ near-twin pair shares 3 of 4 edge colors). Score distribution:
 | 467 | 111 |
 
 **Only 1 of 114 single swaps preserves 469.** That's the
-[[../basins/basin-469-near-twin]] board found in vol-68.
+[[basin-469-near-twin]] board found in vol-68.
 
 ## Double near-twin swap
 

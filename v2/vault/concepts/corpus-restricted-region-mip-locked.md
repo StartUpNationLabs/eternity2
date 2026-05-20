@@ -3,6 +3,7 @@ name: corpus-restricted-region-mip-locked
 description: "Vol-119 T5 — INVENTION: corpus-restricted region MIP. Instead of vol-44's full-piece MIP (4 pieces × 196 rotations per cell), restrict free-region cell choices to a corpus of observed basin placements (mean 5 options/cell). MUCH FASTER (0.04s vs 1h) and proves same kind of local optimality. Vol-60 459 at halo-2 PROVEN OPTIMAL; vol-60 459 at halo-8 (191 of 256 cells free) PROVEN OPTIMAL. bseed9 460 (1-clue variant) at halo-2 PROVEN OPTIMAL."
 metadata:
   type: project
+status: built
 ---
 
 # Corpus-restricted region MIP (vol-119 T5)
@@ -82,4 +83,4 @@ on the 16×16 grid at all tested halo radii.
 
 - [[basin-mix-mip-refuted]] (vol-112 base case)
 - [[sigma-subset-bound-empirically-tight]] (companion T3 finding)
-- [[../sessions/vol-119]]
+- [[vol-119]]

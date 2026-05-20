@@ -1,7 +1,7 @@
 # Session — vol-10
 
 **Theme**: Static spectral analysis. Per-piece structural mining (pieces 17/38/62, multiset equality).
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_10|RESEARCH_NOTES_10.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_10|RESEARCH_NOTES_10.md]]
 
 ## What was attempted
 

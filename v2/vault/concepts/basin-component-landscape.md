@@ -1,3 +1,10 @@
+---
+name: basin-component-landscape
+description: Cluster 135 unique 455+ records by σ-distance (= cells with different
+status: built
+metadata:
+  type: concept
+---
 # Basin-component landscape of canonical E2 records — vol-65 day 4
 
 **Status**: `built` — vol-65 (2026-05-15).
@@ -79,4 +86,4 @@ of 455-458 records — our most-explored 458 family.
 
 - [[basin-permutation-group]]
 - [[e2-maximally-adversarial-thesis]] axis 6
-- [[../sessions/vol-65]]
+- [[vol-65]]

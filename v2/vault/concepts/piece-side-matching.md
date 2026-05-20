@@ -1,3 +1,10 @@
+---
+name: piece-side-matching
+description: Codebase audit (grep -ri \"side.match\|piece.side\|sidegraph\"
+status: unbuilt
+metadata:
+  type: concept
+---
 # Piece-Side-Matching reformulation of E2 (vol-65 math)
 
 **Status**: `design` (math-first) — vol-65 (2026-05-15).
@@ -342,7 +349,7 @@ This adds ~256 piece-placement constraints, all polynomial.
 
 ## Linked
 
-- [[../sessions/vol-65]] (TBD)
+- [[vol-65]] (TBD)
 - [[mip-local-optimality-459]] — vol-62's MIP-bound, complementary
   (cluster-MIP is also a polytope analysis but local-only)
 - memory: [[project_e2_ns1_deficit_invariant]] (vol-11 Δ-invariant)

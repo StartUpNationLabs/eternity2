@@ -3,6 +3,7 @@ name: dlx-e2-implementation-status
 description: "Vol-122 A4 DLX (Dancing Links Algorithm X) for E2 implementation status. Library works on n-queens but XCC color-secondary semantics need careful re-implementation. Multi-day work."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 A4 — DLX/XCC for E2: implementation status
@@ -62,5 +63,5 @@ might explore different basins efficiently.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] — A4 entry
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] — A4 entry

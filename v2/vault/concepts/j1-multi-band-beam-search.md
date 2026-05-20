@@ -3,6 +3,7 @@ name: j1-multi-band-beam-search
 description: "J1 extension: when multiple band-0 configurations achieve perfect score, try each as a starting point for band 1. Effectively beam-search at the BAND level too."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — Multi-Band Beam Search

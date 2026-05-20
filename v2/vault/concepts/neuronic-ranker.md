@@ -1,3 +1,10 @@
+---
+name: neuronic-ranker
+description: Naming: NEURONIC — a small neural rule injected into a combinatorial search.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Neuronic — Tiny NN Ranker for Beam Search (V177)
 
 Status: `unbuilt` (design 2026-05-20)
@@ -72,4 +79,4 @@ A NN that just memorizes "high459 cp = (3,2,0,1) → 469" is useless for finding
 - [[murmuration-basin-sampling]] (V171) — same diversity goal, different mechanism.
 - [[spectral-border-signature]] (V173 — features feed into NEURONIC).
 - [[prior-data-augmented-beam]] (V155 — base architecture).
-- [[../plans/INVENTIONS_BACKLOG]] (C1 GNN, V167 NN — related but C1 is per-cell, V167 is whole-board).
+- [[INVENTIONS_BACKLOG]] (C1 GNN, V167 NN — related but C1 is per-cell, V167 is whole-board).

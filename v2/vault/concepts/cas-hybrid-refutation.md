@@ -1,3 +1,10 @@
+---
+name: cas-hybrid-refutation
+description: Run CAS to get shells 0-2 (156 cells, 252/252 matched). Pin these,
+status: built
+metadata:
+  type: concept
+---
 # CAS-prefix + ALNS-suffix hybrid: 418/480 — vol-74 refutation
 
 **Status**: `built` (negative result) — vol-74 (2026-05-15).

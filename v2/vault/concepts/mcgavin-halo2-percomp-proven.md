@@ -3,6 +3,7 @@ name: mcgavin-halo2-percomp-proven
 description: McGavin per-component MIP-optimality EXTENDED to halo r=2. Component 0 (29 cells, 5.4s) and component 1 (34 cells, 147.6s) both delta=+0. Each component's halo-2 region rigid.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin per-component halo-2 — PROVEN (vol-92)

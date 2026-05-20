@@ -3,6 +3,7 @@ name: j1-fragment-anchor-design
 description: "J1-fragment-anchor: instead of strict top-down chain, solve the 3 hint-containing bands first (bands 1, 7, 12) as independent column-DP fragments, then connect them via top/middle/bottom J1 sub-chains. Addresses the cascade penalty observed in J1-hinted v2."
 metadata:
   type: project
+status: partial
 ---
 
 # J1-fragment-anchor (design only)

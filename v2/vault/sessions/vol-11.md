@@ -1,7 +1,7 @@
 # Session — vol-11
 
 **Theme**: Survey Propagation + boundary-MPS tensor networks. Both refuted; NS-1 quantified.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_11|RESEARCH_NOTES_11.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_11|RESEARCH_NOTES_11.md]]
 
 ## What was attempted
 

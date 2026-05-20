@@ -3,6 +3,7 @@ name: j1-chain-hinted-band-12-failure
 description: "J1-hinted: J1 chain with 5 canonical hints baked in as fixed_top/fixed_bot constraints. Reaches band 11 (208/256 placed) but fails at band 12 col 2 where hint piece 180 rot 1 at (13,2) is no-state-feasible under accumulated piece supply."
 metadata:
   type: project
+status: refuted
 ---
 
 # J1-hinted — Band 12 failure

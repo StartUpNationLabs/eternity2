@@ -1,3 +1,10 @@
+---
+name: operator-lock
+description: A board B is K-operator-locked if no move of cardinality ≤ K (rotations, transpositions, K-cycles) strictly improves ...
+status: built
+metadata:
+  type: concept
+---
 # Operator-lock (K≤5)
 
 **Status**: `built` (vol-20), measurement established

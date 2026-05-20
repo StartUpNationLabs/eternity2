@@ -100,21 +100,21 @@ log to BACKLOG with `since: vol-29` rather than reshaping T1.
 
 Standard:
 1. Update T1 status in BACKLOG.
-2. Amend [[../concepts/learned-value-order]] with vol-29 measurement.
+2. Amend [[learned-value-order]] with vol-29 measurement.
 3. Write `sessions/vol-29.md`.
 4. If gate PASS: draft VOL-30.md for LearnedOnTies hybrid + multi-seed.
-5. If gate FAIL: update [[../concepts/learned-value-order]] status to
+5. If gate FAIL: update [[learned-value-order]] status to
    `refuted` (currently `built`) for the canonical-transfer claim,
    keep `built` for the 6×6 gate result. Close the direction.
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — full vol-26/27/28 history.
-- [[../concepts/edge-bp-marginals]] — historical "learned-from-data
+- [[learned-value-order]] — full vol-26/27/28 history.
+- [[edge-bp-marginals]] — historical "learned-from-data
   value-order" comparison.
 
 ## Linked sessions
 
-- [[../sessions/vol-28]] — direct predecessor (cross-domain refuted).
-- [[../sessions/vol-27]] — bridge + 6×6 gate PASS.
-- [[../sessions/vol-26]] — original 6×6 gate.
+- [[vol-28]] — direct predecessor (cross-domain refuted).
+- [[vol-27]] — bridge + 6×6 gate PASS.
+- [[vol-26]] — original 6×6 gate.

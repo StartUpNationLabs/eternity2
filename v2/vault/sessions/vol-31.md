@@ -85,7 +85,7 @@ that the strong pipeline preserves but doesn't amplify.
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] — Vol-31 measurement section
+- [[learned-value-order]] — Vol-31 measurement section
   added (both pipelines, full table). First ML-driven score lift on
   canonical 5-clue 16×16 E2.
 

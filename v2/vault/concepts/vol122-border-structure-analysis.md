@@ -3,6 +3,7 @@ name: vol122-border-structure-analysis
 description: "Vol-122 border-structure analysis: all valid 60-matched borders have identical interior-color multiset; differences are permutation/rotation. Color-gap uniformity does NOT correlate with eventual ALNS score."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — border structural analysis
@@ -94,4 +95,4 @@ Next hypotheses to test:
 
 - [[vol122-a1-pipeline-result]]
 - [[vol122-pcls-poc-result]]
-- [[../sessions/vol-122]]
+- [[vol-122]]

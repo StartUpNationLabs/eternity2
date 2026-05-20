@@ -1,3 +1,10 @@
+---
+name: stigma-pheromone-adjacency
+description: Naming: STIGMA — Latin \"mark, brand\"; in Ant Colony Optimization the stigmergic trace ants leave on a path. We trace ...
+status: unbuilt
+metadata:
+  type: concept
+---
 # STIGMA — Pheromone Adjacency Learning Across Runs (V178)
 
 Status: `unbuilt` (design 2026-05-20)
@@ -77,7 +84,7 @@ If V175 GAUNTLET builds across 9 scan orders explore 18+ unique corner-perm fami
 
 ## Linked
 
-- [[../sessions/vol-178]] (planned)
+- [[vol-178]] (planned)
 - [[prior-data-augmented-beam]] (V155 — what STIGMA augments)
 - [[murmuration-basin-sampling]] (V171 — diversity engine)
-- [[../plans/IDEAS_BACKLOG_2026-05-19]] V158 PAIR-PRIOR built static; STIGMA is the live version.
+- [[IDEAS_BACKLOG_2026-05-19]] V158 PAIR-PRIOR built static; STIGMA is the live version.

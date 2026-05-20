@@ -3,6 +3,7 @@ name: v125-461-reproducibility
 description: "Vol-125 2026-05-18 12:53: 461/480 achieved by ALL 4 ALNS seeds (1, 7, 99, 142) on the seed=110 bf_bw partial, plus seed=111 with seed=42. The 461 ceiling is HIGHLY reproducible. Two structurally distinct 461 basins identified."
 metadata:
   type: project
+status: built
 ---
 
 # 461 reproducibility — the basin is robust
@@ -83,4 +84,4 @@ Only offsets 110, 111 reach 461 with seed=42. Tight neighborhood.
 
 - [[record-461-2026-05-18]]
 - [[record-460-2026-05-18]]
-- [[../sessions/vol-125]]
+- [[vol-125]]

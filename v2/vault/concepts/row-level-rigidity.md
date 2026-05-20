@@ -1,3 +1,10 @@
+---
+name: row-level-rigidity
+description: A board $b$ is row-locally rigid if for every row $r \in [1, 14]$,
+status: built
+metadata:
+  type: concept
+---
 # Row-Level Local Rigidity — V181 460 and McGavin 469
 
 Status: `built` — row-swap surgery proves both basins are row-locally rigid (2026-05-20, vol-186).
@@ -145,5 +152,5 @@ rigid in the mismatch band.
 
 - [[three-basin-iso-plateau]]
 - [[lighthouse-bidirectional-row]]
-- [[../basins/basin-460-cp0312-v181]]
-- [[../basins/basin-mcgavin-469]]
+- [[basin-460-cp0312-v181]]
+- [[basin-mcgavin-469]]

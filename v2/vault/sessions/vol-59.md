@@ -168,6 +168,6 @@ the empirical record-break probability is ≤ 0.6%.
 
 ## Linked
 
-- [[../sessions/vol-58]] — predecessor with canonical-scale failure
-- [[../concepts/cdcl-no-good-e2]] — math design
-- [[../concepts/cdcl-engine-integration]] — engine plan
+- [[vol-58]] — predecessor with canonical-scale failure
+- [[cdcl-no-good-e2]] — math design
+- [[cdcl-engine-integration]] — engine plan

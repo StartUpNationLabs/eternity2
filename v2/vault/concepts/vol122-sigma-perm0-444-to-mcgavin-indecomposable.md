@@ -3,6 +3,7 @@ name: vol122-sigma-perm0-444-to-mcgavin-indecomposable
 description: "Vol-122 K5 — σ-cycle decomposition between vol-122 perm0_444 basin (NEW clean-slate) and McGavin 469 is INDECOMPOSABLE. Extends vol-65 rigidity to a new basin."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 K5 — σ-transfer perm0_444 → McGavin_469
@@ -78,7 +79,7 @@ Beating 459 (let alone 469) requires either:
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../concepts/vol122-a1-pipeline-result]]
+- [[vol-122]]
+- [[vol122-a1-pipeline-result]]
 - vol-65 σ-indecomposable note (memory)
 - vol-105 sigma cycles (also vol-60 459 → McGavin)

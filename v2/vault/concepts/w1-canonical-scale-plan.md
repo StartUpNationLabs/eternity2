@@ -3,6 +3,7 @@ name: w1-canonical-scale-plan
 description: "Roadmap for scaling W1 PEPS-Lagrangian to canonical 16×16. Phase 1 (DONE): Python validation on 4×4/6×6. Phase 2 (NOW): Python multiprocessing. Phase 3 (next): full Rust port with PyO3 fallback for contraction. Phase 4: canonical run."
 metadata:
   type: project
+status: partial
 ---
 
 # W1 — Canonical scale roadmap

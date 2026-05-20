@@ -3,11 +3,19 @@ name: high-t-mcmc-refuted
 description: "Vol-114 T1 — IDEAS_FROM_BLANK Idea H REFUTED both forms. Single-piece-swap MCMC at T ∈ {2, 5, 10, 15, 25, 50}: chain randomizes (score crashes from 459 to 20-25), never returns to high-score. σ-cycle MCMC with corpus of 4 459 basins: chain hovers around 459 (max ever observed = 459, never 460+). The 459 ceiling holds across the entire 'random + Metropolis' algorithmic family."
 metadata:
   type: project
+status: refuted
 ---
 
 # High-T MCMC on the 459 level set (vol-114 T1 — REFUTED)
 
 **Status**: `refuted` 2026-05-16 ~15:35.
+
+## Refutation
+
+- **Refuted**: vol-114 T1.
+- **Evidence**: 100K iterations × 6 temperatures (T ∈ {2, 5, 10, 15, 25, 50}) — chain randomizes (score crashes 459 → 20-25), never returns. σ-cycle Metropolis variant hovers around 459, never exceeds.
+- **What's refuted**: Idea H from IDEAS_FROM_BLANK_2026-05-16 — "energy-based MCMC at high T can cross 459 barriers where ALNS can't".
+- **What's NOT refuted**: that other MCMC variants (e.g., parallel tempering with σ-cycle moves) could work. Standard high-T single-piece-swap and σ-cycle Metropolis are both bounded by 459.
 **Origin**: IDEAS_FROM_BLANK Idea H — "Energy-based MCMC at high T".
 **Hypothesis**: standard MCMC at T=1 has acceptance ~0 for the
 σ-cycle moves needed to cross 459 barriers. At T=50-100, these
@@ -83,5 +91,5 @@ handhold not yet refuted at this scale.
 
 - [[multiple-459-basins-rigid]] — basin corpus used.
 - [[basin-mix-mip-refuted]] — vol-112 T1, parallel MIP refutation.
-- [[../MATH_NOTES_2026-05-16_459_LEVEL_SET]] — theoretical framing.
-- [[../sessions/vol-114]].
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — theoretical framing.
+- [[vol-114]].

@@ -3,9 +3,17 @@ name: k8-fft-signature-refuted
 description: "K8 = FFT signature: treat board as 16×16×4 image, compute 2D FFT. Hypothesis: high-score boards have characteristic low-frequency dominance. REFUTED — all complete boards (444-459) have identical low_frac ≈ 0.903."
 metadata:
   type: project
+status: refuted
 ---
 
 # K8 — FFT signature analysis (refuted)
+
+## Refutation
+
+- **Refuted**: vol-122 K8.
+- **Evidence**: all complete boards (score 444-459) have identical low-frequency fraction ≈ 0.903. The 2D FFT signature carries **zero discriminative information** for score on canonical 16×16 E2.
+- **What's refuted**: image-processing lens for board scoring — the hypothesis that high-score boards have a distinguishable smooth-color-transition signature.
+- **What's NOT refuted**: other cross-domain lenses (signal processing, group theory, etc.) — FFT specifically is null; this doesn't generalize.
 
 ## Origin
 
@@ -73,5 +81,5 @@ left for future cross-domain exploration.
 
 ## Linked
 
-- [[../sessions/vol-122]] (today)
+- [[vol-122]] (today)
 - [[feedback-invent-cross-domain]] (the directive that motivated this)

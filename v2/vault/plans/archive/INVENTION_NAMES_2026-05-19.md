@@ -103,5 +103,5 @@ publishable finding even if the algorithm doesn't lift the record.
 ## Linked
 
 - [[MULTI_VOL_PLAN_2026-05-19]] (superseded for invention-mode vols)
-- [[../sessions/vol-147]]
-- [[../sessions/vol-148]] (sweep killed mid-launch per user invention pivot)
+- [[vol-147]]
+- [[vol-148]] (sweep killed mid-launch per user invention pivot)

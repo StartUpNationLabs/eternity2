@@ -1,7 +1,7 @@
 # Session — vol-09
 
 **Theme**: First community technique ports. Eulerian-border (refuted) + Verhaard SA (small signal).
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_9|RESEARCH_NOTES_9.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_9|RESEARCH_NOTES_9.md]]
 
 ## What was attempted
 

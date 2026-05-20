@@ -3,6 +3,7 @@ name: k10-kuramoto-design-issues
 description: "K10 Kuramoto coupled-oscillator for E2 — design analysis reveals the mapping isn't natural. Each cell would need a continuous phase, but the puzzle is fundamentally discrete (piece-id + rotation). Kuramoto-on-E2 collapses to XY model that doesn't map back to piece assignments."
 metadata:
   type: project
+status: partial
 ---
 
 # K10 — Kuramoto Coupled Oscillators (design issues)

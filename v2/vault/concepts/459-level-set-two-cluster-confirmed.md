@@ -3,6 +3,7 @@ name: 459-level-set-two-cluster-confirmed
 description: "Vol-118 — pairwise rigidity matrix on 7-board 459 corpus confirms TWO-CLUSTER structure with quantitative precision. Cluster A (6 basins: vol-110 bseed1/6/11/orig/NEW + v17_alns winning5): pairwise Hamming 34-44, max σ-cycle 9-25. Cluster B (1 basin: vol-60 RECORD_TIE_459): Hamming 251-253 to Cluster A members, max σ-cycle 94-190. Cluster A members all reachable via 'small-cycle' σ-permutations. Cluster B isolated by 'giant-cycle' transitions."
 metadata:
   type: project
+status: built
 ---
 
 # Two-cluster structure of the 459-level set (vol-118)
@@ -98,5 +99,5 @@ interpolation.
 
 - [[multiple-459-basins-rigid]] — broader rigidity context.
 - [[sigma-cycle-boundary-growth]] — quantitative cycle structure.
-- [[../MATH_NOTES_2026-05-16_459_LEVEL_SET]] — conjecture C1 supported.
-- [[../sessions/vol-118]].
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — conjecture C1 supported.
+- [[vol-118]].

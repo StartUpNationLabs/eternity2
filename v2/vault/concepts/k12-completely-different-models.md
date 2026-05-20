@@ -3,6 +3,7 @@ name: k12-completely-different-models
 description: "K12 brainstorm — model E2 as something fundamentally non-combinatorial: hydrodynamics/fluids, electrical circuits, DNA sequence, music chord progression, foam topology, etc. Picked foam topology for first PoC (connects to K9/K11 findings)."
 metadata:
   type: project
+status: built
 ---
 
 # K12 — Completely Different Models of E2

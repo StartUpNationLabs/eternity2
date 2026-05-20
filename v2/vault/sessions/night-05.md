@@ -1,7 +1,7 @@
 # Session — NIGHT 5 (preprint abstract + falsification framework)
 
 **Theme**: Formalising vol-5/6 findings as a peer-ready paper.
-**Raw**: [[../sessions/archive/raw/NIGHT5_ABSTRACT|NIGHT5_ABSTRACT.md]], [[../sessions/archive/raw/NIGHT5_MORNING_BRIEF|NIGHT5_MORNING_BRIEF.md]], [[../sessions/archive/raw/NIGHT5_FINAL_SUMMARY|NIGHT5_FINAL_SUMMARY.md]], [[../sessions/archive/raw/NIGHT5_NEXT_DAY|NIGHT5_NEXT_DAY.md]], [[../sessions/archive/raw/NIGHT5_SYNTHESIS|NIGHT5_SYNTHESIS.md]]
+**Raw**: [[archive/raw/NIGHT5_ABSTRACT|NIGHT5_ABSTRACT.md]], [[archive/raw/NIGHT5_MORNING_BRIEF|NIGHT5_MORNING_BRIEF.md]], [[archive/raw/NIGHT5_FINAL_SUMMARY|NIGHT5_FINAL_SUMMARY.md]], [[archive/raw/NIGHT5_NEXT_DAY|NIGHT5_NEXT_DAY.md]], [[archive/raw/NIGHT5_SYNTHESIS|NIGHT5_SYNTHESIS.md]]
 
 ## Output
 

@@ -91,7 +91,7 @@ a writeup section.
 
 Standard:
 1. Update T1+T2 status in BACKLOG.
-2. Amend [[../concepts/learned-value-order]] with the new measurements.
+2. Amend [[learned-value-order]] with the new measurements.
 3. Write `sessions/vol-30.md`.
 4. Draft `VOL-31.md` based on results.
 5. Memory entry if the result is gate-significant.
@@ -106,9 +106,9 @@ Standard:
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — full vol-26/27/28/29 history.
+- [[learned-value-order]] — full vol-26/27/28/29 history.
 
 ## Linked sessions
 
-- [[../sessions/vol-29]] — direct predecessor (distribution-matched
+- [[vol-29]] — direct predecessor (distribution-matched
   imitation matches teacher).

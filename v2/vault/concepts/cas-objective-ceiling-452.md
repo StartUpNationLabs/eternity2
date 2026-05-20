@@ -3,6 +3,7 @@ name: cas-objective-ceiling-452
 description: CAS objective fully covers all 480 grid edges — no inter-shell edges are missed. CAS's empirical 433-436 plateau is NOT an objective-coverage issue; it is a piece-availability / shell-frozen-context issue. Refuted my own initial hypothesis live in vol-79.
 metadata:
   type: project
+status: built
 ---
 
 # CAS objective coverage — full 480, no missing edges

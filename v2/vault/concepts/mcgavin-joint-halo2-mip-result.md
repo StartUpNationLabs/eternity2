@@ -3,6 +3,7 @@ name: mcgavin-joint-halo2-mip-result
 description: "Vol-121 T3 — McGavin 469's 15-cell II-mismatch region + halo-2 (53 cells joint) ran HiGHS MIP for 1800s. Δ=0 found. CBC's B&B didn't close the LP-INT gap to optimality within the time budget (final BestBound=120.93 vs BestSol=113, gap=7%). Two interpretations: (1) the LP relaxation has 7-edge looseness that integer cannot close (i.e. McGavin halo-2 joint truly locked at 113) — most likely given vol-44/95/100 lineage; (2) an integer improvement exists but B&B couldn't find it in 30min. No record produced."
 metadata:
   type: project
+status: built
 ---
 
 # McGavin halo-2 joint MIP timeout (vol-121 T3)
@@ -40,4 +41,4 @@ piece freedom found no improvement. NOT proven globally optimal.
 - [[corpus-restricted-region-mip-locked]]
 - [[mcgavin-top3-mip-locked]]
 - [[honest-status-vol121]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

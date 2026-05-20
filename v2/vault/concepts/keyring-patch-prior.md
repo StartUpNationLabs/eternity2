@@ -1,3 +1,10 @@
+---
+name: keyring-patch-prior
+description: Three corpus-derived signals each carry partial information about \"what
+status: built
+metadata:
+  type: concept
+---
 # KEYRING — Patch + Pheromone + Position Prior (V181)
 
 Status: `built` — produced 460 in new basin cp=(0,3,1,2) + 459 in distinct basin same run.
@@ -69,7 +76,7 @@ Encoded as `HashMap<u64, f32>` where the u64 key packs (piece1, rot1, ..., piece
 - 36 builds (9 scans × 4 seeds) → top 8 to 30min ALNS.
 - **5/8 V181 lifts reached ≥458** (V175-LONG-LIFT: 1/8).
 - Average build score: +3 over V175.
-- **New basin 460** in cp=(0,3,1,2) — see [[../basins/basin-460-cp0312-v181]].
+- **New basin 460** in cp=(0,3,1,2) — see [[basin-460-cp0312-v181]].
 - **Distinct 459** in same run.
 
 ## Why KEYRING works better than V175 alone
@@ -94,10 +101,23 @@ Encoded as `HashMap<u64, f32>` where the u64 key packs (piece1, rot1, ..., piece
 
 ## Linked concepts
 
+### Builder components
 - [[prior-data-augmented-beam]] (V155, position component)
 - [[stigma-pheromone-adjacency]] (V178, pheromone component)
 - [[intaglio-forbidden-patterns]] (V180, patch theory)
-- [[three-basin-iso-plateau]] (limit of post-build ALNS lift)
+
+### Related builders
+- [[murmuration-basin-sampling]] (V171 Gumbel-beam parent)
+- [[spectral-border-signature]] (V178 sibling)
+- [[neuronic-ranker]] (V177 sibling, exploratory)
+
+### Findings produced
+- [[basin-460-cp0312-v181]] (the 460 in new cp)
+- [[three-basin-iso-plateau]] (post-build ALNS lift is bounded)
+- [[v186-pool-biased-top-down]] (vol-186 attempt to extend KEYRING)
+
+### Path forward
+- [[plans/CURRENT-VOL]] — vol-189 CORTEZ extends KEYRING with corner-pinning
 
 ## Linked memory
 

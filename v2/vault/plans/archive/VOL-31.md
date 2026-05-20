@@ -76,7 +76,7 @@ script.
 
 Standard:
 1. Update T1 status in BACKLOG.
-2. Amend [[../concepts/learned-value-order]] with the score-axis
+2. Amend [[learned-value-order]] with the score-axis
    measurement.
 3. Write `sessions/vol-31.md`.
 4. Draft VOL-32 conditional on T1 result.
@@ -85,11 +85,11 @@ Standard:
 
 ## Linked concepts
 
-- [[../concepts/learned-value-order]] — vol-26..30 history.
-- [[../concepts/prune-restart]] — vol-23 ALNS-from-CP-partial baseline.
-- [[../concepts/score-optimizing-cp]] — vol-24's depth-vs-score split.
+- [[learned-value-order]] — vol-26..30 history.
+- [[prune-restart]] — vol-23 ALNS-from-CP-partial baseline.
+- [[score-optimizing-cp]] — vol-24's depth-vs-score split.
 
 ## Linked sessions
 
-- [[../sessions/vol-30]] (or vol-30-DRAFT.md until vol-30 close) —
+- [[vol-30]] (or vol-30-DRAFT.md until vol-30 close) —
   the +9 depth lift.

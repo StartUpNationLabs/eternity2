@@ -3,6 +3,7 @@ name: sigma-subset-bound-empirically-tight
 description: "Vol-119 T3 — DIRECT empirical measurement of Δ(S) for the thinnest σ-subsets in our basin corpus confirms the vol-118 MATH_NOTES theorem (Δ(S) ≈ -B(S)·p) is tight with p ≈ 1.0. Even at ratio B/|S| as low as 0.67 (k=45 on the largest cross-cluster cycle), Δ(S) = -30 (= -B), no lift possible."
 metadata:
   type: project
+status: built
 ---
 
 # σ-subset bound empirically tight (vol-119 T3)
@@ -67,6 +68,6 @@ larger corpus too.
 
 ## Linked
 
-- [[../MATH_NOTES_2026-05-16_SIGMA_SUBSET_THEOREM]]
+- [[MATH_NOTES_2026-05-16_SIGMA_SUBSET_THEOREM]]
 - [[basin-mix-mip-refuted]]
-- [[../sessions/vol-119]]
+- [[vol-119]]

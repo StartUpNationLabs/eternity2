@@ -3,6 +3,7 @@ name: j1-chain-band-decomposition-math
 description: "J1 chain-bands math: theoretical max score from sequential band processing. Each band 1+ adds 2·side - 1 new edges (next row's horizontals + next row's verticals to prior row)."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — Chain-Bands Decomposition (Math)
@@ -115,4 +116,4 @@ sub-perfect compromise.
 
 - [[j1-column-dp-design]]
 - [[j1-poc-perfect-band-results]]
-- [[../sessions/vol-122]]
+- [[vol-122]]

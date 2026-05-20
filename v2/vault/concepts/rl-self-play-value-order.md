@@ -1,3 +1,10 @@
+---
+name: rl-self-play-value-order
+description: vol-30 T2 confirmed +9 depth lift invariant across 3 model variants;
+status: unbuilt
+metadata:
+  type: concept
+---
 # RL self-play for E2 value-order (vol-48 design)
 
 **Status**: design phase.

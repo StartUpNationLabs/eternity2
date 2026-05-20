@@ -1,3 +1,10 @@
+---
+name: score-optimizing-cp
+description: Branch-and-bound CP that optimises the matched-edge count instead of returning the first valid completion.
+status: built
+metadata:
+  type: concept
+---
 # Score-optimizing CP (MaxScore objective)
 
 **Status**: `built` (vol-24 — engine + driver)

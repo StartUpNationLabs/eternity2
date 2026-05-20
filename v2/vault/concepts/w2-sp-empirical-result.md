@@ -3,6 +3,7 @@ name: w2-sp-empirical-result
 description: "W2 SP-Lagrangian for E2: NEGATIVE result on 4×4. SP-style BP with Lagrangian-on-piece-uniqueness fails to converge to balanced piece usage. Min piece marginal stuck at 0, max at 2-3, gap=1.2-1.7 regardless of damping/eta tuning."
 metadata:
   type: project
+status: built
 ---
 
 # W2 SP-Lagrangian — empirical result

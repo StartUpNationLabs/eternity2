@@ -1,3 +1,10 @@
+---
+name: tunnel-pt-destroy-ladder
+description: aggressiveness, not just SA temperature)
+status: partial
+metadata:
+  type: concept
+---
 # TUNNEL — PT with Destroy-Aggressiveness Ladder
 
 **Status**: `partial` (Vol-141, 2026-05-19 — built but inert in

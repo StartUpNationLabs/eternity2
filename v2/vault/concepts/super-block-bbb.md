@@ -3,6 +3,7 @@ name: super-block-bbb
 description: "Vol-125 design — Bourreau-style Block-Backtracking-on-Blocks (BB&B). Use the W14 2×2 super-block alphabets as the variable domains of a CSP at the SUPER-CELL level: 64 super-cells, each with ~2M block candidates after AC-3. Enforce adjacency (boundary equality) + piece-uniqueness. Drastically smaller than the 256-cell native CSP."
 metadata:
   type: project
+status: built
 ---
 
 # Super-block BB&B (Bourreau 2020 reformulation)

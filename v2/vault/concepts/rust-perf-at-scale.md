@@ -3,6 +3,7 @@ name: rust-perf-at-scale
 description: "Vol-106 T7 — distilled web-research + applied results on Rust hot-loop optimization at scale. Workspace currently uses lto=thin + codegen-units=1 + target-cpu=apple-m1. PGO gives +14% on bf_bw, +12% on vanilla_fastest, +4% on vanilla_v2. Apple M1 cache-line is 128 bytes (vs 64 on x86); Firestorm L1d is 128 KB."
 metadata:
   type: project
+status: built
 ---
 
 # Rust performance at scale — hot-loop optimization patterns
@@ -262,4 +263,4 @@ vault rule.
 
 - [[blackwood-fast]] — the crate the PGO measurements were on.
 - [[vanilla-v2]] — the new vanilla DFS that vanilla_fastest+12%-w/-PGO.
-- [[../sessions/vol-106|vol-106]].
+- [[vol-106|vol-106]].

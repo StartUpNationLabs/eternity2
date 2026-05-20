@@ -10,7 +10,7 @@ captures the LP-tightening path that addresses the integer gap.
 
 ## What was shipped
 
-[[../concepts/lifted-lp-column-gen-per-piece]] — a ~400-line concept
+[[lifted-lp-column-gen-per-piece]] — a ~400-line concept
 page covering:
 
 1. The problem (vol-50 LP-integer gap motivation).
@@ -92,7 +92,7 @@ is ruled out.
 
 ## Linked
 
-- [[../concepts/lifted-lp-column-gen-per-piece]] — the design doc
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 motivation
-- [[../concepts/lifted-lp-formulation]], [[../concepts/lifted-lp-column-generation]] — vol-47 predecessors
+- [[lifted-lp-column-gen-per-piece]] — the design doc
+- [[lp-integer-gap-anatomy]] — vol-50 motivation
+- [[lifted-lp-formulation]], [[lifted-lp-column-generation]] — vol-47 predecessors
 - [[vol-50]], [[vol-51]] — recent sessions

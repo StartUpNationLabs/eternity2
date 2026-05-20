@@ -190,7 +190,7 @@ hull. Neither is in scope for an autonomous session.
 
 - [[vol-50]] — anatomy table, numerically correct but loose interpretation
 - [[vol-53]] — refutation of vol-52, intuition vindicated by T2
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50's concept page; update needed
-- [[../concepts/lifted-lp-column-gen-per-piece]] — vol-52 design; update needed
-- [[../concepts/per-piece-column-gen-6x6-worked]] — vol-53 refutation; gets a sharper proof
-- (NEW) [[../concepts/y-linearisation-cell-fractional-gap]] — gap mechanism, vol-54
+- [[lp-integer-gap-anatomy]] — vol-50's concept page; update needed
+- [[lifted-lp-column-gen-per-piece]] — vol-52 design; update needed
+- [[per-piece-column-gen-6x6-worked]] — vol-53 refutation; gets a sharper proof
+- (NEW) [[y-linearisation-cell-fractional-gap]] — gap mechanism, vol-54

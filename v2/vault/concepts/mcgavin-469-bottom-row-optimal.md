@@ -3,6 +3,7 @@ name: mcgavin-469-bottom-row-optimal
 description: "Vol-125 2026-05-18: PROOF that McGavin's 469 is globally optimal on the 4-cell σ-cycle at bottom row (positions 246-249, pieces 4/8/34/56). Exhaustive 24×256=6144 enumeration confirms no permutation+rotation beats 469 in this region."
 metadata:
   type: project
+status: built
 ---
 
 # McGavin 469 — bottom-row 4-cell σ-cycle is proven optimal

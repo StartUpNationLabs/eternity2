@@ -301,7 +301,7 @@ per-arm context lets LLVM specialise the basic-block layout and
 branch predictor for each depth's typical access pattern. The
 constant-folded depth-meta is a secondary win on top.
 
-See concept page [[../concepts/rust-perf-at-scale]] for the broader
+See concept page [[rust-perf-at-scale]] for the broader
 optimization log.
 
 **Analysis update 2026-05-16 ~10:00 CEST**: after building the
@@ -393,7 +393,7 @@ Status of every invention shipped vols 169–184:
 | V183 | SEMAPHORE — per-row chain-DP | `refuted` | row-10 piece-starvation wall |
 | V184 | LIGHTHOUSE — bidirectional row | `refuted` | MERGE interface infeasible |
 
-Universal finding from vols 179/180/181: [[../concepts/three-basin-iso-plateau]] — three distinct ≥458 basins all locked under 30min ALNS basic_lkh + V179 + V180. Path to 461+ requires structural / cross-basin moves.
+Universal finding from vols 179/180/181: [[three-basin-iso-plateau]] — three distinct ≥458 basins all locked under 30min ALNS basic_lkh + V179 + V180. Path to 461+ requires structural / cross-basin moves.
 
 ## Concepts catalog (status pages)
 

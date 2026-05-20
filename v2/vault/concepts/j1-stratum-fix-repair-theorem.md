@@ -3,6 +3,7 @@ name: j1-stratum-fix-repair-theorem
 description: "From J1 loss-localization, the 36 missing edges live ONLY in V_8..V_14 + H_15. This admits a 'fix-stratum' MIP/ALNS restricted to rows 8-15 with the upper 8 rows frozen. Mathematical derivation of feasibility, support, and an operator definition."
 metadata:
   type: project
+status: built
 ---
 
 # J1 stratum-fix repair theorem

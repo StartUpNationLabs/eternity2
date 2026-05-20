@@ -3,6 +3,7 @@ name: vol122-random-path-sweep-result
 description: "Vol-122 T1 random-path massive sweep result. 11 seeds completed: placed counts 87-136 cells, far from full board. Random scan order is much weaker than border-first MRV for basin discovery."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 T1 — random-path massive sweep (result)
@@ -53,6 +54,6 @@ This isn't a refutation of "random helps escape basin lock-in", just of "random 
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]]
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]]
 - [[inv3-border-dp-seed]] — the pivot

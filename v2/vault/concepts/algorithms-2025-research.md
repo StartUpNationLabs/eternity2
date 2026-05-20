@@ -3,6 +3,7 @@ name: algorithms-2025-research
 description: "Vol-125 T38 deep research (2026-05-18): survey of LAP solvers, LNS variants, and E2-related algorithms in 2024-2025 literature. Identifies 8 algorithms NOT in our stack that are candidates for implementation, ranked by EV."
 metadata:
   type: project
+status: built
 ---
 
 # Deep research: algorithms we could try beyond JV

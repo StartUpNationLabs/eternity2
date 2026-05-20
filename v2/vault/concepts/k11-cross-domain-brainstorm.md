@@ -3,6 +3,7 @@ name: k11-cross-domain-brainstorm
 description: "Brainstorming cross-domain framings for E2: wave mechanics, optics, information theory. Each candidate evaluated for what NEW operational structure it introduces beyond CSP/MIP/ALNS."
 metadata:
   type: project
+status: built
 ---
 
 # K11 — Cross-domain brainstorm: waves, optics, information theory

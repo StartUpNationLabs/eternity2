@@ -139,9 +139,9 @@ operationalised that.
 ## Linked
 
 - [[vol-54]] — math finding that motivated this MVP
-- [[../concepts/y-linearisation-cell-fractional-gap]] — gap mechanism
-- [[../concepts/lifted-lp-column-gen-per-piece]] — vol-52 design,
+- [[y-linearisation-cell-fractional-gap]] — gap mechanism
+- [[lifted-lp-column-gen-per-piece]] — vol-52 design,
   vol-55 confirms refutation (column-gen alone wouldn't add MIP power
   beyond what HiGHS already does)
-- [[../concepts/lp-ub-478-basins]] — vol-44 basin LP UBs
+- [[lp-ub-478-basins]] — vol-44 basin LP UBs
 - memory: `feedback_no_limiting_thoughts.md`

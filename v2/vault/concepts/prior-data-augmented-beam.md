@@ -1,3 +1,10 @@
+---
+name: prior-data-augmented-beam
+description: V150-V151 from-scratch builders saturate at 455/480 (K=16384 beam).
+status: built
+metadata:
+  type: concept
+---
 # PRIOR — Data-Augmented Beam Value Ordering
 
 **Status**: `built-measured` 2026-05-19 (Vol-155). **From-scratch ceiling lifted to 456/480** (from V151's 453).
@@ -47,6 +54,6 @@ information is too dilute / pieces-at-positions don't transfer.
 
 ## Linked
 
-- [[../sessions/vol-155]] (to create)
+- [[vol-155]] (to create)
 - [[weaving-beam]] (V151 parent: 455 ceiling)
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[INVENTION_NAMES_2026-05-19]]

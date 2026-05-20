@@ -1,3 +1,10 @@
+---
+name: chiasmus-basin-crossover
+description: Naming: CHIASMUS — Greek χιασμός, the crossing of fibers in DNA recombination. Reserved name; invention credit.
+status: partial
+metadata:
+  type: concept
+---
 # Chiasmus — Basin Crossover via Row/Column Interleave (V172)
 
 Status: `partial` (PoC measured 2026-05-20)
@@ -75,6 +82,6 @@ Both factors are basin-dependent. Pairs (A, B) where (1) is moderate and (2) is 
 
 ## Linked
 
-- [[../sessions/vol-172]]
+- [[vol-172]]
 - [[murmuration-basin-sampling]] (V171 provides the basin diversity input)
 - [[prior-guided-alns]] (V169 used as the lift stage)

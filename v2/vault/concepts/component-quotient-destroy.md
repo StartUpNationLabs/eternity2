@@ -1,3 +1,10 @@
+---
+name: component-quotient-destroy
+description: proves that no local repair with halo ≤ 2 cells can escape the 459
+status: refuted
+metadata:
+  type: concept
+---
 # Component-Quotient-Destroy (vol-62 pivot)
 
 **Status**: `refuted at halo ≤ 2` — vol-62 (2026-05-15). MIP-bound test
@@ -212,5 +219,5 @@ it's used to early-prune unprofitable repairs.
 ## Linked
 
 - [[homotopy-alns]] — refuted concept that this replaces
-- [[../sessions/vol-62]] — vol journal
+- [[vol-62]] — vol journal
 - memory: `feedback_vols_61_to_70_invented_algos`

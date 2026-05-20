@@ -3,6 +3,7 @@ name: vol122-mcgavin-border-our-stack-435
 description: "Vol-122 SANITY CHECK: McGavin's actual 469-host border, passed through OUR border_to_csp_fill+random_fill+ALNS_basic stack, only reaches 435. Gap to 469 = -34. Algorithm-side bottleneck identified."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — McGavin's border yields only 435 in our pipeline
@@ -68,4 +69,4 @@ border-enumeration improvements.
   has some validity (correlates within McGavin-perm), but border choice
   alone doesn't close the gap.
 - [[vol122-a1-pipeline-result]]
-- [[../sessions/vol-122]]
+- [[vol-122]]

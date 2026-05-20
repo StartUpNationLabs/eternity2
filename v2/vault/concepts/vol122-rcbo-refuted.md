@@ -3,9 +3,17 @@ name: vol122-rcbo-refuted
 description: "Vol-122 K1 — Reverse Construction via Boundary-Out (center-out CSP). REFUTED. Across 5×5 through 8×8 puzzles, center-out is 10×–100× SLOWER than border-out, often failing to solve."
 metadata:
   type: project
+status: refuted
 ---
 
 # Vol-122 K1 — RCBO refuted
+
+## Refutation
+
+- **Refuted**: vol-122 K1.
+- **Evidence**: center-out CSP is 10×–100× SLOWER than border-out across 5×5 through 8×8 puzzles. 5×5/c3 center-out fails entirely (depth 22/25 after 2M nodes); 8×8/c5 center-out times out at 10× the border-out budget.
+- **What's refuted**: the "Reverse Construction via Boundary-Out" hypothesis — that starting CSP from the center and building outward would benefit from initial rotation freedom. It doesn't — center cells have lower constraint propagation density; constraints accumulate too slowly to prune effectively.
+- **What's NOT refuted**: hybrid strategies that combine center-anchoring with border-anchoring at specific intermediate sizes.
 
 ## Idea
 
@@ -50,5 +58,5 @@ Center-out is not a viable invention direction.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../concepts/dead-ends]] (add this entry)
+- [[vol-122]]
+- [[dead-ends]] (add this entry)

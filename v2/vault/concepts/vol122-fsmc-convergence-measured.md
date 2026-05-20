@@ -3,6 +3,7 @@ name: vol122-fsmc-convergence-measured
 description: "Vol-122 J6 PoC: CSP frontier-state convergence rate measured on 3×3 through 7×7 puzzles. Strong signal — 17%–94% convergence rates, 80%–870% theoretical node savings via memoization."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 J6 — Frontier-State Memoized CSP (FSMC) PoC
@@ -83,6 +84,6 @@ canonical scale.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] (J6 to add)
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] (J6 to add)
 - [[dlx-e2-implementation-status]] (ZDD is related — same equivalence)

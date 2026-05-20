@@ -49,7 +49,7 @@ plan).
   dominates the saved engine time.
 - Gate condition (c) unsatisfiable at 6×6/5c (MRV had zero failures
   within 5s budget).
-- See [[../concepts/learned-value-order]] for the full table + analysis.
+- See [[learned-value-order]] for the full table + analysis.
 
 ## What was refuted
 
@@ -57,7 +57,7 @@ plan).
   Rust generator already does exactly the same construction with
   reproducible SplitMix64 seeding. Re-implementing would have introduced
   a second source of truth. Decision (vol-26 open): use Rust + JSONL
-  export. See [[../concepts/synthetic-puzzle-generator]] for the
+  export. See [[synthetic-puzzle-generator]] for the
   reasoning.
 - The 200k-param model size suggestion from the plan. 53k params already
   saturate the algorithmic signal at 6×6/5c; bigger wouldn't change the
@@ -75,14 +75,14 @@ plan).
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] (NEW) — the gate result.
-- [[../concepts/synthetic-puzzle-generator]] (NEW) — the data pipeline.
-- [[../concepts/genetic-algorithm]] (vol-25 amended) — frames why we're
+- [[learned-value-order]] (NEW) — the gate result.
+- [[synthetic-puzzle-generator]] (NEW) — the data pipeline.
+- [[genetic-algorithm]] (vol-25 amended) — frames why we're
   trying ML now: pure GA refuted at canonical 16×16 by 16 years of
   literature.
-- [[../concepts/symmetry-analysis]] (vol-25) — σ-bijection isn't an
+- [[symmetry-analysis]] (vol-25) — σ-bijection isn't an
   algebraic lever; ML is the next direction.
-- [[../concepts/edge-bp-marginals]] — the existing closest analog: a
+- [[edge-bp-marginals]] — the existing closest analog: a
   learned-from-data value-order via cell-level BP. Vol-26 demonstrates
   that NN-based imitation gives ≥ 540× node reduction vs BP's ~18%
   entropy gain at the comparable scale.
@@ -93,7 +93,7 @@ plan).
   doing the same-day audit). No aged BACKLOG items were resolved this
   vol; that's vol-25's territory.
 - Vol-27 inherits: the 540× algorithmic finding + the bridge-overhead
-  problem. Vol-27 plan is at [[../plans/VOL-27]].
+  problem. Vol-27 plan is at [[VOL-27]].
 
 ## Linked memory
 

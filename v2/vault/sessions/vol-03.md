@@ -1,7 +1,7 @@
 # Session — vol-03
 
 **Theme**: Edge-variable CSP formulation (Inversion-2); graph-theoretic reframings.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_3|RESEARCH_NOTES_3.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_3|RESEARCH_NOTES_3.md]]
 
 ## What was attempted
 

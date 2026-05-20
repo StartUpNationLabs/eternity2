@@ -1,3 +1,10 @@
+---
+name: cas-beats-alns-from-frame
+description: CAS beats ALNS when starting from a perfect frame — vol-77 (2026-05-15)
+status: built
+metadata:
+  type: concept
+---
 # CAS beats ALNS when starting from a perfect frame — vol-77 (2026-05-15)
 
 **Status**: `built` — vol-77 (2026-05-15).

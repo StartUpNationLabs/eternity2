@@ -101,9 +101,9 @@ Standing record: 458 (vol-32). Unchanged.
 
 ## Linked
 
-- [[../plans/CURRENT-VOL|CURRENT-VOL]] (will be reset for vol-52)
+- [[CURRENT-VOL|CURRENT-VOL]] (will be reset for vol-52)
 - [[vol-50]] — predecessor
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 math
-- [[../concepts/engine-perf-hot-paths]] — vol-25's profiling work
-- [[../concepts/relaxed-bound]] — vol-21 origin of bound
-- [[../concepts/prune-restart]] — vol-23 origin of restart
+- [[lp-integer-gap-anatomy]] — vol-50 math
+- [[engine-perf-hot-paths]] — vol-25's profiling work
+- [[relaxed-bound]] — vol-21 origin of bound
+- [[prune-restart]] — vol-23 origin of restart

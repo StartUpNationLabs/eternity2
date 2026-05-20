@@ -1,3 +1,10 @@
+---
+name: oracle-attracted-alns
+description: Codebase: no existing op uses an oracle board as an attractor.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Oracle-Attracted ALNS (vol-69 design)
 
 **Status**: `design` — vol-69 (2026-05-15).
@@ -104,4 +111,4 @@ can bridge.
 - [[basin-permutation-group]]
 - [[basin-component-landscape]]
 - [[e2-maximally-adversarial-thesis]]
-- [[../sessions/vol-69]]
+- [[vol-69]]

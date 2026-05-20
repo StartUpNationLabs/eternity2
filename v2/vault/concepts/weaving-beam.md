@@ -1,3 +1,10 @@
+---
+name: weaving-beam
+description: V150 random-seed sweep: 50k seeds × 0.7s/seed → max 408/480.
+status: built
+metadata:
+  type: concept
+---
 # WEAVING-Beam (V151) — Layered Beam Search From-Scratch
 
 **Status**: `designed` 2026-05-19. Builds on V150 base.
@@ -96,5 +103,5 @@ Output: best score, # beam states explored, final beam diversity.
 ## Linked
 
 - [[weaving-consensus]] (V150 parent)
-- [[../sessions/vol-151]]
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[vol-151]]
+- [[INVENTION_NAMES_2026-05-19]]

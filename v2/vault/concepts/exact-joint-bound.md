@@ -1,3 +1,10 @@
+---
+name: exact-joint-bound
+description: This is the level-3 bound from relaxed-bound's hierarchy.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Exact joint bound (MaxSAT)
 
 **Status**: `unbuilt` (z3 attempted, failed; need kissat-RC2)

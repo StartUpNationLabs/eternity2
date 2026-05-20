@@ -3,6 +3,7 @@ name: m2-electrical-csp-design
 description: "M2-extension: use electrical-resistance heuristic to guide CSP search from a CLEAN SLATE. Effective resistance as a value-order or variable-order signal. Aims to construct partial boards with low-resistance topology, which (per K11 corpus finding) correlates with high-score basins."
 metadata:
   type: project
+status: partial
 ---
 
 # M2-extension — Electrical CSP heuristic (design)
@@ -97,4 +98,4 @@ Heat kernel + small Krylov might be tractable per-node.
 
 - [[m13-holographic-fft-finding]] (related findings)
 - [[k11-corpus-cross-validation]] (the trade-off insight)
-- [[../concepts/inv3-border-dp-seed]] (related path construction)
+- [[inv3-border-dp-seed]] (related path construction)

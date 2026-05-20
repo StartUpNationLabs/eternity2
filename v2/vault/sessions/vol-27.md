@@ -43,7 +43,7 @@ puzzle size; cheaper.
   Wall-clock median 11 → 2 ms (5.5× faster), max 560 → 11 ms (50× tail
   win), 163/200 puzzles outright wall-clock win.
 - At 100ms budget: Learned solves all 16 MRV-failures (16/16 recovery).
-- Full numbers in [[../concepts/learned-value-order]]
+- Full numbers in [[learned-value-order]]
   "Vol-27 measurement" section.
 
 ## What was refuted
@@ -67,9 +67,9 @@ puzzle size; cheaper.
 
 ## Concepts touched
 
-- [[../concepts/learned-value-order]] (amended vol-27 — gate PASS row,
+- [[learned-value-order]] (amended vol-27 — gate PASS row,
   ONNX path, vol-28 levers).
-- [[../concepts/synthetic-puzzle-generator]] (gen-export added
+- [[synthetic-puzzle-generator]] (gen-export added
   `--budget-ms` flag for harder sizes).
 
 ## Open at close
@@ -79,7 +79,7 @@ puzzle size; cheaper.
   inside vol-27 itself.
 - Audit-at-open: completed; 5 aged items resolved (1 `wont-do`, 4
   deferred with reasons).
-- Vol-28 plan drafted at [[../plans/VOL-28]] — picks variable-size
+- Vol-28 plan drafted at [[VOL-28]] — picks variable-size
   architecture as the next lever.
 
 ## Linked memory

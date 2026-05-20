@@ -1,3 +1,10 @@
+---
+name: constraint-density-vs-alns-gap
+description: For a puzzle with $P$ pieces and color set $\{0, 1, ..., K\}$, the
+status: built
+metadata:
+  type: concept
+---
 # Constraint Density vs ALNS Gap (V132, 2026-05-19)
 
 **Status**: `built`

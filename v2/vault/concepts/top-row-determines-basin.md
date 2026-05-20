@@ -1,3 +1,10 @@
+---
+name: top-row-determines-basin
+description: Top-row choice determines basin component (vol-68 finding)
+status: built
+metadata:
+  type: concept
+---
 # Top-row choice determines basin component (vol-68 finding)
 
 **Status**: `built` — vol-68 (2026-05-15).

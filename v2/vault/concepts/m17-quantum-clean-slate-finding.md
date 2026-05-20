@@ -3,6 +3,7 @@ name: m17-quantum-clean-slate-finding
 description: "M17 quantum walk on PIECE-COMPATIBILITY graph (clean slate). Pieces with HIGHEST quantum-walk affinity to hint pieces (pids 250-255) cluster around hint cells in the 459 record. NEW heuristic for piece placement priorities."
 metadata:
   type: project
+status: built
 ---
 
 # M17 — Quantum Walk on Piece-Compatibility (Clean Slate)

@@ -1,3 +1,10 @@
+---
+name: concentric-annular-solving
+description: known E2 literature. Named today.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Concentric Annular Solving (CAS) — vol-74 design
 
 **Status**: `design` — vol-74 (2026-05-15).
@@ -130,5 +137,5 @@ CAS bears fruit. If lower (≤ 440), CAS adds nothing.
 ## Linked
 
 - [[piece-side-matching]] (parent — uses similar piece-side analysis)
-- [[../sessions/vol-74]] (TBD)
+- [[vol-74]] (TBD)
 - vol-62: cluster_repair MIP infrastructure (reusable)

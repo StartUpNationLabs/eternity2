@@ -3,6 +3,7 @@ name: vol122-25-edge-gap-is-all-interior
 description: "Vol-122 K7 — DECOMPOSITION of McGavin 469 vs perm0 444 = 60BB + 55IB + 354II (McGavin) vs 60BB + 55IB + 329II (perm0). The 25-edge gap is ENTIRELY in interior-interior."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 K7 — Where is the 469-vs-444 gap?
@@ -72,7 +73,7 @@ experiment.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../concepts/vol122-border-structure-analysis]]
-- [[../concepts/vol122-mcgavin-border-our-stack-435]]
+- [[vol-122]]
+- [[vol122-border-structure-analysis]]
+- [[vol122-mcgavin-border-our-stack-435]]
 - vol-122 B3 per-border interior LP-UB

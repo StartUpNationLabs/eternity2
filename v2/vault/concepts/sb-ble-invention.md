@@ -3,6 +3,7 @@ name: sb-ble-invention
 description: "Vol-125 invention: SB-BLE (Super-Block Bandwidth-Limited Enumeration). Row-by-row DP over super-block rows, with frontier state = south-edge tuple × piece-set. Designed to break the BB&B depth-40 plateau."
 metadata:
   type: project
+status: unbuilt
 ---
 
 # SB-BLE — Super-Block Bandwidth-Limited Enumeration

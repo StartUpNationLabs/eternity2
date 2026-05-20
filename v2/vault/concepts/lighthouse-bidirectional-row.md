@@ -1,3 +1,10 @@
+---
+name: lighthouse-bidirectional-row
+description: Build from top down (rows 0..M) and bottom up (rows 15..M) simultaneously; meet
+status: refuted
+metadata:
+  type: concept
+---
 # V184 LIGHTHOUSE — Bidirectional Row-Build (REFUTED)
 
 Status: **refuted** — MERGE fails. 0 valid pairs across configurations.

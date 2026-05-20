@@ -3,6 +3,7 @@ name: w2-sp-for-e2-derivation
 description: "Derivation: Survey Propagation adapted for E2's structured factor graph. SP was designed for random k-SAT; E2's factors are STRUCTURED (color matching, piece-uniqueness, hint pins). Derives the message-passing equations and identifies where the structure helps vs. hurts."
 metadata:
   type: project
+status: partial
 ---
 
 # W2 — Survey Propagation for Eternity II (derivation)

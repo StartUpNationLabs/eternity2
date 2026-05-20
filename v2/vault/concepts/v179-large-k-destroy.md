@@ -1,3 +1,10 @@
+---
+name: v179-large-k-destroy
+description: V169 OPHIDIA PriorDestroy supports $k \leq 16$. If the escape from a 460 basin
+status: built
+metadata:
+  type: concept
+---
 # V179 — LARGE-K PriorDestroy Variants
 
 Status: `built` — variants integrated; tested as part of 3-basin iso-plateau analysis. No record lift but informative negative result.

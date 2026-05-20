@@ -3,6 +3,7 @@ name: strict-canonical-alns-is-bottleneck
 description: "Vol-118 T10 — skipping bound-ascent (direct bf → Hungarian → ALNS) yields HIGHER UB (461 vs 458) but SAME ALNS ceiling (446). The pipeline-composition variants tested don't break 446 → the ALNS step itself is the binding constraint for strict-canonical work. Larger UB gives ALNS more theoretical room but ALNS cannot realize it at 60s budget."
 metadata:
   type: project
+status: built
 ---
 
 # Strict-canonical: ALNS is the bottleneck (vol-118 T10)
@@ -50,4 +51,4 @@ The "pipeline composition" axis is now exhausted at 60s ALNS.
 
 - [[strict-canonical-pipeline-honest-446]] — the 446 ceiling measurement.
 - [[hint-pin-conflict-propagation-fix]] — unblocked the pipeline.
-- [[../sessions/vol-118]].
+- [[vol-118]].

@@ -3,6 +3,7 @@ name: j1-backward-multiset-constraint
 description: "Backward multiset constraint for J1: when row r commits its bottom-color vector, that vector must be a multiset-subset of the available pieces' rotated-top-color vector. Backward induction reveals this constraint at every band."
 metadata:
   type: project
+status: built
 ---
 
 # J1 — Backward multiset constraint
@@ -41,7 +42,7 @@ bot=0 for border, or any rot for inner).
 
 J1's beam doesn't track the future piece pool's MULTISET; it only tracks
 the SET of used pieces (via `PieceSet`). The supply-LP bound used by
-[[../concepts/inv-b4-hall-color-pair-refuted]] is the right tool but it
+[[inv-b4-hall-color-pair-refuted]] is the right tool but it
 operates at the LP level, not within the beam.
 
 ## Backward induction
@@ -104,4 +105,4 @@ Optimistic: 420-440. Pessimistic: 410-420 (no gain).
 
 - [[j1-hinted-v2-corner-color-bug]]
 - [[j1-forward-look-heuristic]]
-- [[../concepts/inv-b4-hall-color-pair-refuted]]
+- [[inv-b4-hall-color-pair-refuted]]

@@ -1,3 +1,10 @@
+---
+name: border-enum-lp-ub
+description: Enumerate canonical-E2 full border placements (4 corners + 56 edge pieces, all rotations forced by piece BORDER sides...
+status: partial
+metadata:
+  type: concept
+---
 # Border-class enumeration with LP upper bound
 
 **Status**: partial (design complete, smoke test passing, UB function in progress)

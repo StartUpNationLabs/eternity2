@@ -3,6 +3,7 @@ name: interior-14x14-parity-feasible
 description: "Vol-122 prep — parity check on canonical E2 interior pieces: 196 interior pieces have 784 total edges, 8 colors have ODD instance count. Achievable II=364 (complete interior) requires each odd-color to be absorbed by IB-adjacencies; with 56 IB slots ≥ 8 odd colors, parity is FEASIBLE. The veteran's milestone #3 is NOT blocked at the parity / supply level."
 metadata:
   type: project
+status: built
 ---
 
 # Interior 14×14 parity check — FEASIBLE
@@ -99,4 +100,4 @@ that all 364 II edges align is unknown. Could be:
 - [[three-milestones-from-veteran]]
 - [[lp-ub-478-basins]]
 - [[ns1-deficit]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

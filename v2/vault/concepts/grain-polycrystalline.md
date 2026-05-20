@@ -1,3 +1,10 @@
+---
+name: grain-polycrystalline
+description: 1. Drop $K$ seeds at random interior positions with random interior
+status: built
+metadata:
+  type: concept
+---
 # GRAIN — Polycrystalline E2 Search
 
 **Status**: `built` (Vol-135 → 137, 2026-05-19)

@@ -1,3 +1,10 @@
+---
+name: mcgavin-n-row-scaling
+description: Pin McGavin's top N rows (16N pieces) and run our alnsonly with
+status: built
+metadata:
+  type: concept
+---
 # McGavin N-row pinning scaling — vol-68 (2026-05-15)
 
 **Status**: `built` (empirical) — vol-68.
@@ -60,4 +67,4 @@ completion? If 100 well-chosen cells force the rest, that's a
 
 - [[top-row-determines-basin]] (parent — refuted strong hypothesis)
 - [[basin-component-landscape]]
-- [[../sessions/vol-68]]
+- [[vol-68]]

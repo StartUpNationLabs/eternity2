@@ -3,6 +3,7 @@ name: strict-hint-slot-rotation-fix
 description: "Vol-125 CRITICAL FIX: BB&B's apply_hints was not enforcing slot or rotation constraints. The canonical 5-clue puzzle pins (piece, rotation) at specific (row, col) positions; v5/v6 only pinned the piece globally without constraining slot or rotation, expanding the search space by ~287× per hint cell."
 metadata:
   type: project
+status: built
 ---
 
 # Strict-hint slot+rotation fix

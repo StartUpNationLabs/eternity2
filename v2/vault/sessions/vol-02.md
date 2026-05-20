@@ -1,7 +1,7 @@
 # Session — vol-02
 
 **Theme**: Prefix-determinism trap. Blackwood-1-clue σ-decoding.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_2|RESEARCH_NOTES_2.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_2|RESEARCH_NOTES_2.md]]
 
 ## What was attempted
 

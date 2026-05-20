@@ -1,7 +1,7 @@
 # Session — vol-21
 
 **Theme**: Relaxed bound + edge-gap. Dead-end detector strictly stronger than K ≤ 5.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_21|RESEARCH_NOTES_21.md]], [[../sessions/archive/raw/RESEARCH_NOTES_21_PLAN|RESEARCH_NOTES_21_PLAN.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_21|RESEARCH_NOTES_21.md]], [[archive/raw/RESEARCH_NOTES_21_PLAN|RESEARCH_NOTES_21_PLAN.md]]
 
 ## What was attempted
 

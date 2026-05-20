@@ -1,3 +1,10 @@
+---
+name: per-piece-column-gen-6x6-worked
+description: a 6×6/5c worked example to validate before any engineering investment.
+status: refuted
+metadata:
+  type: concept
+---
 # Per-piece column-gen — worked example attempt + REFUTATION
 
 **Status**: `refuted (subtle)` — vol-53 (2026-05-15).
@@ -125,4 +132,4 @@ algorithm (multi-week+).
 - [[lifted-lp-column-gen-per-piece]] — vol-52 design (now partially refuted)
 - [[lp-integer-gap-anatomy]] — vol-50 motivation
 - [[lp-ub-478-basins]] — vol-44 LP UB landscape
-- [[../sessions/vol-52]], [[../sessions/vol-53]] — sessions
+- [[vol-52]], [[vol-53]] — sessions

@@ -1,3 +1,10 @@
+---
+name: cp-with-lp-ub-pruning
+description: sampled basins. Breaking 458 requires finding a basin with LP UB ≥ 479.
+status: unbuilt
+metadata:
+  type: concept
+---
 # CP search with LP-UB pruning (design doc)
 
 **Status**: unbuilt. Designed during vol-45 close.

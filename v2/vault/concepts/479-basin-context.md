@@ -1,3 +1,10 @@
+---
+name: 479-basin-context
+description: This basin was lightly explored — only 1 minute of single-seed
+status: built
+metadata:
+  type: concept
+---
 # 479-UB basin: context and structural analysis
 
 **Status**: discovered 2026-05-15 morning.

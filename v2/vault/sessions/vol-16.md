@@ -1,7 +1,7 @@
 # Session — vol-16
 
 **Theme**: Cleanup volume. 4.6× engine speedup. Cat-2 PropagatorConfig extraction. score_board O(n²)→O(n).
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_16|RESEARCH_NOTES_16.md]], [[../sessions/archive/raw/OPTIMIZATION_REPORT|OPTIMIZATION_REPORT.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_16|RESEARCH_NOTES_16.md]], [[archive/raw/OPTIMIZATION_REPORT|OPTIMIZATION_REPORT.md]]
 
 ## What was attempted
 

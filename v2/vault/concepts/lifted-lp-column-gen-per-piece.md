@@ -1,3 +1,10 @@
+---
+name: lifted-lp-column-gen-per-piece
+description: instance with HiGHS verification) shows the gap mechanism is cell-
+status: refuted
+metadata:
+  type: concept
+---
 # Lifted LP via per-piece column-generation — design
 
 **Status**: `refuted` — vol-54 worked-example (minimal 2-cell, 2-piece
@@ -5,7 +12,7 @@ instance with HiGHS verification) shows the gap mechanism is **cell-
 fractional x**, NOT rotation-fractional x. Per-piece column-gen
 tightens the rotation-level convex hull but does NOT close the cell-
 fractional gap. See [[y-linearisation-cell-fractional-gap]] for the
-precise mechanism and [[../sessions/vol-54]] for the proof.
+precise mechanism and [[vol-54]] for the proof.
 
 **Status (vol-53)**: `partially-refuted` — vol-53 worked-example math
 revealed that per-piece column-gen alone does NOT close the gap. The
@@ -284,7 +291,7 @@ compute per basin.
 - [[lp-ub-478-basins]] — vol-44 basin survey
 - [[exact-joint-bound]] — earlier MaxSAT attempt (wont-do)
 - [[border-enum-lp-ub]] — vol-44 LP formulation
-- [[../sessions/vol-50]], [[../sessions/vol-51]] — predecessor sessions
+- [[vol-50]], [[vol-51]] — predecessor sessions
 
 ## Vol-52 disposition
 

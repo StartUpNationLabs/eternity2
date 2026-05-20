@@ -1,3 +1,10 @@
+---
+name: cdcl-no-good-e2
+description: discards all conflict information at backtrack. No-good learning is
+status: unbuilt
+metadata:
+  type: concept
+---
 # CDCL no-good learning for E2 — design + soundness
 
 **Status**: `design` (math only, no code) — vol-56 (2026-05-15).
@@ -321,9 +328,9 @@ vol-57 will pick whether to MVP-prototype or full build.
 
 ## Linked
 
-- [[../sessions/vol-56]] — this vol's session journal
-- [[../sessions/vol-55]] — predecessor; closed LP-tightening arc
-- [[../concepts/relaxed-bound]] — admissible upper bound for soft no-goods
-- [[../concepts/prune-restart]] — vol-23/51 prune-restart; conceptually
+- [[vol-56]] — this vol's session journal
+- [[vol-55]] — predecessor; closed LP-tightening arc
+- [[relaxed-bound]] — admissible upper bound for soft no-goods
+- [[prune-restart]] — vol-23/51 prune-restart; conceptually
   adjacent (both throw out part of search and retry)
 - memory: `feedback_autonomous_dont_wait.md`, `feedback_no_limiting_thoughts.md`

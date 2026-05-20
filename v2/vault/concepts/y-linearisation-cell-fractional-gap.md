@@ -1,3 +1,10 @@
+---
+name: y-linearisation-cell-fractional-gap
+description: The canonical-E2 border LP optimum has UB ≈ 478 but the integer
+status: built
+metadata:
+  type: concept
+---
 # y-linearisation cell-fractional gap
 
 **Status**: `built` (math + worked example) — vol-54 (2026-05-15).

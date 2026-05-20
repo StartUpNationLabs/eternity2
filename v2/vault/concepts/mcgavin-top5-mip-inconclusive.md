@@ -3,6 +3,7 @@ name: mcgavin-top5-mip-inconclusive
 description: Top-5-rows MIP on McGavin 469 didn't finish — 600s time limit hit with 0 B&B nodes explored, 1745% gap. Best feasible = current 144 (no improvement) but NOT a proof. Honest null result.
 metadata:
   type: project
+status: partial
 ---
 
 # Top-5-rows MIP on McGavin 469 — INCONCLUSIVE (vol-84)

@@ -1,3 +1,10 @@
+---
+name: v155-finding-prior-lift
+description: structure understood; ceiling identified.
+status: built
+metadata:
+  type: concept
+---
 # V155 Finding — Empirical Prior Lifts Beam-Search Ceiling
 
 **Status**: `built-measured` 2026-05-19. Empirical result; mathematical
@@ -109,7 +116,7 @@ V156 (running): does ALNS on 456 → reach 459+?
 
 ## Linked
 
-- [[../sessions/vol-155]]
-- [[../sessions/vol-156]] (ALNS hybrid)
+- [[vol-155]]
+- [[vol-156]] (ALNS hybrid)
 - [[prior-data-augmented-beam]] (V155 invention)
 - [[weaving-beam]] (V151 parent)

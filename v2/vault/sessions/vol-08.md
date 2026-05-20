@@ -1,7 +1,7 @@
 # Session — vol-08
 
 **Theme**: Community-export mining. Verification of canonical-5-clue SOTA = 469 (McGavin 2020).
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_8|RESEARCH_NOTES_8.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_8|RESEARCH_NOTES_8.md]]
 
 ## What was attempted
 

@@ -1,16 +1,16 @@
 # Current vol — vol-50 (opening) — 2026-05-15
 
 **Predecessor**: vol-49 closed with adaptive-ES negative result.
-See [[../sessions/vol-49]].
+See [[vol-49]].
 
 This file rolls forward five drifted volumes (45→50) in one update
 because the previous CURRENT-VOL was last touched at vol-45 open.
 Vols 46–49 produced four documented negative results:
 
 - **Vol-46**: per-class LP UB diagnostic — no record lever.
-- **Vol-47**: lifted-LP McCormick formulation — intractable at scale; column-gen variants invalid. [[../sessions/vol-47]].
-- **Vol-48**: vanilla ES (sigma=0.2) — collapsed at 277/480 vs vol-29 imitation baseline 282. [[../sessions/vol-48]].
-- **Vol-49**: adaptive-sigma ES — improved peak to 280, still below baseline. [[../sessions/vol-49]].
+- **Vol-47**: lifted-LP McCormick formulation — intractable at scale; column-gen variants invalid. [[vol-47]].
+- **Vol-48**: vanilla ES (sigma=0.2) — collapsed at 277/480 vs vol-29 imitation baseline 282. [[vol-48]].
+- **Vol-49**: adaptive-sigma ES — improved peak to 280, still below baseline. [[vol-49]].
 
 ## Vol-50 binding item — PIVOTED (2026-05-15)
 
@@ -38,7 +38,7 @@ The original Q-learning / REINFORCE plan was pivoted twice:
 
 **Build**: `joe-iteration-budgeted-prune` (BACKLOG, unbuilt since vol-32 open).
 
-Joe's published recipe (msg #11725 in [[../reference/reference-e2-community-corpus|community corpus]]):
+Joe's published recipe (msg #11725 in [[reference-e2-community-corpus|community corpus]]):
 "99% of canonical-E2 cold-start time is spent at depth > 132; with
 150 correctly-placed tiles a solution is found in <1500 iters;
 therefore prune to depth 150 every 2000 iters when depth > 150 has
@@ -158,8 +158,8 @@ Resolved/promoted from this audit:
 
 ## Linked
 
-- [[../sessions/vol-48]] — vanilla ES result
-- [[../sessions/vol-49]] — adaptive ES result
-- [[../concepts/learned-value-order]] — imitation context
-- [[../concepts/rl-es-pipeline]] — predecessor RL design
-- [[../concepts/rl-self-play-value-order]] — original RL design
+- [[vol-48]] — vanilla ES result
+- [[vol-49]] — adaptive ES result
+- [[learned-value-order]] — imitation context
+- [[rl-es-pipeline]] — predecessor RL design
+- [[rl-self-play-value-order]] — original RL design

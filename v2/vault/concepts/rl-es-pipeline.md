@@ -1,3 +1,10 @@
+---
+name: rl-es-pipeline
+description: rl-self-play-value-order.md because the engine doesn't expose
+status: unbuilt
+metadata:
+  type: concept
+---
 # RL via evolutionary strategies (ES) — pipeline design (vol-48)
 
 **Status**: design, replacing the REINFORCE plan from

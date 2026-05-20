@@ -1,3 +1,10 @@
+---
+name: semaphore-row-hungarian
+description: Naming: SEMAPHORE — Greek for \"sign-bearer\"; per-row signals from above propagate to determine below.
+status: refuted
+metadata:
+  type: concept
+---
 # V183 SEMAPHORE — Per-Row Hungarian Optimization
 
 Status: **refuted** (Python PoC + beam K=32 both hit row-10 piece-starvation wall, 2026-05-20)
@@ -100,6 +107,6 @@ not 12–15).
 
 ## Linked
 
-- [[../sessions/vol-183]]
+- [[vol-183]]
 - [[lighthouse-bidirectional-row]] (V184 — same wall, different formulation)
 - [[prior-data-augmented-beam]] (V155 — what SEMAPHORE tried to replace; remains the better builder)

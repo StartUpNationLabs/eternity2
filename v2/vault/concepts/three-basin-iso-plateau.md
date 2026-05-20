@@ -1,3 +1,10 @@
+---
+name: three-basin-iso-plateau
+description: The iso-plateau is the empirical fact that the strongest local-search
+status: built
+metadata:
+  type: concept
+---
 # Three-Basin Iso-Plateau — Universal Local Rigidity at 458–460
 
 Status: `built` (empirically validated across 3 distinct basin families, 2026-05-20)
@@ -110,11 +117,32 @@ on any 2-row swap.
 
 ## Linked
 
-- [[prior-guided-alns]]
-- [[intaglio-attack-lex]]
-- [[sigma-cycle-indecomposability]]
-- [[basin-458-cp3012-v175]]
-- [[basin-460-cp0312-v181]]
+### Algorithms & operators
+- [[prior-guided-alns]] — V169 OPHIDIA prior-destroy used in tests
+- [[intaglio-attack-lex]] — V180 lex-intaglio acceptance used in tests
+- [[v179-large-k-destroy]] — V179 LARGE-K destroy variants
+- [[keyring-patch-prior]] — V181 KEYRING builder
+- [[prior-data-augmented-beam]] — V155 PRIOR builder
+
+### Findings extending or extended by
+- [[sigma-cycle-universal-indecomposable]] — the cross-basin obstruction this generalizes
+- [[row-level-rigidity]] — vol-186 row-swap rigidity on V181 460
+- [[v187-intaglio-mip]] — MIP-proven region rigidity on V181 460
+- [[v188-translation-sigma-indecomposability]] — vol-188 σ-transport refutation, V181↔McGavin
+- [[mip-local-optimality-459]] — earlier MIP-rigidity finding
+- [[corner-permutation-study]] — 18-cp basin taxonomy
+
+### Basins
+- [[basin-458-cp3012-v175]] — V175 458 basin
+- [[basin-460-cp0312-v181]] — V181 460 basin
+- [[basin-459-p06]] — vol-60 459 basin (Cluster A)
+- [[basin-461-cp1203-v125]] — V125 461 basin (sibling era)
+- [[basin-463-cp2301-v129]] — V129 463 basin (current matched record)
+- [[basin-mcgavin-469]] — community ceiling
+
+### Papers
+- [[PAPER_2026-05-16_canonical_E2_rigidity_theorem]]
+- [[SYNTHESIS_VOL_188]]
 
 ## Linked memory
 

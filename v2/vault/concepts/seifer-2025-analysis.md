@@ -3,6 +3,7 @@ name: seifer-2025-analysis
 description: "Vol-125 T38b inspection of e2solver (Seifer, Weizmann Institute, December 2025). Identifies their NEW techniques: nucleation, selection waves, graph-to-sequence neural network, D-Wave quantum annealing integration."
 metadata:
   type: project
+status: built
 ---
 
 # Seifer 2025 e2solver — technique inventory

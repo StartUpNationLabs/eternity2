@@ -3,11 +3,19 @@ name: min-boundary-subset-bridge-refuted
 description: "Vol-117 T4 — refutes the 'min-boundary σ-cycle subset + ALNS' bridge hypothesis. Greedy min-boundary subsets of the 459→McGavin 154-cycle achieve k=10/b=24, k=20/b=38, k=40/b=64 (vs contiguous min ~3-4× higher). Applying these subsets loses ~boundary-many score edges (22, 38, 63). ALNS recovery from the resulting partials plateaus at 446-448 (k=10), 441 (k=20), 430 (k=40) — all WELL BELOW 459 across 12 (seed × ops) combinations. The σ-cycle indecomposability extends to greedy min-boundary subsets."
 metadata:
   type: project
+status: refuted
 ---
 
 # Min-boundary subset bridge — REFUTED (vol-117 T4)
 
 **Status**: `refuted` 2026-05-16.
+
+## Refutation
+
+- **Refuted**: vol-117 T4.
+- **Evidence**: greedy min-boundary subsets of the 459→McGavin 154-cycle achieved 35-45% lower boundary than contiguous, but applying them lost ~boundary-many score edges (22, 38, 63 for k=10, 20, 40). ALNS recovery from those partials plateaus at 446-448 / 441 / 430 across 12 (seed × ops) combinations — all WELL below 459.
+- **What's refuted**: the hypothesis that lower σ-boundary partial-loss + ALNS access to the McGavin-side basin geometry could yield ≥ 460. The σ-cycle indecomposability extends to greedy min-boundary subsets, not just contiguous ones.
+- **What's NOT refuted**: that the full 154-cycle would lift to 469 (it does — that's how McGavin's basin is reached in principle). Only the "partial subset + ALNS bridge" idea is dead.
 
 ## Hypothesis
 
@@ -100,4 +108,4 @@ A 460+ board, if reachable from a 459 basin, would require:
 - [[multiple-459-basins-rigid]] — broader rigidity context.
 - [[basin-mix-mip-refuted]] — parallel MIP refutation.
 - [[high-t-mcmc-refuted]] — parallel MCMC refutation.
-- [[../sessions/vol-117]].
+- [[vol-117]].

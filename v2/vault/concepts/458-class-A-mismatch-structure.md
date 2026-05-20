@@ -1,3 +1,10 @@
+---
+name: 458-class-A-mismatch-structure
+description: mismatchmap ran on vol-32 RECORDBREAK458vanillafastalns.json.
+status: built
+metadata:
+  type: concept
+---
 # Class-A 458 board: mismatch anatomy (vol-44)
 
 **Status**: measurement.

@@ -3,6 +3,7 @@ name: relax-and-cross-cvc
 description: Constraint-Vote Crossover (CVC) — a NEW algorithm class invented by user 2026-05-16 (vol-106 directive). Solve N constraint-relaxed subproblems, then cross-produce via per-cell consensus. Untested but paper-publishable if signal emerges. RESERVE THIS NAME.
 metadata:
   type: project
+status: unbuilt
 ---
 
 # Relax-and-Cross / Constraint-Vote Crossover (CVC)
@@ -167,11 +168,10 @@ documented.
 
 ## Linked
 
-- [[../DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP|The vol-106-115
-  directive]] (where this algorithm is canonically introduced).
-- [[../IDEAS_FROM_BLANK_2026-05-16|IDEAS from blank]] — broader
+- [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP|The vol-106-115 directive]] (where this algorithm is canonically introduced).
+- [[IDEAS_FROM_BLANK_2026-05-16|IDEAS from blank]] — broader
   algorithm-invention catalogue.
-- [[../sessions/vol-105|vol-105 close]] — where this algorithm
+- [[vol-105|vol-105 close]] — where this algorithm
   was named and reserved.
 
 ## Authorship reservation

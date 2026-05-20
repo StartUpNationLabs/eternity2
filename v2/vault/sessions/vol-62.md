@@ -26,7 +26,7 @@ operator in this class — `ComponentDestroy`, `ComponentClusterDestroy
 ## What was attempted
 
 1. **Day 1 morning**: drafted Homotopy-ALNS spec
-   ([[../concepts/homotopy-alns]]) — destroy regions bounded by β₁
+   ([[homotopy-alns]]) — destroy regions bounded by β₁
    generator cycles of the defect graph.
 2. **Day 1 midday**: prototyped β₁ measurement in
    `scripts/vol62_homotopy_alns.py`. Found β₁ = 0 on local 459.
@@ -83,10 +83,10 @@ proof at halo ≤ 1.
 
 ## What was refuted
 
-- **[[../concepts/homotopy-alns]]** — β₁ = 0 on all records.
+- **[[homotopy-alns]]** — β₁ = 0 on all records.
   Concept marked `refuted` with full evidence in concept page; no
   quiet delete.
-- **[[../concepts/component-quotient-destroy]]** — concept survives
+- **[[component-quotient-destroy]]** — concept survives
   but operator is BOUNDED by joint-MIP-bound at halo ≤ 1. Status
   `refuted at halo ≤ 2` (per-component) and `refuted at halo ≤ 1`
   (joint).
@@ -106,9 +106,9 @@ proof at halo ≤ 1.
 
 ## Concepts touched
 
-- [[../concepts/homotopy-alns]] — `refuted` (β₁ = 0 on records)
-- [[../concepts/component-quotient-destroy]] — `refuted at halo ≤ 1`
-- [[../concepts/mip-local-optimality-459]] — NEW, `built`
+- [[homotopy-alns]] — `refuted` (β₁ = 0 on records)
+- [[component-quotient-destroy]] — `refuted at halo ≤ 1`
+- [[mip-local-optimality-459]] — NEW, `built`
 
 ## Open at close
 
@@ -117,7 +117,7 @@ proof at halo ≤ 1.
 - Run radius-2 joint-MIP (region ≥ 90 cells). May not solve to
   optimum in budget; column generation needed for proof.
 - Vol-63 pivot: NON-local mechanisms. Drafted
-  [[../concepts/temporal-rewind-search]] with codebase audit
+  [[temporal-rewind-search]] with codebase audit
   up-front (lesson learned from vol-62).
 
 ## NOTE: this is the vol-62 session; vol-65 is its own session

@@ -3,6 +3,7 @@ name: board-wide-ub-derivation
 description: Math derivation — combining per-row-window MIP UBs to derive a sound board-wide UB < 480 on canonical E2. Vol-105 T3 design.
 metadata:
   type: project
+status: partial
 ---
 
 # Sound board-wide UB derivation from row-window MIPs
@@ -183,5 +184,5 @@ To get a TRUE board-wide UB, we'd need:
 ## Linked
 
 - [[mcgavin-top4-mip-bounded]] — vol-86 reference
-- [[../sessions/vol-105]]
+- [[vol-105]]
 - IDEAS doc: SDP relaxation (untried)

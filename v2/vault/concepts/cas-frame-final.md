@@ -1,3 +1,10 @@
+---
+name: cas-frame-final
+description: CAS-from-20-frames final results — vol-76 (2026-05-15)
+status: built
+metadata:
+  type: concept
+---
 # CAS-from-20-frames final results — vol-76 (2026-05-15)
 
 **Status**: `built` (final) — vol-76 (2026-05-15).

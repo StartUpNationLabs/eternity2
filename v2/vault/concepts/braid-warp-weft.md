@@ -1,3 +1,10 @@
+---
+name: braid-warp-weft
+description: framing is conceptually appealing but the proposed search algorithms
+status: wont-do
+metadata:
+  type: concept
+---
 # BRAID — Joint Warp-Weft Color-Thread Construction
 
 **Status**: `wont-do` 2026-05-19 (Vol-153, same day). The warp-weft
@@ -67,7 +74,7 @@ know in 1-2 days.
 
 ## Linked
 
-- [[../sessions/vol-153]]
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[vol-153]]
+- [[INVENTION_NAMES_2026-05-19]]
 - [[weaving-beam]] (V151 parent; 455 ceiling)
 - [[harmonics-matching]] (V152 refuted; informed BRAID design)

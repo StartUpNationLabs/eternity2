@@ -220,36 +220,74 @@ All v2 work lives inside `v2/`. The sibling directories of `v2/` (`solvers/`, `f
 
 ## Research vault — READ FIRST when starting a new volume
 
-**LOAD ORDER for any new autonomous run:**
-1. `v2/vault/REMINDER_USER_DIRECTIVES.md` — binding rules from the user (2026-05-17). If you skip this, you will repeat dead-end work.
-2. `v2/vault/plans/INVENTIONS_BACKLOG.md` — the systematic list of unexplored attacks. Pick top `unbuilt` or `partial`.
-3. `v2/vault/INDEX.md` — Map-of-Content.
-4. `v2/vault/plans/CURRENT-VOL.md` — current vol's binding items.
-5. The most recent `v2/vault/sessions/vol-NN.md`.
+> **Avoid re-research.** Before designing any new experiment, check whether the question has already been answered. The vault was reorganized at vol-188 specifically so future agents and humans can find prior work in seconds, not hours. The cost of NOT checking is much higher than the cost of checking.
 
-`v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5–8 volumes. It is an Obsidian-compatible vault: pages link via `[[wikilink]]`, the canonical entry point is `vault/INDEX.md` (Map-of-Content).
+### LOAD ORDER for any new autonomous run
+
+1. **`v2/vault/REMINDER_USER_DIRECTIVES.md`** — binding rules from the user (2026-05-17). If you skip this, you will repeat dead-end work.
+2. **`v2/vault/SYNTHESIS_VOL_188.md`** — master synthesis. State of the project: records, what's been proven (8 durable findings), what's been refuted (25+ approaches with vol-cites), open questions ordered by tractability. **Read this before proposing any new direction.**
+3. **`v2/vault/E2_KNOWN_FACTS.md`** — numerical facts at a glance (records, basins, bounds, structural facts).
+4. **`v2/vault/plans/INVENTIONS_BACKLOG.md`** — the systematic list of unexplored attacks. Pick top `unbuilt` or `partial`.
+5. **`v2/vault/plans/CURRENT-VOL.md`** — current vol's binding items.
+6. **`v2/vault/INDEX.md`** — Map-of-Content (use for navigation by topic).
+7. The most recent `v2/vault/sessions/vol-NN.md` (use [[MISSING_VOL_INDEX]] if no per-vol journal exists).
+
+### To avoid re-doing things — read these BEFORE designing experiments
+
+| Question you're about to investigate | Read first |
+|---|---|
+| "Has someone tried X already?" | `concepts/dead-ends.md` + `concepts/_umbrella-*.md` |
+| "What does the community know about Y?" | `vault/reference/community-e2-history.md` + `docs/community-mining/00_index.md` |
+| "Is there an academic paper on this?" | `vault/reference/academic-references.md` |
+| "What did vol-N do?" | `sessions/TIMELINE.md` (era-grouped), then `sessions/vol-NN.md` or `sessions/MISSING_VOL_INDEX.md` |
+| "Why is 459/463 hard to beat?" | `SYNTHESIS_VOL_188.md` §2, `concepts/sigma-cycle-universal-indecomposable.md`, `concepts/three-basin-iso-plateau.md` |
+| "What does this memory entry map to?" | `vault/reference/memory-crosswalk.md` |
+| "Was approach Z refuted?" | grep `concepts/` for `status: refuted` + `concepts/dead-ends.md` |
+| "Where are the proven structural rigidities?" | `concepts/_umbrella-mcgavin-mip-proofs.md`, `concepts/three-basin-iso-plateau.md`, `concepts/row-level-rigidity.md`, `concepts/v187-intaglio-mip.md` |
+| "What scoring convention is in use?" | `E2_KNOWN_FACTS.md` §Records + this file §5 |
+| "What's the community SOTA file or board?" | `output/community_corpus/_index.tsv` |
+
+`v2/vault/` is the concept-first knowledge base for E2 research. Established 2026-05-13 to fix the recurring pattern of plan items deferred 5–8 volumes; reorganized + enriched at vol-188 (status frontmatter, flattened wikilinks, master synthesis, community + academic enrichment). It is an Obsidian-compatible vault: pages link via `[[wikilink]]`, the canonical entry point is `vault/INDEX.md` (Map-of-Content).
 
 The vault is the single source of truth for **what we know and what we've tried** on Eternity II. Code is the source of truth for *what we currently do*; the vault is the source of truth for *the research history, current bounds, and the open questions*.
 
-### Layout
+### Layout (post-vol-188 cleanup)
 
 ```
 vault/
-├── INDEX.md                Map-of-Content (read first if disoriented)
-├── README.md               vault discipline (one page)
-├── concepts/               one page per algorithm class, propagator, structural finding
-├── basins/                 one page per notable board or basin
+├── INDEX.md                       Map-of-Content (slim, 10 KB)
+├── README.md                      vault discipline
+├── REMINDER_USER_DIRECTIVES.md    binding rules
+├── SYNTHESIS_VOL_188.md           master synthesis — read FIRST after directives
+├── E2_KNOWN_FACTS.md              numerical facts at a glance
+├── PAPER_*.md                     formal papers (rigidity theorem, etc.)
+├── MATH_NOTES_*.md                math derivations
+├── AUDIT_2026-05-20.md            vol-188 cleanup audit (meta)
+├── CONCEPT_TRIAGE_2026-05-20.md   vol-188 triage decisions (meta)
+├── concepts/                      344+ durable algorithm/finding pages
+│   ├── _umbrella-*.md             cluster umbrellas (vol122, j1, mcgavin, cas)
+│   └── *.md                       individual concepts (all have status: frontmatter)
+├── basins/                        17 notable boards
 ├── sessions/
-│   ├── vol-NN.md           per-volume compact journal (one page per vol)
-│   ├── night-NN.md         per-night-session journal
-│   └── archive/raw/        original long-form RESEARCH_NOTES_*.md / NIGHT*.md / V15_*.md
+│   ├── TIMELINE.md                vol-1..188 era-grouped spine
+│   ├── MISSING_VOL_INDEX.md       routing for 72 vols without dedicated journals
+│   ├── vol-NN.md                  per-volume compact journals (where present)
+│   └── archive/raw/               original long-form RESEARCH_NOTES_*.md / NIGHT*.md
 ├── plans/
-│   ├── BACKLOG.md          canonical T-list across volumes
-│   └── CURRENT-VOL.md      the in-progress volume's binding items (1–3 max)
+│   ├── BACKLOG.md                 canonical T-list across volumes
+│   ├── INVENTIONS_BACKLOG.md      systematic unexplored attacks list
+│   ├── CURRENT-VOL.md             active vol's binding items (≤ 3)
+│   └── archive/                   per-vol plans + date-stamped scratch
 └── reference/
-    ├── memory-crosswalk.md ~/.claude/.../memory/*.md → vault page mapping
-    └── reference-*.md      mirrors of authoritative reference memories
+    ├── memory-crosswalk.md        ~/.claude/.../memory/*.md → vault page mapping
+    ├── community-e2-history.md    full community history (groups.io + discord + corpus)
+    ├── academic-references.md     curated academic bibliography with URLs
+    └── reference-*.md             short pointer pages
 ```
+
+**Wikilink discipline (post-vol-188):** all subdir wikilinks use bare basename form (e.g., `[[gacolor]]`, not `[[concepts/gacolor]]` or `[[../concepts/gacolor]]`). Obsidian basename resolution handles this since every vault file has a unique basename. When adding a new file, ensure its basename doesn't collide with existing files.
+
+**Status frontmatter (post-vol-188):** all 344 concept pages have a `status:` field in YAML frontmatter. Use `built` | `partial` | `unbuilt` | `refuted` | `wont-do`. Nuanced compound statuses (e.g., `refuted-as-greedy`) are allowed where they encode useful signal.
 
 ### Page schema — concepts
 

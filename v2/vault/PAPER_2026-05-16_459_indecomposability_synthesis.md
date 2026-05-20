@@ -9,6 +9,16 @@ status: synthesis
 A unified mathematical characterization of the 459 ceiling on
 canonical 5-clue Selby-Riordan Eternity II.
 
+> **Status (2026-05-20, vol-188):** the 459 ceiling described here was
+> broken to **463/480** at vol-129 (PALIMPSEST consensus-trap attack on
+> a new corner-perm). The σ-cycle indecomposability theorem of this
+> paper still holds — it's been strengthened to **4 basin pairs** by
+> vol-188. What changed: the 459 → 463 lift came from discovering a
+> *new basin in a different corner-perm*, not from breaking the
+> σ-cycle obstruction described here. See [[SYNTHESIS_VOL_188]] for
+> the current state and [[v188-translation-sigma-indecomposability]]
+> for the strengthened theorem.
+
 ## The 459 problem
 
 Across multiple algorithmic methods, our reachable score is bounded

@@ -3,6 +3,7 @@ name: w11-sat-correctness-validated
 description: "Vol-124 2026-05-17: definitively validated that the fixed W-SAT encoder (post pinned-pinned bug fix) correctly decides 480-feasibility. Verified by SAT-then-decode round-trip on synthetic 4×4 and 5×5 puzzles, plus border-only-pin SAT test. Combined with the 9 negative results on canonical 16×16 borders, W11 border-screening is sound."
 metadata:
   type: project
+status: built
 ---
 
 # W-SAT correctness validation (vol-124, 2026-05-17)
@@ -138,4 +139,4 @@ For ANY new border-screen experiment:
 
 - [[w-sat-459-unsat-findings]] (the original negative results)
 - [[w11-sat-verified-border-enum]] (the invention)
-- [[../sessions/vol-124]] (this volume)
+- [[vol-124]] (this volume)

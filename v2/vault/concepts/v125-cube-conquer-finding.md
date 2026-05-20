@@ -3,6 +3,7 @@ name: v125-cube-conquer-finding
 description: "Vol-125 2026-05-18: 576 piece-unique cubes (top-4 candidates per cell × 4 corners + 4 edge cells; piece-uniqueness filter) all decide UNSAT in <1s each via kissat. Average 0.6s per UNSAT decision; max 0.95s. Compared to vol-124 UNKNOWN-after-1h on unconstrained instance, the cube assumptions provide MASSIVE pruning."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-125 cube-and-conquer (initial 576-cube run)
@@ -110,4 +111,4 @@ Paths still open:
 
 - [[w-sat-459-unsat-findings]]
 - [[459-basin-halo-10-rigidity]]
-- [[../sessions/vol-125]]
+- [[vol-125]]

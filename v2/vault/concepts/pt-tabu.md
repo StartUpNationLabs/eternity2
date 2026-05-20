@@ -1,3 +1,10 @@
+---
+name: pt-tabu
+description: Add a tabu list to PT chains: when a chain visits a state with a previously-seen Zobrist hash, reject and force diver...
+status: wont-do
+metadata:
+  type: concept
+---
 # PT tabu (Zobrist hash-cons)
 
 **Status**: `wont-do` (resolved at vol-24 open)

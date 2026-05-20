@@ -3,6 +3,7 @@ name: w11-border-screen-unviable
 description: "Vol-124 conclusion: SAT-screen-per-border on canonical E2 cannot be a primary engine. Border space is ~10^7-10^9, per-border SAT is ~1.9s → enumeration would take ~22 single-thread years. W11 retires as a primary attack; remains useful as post-hoc verification (yes/no on a candidate in <2s)."
 metadata:
   type: project
+status: refuted
 ---
 
 # W11 SAT-screen-per-border — unviable as primary engine
@@ -54,4 +55,4 @@ multiple CDCL solvers. The 1h kissat run on the current encoding
 - [[w11-sat-correctness-validated]] (encoder works)
 - [[w11-sat-verified-border-enum]] (original invention page; amend)
 - [[w-sat-459-unsat-findings]] (the local-halo UNSAT findings)
-- [[../sessions/vol-124]] (full session)
+- [[vol-124]] (full session)

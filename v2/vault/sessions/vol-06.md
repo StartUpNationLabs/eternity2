@@ -1,7 +1,7 @@
 # Session — vol-06
 
 **Theme**: Border monoculture diagnosis; Las Vegas border sampler; **454/480 historic warm record**.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_6|RESEARCH_NOTES_6.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_6|RESEARCH_NOTES_6.md]]
 
 ## What was attempted
 

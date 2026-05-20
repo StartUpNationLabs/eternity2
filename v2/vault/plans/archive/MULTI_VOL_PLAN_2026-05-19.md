@@ -300,5 +300,5 @@ This plan itself can be killed early if:
 - [[STRATEGIC_REVIEW_2026-05-19]]
 - [[MONTH_AHEAD_2026-05-19]]
 - [[INVENTIONS_BACKLOG]]
-- [[../sessions/vol-146-close]]
-- [[../concepts/forbidden-patch-theorem-2026-05-19]]
+- [[vol-146-close]]
+- [[forbidden-patch-theorem-2026-05-19]]

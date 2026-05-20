@@ -3,6 +3,7 @@ name: k11-2-algebraic-connectivity-signature
 description: "K11.2 result: algebraic connectivity (Fiedler eigenvalue λ_2) of the MATCHED-edge graph on a complete E2 board shows monotonic correlation with score. 459 record λ_2 = 0.0369 (highest); J1 boards λ_2 ≈ 0.0334-0.0341. New basin signature derived from spectral graph theory."
 metadata:
   type: project
+status: built
 ---
 
 # K11.2 — Algebraic connectivity as a basin signature

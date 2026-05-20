@@ -3,6 +3,7 @@ name: j1-chain-hinted-v2-fix
 description: "J1-hinted v2 — corrects v1's silent failure mode by reserving downstream hint pieces upstream. Result: 240/256 placed, 5/5 hints, 414/480 matched, LEGAL_PARTIAL."
 metadata:
   type: project
+status: built
 ---
 
 # J1-hinted v2 — hint piece reservation fix

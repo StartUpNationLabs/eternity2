@@ -1,3 +1,10 @@
+---
+name: palimpsest-historical-consensus
+description: plans/EXTERNALBRAINSTORM2026-05-18
+status: built
+metadata:
+  type: concept
+---
 # PALIMPSEST — Historical-Consensus Invariant Mining
 
 **Status**: `built` (Vol-129, 2026-05-19 — analysis useful AND yielded a NEW RECORD. PALIMPSEST as a DATA-ANALYSIS tool is valuable; the corner-perm basin clustering (V129-T11) led to V129-T12 15-basin attack which found 463/480 — a score never before seen in our 1278-record DB. PALIMPSEST as a search operator via hard-pinning was refuted, but PALIMPSEST as a basin-discovery tool succeeded.)

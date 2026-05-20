@@ -1,3 +1,10 @@
+---
+name: concord-difference-map
+description: plans/EXTERNALBRAINSTORM2026-05-18 (round 4), Vol-126 build,
+status: partial
+metadata:
+  type: concept
+---
 # CONCORD — Veit Elser's Difference Map for E2
 
 **Status**: `partial` (Vol-126 — PoC built, not yet working as designed)

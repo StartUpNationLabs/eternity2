@@ -1,3 +1,10 @@
+---
+name: cas-backtrack
+description: Vol-74 CAS greedy commits each shell as it's solved. Shells 3-7
+status: unbuilt
+metadata:
+  type: concept
+---
 # CAS-BACKTRACK — vol-78 design (2026-05-15)
 
 **Status**: `design` — vol-78.

@@ -3,6 +3,7 @@ name: m2-er-priority-poc-result
 description: "M2-ext ER-priority PoC: applied effective-resistance reduction heuristic to identify high-priority cells in a 60-cell border partial. Result: cells adjacent to hint positions get HIGHEST priority. Confirms ER-priority is a meaningful CSP heuristic."
 metadata:
   type: project
+status: built
 ---
 
 # M2-extension — ER priority PoC result

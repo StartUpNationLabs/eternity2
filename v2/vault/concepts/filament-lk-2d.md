@@ -1,3 +1,10 @@
+---
+name: filament-lk-2d
+description: RepairKind, validated on bad boards; LOSES to SA-repair on equal
+status: partial
+metadata:
+  type: concept
+---
 # FILAMENT — Lin-Kernighan on 2D Grid
 
 **Status**: `partial` (Vol-130, 2026-05-19 — built, integrated as

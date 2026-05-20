@@ -1,3 +1,10 @@
+---
+name: cas-greedy-433-result
+description: Each shell solved as a SEPARATE MIP, conditioned on previous shells.
+status: built
+metadata:
+  type: concept
+---
 # CAS greedy-annular result: 433/480 — vol-74 (2026-05-15)
 
 **Status**: `built` — vol-74 (2026-05-15).

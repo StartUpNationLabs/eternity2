@@ -2,7 +2,7 @@
 
 **Predecessor**: vol-51 closed with B1 bound-trigger infrastructure
 shipped but the recovery path identified as the bottleneck. Standing
-458 record unchanged. See [[../sessions/vol-51]].
+458 record unchanged. See [[vol-51]].
 
 ## Vol-52 binding item — design document for lifted-LP via per-piece column-generation
 
@@ -15,7 +15,7 @@ the empirical evidence is overwhelming: **local search cannot close
 the ~20-point LP-integer gap that exists in every basin**. Multi-week
 algorithm change is what's actually needed.
 
-The vol-50 [[../concepts/lp-integer-gap-anatomy|LP-integer gap anatomy]]
+The vol-50 [[lp-integer-gap-anatomy|LP-integer gap anatomy]]
 identified the binding constraint precisely:
 - 33% of the gap is in fractional LP values (closeable by classical cuts).
 - 67% is in integer-valued per-color LP UBs that cannot be jointly
@@ -86,9 +86,9 @@ the binding item is design, not picking from this list.
 
 ## Linked
 
-- [[../sessions/vol-51]] — predecessor
-- [[../concepts/lp-integer-gap-anatomy]] — vol-50 math motivation
-- [[../concepts/lifted-lp-formulation]] — vol-47 design (McCormick)
-- [[../concepts/lifted-lp-column-generation]] — vol-47 column-gen attempt
-- [[../concepts/lp-ub-478-basins]] — vol-44 basin survey
-- [[../concepts/lp-ub-479-basin-found]] — vol-46 class D
+- [[vol-51]] — predecessor
+- [[lp-integer-gap-anatomy]] — vol-50 math motivation
+- [[lifted-lp-formulation]] — vol-47 design (McCormick)
+- [[lifted-lp-column-generation]] — vol-47 column-gen attempt
+- [[lp-ub-478-basins]] — vol-44 basin survey
+- [[lp-ub-479-basin-found]] — vol-46 class D

@@ -3,6 +3,7 @@ name: mcgavin-mip-local-optimal-halo1
 description: McGavin's 469 is JOINT-MIP-locally-optimal at halo r=1. Adds him to the corpus of 5 high-score records (458, 459×3, 469) all proved unbreakable by local ops with halo ≤ 1. Strongest evidence yet for "maximally-adversarial puzzle" thesis.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin 469 — joint-MIP-locally-optimal at halo r=1

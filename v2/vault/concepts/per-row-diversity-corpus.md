@@ -3,6 +3,7 @@ name: per-row-diversity-corpus
 description: Across 421 complete high-score boards, rows 12-15 have ~3× more distinct piece arrangements (131-132 each) than rows 0-11 (49-63). Quantifies basin diversity at the bottom of the board.
 metadata:
   type: project
+status: built
 ---
 
 # Per-row diversity across 421-board corpus (vol-99 finding)

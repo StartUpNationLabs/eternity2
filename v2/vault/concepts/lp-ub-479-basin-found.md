@@ -1,3 +1,10 @@
+---
+name: lp-ub-479-basin-found
+description: File: output/v17alnsonly/winning5sat1s11778670467.json
+status: built
+metadata:
+  type: concept
+---
 # First LP-UB-479 basin discovered (vol-46)
 
 **Status**: DISCOVERED 2026-05-15 morning during basin-rep sweep.

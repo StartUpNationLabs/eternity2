@@ -63,15 +63,15 @@ work, McGavin 469 decode, σ-distance histograms, spectral analysis.
 
 ## Concepts touched (vault)
 
-- [[../concepts/homotopy-alns]] — `refuted`
-- [[../concepts/component-quotient-destroy]] — `refuted-at-halo-1`
-- [[../concepts/mip-local-optimality-459]] — `built`
-- [[../concepts/piece-side-matching]] — `built` (with 3 LP layers)
-- [[../concepts/piece-orbit-structure]] — `built`
-- [[../concepts/basin-permutation-group]] — `built`
-- [[../concepts/piece-spectral-fiedler]] — `built`
-- [[../concepts/basin-level-genetic-search]] — `design` (vol-66)
-- [[../concepts/temporal-rewind-search]] — `design` (vol-63)
+- [[homotopy-alns]] — `refuted`
+- [[component-quotient-destroy]] — `refuted-at-halo-1`
+- [[mip-local-optimality-459]] — `built`
+- [[piece-side-matching]] — `built` (with 3 LP layers)
+- [[piece-orbit-structure]] — `built`
+- [[basin-permutation-group]] — `built`
+- [[piece-spectral-fiedler]] — `built`
+- [[basin-level-genetic-search]] — `design` (vol-66)
+- [[temporal-rewind-search]] — `design` (vol-63)
 
 ## Scripts (vol-65)
 

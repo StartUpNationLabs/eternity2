@@ -3,6 +3,7 @@ name: j1-stratum-fix-result
 description: "J1 stratum-fix empirical result: freezing rows 0..K and rebuilding K+1..15 with column-DP recovers J1-chain-no-FLH score (444) regardless of K. FLH gives +3 at last band; stratum-fix doesn't preserve that. Conclusion: lower-stratum loss is greedy-horizon, not piece-supply, dependent."
 metadata:
   type: project
+status: built
 ---
 
 # J1 stratum-fix — empirical results

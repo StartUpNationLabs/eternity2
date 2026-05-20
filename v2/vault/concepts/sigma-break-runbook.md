@@ -3,6 +3,7 @@ name: sigma-break-runbook
 description: "Vol-125 runbook for SIGMA-BREAK (bidirectional meet-in-the-middle) experiments on canonical Eternity II. Designed for a 32 GB / 10-core machine; describes the experiments to run, expected memory/compute, and the success criteria."
 metadata:
   type: project
+status: built
 ---
 
 # SIGMA-BREAK runbook — what to run on the 32 GB / 10-core machine

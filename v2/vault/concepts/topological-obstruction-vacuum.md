@@ -1,3 +1,10 @@
+---
+name: topological-obstruction-vacuum
+description: at c (after frame constraint).
+status: built
+metadata:
+  type: concept
+---
 # Topological obstruction is vacuous on E2 — vol-65 note
 
 **Status**: `built` (negative result) — vol-65 (2026-05-15).

@@ -1,7 +1,7 @@
 # Session — vol-13
 
 **Theme**: Boundary-MPS tensor-network contraction. Rare-color geography. 10¹⁰¹ overcounting.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_13|RESEARCH_NOTES_13.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_13|RESEARCH_NOTES_13.md]]
 
 ## What was attempted
 

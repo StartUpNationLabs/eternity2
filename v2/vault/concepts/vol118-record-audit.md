@@ -3,6 +3,7 @@ name: vol118-record-audit
 description: "Vol-118 T12 — comprehensive audit of all output/v17_alns_only/*.json (1152 files) with canonical verify_board. Found 44 final boards with border violations (all score < 425 — the failed attempts where ALNS couldn't repair bug-induced illegal placements). ALL high-score records (459, 469, 452 strict-canonical, etc.) are CLEAN: 0 border violations. The bf-bucket bug DID survive into low-score final outputs but NOT into any claimed records. vol-110 basins: 10/10 CLEAN."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-118 record audit (T12)
@@ -88,4 +89,4 @@ border-consistency check is the right safety net going forward.
 
 - [[bf-candidate-bucket-bug]] — the bug that was potentially contaminating.
 - [[hint-pin-conflict-propagation-fix]] — another related fix.
-- [[../sessions/vol-118]].
+- [[vol-118]].

@@ -1,236 +1,236 @@
 ---
 tags: [moc, index]
+date: 2026-05-20
+vol: 188
 ---
 
 # E2 Research Vault — Map of Content
 
-The Obsidian landing page. Click any wikilink to navigate.
+The Obsidian landing page. Open any wikilink to navigate.
 
-## Quick orientation
+> Last rewrite: 2026-05-20 (vol-188 close). The old per-vol score-history table moved to [[sessions/TIMELINE]].
 
-- **Goal**: solve canonical 5-clue Eternity II (16×16 Monckton piece set) — score 480/480.
-- **Community ceiling**: 469/480 ([[basin-mcgavin-469|McGavin 2020]] via Blackwood algorithm).
-- **Our current record (vol-60)**: **459/480** (vanilla_fast + ALNS, p06 corner perm).
-- **Cold-start record (vol-32)**: 458/480.
-- **Warm-start record (vol-6)**: 454/480.
-- **Gap to community**: 10 points; the 459 ↔ 469 gap is **rigorously characterised** as a board-spanning σ-cycle problem (vols 65-101 PAPER).
-- **Spec contract**: `v2/V2_DESIGN.md`.
-- **Project guide**: `v2/CLAUDE.md`.
-- **2026-05-16 PAPER**: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem|Local Rigidity Theorem]] (13+ MIP-proven local-optimal regions, sound UB ≤ 123 on McGavin top-4, universal σ-cycle indecomposability). **Caveat (vol-105)**: the "first sound UB below 480" claim is a SUBSET-bound, not unconditional. See [[concepts/board-wide-ub-derivation]].
-- **2026-05-16 DIRECTIVE (vols 106-115)**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] — pivot to blank-puzzle speedup + NEW algorithm classes (paper-publishable inventions). User-invented [[concepts/relax-and-cross-cvc|Relax-and-Cross (CVC)]].
-- **2026-05-16 LAB NOTES (vols 106-109)**: [[LAB_NOTES_2026-05-16]] — partial summary mid-session.
-- **2026-05-16 SYNTHESIS (vols 106-115)**: [[SYNTHESIS_VOLS_106-115_2026-05-16]] — **full 10-vol directive close.** Engine: 232× speedup. Vanilla DFS: +33%. Full Blackwood port. ~16 documented refutations. Mathematical framework for the 459-level set. Hint-preserving DFS prototype. Standing record 459 unchanged.
-- **2026-05-16 PAPER (vols 117-118)**: [[PAPER_2026-05-16_459_indecomposability_synthesis]] — unified 3-layer characterization of 459 ceiling: empirical (8 refutations), structural (2-cluster decomposition), quantitative (boundary bound Δ ≈ -B(S)). σ-subset theorem [[MATH_NOTES_2026-05-16_SIGMA_SUBSET_THEOREM]].
-- **Vol-116**: hint-preserving Hungarian SHIPPED — full pipeline 5/5 canonical compliant. Score ceiling 435 on strict-canonical (raw DFS limited).
-- **Vol-117**: hint-preserving schedule path + 3 σ-cycle math findings: schedule×hint destructive interaction; rotation-locally-optimal across 12 boards; σ-cycle boundary growth (quantitative indecomposability); greedy min-boundary subset bridge REFUTED.
-- **Vol-118**: two-cluster 459-level set CONFIRMED via rigidity matrix; pipeline corner-perm specificity (McGavin perm only reaches 396); σ-subset score-lift theorem.
-- **Vol-118 (cont)**: **CRITICAL bf-bucket bug FIXED** (edge pieces at interior cells with BORDER edges facing inward) — [[concepts/bf-candidate-bucket-bug]]. Infrastructure CONSOLIDATION: [[ONBOARDING|ONBOARDING.md]], `eternity2_export::{load_board, save_board, verify, score_board}` canonical implementations, **39 bins migrated** (-427 lines duplicate I/O), `verify_board` + `board_convert` bins, [[docs/BOARD_FORMAT|BOARD_FORMAT.md]].
-- **Standing strict-canonical pipeline ceiling (vol-118 post-fix)**: 452 (5/5 hints, LEGAL_COMPLETE). Gap to record 457: 5 points. T11 30-min ALNS budget test in progress.
-- **Vol-119**: INVENTION shipped — [[concepts/corpus-restricted-region-mip-locked|corpus-restricted region MIP]] (locks 459 at halo-8 with 191 free cells in <1min; far faster than vol-44 full-piece MIP). σ-subset bound [[concepts/sigma-subset-bound-empirically-tight|empirically tight]] across 30-board corpus (Δ ≈ -B(S), p ≈ 1.0). **NEW basin discovered**: sweep_p18_s2 458 (3/5 hints, structurally distinct from vol-32 458 — only 1.6% cell agreement). 30-board basin corpus assembled at `output/vol-119/corpus_full_*/`. Vol-112 basin-pick MIP [[concepts/corpus-restricted-mip-doesnt-scale|doesn't scale]] past N=5. Standing record 459 UNCHANGED.
+---
 
-## Plans + discipline
+## Where to start
 
-- [[plans/BACKLOG|BACKLOG]] — canonical T-list across volumes
-- [[plans/CURRENT-VOL|CURRENT-VOL]] — active volume's binding items (other-agent territory)
-- [[README]] — vault discipline (audit-at-open, concept-first, no quiet deletes)
+| Reading order | Document | Why |
+|---|---|---|
+| 1 | [[REMINDER_USER_DIRECTIVES]] | binding rules from the user (2026-05-17). |
+| 2 | [[SYNTHESIS_VOL_188]] | master synthesis — state of the project at vol-188. |
+| 3 | [[E2_KNOWN_FACTS]] | numerical facts at a glance. |
+| 4 | [[plans/CURRENT-VOL]] | what the active volume is doing. |
+| 5 | [[sessions/TIMELINE]] | vol-1..188 timeline, era-grouped. |
+| 6 | [[plans/INVENTIONS_BACKLOG]] | the systematic list of unexplored attacks. |
 
-## Score history
+---
 
-| Vol |            Cold |    Warm | Mechanism                                                         |                               |
-| --: | --------------: | ------: | ----------------------------------------------------------------- | ----------------------------- |
-|   1 |             449 |       — | Cell-CP baseline ([[gacolor]] + [[ac3]])                          |                               |
-|   4 |             450 |       — | [[frame-first]] decomposition                                     |                               |
-|   5 |               — |     453 | [[genetic-algorithm                                               | GA-LARGE]] cascade            |
-|   6 |               — | **454** | [[border-diversity]] + [[parallel-tempering]] --pin-perimeter     |                               |
-|   7 |               — |     454 | (no break, structural characterization)                           |                               |
-|  12 |      (439 true) |       — | [[bitset-domain-rep]] engine rewrite                              |                               |
-|  14 | (~440 post-fix) |       — | [[edge-bp-marginals]] + [[hint-pinning-bug                        | hint pinning bug]] discovered |
-|  15 |             416 |       — | [[blackwood-algorithm]] raw (cliff-fix)                           |                               |
-|  17 |         **455** |       — | [[blackwood-schedule-calibration]] + WorstBand+ConflictDriven{80} |                               |
-|  18 |         **457** |       — | [[oracle-cycle-swap]] + hot-PT T=30 ([[basin-457-pt]])            |                               |
-|  22 |             457 |       — | [[basin-escape-recipe]] finds [[basin-440-469                     | 469-ceiling basin]]           |
-|  23 |             457 |       — | [[prune-restart]] shipped; cold-start route +266 CP-depth lift but ALNS-fill only 424 (< 451 vanilla) |                               |
-|  24 |             457 |       — | [[score-optimizing-cp]] shipped — MaxScore CP-fill 412→419 vs vol-23 round-2 partial; cold-chain 413 at 40% budget |                               |
-|  26 |             457 |       — | [[learned-value-order]] gate at 6×6/5c — 540× engine-node reduction vs MRV+LCV; stdio bridge eats wall-clock win |                               |
-|  27 |             457 |       — | [[learned-value-order]] gate PASS — ONNX in-process, 5.5× wall-clock win, 16/16 recovery of MRV-failures at 100ms budget |                               |
-|  28 |             457 |       — | [[learned-value-order]] cross-domain transfer REFUTED — 6×6-trained v2 model gives Δ=−108 depth regression under `joe_depth150_bp` at canonical 16×16 |                               |
-|  29 |             457 |       — | [[learned-value-order]] distribution-matched imitation hits the teacher ceiling — Δ=−1 with −35% nodes, −37% backtracks at iso-depth (gate PASS at match condition) |                               |
-|  30 |             457 |       — | ~~[[learned-value-order]] +9 depth lift from LearnedOnTies~~ **REFUTED vol-32** — bug at lib.rs:2550 caused LOT to silently fall through to InsertionOrder; model never called |                               |
-|  31 |             457 |       — | ~~[[learned-value-order]] +10/+8 score lift~~ **MIS-ATTRIBUTED vol-32** — the "depth-174 ML partial" was actually an InsertionOrder partial; real numbers but wrong attribution |                               |
-|  32 |         **458** |       — | **NEW RECORD** via vanilla_fast (125M pp/s, community-class) + ALNS-5min: matched=458/480 (caveat: 2 of 5 canonical hints displaced). Also: vol-30/31 BUG DISCOVERED, [[unsat-clause-propagator]] prototype, blackwood_raw+MRV cold-start tied 457 in 10min |                               |
-|  33 |               — |       — | code refactor: 5 deferred items shipped (eternity2-time, -export, -puzzle-io crates; solver-engine modules split; bin-harness scaffold). solver-engine lib.rs: 5355→3705 lines |  |
-|  34 |             — |       — | T1 vanilla_fast snapshot infra; T2 unsat-clause-propagator hard-pruner refuted (encoding reconciled); T3 lottery: 2 boards CLAIMED 457 but later **RETRACTED** (vol-35 found pin_hints duplicate-piece bug). 2 alns_only bugs fixed (polish_swap, filename collision). User-proposed [[fitness-landscape-mapping]] vol-35 T1. |  |
-|  35 |             — |       — | **Vol-35 closed**: pin_hints duplicate-piece bug found + fixed (3 save paths); vol-34 records + vol-35 "7th basin" claim retracted. Multi-scale landscape mapped (4×4 → 16×16); 10×10/8c smallest showing clustering. Thread-id sweep finds 19 distinct basin families (vs 5 default). Deep_458_basin lottery on vol-32's clean partial: 1×458 byte-identical + 2 new 457 satellites. **458 record stands; no 459 break.** [[vol-35]] |  |
-|  36 |             — |       — | **Vol-36 closed**: vanilla_path bin shipped (raw-DFS, custom paths, 60-100M pp/s, 7 path modes). border-first wins cold CP at +12 edges vs row-major; all centre-first variants refuted (re-confirm vol-14 hint-centric null in raw-DFS). **Canonical-compliance tension** found: vol-32 458 has only 3/5 hints honored; vol-36 border-first ALNS produces 0/5; pin-hints depth caps at ~208. Make-canonical operator built: 458 → canonical 446 (5/5 hints) via prune_restart MaxScore in 0.1s. Vol-37 lottery from 7 canonical partials in flight. [[vol-36]] |  |
-|  37 |             — |       — | **Vol-37 closed (no record break)**: structural_scan.py + gh_e2.py + canonical 454 production. Found pos 161 (interior, x=1 y=10) = pid 234 rot 0 invariant across all 7 verified records (genuine cross-basin structural cell, NOT hint-adjacent). gh_e2 relaxation algorithm works but relaxation-gap dominates. Pos 161 synthetic-hint on vf 5min × 8t: +2 depth, +4 score (modest). Two mid-vol re-evaluations cancelled saturated lotteries. Canonical records unchanged: 457 (×3 blackwood_mrv), 456 (×2 blackwood_raw), 454 (new pathway). [[vol-37]] |  |
-|  38 |             — |       — | **Vol-38 closed (honest null)**: prune-restart MaxScore on canonical 454 with drop-k ∈ {0, 20, 40}: best completion 431 (-23 vs 454 start). Canonical 454 mismatch region (38 cells) is structurally CP-uncompletable — no 256-completion of the dropped region beats 454. To break 454, need larger drop (>50% of board) OR change the SURROUNDING 218 cells (not just the mismatch cluster). [[vol-38]] |  |
-|  39 |             — |       — | **Vol-39 closed (modest lift)**: ALNS-diverse (winning5 + BottomBandDestroy) 8 seeds × 5min from canonical 454 → 2 seeds reached **455** (NEW canonical record-class, +1 lift). Both 5/5 hints, piece-unique, distinct boards (54 cells differ). drop-100 prune-restart 60s: 138-cell refill too big for CP budget. [[vol-39]] |  |
-|  40 |             — |       — | **Vol-40 closed (honest null)**: ALNS-diverse 24 runs (3 canonical 457 sources × 8 seeds × 5min) ALL stayed at 457. Confirms vol-22 "457 is ALNS-locked" finding even with BottomBandDestroy added. ALNS ceiling per basin ≈ +1 score; 454→458 requires ~4 chained lifts at decreasing probability. To break 458 need community-class compute or new algorithm. [[vol-40]] |  |
-|  41 |             — |       — | **Vol-41 closed (positive signal, no record-break)**: ValueOrder::RecordsPrior SHIPPED. New engine variant ranks candidates by record-frequency from vol-37 structural_scan. A/B canonical E2 5min: +5-9 matched edges at iso-depth (171). Downstream ALNS-5min × 4 seeds: +8 mean, +16 best (3 of 4 seeds win). Best ALNS-completion 439/480 (below records). First positive engine-level signal in vol-37-41 series. Gate (≥5% depth lift) not met but consistent positive effect. [[vol-41]] |  |
-|  42 |             — |       — | **Vol-42 closed (honest null + session close)**: McGavin 469 from community corpus decoded, applied make-canonical (drops to 443 = -26 score, since McGavin is 1-clue variant), ALNS-diverse × 4 seeds → all 4 reach 444 (deterministic +1 lift). Community 469 layout is structurally incompatible with our canonical 5-clue. **Autonomous session closes after 7 volumes (vol-36-42)**. Real outputs: 6 tools (vanilla_path, make_canonical, structural_scan, gh_e2, --extra-hint, RecordsPrior), 5 new canonical records (454, 455 ×2, 444), verify_records.sh 10/10 pass, honest nulls documented. Records UNCHANGED: 458 absolute, 457 canonical. [[vol-42]] |  |
-|  43 |             — |       — | **Vol-43 reframing only**: 7 cross-domain reframings explored, no shipped record-mover. [[vol-43-reframing]] |  |
-|  44 |             — |       — | **Vol-44 closed (rich research, no break)**: LP UB tool ships; 3 border-classes A/B/C UB 478/477/476; vol-32 458 basin PROVEN locally optimal under MIP cluster-repair (halo ≤ 2) and whole-interior MIP (196 cells, 1h). 458 border is LP-UB locally maximal under k≤3 perturbations. **Conclusion: 458 is firm in this basin; record break needs UB ≥ 479 basin.** [[vol-44]] |  |
-|  45 |             — |       — | **Vol-45 closed**: CP search with LP UB-based pruning. Built but no record-class breakthrough. [[vol-45]] |  |
-|  46 |             — |       — | **Vol-46 closed**: Per-class LP UB diagnostic. No record lever. [[vol-46]] |  |
-|  47 |             — |       — | **Vol-47 closed (negative)**: Lifted LP McCormick formulation. Standard LP intractable at canonical scale; column-gen v1/v2 variants under/over-count match credit, both INVALID. Correct path = Lagrangian relaxation with cutting planes (multi-week). [[vol-47]] |  |
-|  48 |             — |       — | **Vol-48 closed (negative)**: RL via vanilla Evolutionary Strategies (sigma=0.2). 4 rounds: collapsed to std=0.00 by R3 at 277/480 (−5 vs vol-29 imitation 282). ES fails on E2 value-order because engine argmax is structurally invariant to small policy perturbations. Infra (`crates/rl-search`) reusable. [[vol-48]] |  |
-|  49 |             — |       — | **Vol-49 closed (negative)**: Adaptive-sigma ES (bumps to 2× when std<0.5). 6 rounds peak 280 at R3 then collapsed; bumps to 0.4 and 0.8 did not exceed 280 and destabilized. **Both ES variants finish BELOW imitation baseline** — ES degrades the model. Q-learning is the natural pivot (gradient on Q-values, not argmax). [[vol-49]] |  |
-|  50 |             — |       — | **Vol-50 closed (net negative + infrastructure + math)**: 3 pivots — Q-learning design, then REINFORCE+Plackett-Luce via ONNX Gumbel (probe refuted via deterministic RandomUniformLike), then search-side. Shipped `SolveOpts.node_budget` engine axis + prune_restart `--node-budget` flag. A/B time-budget vs node-budget: same final partial (412 vs 410), 3× more wall for node-budget. ALNS-5min × 4 from 412 partial: best=428 (+4 vs vol-23 baseline 424). blackwood_raw + MRV 1h × 4 parallel **FAILED** (CPU oversubscription crushed each seed to depth 85-90 vs vol-32's 5min @ depth 190+). Math: LP-integer gap anatomy — 33% in fractional LP, 67% in piece-uniqueness joint-infeasibility. [[vol-50]] |  |
-|  51 |             — |       — | **Vol-51 closed (modest infrastructure, no record)**: B1 bound-trigger prune-restart built and shipped — extracted `relaxed_bound` to bench-audit lib, added `--bound-trigger` and `--drop-k-bound-stall` flags to prune_restart, per-round bound logged. Empirical: trigger CORRECTLY fires when board is full + score stagnant; **recovery is the bottleneck** — drop k=60 + halo = 164 cells dropped, CP-MaxScore refills only 140 in 30s, score collapses to 188 from 412. Pivot to B3 engine profiling found vol-25 already did this comprehensively (7 fixes shipped, joe +22%, BLACKWOOD_RAW +27%); no further research-grade profiling work remains. Apples-to-apples: our vanilla_fast 125M nps single-thread vs McGavin 295M — only ~2.4× gap, not the "4000×" suggested by mismatched comparison. Standing 458 record unchanged. [[vol-51]] |  |
-|  52 |             — |       — | **Vol-52 closed (design doc only)**: 400-line concept page on lifted-LP via per-piece column-generation. Structural alternative to vol-47's failed McCormick: keeps same LP variables, decomposes via Lagrangian per piece. Each subproblem ≤ 800 placements; master is LP. Expected to close 12 of 20 LP-integer-gap points (piece-uniqueness joint-infeasibility). Wouldn't directly break 458 (which vol-44 proved integer-optimal under MIP) but provides optimality certificates per basin + tighter CSP-search bound. Engineering: 7-10 days; flagged as candidate for vol-53+. No code shipped this vol; design-only per CLAUDE.md senior-researcher mode. [[vol-52]] |  |
-|  53 |             — |       — | **Vol-53 closed (PARTIAL REFUTATION of vol-52)**: Python+highspy worked example on toy 2-3 cell LP instances. All toy cases LP=Integer (zero gap). Reveals the canonical-E2 20-point LP-integer gap doesn't come from piece-uniqueness fractionality alone — it comes from y-linearisation interacting with piece-uniqueness at scale. Per-piece column-gen alone won't close the gap; needs full branch-and-price-and-cut (revised estimate: 3-4 weeks, not 7-10 days). Standing 458 may be near-globally-optimal under search algorithms we have. [[vol-53]] |  |
-|  54 |             — |       — | **Vol-54 closed (math resolution of vol-50 vs vol-53)**: built `per_color_integer` bin, filled the INTEGER column of vol-50's anatomy table. Confirms 5.96 fractional + 12 rounding = 17.96 II gap numerically. **BUT**: color 8 has INT=21 > floor(LP_UB)=20, proving `floor(LP_UB[k])` is NOT a per-color integer bound; vol-50's "12 from piece-uniqueness joint-infeasibility" interpretation refuted. Minimal 2-cell, 2-piece worked example (HiGHS verified) gives LP=1.0, INT=0, gap=1.0 — the actual mechanism is **cell-fractional x**, not rotation-fractional or piece-uniqueness slack. Vol-52 design now `refuted`: per-piece column-gen tightens rotations but doesn't restrict cell-level fractionality. Vol-44 MIP (1h) remains the cheapest tight bound. [[vol-54]] [[y-linearisation-cell-fractional-gap]] |  |
-|  55 |             — |       — | **Vol-55 closed (MVP success: B&P-and-cut on canonical-E2)**: 3-hr build (per user "limiting thoughts" challenge), shipped `dump_cluster_for_lp` Rust bin + Python+highspy LP/MIP solver. Measured LP UB vs MIP optimum vs current-458 on 6 real canonical-E2 clusters. **LP-MIP gap is real**: 5×4 cluster has gap=3.31, 6×3 has gap=3.41 (confirms vol-54 mechanism on canonical data). **458 record is LOCALLY OPTIMAL on every cluster tested** (MIP=current for all 6, including the gap-3 clusters). The cell-fractional gap is LP looseness, NOT 458-suboptimality. Sharpens vol-44's single-cluster local-optimality to multi-cluster local-optimality. Standing 458 confidence substantially raised; remaining question is whether a higher-MIP basin exists. MIP runtime scales ~2× per added cell — full canonical-scale needs Rust + column-gen (vol-44 already did this in different form). [[vol-55]] |  |
-|  56 |             — |       — | **Vol-56 closed (rich research, 8 deliverables)**: dual-track autonomous vol on CDCL no-good learning + structural discovery. (T2) `cdcl-no-good-e2.md` math design: hard/soft no-goods, soundness lemmas, soft-minimization non-monotone subtlety. (T3) Engine wipeout-distribution + repetition measurement: 46k wipeouts/60s, 67% position-set hashes unique, FULL hashes 100% unique. (T4) Python 6×6/5c proto: clauses median 6 literals, 96% of states have ready-to-fire clauses, avg 6.57 per node — **GREEN LIGHT for vol-57 CDCL Rust build**. (T6) `cdcl-engine-integration.md` solver-engine refactor design (Option A separate path). (T7) Row-10-12 bimodal family analysis: row 11 splits 6 records into 2 families perfectly. (T8) Row-11-swap experiment: -41 score, energy barrier exists. **T7 CORRECTION**: Family A = relaxed-canonical (3/5 hints, allows +1 score); Family B = strict-canonical (5/5 hints). The vol-32 458 record is on the 3-hint puzzle; strict-canonical record is 457. Lottery (T1) running 156 ALNS jobs in background. [[vol-56]] |  |
-|  57 |             — |       — | **Vol-57 closed (CDCL Rust prototype)**: `crates/cdcl-proto` standalone crate. AC-3 with cause tracking + 1-UIP-equivalent + watch-filtered unit-prop. Algorithm validated; clauses median 8-9 lits on 6×6/5c. Wall-clock 2WL deferred to vol-58+. [[vol-57]] |  |
-|  58 |             — |       — | **Vol-58 closed (extensive validation + canonical-scale failure)**: family-B 457 basin MIP-verified on 11 clusters, McGavin 469 basin verified on 9 clusters. Total **22 cluster MIPs across 3 basin families** all locally optimal. CDCL scaling 5×5→16×16: 7×7 PASS (3.4× wall-clock + finds where vanilla can't), canonical 16×16 FAIL (avg clause 96 lits, 0 unit-props). Our 458 matches Schaus & Deville 2008 academic SOTA. [[vol-58]] |  |
-|  59 |             — |       — | **Vol-59 closed (lottery + CDCL scaling + theoretical 1-UIP analysis)**: basin lottery 156/156 jobs: 1×458 + 3×457, **no 459+ found, P(458)=0.64%**. CDCL scaling test confirms unit-prop hit rate crashes at 12×12+ due to clause-size growth. **THEORETICAL FINDING**: E2's cause-graph is FLAT (depth ≤ 2), so SAT-style 1-UIP collapses to what my naive code already does. Real fix isn't 1-UIP but redundant-cause elimination — a different (and possibly harder) analysis. Path to >458 narrowed: McGavin/Blackwood-class algorithm or fundamentally different paradigm. [[vol-59]] |  |
-|  60 |         **459** |       — | **NEW LOCAL RECORD**: cross-machine SOTA replay produced 459/480 from p06 corner-perm + vanilla_fast + ALNS basic seed=42 30min. p06 partial = corner perm (1,0,2,3). All vol-32 458 + vol-44 458 + 2 sister basins now MIP-locally optimal (halo-1). |  |
-|  61 |             459 |       — | Vol-61 SOTA replay calibration on vol-60 459 basin. ALNS lottery rich diagnostics; no 460. |  |
-|  62-79 |       459 |       — | Vols 62-79: 8+ invented algorithms (Homotopy-ALNS, ComponentClusterDestroy, BLGS, FCD, OA-ALNS, RGS, CAS) all bounded ≤ 459. McGavin 469 fully decoded. New 469 board found (near-twin swap). σ-cycle indecomposability 459→469 (vol-65). Basin asymmetry (vol-68 top-row pinning). |  |
-|  80 |             459 |       — | **Blackwood "lots of overlap" rationale REFUTED at single-seed**: 7-triple sweep, top-overlap triples scored worst (436-437), bottom-overlap best (446). 1-seed result; needs variance check. [[blackwood-triple-sweep]] |  |
-|  82 |             459 |       — | **McGavin basin TOP-DETERMINING**: bottom-N pinning gives 443-462 vs top-N=14 → 469. Mismatch geometry: McGavin 11 mismatches concentrate in rows 0-4 (top 5). [[mcgavin-basin-top-bottom-symmetry]] [[mcgavin-469-mismatch-geometry]] |  |
-|  83-101 |       459 |       — | **Local Rigidity Theorem proven**: 13+ MIP-PROVEN local-optimal regions across 3 basins. McGavin halo-1 (vol-83, 37 cells, 895s) → halo-2 per-comp (vol-92) → halo-3 per-comp (vol-94) → halo-4 comp 0 (vol-96, 57 cells = LARGEST). Local 459 halo-1 joint (vol-90, 59 cells, 1800s) + halo-2 per-comp (vol-93) + halo-4 per-comp (vol-100, comp 0 = 56 cells PROVEN). Vol-32 458 halo-2 per-comp (vol-95). First sound UB below 480 (vol-86: top-4 ≤ 123). σ-cycle indecomposability UNIVERSAL across 3 basin-pairs (vols 65/99/101). σ-cycles board-spanning (rows 1-14 × cols 1-14). McGavin near-twin orbit = exactly 2 boards (6555 perturbations tested, 0 give 470). Corner perm (3,2,0,1) UNIQUE 469 host across 1156-board corpus. PAPER: [[../PAPER_2026-05-16_canonical_E2_rigidity_theorem]]. Standing 459 unchanged after 10h autonomous. |  |
-| 105 | 459 | — | **Vol-105 closed early (user redirect)**: rows-12-15 LP-UB on local-459 = 121.14 (conditional global UB ≤ 477 if outside pinned). σ-cycle MIP infrastructure prepared (T1 never launched). Audit found canonical ceiling is 469 (McGavin), NOT 470 — corpus 470s are 1-clue Blackwood variant. PAPER UB claim corrected (subset-bound, not unconditional). **New directive issued for vols 106-115**: [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]]. User-invented [[concepts/relax-and-cross-cvc\|CVC]] algorithm reserved. [[sessions/vol-105]]. |  |
-| 119 | 459 | — | **Vol-119 closed**: INVENTION shipped — [[concepts/corpus-restricted-region-mip-locked\|corpus-restricted region MIP]]. Locks 459/460/469 at halo-8/12/15 with 191-256 free cells in <1min. NEW 458 basin discovered (sweep_p18_s2, 3/5 hints, structurally distinct from vol-32 458). σ-subset bound [[concepts/sigma-subset-bound-empirically-tight\|empirically tight]] across 30-board corpus. Vol-112 basin-pick MIP [[concepts/corpus-restricted-mip-doesnt-scale\|doesn't scale]] past N=5. 30-board basin corpus assembled. Records UNCHANGED. [[sessions/vol-119]]. |  |
-| 120 | 459 | — | **Vol-120 closed**: THEOREM proved — strict-canonical 457 + matched-edges 459 BOTH corpus-MIP-LOCKED across full board interior with 25-30 board corpus. New `vol120_strict_canonical_region_mip.py` script enforces 5/5 hint compliance + halo-K region MIP. T1 (vanilla_path basin hunt) NULL: 60s budget too small for ALNS recovery. The 478 LP-UB → 459 INT gap (19 pts) represents the basin-discovery deficit. Records UNCHANGED. [[sessions/vol-120]]. |  |
-| 122 | **458** strict | — | strict-canonical record-break ALNS basic 30min seed=42 + λ_2 signature pick. |  |
-| 125 | **461** | — | bf_bw off=110 + ALNS basic 30min seed=42 → 461/480 (matched-edges). New 18-basin family analysis. |  |
-| 129 | **463** | — | 15-basin attack on (2,3,0,1)@462 base → 463/480, never seen in 1278-board DB. |  |
-| 155–156 | 460 | — | V155 PRIOR data-augmented beam (from-scratch 460 in 238s); V155→ALNS pipeline. |  |
-| 171–181 | 460 | — | 13 inventions across 10 vols (OPHIDIA, MURMURATION, CHIASMUS, GAUNTLET, STIGMA, LARGE-K, INTAGLIO, KEYRING, ENGRAVE, SEMAPHORE, LIGHTHOUSE, etc.). New 460 basin cp=(0,3,1,2) + new 458 basin cp=(3,0,1,2). |  |
-| 185 | 460 | — | **Vol-185 cleanup**: vault catchup, BACKLOG audit, MEMORY trim. No new search. [[concepts/three-basin-iso-plateau]] documents universal local rigidity on 3 distinct ≥458 basins. |  |
+## Standing state (vol-188)
 
+- **Matched-edges record**: **463/480** (vol-129 PALIMPSEST, cp=(2,3,0,1)).
+- **Strict-canonical record (5/5 hints)**: **459/480** (vol-122 DB-find).
+- **Community ceiling**: **469/480** (McGavin 2020, canonical 5-clue).
+- **Three-basin iso-plateau** at 458–460 (V175, vol-60, V181) — structurally locked under all known local ops. See [[concepts/three-basin-iso-plateau]].
+- **18 corner-perms** carry ≥ 458; **5** reach ≥ 460. 13 cps unexplored at ≥ 460. → [[plans/CURRENT-VOL]] (vol-189 CORTEZ).
+
+---
+
+## Vault structure
+
+```
+vault/
+├── INDEX.md, README.md, REMINDER_USER_DIRECTIVES.md  ← entry
+├── E2_KNOWN_FACTS.md, SYNTHESIS_VOL_188.md           ← capstones
+├── PAPER_*.md, MATH_NOTES_*.md                       ← papers/notes
+├── concepts/   ← 344 durable algorithm/finding pages (umbrellas start with `_`)
+├── basins/     ← 17 notable boards
+├── sessions/   ← per-volume journals, TIMELINE.md spine, archive/raw/
+├── plans/      ← BACKLOG, CURRENT-VOL, INVENTIONS_BACKLOG, etc.
+└── reference/  ← memory-crosswalk and mirrors of authoritative refs
+```
+
+---
+
+## Papers & math notes (root)
+
+- [[PAPER_2026-05-16_canonical_E2_rigidity_theorem]] — local rigidity theorem (vols 83-101).
+- [[PAPER_2026-05-16_459_indecomposability_synthesis]] — 3-layer 459-ceiling characterization.
+- [[PAPER_2026-05-17_vol122_basin_diversity_and_rigidity]] — basin diversity + rigidity.
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — 459-level set framework.
+- [[MATH_NOTES_2026-05-16_SIGMA_SUBSET_THEOREM]] — σ-subset theorem.
+- [[SYNTHESIS_VOLS_106-115_2026-05-16]] — vols 106-115 synthesis (blank-puzzle speedup).
+- [[LAB_NOTES_2026-05-16]], [[IDEAS_FROM_BLANK_2026-05-16]], [[DIRECTIVE_VOLS_106-115_BLANK_PUZZLE_SPEEDUP]] — vol-106-era materials.
+- [[AUDIT_2026-05-20]] / [[CONCEPT_TRIAGE_2026-05-20]] — this synthesis pass's working docs.
+
+---
 
 ## Concepts — by category
 
+### Umbrellas (start here for clusters)
+
+- [[concepts/_umbrella-vol122-experiments]] — 19 vol-122 sub-experiments.
+- [[concepts/_umbrella-j1-builder-attempts]] — 18 J1 builder variants.
+- [[concepts/_umbrella-mcgavin-mip-proofs]] — 18 McGavin rigidity cuts.
+- [[concepts/_umbrella-cas]] — CAS cluster (refuted as greedy).
+
 ### Engine / propagators
-- [[gacolor]] — Régin alldiff per color (most powerful global)
-- [[ac3]] — pairwise arc-consistency
-- [[ns1-deficit]] — multiset-equality invariant (necessary, loose)
-- [[bitset-domain-rep]] — vol-12 engine rewrite
-- [[engine-profile-registry]] — registry of profiles (2 solver_ids × 7 heuristics)
-- [[engine-perf-hot-paths]] — vol-25 flamegraph audit + 7 fixes (+22% joe, +27% BR)
-- [[scan-order]] — variable-order axis (BorderFirstMRV, RowMajorBottomUp, …)
-- [[mcgavin-engine]] — community throughput target (295M nps)
+
+- [[concepts/gacolor]] — Régin alldiff per color (most powerful global).
+- [[concepts/ac3]] — pairwise arc-consistency.
+- [[concepts/ns1-deficit]] — multiset-equality invariant (necessary, loose).
+- [[concepts/bitset-domain-rep]] — vol-12 engine rewrite.
+- [[concepts/engine-profile-registry]] — 2 solver_ids × 7 heuristics.
+- [[concepts/scan-order]] — variable-order axis.
+- [[concepts/mcgavin-engine]] — community throughput target (295M nps).
+- [[concepts/blackwood-fast]] — our 85M nps single-thread engine.
+- [[concepts/rust-perf-at-scale]] — perf notes.
 
 ### Search algorithms
-- [[blackwood-algorithm]] — heuristic-schedule + break-index backtracker (community 469)
-- [[blackwood-schedule-calibration]] — empirical schedules from corpus
-- [[blackwood-then-csp]] — pipeline composition (Variant K)
-- [[prune-restart]] — Joe's in-place restart (vol-23 shipped)
-- [[score-optimizing-cp]] — MaxScore B&B objective (vol-24 shipped)
-- [[frame-first]] — vol-4 decomposition (border + interior)
-- [[border-diversity]] — Las Vegas sampler + pin-perimeter
+
+- [[concepts/blackwood-algorithm]] — schedule + break-index backtracker (community 469).
+- [[concepts/blackwood-schedule-calibration]]
+- [[concepts/blackwood-then-csp]] — pipeline composition.
+- [[concepts/prune-restart]] — Joe's in-place restart.
+- [[concepts/score-optimizing-cp]] — MaxScore B&B objective.
+- [[concepts/frame-first]] — border + interior decomposition.
+- [[concepts/border-diversity]] — Las Vegas sampler.
 
 ### Local search / metaheuristics
-- [[alns]] — destroy-repair, 10-op portfolio
-- [[parallel-tempering]] — PT chains; warm-record producer
-- [[genetic-algorithm]] — vol-5 4×4 / 6×6 crossover
-- [[oracle-cycle-swap]] — vol-18 cold-record producer (with hot-PT)
-- [[basin-escape-recipe]] — vol-22 bound+Hungarian+ALNS pipeline
-- [[ot-hungarian-repair]] — used inside basin-escape recipe
-- [[prior-guided-alns]] — V169 OPHIDIA PriorDestroy
-- [[v179-large-k-destroy]] — V179 LARGE-K destroy variants (k∈{32,48})
-- [[intaglio-attack-lex]] — V180 lex-ordered acceptance on forbidden-2x2
-- [[chiasmus-basin-crossover]] — V172 cross-basin row-interleave (refuted as record-mover)
-- [[three-basin-iso-plateau]] — universal local rigidity at 458–460 (vol-181 finding)
+
+- [[concepts/alns]] — destroy-repair, 10-op portfolio.
+- [[concepts/parallel-tempering]] — PT chains.
+- [[concepts/genetic-algorithm]] — 4×4 / 6×6 crossover.
+- [[concepts/oracle-cycle-swap]] — vol-18 cold-record producer.
+- [[concepts/basin-escape-recipe]] — vol-22 composite.
+- [[concepts/ot-hungarian-repair]]
+- [[concepts/prior-guided-alns]] — V169 OPHIDIA.
+- [[concepts/v179-large-k-destroy]] — V179 LARGE-K.
+- [[concepts/intaglio-attack-lex]] — V180 lex-ordered acceptance.
+- [[concepts/chiasmus-basin-crossover]] — refuted.
+
+### Builders (constructive, vol-150+)
+
+- [[concepts/prior-data-augmented-beam]] — V155 PRIOR.
+- [[concepts/stigma-pheromone-adjacency]] — V178 STIGMA.
+- [[concepts/keyring-patch-prior]] — V181 KEYRING (production).
+- [[concepts/murmuration-basin-sampling]] — V171 Gumbel-beam.
+- [[concepts/spectral-border-signature]] — V178 border-spectral.
+- [[concepts/neuronic-ranker]] — exploratory ML ranker.
+- [[concepts/bidirectional-meet-in-middle]] — refuted at V184.
 
 ### Value-orders / message-passing
-- [[bp-marginals]] — cell-encoding (refuted as standalone)
-- [[edge-bp-marginals]] — vol-12 edge-color (partial-positive in pipeline)
-- [[survey-propagation]] — refuted (cavity-method block)
-- [[boundary-mps]] — vol-13 tensor network (refuted, 10¹⁰¹ overcounting)
-- [[learned-value-order]] — vol-26 imitation-learning gate (540× engine-node reduction at 6×6/5c; bridge eats wall-clock)
-- [[prior-data-augmented-beam]] — V155 PRIOR corpus position prior
-- [[stigma-pheromone-adjacency]] — V178 STIGMA pheromone adjacency
-- [[keyring-patch-prior]] — V181 KEYRING patch+pheromone+prior
+
+- [[concepts/bp-marginals]] — refuted as standalone.
+- [[concepts/edge-bp-marginals]] — partial-positive in pipeline.
+- [[concepts/survey-propagation]] — refuted.
+- [[concepts/boundary-mps]] — refuted (overcounting).
+- [[concepts/learned-value-order]] — ML imitation gate.
 
 ### Structural / measurement
-- [[mismatch-geometry]] — where errors live (universal mismatches, fracture threshold)
-- [[rare-color-rule]] — opposite-edge invariant + border exclusivity
-- [[selby-riordan-generator]] — the generator behind canonical E2
-- [[synthetic-puzzle-generator]] — vol-26 Rust impl + JSONL exporter for synthetic E2-family puzzles
-- [[mismatch-homology]] — vol-19 β_1 (small signal)
-- [[z22-vertex-charge]] — vol-7 gauge fingerprint
-- [[r5f-cooperativity]] — vol-18 76-cell barrier (KEY PHYSICS)
-- [[trajectory-families]] — score-distance ≠ configuration-distance
-- [[strain-cascade]] — vol-4 hypothesis (partly confounded with scan-order)
-- [[hamilton-frame]] — 75k frames (partial, necessary-not-sufficient)
+
+- [[concepts/piece-side-matching]] — PSM polytope.
+- [[concepts/piece-orbit-structure]]
+- [[concepts/piece-set-symmetries]] — 0 rotation-symmetric, 5 multiset twins.
+- [[concepts/piece-spectral-fiedler]] — Fiedler = frame/interior.
+- [[concepts/mismatch-geometry]]
+- [[concepts/rare-color-rule]] — Selby-Riordan invariant.
+- [[concepts/selby-riordan-generator]]
+- [[concepts/r5f-cooperativity]] — vol-18 76-cell barrier.
+- [[concepts/hamilton-frame]] — 75k frames lower bound.
+- [[concepts/z22-vertex-charge]] — vol-7 gauge fingerprint.
+- [[concepts/three-basin-iso-plateau]] — current standing rigidity finding.
+- [[concepts/row-level-rigidity]] — vol-186 1/2/3-row rigidity.
+- [[concepts/sigma-cycle-universal-indecomposable]] — universal cross-basin obstruction.
+- [[concepts/corner-permutation-study]] — 18-cp basin taxonomy.
+- [[concepts/v187-intaglio-mip]] — MIP rigidity probes on V181 460.
+- [[concepts/v188-translation-sigma-indecomposability]] — V181↔McGavin σ-transport refutation.
+- [[concepts/k11-basin-signatures]] — λ_2 + mz basin discriminator.
 
 ### Bounds / dead-end tests
-- [[relaxed-bound]] — vol-21 basin-local ceiling (strictly stronger than K=5)
-- [[bound-ascent]] — climb the bound landscape
-- [[operator-lock]] — K ≤ 5 lock test (vol-20)
-- [[inner-k-optimality]] — EvalMaxSAT proof for sub-regions
-- [[exact-joint-bound]] — MaxSAT for joint optimum (z3 failed, kissat-RC2 unbuilt)
-- [[lp-integer-gap-anatomy]] — vol-50 anatomy; vol-54 filled INT column + sharpened interpretation
-- [[y-linearisation-cell-fractional-gap]] — **vol-54** precise gap mechanism (cell-fractional x, NOT rotation-fractional)
-- [[lifted-lp-column-gen-per-piece]] — vol-52 design, **refuted at vol-54** (column-gen alone doesn't close cell-fractional gap)
 
-### Pipelines / infrastructure
-- [[basin-escape-recipe]] — vol-22 composite
-- [[cold-portfolio]] — vol-17 parallel-chunk runner
-- [[blackwood-then-csp]] — vol-17 Variant K
-
-### Code quality
-- [[code-debt]] — vol-25 restructure proposal (5 dup utils, solver-engine 5-module split, bin harness)
-
-### Community / external
-- [[community-corpus]] — 12k messages decoded, 123 boards
-- [[mcgavin-engine]] — 295M nps target
-- [[blackwood-algorithm]] — the algorithm behind 469
-- [[verhaard-set-sa]] — 2008 set-composition swap-annealing
-- [[eulerian-border]] — anr_56 2007 (refuted on canonical E2)
-- [[mcgavin-blackwood-gap-analysis]] — 4 orthogonal gaps to 469
+- [[concepts/relaxed-bound]] — basin-local ceiling (NOT a true UB).
+- [[concepts/bound-ascent]] — climb the bound landscape.
+- [[concepts/inner-k-optimality]] — EvalMaxSAT proof for sub-regions.
+- [[concepts/exact-joint-bound]] — joint MIP optimum.
+- [[concepts/lp-integer-gap-anatomy]] — vol-50 anatomy.
+- [[concepts/y-linearisation-cell-fractional-gap]] — vol-54 precise gap mechanism.
+- [[concepts/lifted-lp-column-gen-per-piece]] — vol-52 design, refuted at vol-54.
+- [[concepts/board-wide-ub-derivation]] — subset-bound caveat.
+- [[concepts/corpus-restricted-region-mip-locked]] — vol-119 invention.
+- [[concepts/sigma-subset-bound-empirically-tight]]
+- [[concepts/forbidden-patch-theorem-2026-05-19]] — INTAGLIO theory.
 
 ### Bugs / postmortems
-- [[hint-pinning-bug]] — vol-14 ALNS unpinning canonical hints (fixed `afb3dc9`)
 
-### Refuted / do-not-revisit
-- [[dead-ends]] — SP, IsingFormer, GPU/FPGA SAT (cross-domain agent verdicts)
-- [[survey-propagation]] — theoretical block
-- [[boundary-mps]] — 10¹⁰¹ overcounting gap
-- [[eulerian-border]] — vacuous on canonical E2
-- [[blackwood-layered-depth-wall]] — schedule wall structural
-- [[w-sat-459-unsat-findings]] — kissat UNSATs 459 halos, 9 basin borders
-- [[w11-sat-verified-border-enum]] — SAT-screen invention (border-pin filter)
-- [[w11-sat-correctness-validated]] — 2026-05-17 round-trip + sabotage validation
-- [[w11-border-screen-unviable]] — primary-engine retirement (border space ~10^7-10^9)
-- [[semaphore-row-hungarian]] — V183 row-10 piece-starvation wall
-- [[lighthouse-bidirectional-row]] — V184 MERGE interface infeasible
-- [[v182-engrave-csp-fill]] — V182 K∈{2,4} band-fill refutes local 460 lift
+- [[concepts/hint-pinning-bug]] — vol-14 ALNS unpinning canonical hints.
+- [[concepts/bf-candidate-bucket-bug]] — vol-118 edge pieces at interior cells.
+- [[concepts/dead-ends]] — central refuted-approaches registry.
+
+---
 
 ## Basins — notable boards
 
-| Basin | Score | Status |
-|---|---:|---|
-| [[basin-449-plateau]] | 449 | historic floor (cell-CP) |
-| [[basin-450-vol4]] | 450 | first break (frame-first) |
-| [[basin-453-vol5]] | 453 | GA-LARGE record |
-| [[basin-454-vol6]] | 454 | **historic warm record** |
-| [[basin-443-vol14]] | ~440 | vol-14 (post-fix invalidated) |
-| [[basin-447-top-row]] | 447 | vol-17 calibrated_v17a |
-| [[basin-457-pt]] | **457** | **current cold record** (vol-18 hot-PT) |
-| [[basin-440-469]] | 440 | vol-22 fresh, ceiling 469 |
-| [[basin-blackwood-470]] | 470 | community, 1-clue variant (NOT canonical) |
-| [[basin-mcgavin-469]] | 469 | **community canonical 5-clue ceiling** |
-| [[basins/basin-458-cp3012-v175]] | 458 | vol-175, new cp=(3,0,1,2) |
-| [[basins/basin-460-cp0312-v181]] | 460 | vol-181, new cp=(0,3,1,2) |
+| Basin | Score | cp | Status |
+|---|---:|---|---|
+| [[basins/basin-449-plateau]] | 449 | — | historic floor (cell-CP) |
+| [[basins/basin-450-vol4]] | 450 | — | first break (frame-first) |
+| [[basins/basin-453-vol5]] | 453 | — | GA-LARGE record |
+| [[basins/basin-454-vol6]] | 454 | — | historic warm record |
+| [[basins/basin-443-vol14]] | ~440 | — | vol-14 (post-fix invalidated) |
+| [[basins/basin-447-top-row]] | 447 | — | vol-17 calibrated_v17a |
+| [[basins/basin-457-pt]] | 457 | — | vol-18 hot-PT cold record |
+| [[basins/basin-440-469]] | 440 | — | vol-22 basin, ceiling 469 (oracle path) |
+| [[basins/basin-459-p06]] | 459 | (1,0,2,3) | vol-60 local cold record |
+| [[basins/basin-459-pt]] | 459 | — | PT-found 459 sister |
+| [[basins/basin-458-cp3012-v175]] | 458 | (3,0,1,2) | vol-175 new basin (V175 GAUNTLET) |
+| [[basins/basin-458-sweep-p18]] | 458 | — | vol-119 sweep_p18_s2 (structurally distant) |
+| [[basins/basin-460-cp0312-v181]] | 460 | (0,3,1,2) | vol-181 new basin (V181 KEYRING) |
+| [[basins/basin-461-cp1203-v125]] | 461 | (1,2,0,3) | vol-125 (A1 closure) |
+| [[basins/basin-463-cp2301-v129]] | **463** | (2,3,0,1) | **vol-129 current matched record** |
+| [[basins/basin-blackwood-470]] | 470 | — | community, 1-clue variant (NOT canonical) |
+| [[basins/basin-mcgavin-469]] | 469 | (3,2,0,1) | community canonical ceiling |
+
+---
+
+## Plans + discipline
+
+### Active (3 canonical)
+
+- [[BACKLOG]] — canonical T-list across volumes.
+- [[INVENTIONS_BACKLOG]] — systematic list of unexplored attacks.
+- [[CURRENT-VOL]] — active vol's binding items.
+
+### Archive
+
+- `plans/archive/` — per-vol plans (VOL-26..VOL-60) + date-stamped scratch from vol-122-146 era. See [[plans/archive/README]].
+
+### Discipline
+
+- [[README]] — vault discipline (audit-at-open, concept-first, no quiet deletes).
+
+---
 
 ## Sessions
 
-- [[sessions/vol-01]] through [[sessions/vol-54]] — per-volume journals
-- [[sessions/night-05]], [[sessions/night-07]] — preprint + closeout distillations
-- `sessions/archive/raw/` — original RESEARCH_NOTES_*.md, NIGHT*.md, V15_BLACKWOOD_SPEC.md
+- [[sessions/TIMELINE]] — the spine: vol-1..188 era-grouped one-liners.
+- [[sessions/vol-188]], [[sessions/vol-187]], [[sessions/vol-186]], … — per-vol journals.
+- `sessions/archive/raw/` — RESEARCH_NOTES_*.md, NIGHT*.md, V15_BLACKWOOD_SPEC.md.
 
-## Memory crosswalk
+---
 
-- [[reference/memory-crosswalk]] — map of `~/.claude/.../memory/*.md` → vault pages
+## Reference
 
-## Discipline
+- [[reference/memory-crosswalk]] — `~/.claude/.../memory/*.md` ↔ vault pages.
+- [[reference/reference-blackwood-decoded]]
+- [[reference/reference-community-e2-ceiling]]
+- [[reference/reference-verhaard-actual-method]]
 
-- Audit-at-open every new volume.
-- Concepts carry durable knowledge; sessions are journals.
-- No quiet deletes — `status: refuted` with evidence link.
-- Discoveries mid-vol → BACKLOG, not pivots.
+---
+
+## Discipline (per README)
+
+- **Audit-at-open** every new volume — see [[plans/BACKLOG]].
+- **Concepts** carry durable knowledge; **sessions** are journals.
+- **No quiet deletes** — `status: refuted` with evidence link.
+- **Discoveries mid-vol** → BACKLOG entries, not pivots.
+- **Take notes AS YOU GO** — every non-trivial finding → session or concept page at the moment it occurs.

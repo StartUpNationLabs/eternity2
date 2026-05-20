@@ -1,3 +1,10 @@
+---
+name: v186-color-conservation
+description: 1. Pool-availability: which pieces remain after the top consumes 8 rows.
+status: unbuilt
+metadata:
+  type: concept
+---
 # V186-T4 — Color-Conservation Co-Designed Top+Bottom
 
 Status: `unbuilt` — math design, not yet PoC'd.

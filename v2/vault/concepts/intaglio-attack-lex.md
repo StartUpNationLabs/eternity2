@@ -1,3 +1,10 @@
+---
+name: intaglio-attack-lex
+description: Naming: INTAGLIO — Italian \"carved\" — from V138/V139 forbidden-2x2 analysis.
+status: partial
+metadata:
+  type: concept
+---
 # V180 INTAGLIO-ATTACK — Lex-ordered ALNS with Forbidden-2x2 Secondary
 
 Status: `partial` — code exists (V140 lex_break_intaglio), CLI wired 2026-05-20.
@@ -61,6 +68,6 @@ If the corpus shows that even 461+ basins have ~29 forbidden patches, then INTAG
 
 ## Linked
 
-- [[../sessions/vol-180]] (planned)
+- [[vol-180]] (planned)
 - [[prior-guided-alns]] (V169 — combined with INTAGLIO-ATTACK in long-lift driver)
 - `project_e2_intaglio_2x2_finding` (memory file)

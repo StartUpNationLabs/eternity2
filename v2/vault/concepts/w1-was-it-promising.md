@@ -3,6 +3,7 @@ name: w1-was-it-promising
 description: "Honest vol-123 assessment of W1 PEPS-Lagrangian. Concrete wins: solves 4×4/6×6 generated puzzles, solves vol-13 piece-uniqueness obstruction, Rust port has working exact contraction. Unknowns: canonical 16×16 scale unvalidated (first attempt OOM'd). No record broken today."
 metadata:
   type: project
+status: built
 ---
 
 # Was W1 PEPS-Lagrangian promising?

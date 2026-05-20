@@ -182,5 +182,5 @@ flag; in destroy phase, sample by inverse prior weight.
 
 - [[CURRENT-VOL]] (V156 in progress)
 - [[INVENTION_NAMES_2026-05-19]] (named inventions)
-- [[../sessions/vol-155]] (V155 PRIOR build-up)
-- [[../concepts/prior-data-augmented-beam]] (V155 concept)
+- [[vol-155]] (V155 PRIOR build-up)
+- [[prior-data-augmented-beam]] (V155 concept)

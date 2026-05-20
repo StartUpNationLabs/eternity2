@@ -3,6 +3,7 @@ name: local459-mismatch-geometry
 description: Our local 459 has all 21 mismatches in rows 11-15 (BOTTOM 5 rows) — exact mirror of McGavin's 469 (TOP 5 rows). Confirms vol-14 "scan-order determined" finding empirically.
 metadata:
   type: project
+status: built
 ---
 
 # Local 459 — mismatch geometry (bottom-concentrated)

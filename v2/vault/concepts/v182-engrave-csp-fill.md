@@ -1,3 +1,10 @@
+---
+name: v182-engrave-csp-fill
+description: 1. Strip a contiguous row band of $K$ rows (e.g., rows 12..15) → leaves $192$ pieces placed and $64 - 16 K$ cells empty.
+status: partial
+metadata:
+  type: concept
+---
 # V182 ENGRAVE — Exact CSP-Fill on Stripped Row-Bands
 
 Status: `partial` — probe done on K∈{2,4} row bands; no record lift; consistent with three-basin-iso-plateau.
@@ -57,4 +64,4 @@ randomness, no time-budget excuse. Within the band, 460 is the genuine ceiling.
 ## Linked concepts
 
 - [[three-basin-iso-plateau]]
-- [[../basins/basin-460-cp0312-v181]]
+- [[basin-460-cp0312-v181]]

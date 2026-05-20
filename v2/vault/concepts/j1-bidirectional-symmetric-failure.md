@@ -3,6 +3,7 @@ name: j1-bidirectional-symmetric-failure
 description: "J1 chain fails symmetrically: top-down fails at band 14 (last); bottom-up fails at band 0 (first). Failure point is FAR from the starting boundary, regardless of direction."
 metadata:
   type: project
+status: refuted
 ---
 
 # J1 — Bidirectional symmetric failure

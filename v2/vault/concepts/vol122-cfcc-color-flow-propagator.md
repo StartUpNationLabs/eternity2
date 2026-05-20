@@ -3,6 +3,7 @@ name: vol122-cfcc-color-flow-propagator
 description: "Vol-122 K3 — Color Flow Capacity Constraint (CFCC) PoC POSITIVE. New CSP propagator checks per-color frontier-demand vs unplaced-piece-supply. 2-2.7× node reduction on 7×7/c4-c5 and 8×8/c5."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 K3 — Color Flow Capacity Constraint (CFCC)
@@ -67,7 +68,7 @@ propagator. Expect 1.5-3× additional speedup over current engine.
 
 ## Linked
 
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] — add K3 entry
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] — add K3 entry
 - [[vol122-fsmc-rust-scaling-wall]] (J6, orthogonal)
 - [[ns1-deficit]] (vol-11, related)

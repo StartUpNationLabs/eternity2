@@ -3,6 +3,7 @@ name: m13-holographic-fft-finding
 description: "M13 Holographic / compressed-sensing: FFT of the per-cell mismatch density. Reconstruction error using only top 1% of frequencies discriminates basin quality. 457_blackwood_seed10 (high λ_2) has err_1%=0.1447 (lowest); 458 records err_1%=0.2355. Third independent confirmation of the 457>458 structural finding."
 metadata:
   type: project
+status: built
 ---
 
 # M13 — Holographic FFT reconstruction (NEW finding)

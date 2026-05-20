@@ -3,6 +3,7 @@ name: perm-row15-diversity
 description: Each corner perm has narrow distinct row-15 arrangement set. McGavin perm has 8 distinct row-15s across 54 boards; local 459 perm has 3 (consistent narrow basin); vol-32 perm has 13 (more diverse).
 metadata:
   type: project
+status: built
 ---
 
 # Per-perm row-15 diversity (vol-99 finding)

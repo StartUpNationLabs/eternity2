@@ -3,6 +3,7 @@ name: parallel-hint-preserving-bf
 description: "Vol-118 T5b — 8-thread hint-preserving Blackwood-schedule DFS produces SIGNIFICANTLY deeper partials than single-thread. 60s budget: single reaches depth 192/score 338; parallel-8 reaches depth 232/score 414 (244/256 placed). The per-thread shuffle of candidate-list buckets exposes search regions single-thread doesn't reach in budget. Pipeline output: Hungarian 432/480, ALNS pending."
 metadata:
   type: project
+status: built
 ---
 
 # Parallel hint-preserving Blackwood (vol-118 T5b)
@@ -93,4 +94,4 @@ the default in vol-115.
 
 - [[hint-pin-conflict-propagation-fix]] — the bug fix that unblocked this.
 - [[hint-compliance-clarification]] — convention reference.
-- [[../sessions/vol-118]].
+- [[vol-118]].

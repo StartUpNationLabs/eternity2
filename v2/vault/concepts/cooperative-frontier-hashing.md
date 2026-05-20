@@ -3,6 +3,7 @@ name: cooperative-frontier-hashing
 description: "Vol-106 T9 INVENTION REFUTED BY T10 MEASUREMENT. Hypothesis: shared frontier-hash dedupe across workers would catch redundant subtree exploration. Empirical (T10): 8 workers each place ~214 cells, pairwise agreement is 1.8 cells (0.8%). Workers explore radically different trajectories; shared hash would have near-zero hit rate. Don't build."
 metadata:
   type: project
+status: refuted
 ---
 
 # Cooperative frontier hashing (vol-106 T9 — REFUTED PRE-BUILD)
@@ -183,6 +184,6 @@ The win scales with N × time. At 8 workers × 5 min × 60M nps =
 ## Linked
 
 - [[blackwood-fast]] — multi-thread baseline.
-- [[../sessions/vol-106|vol-106]] — origin.
+- [[vol-106|vol-106]] — origin.
 - [[edge-color-supply-propagator]] — sibling vol-106 invention
   (refuted).

@@ -97,5 +97,5 @@ What we KNOW:
 ## Linked
 
 - [[basin-459-pt]] — cross-machine SOTA, p20 perm
-- [[../concepts/corner-permutation-study]] — full 24-perm analysis
-- [[../sessions/vol-60]] — this session
+- [[corner-permutation-study]] — full 24-perm analysis
+- [[vol-60]] — this session

@@ -1,3 +1,10 @@
+---
+name: rigidity-guided-search
+description: No existing E2 algorithm probes basin rigidity at search time.
+status: unbuilt
+metadata:
+  type: concept
+---
 # Rigidity-Guided Basin Search (vol-70 design)
 
 **Status**: `design` — vol-70 (2026-05-15).
@@ -102,4 +109,4 @@ many rigid 440-basins), the algorithm doesn't help.
 
 - [[mcgavin-basin-rigidity]] (parent — empirical observation)
 - [[basin-component-landscape]]
-- [[../plans/AUTONOMOUS-MONTH-PLAN.md]]
+- [[AUTONOMOUS-MONTH-PLAN]]

@@ -1,3 +1,10 @@
+---
+name: weaving-consensus
+description: A canonical 16×16 board has two natural axes: rows and columns. Score
+status: built
+metadata:
+  type: concept
+---
 # WEAVING — Two-Axis Consensus Construction
 
 **Status**: `designed` 2026-05-19 (Vol-150). Math written; PoC in
@@ -108,6 +115,6 @@ then run with K=100 seeds.
 
 ## Linked
 
-- [[../sessions/vol-150]]
+- [[vol-150]]
 - [[grain-polycrystalline]]
-- [[../plans/INVENTION_NAMES_2026-05-19]]
+- [[INVENTION_NAMES_2026-05-19]]

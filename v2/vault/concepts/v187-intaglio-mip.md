@@ -1,3 +1,10 @@
+---
+name: v187-intaglio-mip
+description: Naming: INTAGLIO-MIP — the engraver's exact cut on the mismatch band, by integer linear programming.
+status: unbuilt
+metadata:
+  type: concept
+---
 # V187 INTAGLIO-MIP — Full Mismatch-Band MIP
 
 Status: `unbuilt` — design only.
@@ -112,6 +119,6 @@ HiGHS can handle 10⁵ binary vars with LP relaxation guidance.
 ## Linked
 
 - [[row-level-rigidity]]
-- [[../basins/basin-460-cp0312-v181]]
+- [[basin-460-cp0312-v181]]
 - [[three-basin-iso-plateau]]
-- [[../sessions/vol-186]]
+- [[vol-186]]

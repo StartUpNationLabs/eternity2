@@ -3,6 +3,7 @@ name: canonical-hint-cost-2-edges
 description: "Vol-121 observation — the canonical 5-clue hint constraint costs ~2 edges on our basins. The matched-edges 459 record gives up 1 hint (pos 210) to enable a better local configuration. The strict-canonical 457 record keeps all 5 hints. McGavin 469 keeps only 1/5 hints. Implication: the 5/5-hint search space is structurally MORE constrained than the matched-edges search space."
 metadata:
   type: project
+status: built
 ---
 
 # Canonical hint cost ≈ 2 edges (vol-121)
@@ -98,4 +99,4 @@ there a hint-friendly basin we haven't found?**
 
 - [[corpus-restricted-region-mip-locked]]
 - [[pipeline-corner-perm-specificity]]
-- [[../sessions/vol-121]]
+- [[vol-121]]

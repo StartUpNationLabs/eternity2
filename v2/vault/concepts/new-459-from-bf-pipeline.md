@@ -3,6 +3,7 @@ name: new-459-from-bf-pipeline
 description: "Vol-110 T2 — pipeline reaches 459/480 reproducibly. INDEPENDENTLY RESCORED 459. CRITICAL CAVEAT (vol-111): the pipeline VIOLATES all 5 canonical 5-clue hints (0/5 hint compliance). The 459-score is on the HINT-FREE / 1-clue variant of E2, NOT canonical 5-clue. Standing canonical record (459/480 with 5/5 hints, vol-60) is NOT tied or broken by this work."
 metadata:
   type: project
+status: built
 ---
 
 # Pipeline 459 basins — HINT-FREE caveat (vol-110 T2, vol-111 retraction)
@@ -137,4 +138,4 @@ candidate.
 - [[sigma-cycle-predicts-alns]] — vol-107 T2 (max-cycle > 50
   predicted offset=100 as "locked"; this pipeline broke that lock).
 - [[oracle-aware-alns-repair]] — vol-109 T1 alternative approach (refuted).
-- [[../sessions/vol-110]] — origin of this measurement.
+- [[vol-110]] — origin of this measurement.

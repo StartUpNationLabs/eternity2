@@ -3,6 +3,7 @@ name: depth-40-wall-math
 description: "Vol-125: mathematical analysis of WHY BB&B on W14 super-grid plateaus at depth 40 of 64. The plateau is at the convergence of multiple constraints — edge propagation across neighbors, piece-conservation tightness, and color-budget exhaustion. The wall is not arbitrary; it's the fundamental rigidity of the CSP."
 metadata:
   type: project
+status: built
 ---
 
 # Why BB&B plateaus at depth 40 of 64 — the math

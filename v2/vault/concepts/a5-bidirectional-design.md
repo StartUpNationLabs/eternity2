@@ -3,6 +3,7 @@ name: a5-bidirectional-design
 description: "A5 = Bidirectional CSP: solve from corners-in (4 separate fronts) + from center-out simultaneously. Both meet at a 14-cell ring (perimeter of inner 8x8 in canonical 16x16). Designed 2026-05-17."
 metadata:
   type: project
+status: partial
 ---
 
 # A5 — Bidirectional CSP (design)
@@ -155,6 +156,6 @@ only deliver day 1 + initial day 2.
 
 ## Linked
 
-- [[../plans/INVENTIONS_BACKLOG]] (A5 entry)
-- [[../concepts/inv3-border-dp-seed]] (A1, related)
-- [[../sessions/vol-122]] (current vol)
+- [[INVENTIONS_BACKLOG]] (A5 entry)
+- [[inv3-border-dp-seed]] (A1, related)
+- [[vol-122]] (current vol)

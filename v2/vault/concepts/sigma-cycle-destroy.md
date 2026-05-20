@@ -3,6 +3,7 @@ name: sigma-cycle-destroy
 description: "Vol-108 T1 — built a SigmaCycleDestroy ALNS operator (+ halo variant) that destroys cells along the largest σ-cycle to an oracle good basin. Tested on offset=100 partial (max-cyc 71, baseline ALNS-lift 446). Result: NO IMPROVEMENT (448 with or without sigma op). The destroy-and-let-repair-figure-it-out approach doesn't work because the σ-cycle's structural lock comes from the HALO constraints, not the cycle cells themselves. The oracle's PIECES are needed in those slots, not just cell-clearance."
 metadata:
   type: project
+status: refuted
 ---
 
 # σ-cycle-aware ALNS destroy operator (vol-108 T1 — refuted)
@@ -78,8 +79,8 @@ The structural lock is real; cell-clearance alone doesn't break it.
 
 ## Linked
 
-- [[../sessions/vol-107|vol-107]] — origin of the hypothesis.
-- [[../sessions/vol-108|vol-108]] — this concept's origin.
+- [[vol-107|vol-107]] — origin of the hypothesis.
+- [[vol-108|vol-108]] — this concept's origin.
 - [[sigma-cycle-predicts-alns]] — the vol-107 hypothesis (status PARTIAL).
 - [[oracle-cycle-swap]] — vol-18 apply-cycle as a meta-move.
 - [[basin-escape-recipe]] — vol-22 bound-ascent → Hungarian → ALNS.

@@ -3,6 +3,7 @@ name: vol122-pair-supply-discriminator
 description: "Vol-122 FINDING: consecutive-color-pair supply score discriminates McGavin (469) from our borders (424-439). Pair-supply correlates with ALNS-final-score. New optimization target for border enumeration."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 — pair-supply score discriminates border quality
@@ -76,5 +77,5 @@ bottleneck is search algorithm, not border choice.
 - [[vol122-pcls-poc-result]]
 - [[vol122-border-structure-analysis]]
 - [[vol122-a1-pipeline-result]]
-- [[../sessions/vol-122]]
-- [[../plans/INVENTIONS_BACKLOG]] — promote to NEW invention "border-DP with pair-supply objective"
+- [[vol-122]]
+- [[INVENTIONS_BACKLOG]] — promote to NEW invention "border-DP with pair-supply objective"

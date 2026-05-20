@@ -3,6 +3,7 @@ name: mcgavin-halo3-percomp-proven
 description: McGavin per-component MIP-optimality EXTENDED to halo r=3. Both components proven +0 (42-cell region in 329s, 47-cell in 600s). Rigidity proven at every halo radius tested up to 3.
 metadata:
   type: project
+status: built
 ---
 
 # McGavin per-component halo-3 — PROVEN (vol-94)

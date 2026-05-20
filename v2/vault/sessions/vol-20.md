@@ -1,7 +1,7 @@
 # Session — vol-20
 
 **Theme**: Exhaustive local-move null on 457. K ≤ 5 operator-lock proof. Backbone scan-order correction.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_20|RESEARCH_NOTES_20.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_20|RESEARCH_NOTES_20.md]]
 
 ## What was attempted
 

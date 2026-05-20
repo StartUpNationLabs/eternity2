@@ -123,5 +123,5 @@ the user wants score-chase in parallel.
 
 ## Linked concepts
 
-- [[../concepts/code-debt]] — vol-25 measurement + restructure plan.
-- [[../sessions/vol-25]] — original measurement.
+- [[code-debt]] — vol-25 measurement + restructure plan.
+- [[vol-25]] — original measurement.

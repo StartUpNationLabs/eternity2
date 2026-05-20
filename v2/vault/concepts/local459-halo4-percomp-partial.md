@@ -3,6 +3,7 @@ name: local459-halo4-percomp-partial
 description: Local 459 halo-4 per-component MIP — 3 of 4 components PROVEN +0 (56, 60, 26 cells). Component 3 (smallest, 2 defects) ran ~50min without finishing, killed at threshold.
 metadata:
   type: project
+status: partial
 ---
 
 # Local 459 halo-4 per-component (vol-100 partial)

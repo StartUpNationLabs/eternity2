@@ -1,3 +1,10 @@
+---
+name: prior-guided-alns
+description: Naming: OPHIDIA — the destroy operator slithers along weakly-supported cells.
+status: partial
+metadata:
+  type: concept
+---
 # Prior-Guided ALNS (V169 / "OPHIDIA")
 
 Status: `partial` — built + tested (escape variant refuted at β ≤ 2.0 on V155→ALNS 460 base, 2026-05-20)
@@ -127,7 +134,7 @@ For each base board (V155→ALNS 460 outputs):
 
 - [[prior-data-augmented-beam]] (V155 — where the prior was first used)
 - [[v155-finding-prior-lift]]
-- [[../sessions/vol-155]], [[../sessions/vol-156]]
+- [[vol-155]], [[vol-156]]
 - [[basin-460-v156-newcps]]
 
 ## Linked memory

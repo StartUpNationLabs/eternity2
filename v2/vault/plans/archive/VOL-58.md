@@ -29,6 +29,6 @@ Per cdcl-engine-integration.md. Major refactor. Multi-week.
 
 ## Linked
 
-- [[../sessions/vol-58]] — live journal
-- [[../sessions/vol-57]] — predecessor
-- [[../sessions/vol-55]] — MIP MVP foundation
+- [[vol-58]] — live journal
+- [[vol-57]] — predecessor
+- [[vol-55]] — MIP MVP foundation

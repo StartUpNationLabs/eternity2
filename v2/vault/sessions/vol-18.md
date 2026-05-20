@@ -1,7 +1,7 @@
 # Session — vol-18
 
 **Theme**: Trajectory families. R5f cooperativity. OracleCycleSwap + hot-PT → **457/480 cold-start record**.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_18|RESEARCH_NOTES_18.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_18|RESEARCH_NOTES_18.md]]
 
 ## What was attempted
 

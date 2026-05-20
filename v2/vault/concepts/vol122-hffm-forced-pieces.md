@@ -3,6 +3,7 @@ name: vol122-hffm-forced-pieces
 description: "Vol-122 J7 — Hint-Free Forced-Move analysis: 92/256 pieces (36%) uniquely provide some adjacency color-pair. These are STRONGLY constrained in placement."
 metadata:
   type: project
+status: built
 ---
 
 # Vol-122 J7 — Forced-Move Analysis
@@ -74,4 +75,4 @@ algorithm but motivates further work:
 
 - [[vol122-pcls-poc-result]] (per-color, not pair)
 - [[vol122-cfcc-color-flow-propagator]] (K3, similar idea but per-color)
-- [[../sessions/vol-122]]
+- [[vol-122]]

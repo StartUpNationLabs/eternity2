@@ -1,3 +1,10 @@
+---
+name: basin-level-genetic-search
+description: Codebase search (grep -ri \"genetic\|crossover\|GA\b\" crates/): no
+status: unbuilt
+metadata:
+  type: concept
+---
 # Basin-Level Genetic Search (BLGS) — vol-66 design
 
 **Status**: `design` — vol-66 (2026-05-15).
@@ -136,6 +143,6 @@ starting population of ~15.
 
 - [[piece-side-matching]] (vol-65 PSM context)
 - [[basin-permutation-group]] (vol-65 σ-orbit finding that motivates BLGS)
-- [[../sessions/vol-65]]
-- [[../plans/VOLS-62-70-ROADMAP.md]] (vol-66+)
-- [[../plans/AUTONOMOUS-MONTH-PLAN.md]]
+- [[vol-65]]
+- [[VOLS-62-70-ROADMAP]] (vol-66+)
+- [[AUTONOMOUS-MONTH-PLAN]]

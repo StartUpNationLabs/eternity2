@@ -71,7 +71,7 @@ Aged items: no change since vol-54 audit. Same set of defers.
 
 ## Linked
 
-- [[../sessions/vol-55]] — predecessor result
-- [[../sessions/vol-56]] — this vol's journal
+- [[vol-55]] — predecessor result
+- [[vol-56]] — this vol's journal
 - memory: `feedback_autonomous_dont_wait.md`
 - memory: `project_e2_vol55_local_optimality_multi_cluster.md`

@@ -1,7 +1,7 @@
 # Session — vol-14
 
 **Theme**: EdgeBpMarginals Rust port. Hint-pinning bug discovered. McGavin-Blackwood gap analysis. Blackwood spec drafted.
-**Raw**: [[../sessions/archive/raw/RESEARCH_NOTES_14|RESEARCH_NOTES_14.md]], [[../sessions/archive/raw/RESEARCH_NOTES_14_PLAN|RESEARCH_NOTES_14_PLAN.md]]
+**Raw**: [[archive/raw/RESEARCH_NOTES_14|RESEARCH_NOTES_14.md]], [[archive/raw/RESEARCH_NOTES_14_PLAN|RESEARCH_NOTES_14_PLAN.md]]
 
 ## What was attempted
 

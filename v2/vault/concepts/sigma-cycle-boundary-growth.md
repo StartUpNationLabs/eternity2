@@ -3,6 +3,7 @@ name: sigma-cycle-boundary-growth
 description: "Vol-117 T3 — quantitative explanation of σ-cycle indecomposability via boundary-growth analysis in the 2D grid graph. For the 154-cell σ-cycle between local-459 and McGavin-469, minimum boundary at k=113 is ~190 edges (ratio 1.68 per cell). For smaller σ-cycles between same-score basins (cycles of 6-10 cells), min boundary is 2.0-2.6 edges per cell — near-optimal contiguity. Partial-cycle application breaks ~boundary score-edges, explaining the empirical 90+ edge loss seen in subset tests."
 metadata:
   type: project
+status: built
 ---
 
 # σ-cycle boundary growth (vol-117 T3)
@@ -118,5 +119,5 @@ For our giant 154-cycle: $B \approx 190 \gg 30-50$. Indecomposable.
 
 - [[multiple-459-basins-rigid]] — empirical refutation of σ-subset attack.
 - [[basin-mix-mip-refuted]] — MIP-level refutation at 4 basins.
-- [[../MATH_NOTES_2026-05-16_459_LEVEL_SET]] — Conjecture C4 (board-spanning move).
-- [[../sessions/vol-117]].
+- [[MATH_NOTES_2026-05-16_459_LEVEL_SET]] — Conjecture C4 (board-spanning move).
+- [[vol-117]].
