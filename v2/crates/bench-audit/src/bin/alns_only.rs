@@ -28,9 +28,67 @@ use eternity2_core::{Board, Rotation};
 use eternity2_localsearch::{
     piece_swap_hillclimb, polish_rotations, run_alns, Acceptance, AlnsConfig,
     BottomBandDestroy, ComponentClusterDestroy, ComponentDestroy, ComponentPlusHaloDestroy, ConflictDriven, DestroyOp,
-    HalfBoardDestroy, HingeDestroy, LkhChainDestroy, MegaBand, MwpmDefectPair, RandomRegion, RandomScatter,
+    HalfBoardDestroy, HingeDestroy, LkhChainDestroy, MegaBand, MwpmDefectPair, PriorDestroy, RandomRegion, RandomScatter,
     RepairKind, SigmaCycleDestroy, WorstBand, WorstColumn, WorstColumnBand, WorstRow, WorstWindow,
 };
+
+/// Load V155 prior matrix from JSON: `{ "matrix": [[u16; N_pos]; N_pieces], ... }`.
+fn load_prior_matrix(path: &std::path::Path) -> Vec<Vec<u16>> {
+    let raw = std::fs::read_to_string(path).expect("read prior matrix");
+    let v: serde_json::Value = serde_json::from_str(&raw).expect("parse prior matrix");
+    let arr = v.get("matrix").and_then(|x| x.as_array()).expect("prior.matrix array");
+    arr.iter()
+        .map(|row| {
+            row.as_array()
+                .expect("prior row array")
+                .iter()
+                .map(|x| x.as_u64().expect("prior cell u64") as u16)
+                .collect::<Vec<u16>>()
+        })
+        .collect()
+}
+
+/// V169 — build PriorDestroy ops augmenting an existing preset.
+///
+/// Two complementary directions:
+/// - ESCAPE (β>0): destroy corpus-anchored cells to break out of corpus
+///   basin. For the 460 plateau on V155→ALNS boards. Highest leverage.
+/// - ATTRACT (β<0): destroy corpus-unsupported (weak) cells to pull
+///   board back to corpus. For diversified boards that should refine
+///   within the basin.
+///
+/// Variants returned:
+///   prior_escape_b0.5_k16   — gentle escape pull, larger region.
+///   prior_escape_b2.0_k12   — sharp escape pull.
+///   prior_attract_b-1.0_k8  — gentle attract.
+fn build_prior_ops(
+    prior: &[Vec<u16>],
+    pinned: &std::collections::BTreeSet<eternity2_core::Position>,
+) -> Vec<Box<dyn DestroyOp>> {
+    vec![
+        Box::new(PriorDestroy {
+            support: prior.to_vec(),
+            beta: 0.5,
+            max_size: 16,
+            pinned: pinned.clone(),
+            variant: "prior_escape_b0.5_k16",
+        }),
+        Box::new(PriorDestroy {
+            support: prior.to_vec(),
+            beta: 2.0,
+            max_size: 12,
+            pinned: pinned.clone(),
+            variant: "prior_escape_b2.0_k12",
+        }),
+        Box::new(PriorDestroy {
+            support: prior.to_vec(),
+            beta: -1.0,
+            max_size: 8,
+            pinned: pinned.clone(),
+            variant: "prior_attract_b-1.0_k8",
+        }),
+    ]
+}
 
 fn build_ops_with_oracle(preset: &str, oracle: Option<&Board>) -> Vec<Box<dyn DestroyOp>> {
     match preset {
@@ -270,6 +328,9 @@ fn main() {
     let mut oracle_path: Option<PathBuf> = None;
     // Vol-122 K11 — allow custom puzzle path (e.g. for hint-relaxation experiments).
     let mut custom_puzzle: Option<PathBuf> = None;
+    // V169 — load a prior matrix to enable PriorDestroy ops appended to
+    // the preset's destroy portfolio.
+    let mut prior_path: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -297,6 +358,7 @@ fn main() {
                 let pos: u32 = parts[0].parse().expect("--extra-hint pos");
                 extra_pins.push(pos);
             }
+            "--prior-destroy" => prior_path = Some(PathBuf::from(args.next().unwrap())),
             other => panic!("unknown arg {other}"),
         }
     }
@@ -323,6 +385,22 @@ fn main() {
         load_cp_board(p)
     });
     let mut ops = build_ops_with_oracle(&ops_preset, oracle_board.as_ref());
+
+    // V169 — append PriorDestroy variants to the preset if a prior was given.
+    if let Some(p) = prior_path.as_ref() {
+        eprintln!("loading prior matrix from {}", p.display());
+        let prior = load_prior_matrix(p);
+        let pinned_set: std::collections::BTreeSet<u32> = hints.hints.iter()
+            .map(|h| h.position)
+            .chain(extra_pins.iter().copied())
+            .collect();
+        let prior_ops = build_prior_ops(&prior, &pinned_set);
+        eprintln!("appended {} PriorDestroy ops to preset", prior_ops.len());
+        for op in prior_ops {
+            ops.push(op);
+        }
+    }
+
     let cfg = AlnsConfig {
         time_budget_ms: alns_ms,
         repair_budget_ms,
@@ -345,6 +423,7 @@ fn main() {
             .collect(),
         iter_budget: 0,
         lex_break_isoscore: lex,
+        lex_break_intaglio: false,
         checkpoint_path: None,
         checkpoint_every_ms: 60_000,
         repair_step_budget,

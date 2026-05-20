@@ -481,6 +481,126 @@ impl DestroyOp for WorstWindow {
     }
 }
 
+/// V169 OPHIDIA — Prior-Guided Destroy.
+///
+/// Two directions:
+/// - `beta < 0` (attract mode): destroy cells with LOW corpus support.
+///   Pulls the board back toward the corpus attractor. Useful when the
+///   board is far from the basin and we want to refine.
+/// - `beta > 0` (escape mode, default for V169): destroy cells with HIGH
+///   corpus support. Frees corpus-anchored placements so repair can
+///   propose alternatives. Useful when the board PLATEAUS at the corpus
+///   basin (e.g., 460 plateau) and we want to break out.
+///
+/// Algorithm:
+///   1. Per cell c with placed piece p, compute s(c) = support[p][c].
+///   2. Weight w(c) = exp(β · s(c)). β > 0 → prefer high-s; β < 0 → prefer low-s.
+///   3. Pinned positions have w = 0.
+///   4. Sample seed cell with P ∝ w(c).
+///   5. BFS-grow region by max-weight neighbor until `max_size` cells.
+///
+/// Empirical finding (vol-169 probe 2026-05-20):
+/// - McGavin 469: 0 unsupported cells (s=0) — fully in corpus.
+/// - V155-direct 460: 5 unsupported — basically a corpus replay.
+/// - V155→ALNS 460 (seed1, seed13): 186-191 unsupported — already
+///   diversified. To break 460, we need MORE diversification of the
+///   ~65 remaining supported cells. Hence default β > 0.
+pub struct PriorDestroy {
+    /// Prior support matrix: support[piece_id][position] = corpus count.
+    pub support: Vec<Vec<u16>>,
+    /// Inverse-temperature for the destroy distribution. β = 0 →
+    /// uniform; β → ∞ → only s=0 cells. Common choice: β = 1.0.
+    pub beta: f64,
+    /// Max region size in cells.
+    pub max_size: u32,
+    /// Positions never to destroy (canonical hints). Empty if not used.
+    pub pinned: BTreeSet<Position>,
+    /// Friendly name for logging.
+    pub variant: &'static str,
+}
+impl PriorDestroy {
+    fn cell_weight(&self, board: &Board, pos: Position) -> f64 {
+        if self.pinned.contains(&pos) { return 0.0; }
+        let Some((pid, _rot)) = board.get(pos) else { return 0.0; };
+        let pid_idx = u32::from(pid) as usize;
+        if pid_idx >= self.support.len() { return 0.0; }
+        let row = &self.support[pid_idx];
+        let pos_idx = pos as usize;
+        if pos_idx >= row.len() { return 0.0; }
+        let s = row[pos_idx] as f64;
+        // β > 0 → escape mode (prefer high-support cells).
+        // β < 0 → attract mode (prefer low-support cells).
+        (self.beta * s).exp()
+    }
+}
+impl DestroyOp for PriorDestroy {
+    fn name(&self) -> &str { self.variant }
+    fn destroy(&mut self, puzzle: &Puzzle, board: &Board, rng: &mut AlnsRng) -> BTreeSet<Position> {
+        let w = puzzle.width;
+        let h = puzzle.height;
+        let n = (w * h) as usize;
+        // Build per-cell weights.
+        let mut weights = vec![0.0f64; n];
+        let mut total = 0.0f64;
+        for pos in 0..n {
+            let wt = self.cell_weight(board, pos as Position);
+            weights[pos] = wt;
+            total += wt;
+        }
+        if total <= 0.0 {
+            // No prior signal available; fall back to random region.
+            return RandomRegion { k: 4 }.destroy(puzzle, board, rng);
+        }
+        // Sample seed cell by weighted draw.
+        let r = rng.next_f64() * total;
+        let mut acc = 0.0f64;
+        let mut seed = 0u32;
+        for pos in 0..n {
+            acc += weights[pos];
+            if acc >= r { seed = pos as u32; break; }
+        }
+        // BFS-grow, popping by max weight among neighbors of the region.
+        let mut s = BTreeSet::new();
+        s.insert(seed);
+        let mut frontier: Vec<Position> = Vec::new();
+        let push_nbrs = |p: Position, frontier: &mut Vec<Position>, s: &BTreeSet<Position>| {
+            let x = (p % w) as i32;
+            let y = (p / w) as i32;
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = x + dx;
+                let ny = y + dy;
+                if nx < 0 || ny < 0 || nx as u32 >= w || ny as u32 >= h { continue; }
+                let np = ny as u32 * w + nx as u32;
+                if !s.contains(&np) && !frontier.contains(&np) {
+                    frontier.push(np);
+                }
+            }
+        };
+        push_nbrs(seed, &mut frontier, &s);
+        while (s.len() as u32) < self.max_size && !frontier.is_empty() {
+            // Pick frontier cell with highest weakness weight.
+            let mut best_i = 0usize;
+            let mut best_w = weights[frontier[0] as usize];
+            for i in 1..frontier.len() {
+                let wi = weights[frontier[i] as usize];
+                if wi > best_w {
+                    best_w = wi;
+                    best_i = i;
+                }
+            }
+            let p = frontier.swap_remove(best_i);
+            if best_w <= 0.0 {
+                // All remaining frontier cells are pinned or have zero
+                // weight; stop growing.
+                break;
+            }
+            s.insert(p);
+            push_nbrs(p, &mut frontier, &s);
+        }
+        s
+    }
+}
+
 pub struct ConflictDriven { pub max_size: u32 }
 impl DestroyOp for ConflictDriven {
     fn name(&self) -> &str { "conflict_driven" }

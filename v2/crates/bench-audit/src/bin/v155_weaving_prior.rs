@@ -233,6 +233,10 @@ fn main() {
     let mut prior_alpha: f64 = 0.0;  // weight of prior_sum in combined score
     let mut save_best_path: Option<PathBuf> = None;
     let mut tiebreak_seed: u64 = 0;  // 0 = deterministic; nonzero = randomized tiebreak
+    // V171/V165 STOCHASTIC BEAM — sample K children from softmax(score + α·prior).
+    // When > 0.0, replaces top-K deterministic with weighted random sampling
+    // (Gumbel-top-K). This injects real diversity across seeds.
+    let mut stochastic_temperature: f64 = 0.0;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < raw.len() {
@@ -247,6 +251,7 @@ fn main() {
             "--prior-alpha" => { prior_alpha = raw[i + 1].parse().expect("prior-alpha"); i += 2; }
             "--save-best" => { save_best_path = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--seed" => { tiebreak_seed = raw[i + 1].parse().expect("seed"); i += 2; }
+            "--stochastic-temperature" => { stochastic_temperature = raw[i + 1].parse().expect("stochastic-temperature"); i += 2; }
             "--verbose" => { verbose = true; i += 1; }
             other => { eprintln!("unknown arg {other}"); std::process::exit(2); }
         }
@@ -353,7 +358,33 @@ fn main() {
         // We use integer arithmetic for stability: combined = score * 1000000 + alpha_int * prior_sum.
         // Tiebreak: if seed != 0, use seeded state_hash to randomize ties;
         // if seed == 0, deterministic (state_hash ordering).
-        if prior_alpha > 0.0 {
+        //
+        // V171/V165 STOCHASTIC BEAM: if stochastic_temperature > 0, sort by
+        // (combined_score / T) + Gumbel(0,1) noise. This is the standard
+        // Gumbel-top-K trick: top-K under additive Gumbel noise = K-without-
+        // replacement samples from softmax(score/T). Reproducible because
+        // the Gumbel is seeded by (state_hash, tiebreak_seed).
+        if stochastic_temperature > 0.0 {
+            // Compute logit = (score + alpha·prior_sum) / T.
+            let alpha = if prior_alpha > 0.0 { prior_alpha } else { 0.0 };
+            let inv_t = 1.0 / stochastic_temperature;
+            let mut keyed: Vec<(f64, BeamState)> = Vec::with_capacity(children.len());
+            for c in children.drain(..) {
+                let logit = (c.score as f64 + alpha * c.prior_sum as f64) * inv_t;
+                // Seeded Gumbel: u ~ U(0,1) from (state_hash, seed), g = -log(-log(u))
+                let h = c.state_hash
+                    .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                    .wrapping_add(tiebreak_seed.wrapping_mul(0xBF58_476D_1CE4_E5B9));
+                let u = ((h >> 11) as f64) / ((1u64 << 53) as f64);
+                let u = u.max(1.0e-300).min(1.0 - 1.0e-16);
+                let g = -((-u.ln()).ln());
+                let key = logit + g;
+                keyed.push((key, c));
+            }
+            // Sort descending by perturbed key.
+            keyed.sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+            children = keyed.into_iter().map(|(_, c)| c).collect();
+        } else if prior_alpha > 0.0 {
             let alpha_int = (prior_alpha * 1000.0) as i64;
             children.sort_unstable_by(|a, b| {
                 let ka = (a.score as i64) * 1_000_000 + alpha_int * (a.prior_sum as i64);
