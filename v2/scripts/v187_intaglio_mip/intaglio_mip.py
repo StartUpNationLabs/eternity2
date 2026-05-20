@@ -393,7 +393,6 @@ def main():
             h.addRow(-highspy.kHighsInf, 0.0, len(row_idxs), np.array(row_idxs, dtype=np.int32), np.array(row_vals))
 
     # Sanity check: is the original placement IN the candidate set for each cell?
-    # If not, candidate filter excluded it (a bug).
     print("Sanity check: original placement vs candidates...")
     orig_in_cands = True
     for v in target_cells:
@@ -402,6 +401,36 @@ def main():
             print(f"  v=({v//16},{v%16}): ORIGINAL ({pid},{rot}) NOT IN CANDIDATES")
             orig_in_cands = False
     print(f"original in candidates: {orig_in_cands}")
+
+    # Warm-start with sparse setSolution.
+    warm_indices = []
+    warm_values = []
+    for v in target_cells:
+        pid, rot = pl[v]
+        if (v, pid, rot) in x_col:
+            warm_indices.append(x_col[(v, pid, rot)])
+            warm_values.append(1.0)
+    for (v1, v2) in h_pairs:
+        e1 = pieces[pl[v1]][1]
+        w2 = pieces[pl[v2]][3]
+        if e1 == w2 and not is_border(e1):
+            if (v1, v2, e1, 'H') in m_col:
+                warm_indices.append(m_col[(v1, v2, e1, 'H')])
+                warm_values.append(1.0)
+    for (v1, v2) in v_pairs:
+        s1 = pieces[pl[v1]][2]
+        n2 = pieces[pl[v2]][0]
+        if s1 == n2 and not is_border(s1):
+            if (v1, v2, s1, 'V') in m_col:
+                warm_indices.append(m_col[(v1, v2, s1, 'V')])
+                warm_values.append(1.0)
+    try:
+        status_ws = h.setSolution(len(warm_indices),
+                                    np.array(warm_indices, dtype=np.int32),
+                                    np.array(warm_values, dtype=np.float64))
+        print(f"warm-start setSolution status: {status_ws}, entries: {len(warm_indices)}")
+    except Exception as e:
+        print(f"warm-start failed: {e}")
 
     # Sense: maximize.
     h.changeObjectiveSense(highspy.ObjSense.kMaximize)

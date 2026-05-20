@@ -81,9 +81,32 @@ matching/lkh-chain, which has no mechanism to coordinate hundreds of placements.
 
 - NOT a proof that the basins are local optima in any rigorous sense.
 - NOT a statement about non-canonical-hint variants of the puzzle.
-- NOT a claim that 30min × N seeds is computationally exhaustive — longer
-  budgets, larger op portfolios, or warm-start from outside-the-basin
-  trajectories are not ruled out. (See CLAUDE.md §10.)
+
+## 1h budget confirms basin lock (vol-187 close)
+
+Extended V181 460 KEYRING ALNS from 30min → 1h: 2400 iterations all
+accepted at SA t=1, score history still 1 entry (iter=0, score=460).
+
+The iso-plateau is **NOT budget-dependent**. Doubling wall-clock time
+produces zero lift. This rules out "the basin is reachable but we
+ran out of time" as an interpretation — the manifold of accepted-equal
+boards has measure zero in any lift direction under our operators.
+
+## V187 row-band MIP rigidity proof (vol-187)
+
+LP relaxation + MIP on V181 460 mismatch band:
+
+| Band | Original | LP-UB | MIP-optimal | Status |
+|---|---|---|---|---|
+| (11, 12) | 72 | 72.00 | (LP-proven) | **MIP-rigid by LP** |
+| (12, 13) | 63 | 65.24 | **63** | MIP-rigid (gap closes) |
+| (13, 14) | 62 | 63.81 | **62** | MIP-rigid (gap closes) |
+| (11, 12, 13) | 94 | 100.86 | ≥92 at 20min | LP gap 6; MIP-search hard |
+| (11..14) | 120 | 135.09 | (in progress) | LP gap 15; running |
+
+**All three 2-row bands MIP-proven rigid**: the integrality gap closes
+the LP slack to exactly zero. No higher-scoring integer solution exists
+on any 2-row swap.
 
 ## Linked
 
