@@ -207,7 +207,9 @@ def main():
             continue
         pl = board_to_pl(b)
         dups, missing = validate(pl)
-        if dups or missing:
+        # For PILGRIM corpus: missing pieces are expected (partial board).
+        # Only flag invalid if duplicates exist (real bug).
+        if dups:
             n_invalid += 1
             continue
         # Verify hints
@@ -222,9 +224,9 @@ def main():
             continue
         # CSP-fill
         pl_filled = csp_fill_greedy(pl_rep, pieces)
-        # Final validation
+        # Final validation: only reject if duplicates exist (missing = partial board, OK for ALNS).
         dups, missing = validate(pl_filled)
-        if dups or missing:
+        if dups:
             continue
         placed = sum(1 for x in pl_filled if x is not None)
         score = score_pl(pl_filled, pieces)

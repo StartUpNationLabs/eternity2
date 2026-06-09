@@ -164,9 +164,9 @@ Listed in vol order. Empty cells = no dedicated concept (memory IS the canonical
 
 ## Engineering todo
 
-| Memory | Vault |
-|---|---|
-| `project_todo_engine_bitset` | [[bitset-domain-rep]] (DONE) |
+| Memory                       | Vault                                                |
+| ---------------------------- | ---------------------------------------------------- |
+| `project_todo_engine_bitset` | [[bitset-domain-rep]] (DONE)                         |
 | `project_e2_vol25_perf_push` | [[engine-perf-hot-paths]], [[code-debt]], [[vol-25]] |
 
 ---

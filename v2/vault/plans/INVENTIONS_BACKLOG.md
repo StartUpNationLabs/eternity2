@@ -1001,3 +1001,31 @@ If any week's invention finds a ≥460 board: STOP scheduled plan, focus deep on
 - [[inv3-border-dp-seed]] (A1 detail)
 - [[vol121-all-locked]] (exhaustively proven locked)
 - [[three-milestones-from-veteran]] (veteran hints)
+
+---
+
+## N-series — vol-204/205 scarcity-derived (added 2026-06-09)
+
+### N1. Constructive Lagrangian assignment — status: `unbuilt` (do-later)
+Reframe vol-22 bound-ascent CONSTRUCTIVELY: solve the global piece→cell assignment
+respecting (N,W)-pair scarcity via Lagrangian relaxation of piece-uniqueness, round
+into a high-quality seed (scarcity-aware rounding). Attacks piece-theft as the
+global optimization it is (vol-204 finding: theft is a global assignment constraint).
+vol-22 did this for a BOUND (collapsed on integer apply); never as a constructive
+seed generator with scarcity-aware rounding. EV medium-high. Effort ~1 week.
+Linked: [[watershed-frontier-flow]], [[vol-22-bound-ascent]] (if exists).
+
+### N2. Window-MaxSAT constructive engine — status: `unbuilt` (do-later)
+Use Anjou's tractable sequential-AMO window-MaxSAT (uwrmaxsat) FORWARD as a
+constructive engine: build the board window-by-window, each window solved to
+OPTIMALITY with scarcity-pinned pieces RESERVED (not spent). Combines Anjou's
+proven tractable-window result (16×10 strips OPTIMUM in seconds) with our scarcity
+skeleton ([[watershed-frontier-flow]]). The reservation prevents the pool-depletion
+that broke Anjou's sequential scaffolds (em~308). EV medium-high. Effort ~1 week.
+Linked: `reference_anjou_experiments_2026_06_09` (memory), [[watershed-frontier-flow]].
+
+### N3. Scarcity-graph forced-chain closure (LATTICE) — status: `IN PROGRESS vol-205`
+The CHOSEN direction. Compute unconditional forced adjacencies from color
+uniqueness (a color on exactly 2 piece-sides ⟹ those pieces forced adjacent if
+used) and propagate to closure. Measures how much of the board is deterministically
+pinned BEFORE search = unconditional search-space reduction. See [[lattice-forced-chains]].

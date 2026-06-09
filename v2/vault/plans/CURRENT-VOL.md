@@ -1,57 +1,45 @@
-# Current Volume — Vol-189 — CORTEZ: Corner-Perm-Targeted Search
+# Current Volume — Vol-204 — WATERSHED: Frontier Color-Flow Streamliner
 
-**Theme**: directly target corner-perm signatures that have ≥458 in DB but NO ≥460. There are 15 such cps; finding even ONE ≥460 in a new cp validates that the algorithm pipeline reaches new basins given the right cp target.
+**Theme**: A GLOBAL, incremental feasibility check that prunes a partial board the
+moment its remaining piece supply provably cannot match the exposed frontier's
+color demand (Hall / max-flow on the frontier). Attacks WHY deep edge-strict DFS
+paths die (~depth 150-210) — the real bottleneck, since canonical DFS branching is
+already tiny (~2-3 survivors/cell, measured vol-203).
 
 ## Naming
+**WATERSHED** — the frontier is a watershed line; the color-flow check decides
+whether remaining-piece "supply" can flow downhill to meet the frontier's "demand".
 
-**CORTEZ** — for the "explorer searching unknown shores" metaphor: each unexplored corner-perm is a basin not yet visited at ≥460 quality.
-
-## Why this angle
-
-Per vol-129 PALIMPSEST: 18 corner-perms carry ≥458 boards. Of these, only 3 have ≥460 in the DB:
-- cp=(3,2,0,1) — McGavin 469
-- cp=(1,2,0,3) — V125 461
-- cp=(0,3,1,2) — V181 460
-
-**15 corner-perms have ≥458 but no ≥460**. These are unexplored basin families. The V181 KEYRING pipeline successfully reaches NEW ≥460 basins — V181's 460 was the first ever in its cp. There's no a-priori reason it can't do the same in the 15 other cps.
-
-But V155/V175/V181 builders DON'T select for cp — they go where the corpus prior + scan order leads. To force exploration of a target cp, we need:
-
-1. **Corner-perm-fixed beam search**: place corners FIRST (at positions 0, 15, 240, 255) before any interior placement, and pin them to the target cp.
-2. **Continue with V181 KEYRING** ranker: patch + pheromone + position prior.
-3. **Sweep**: target each of the 15 cps × 3-4 seeds.
-
-## Math (KEYRING-FRESH builder)
-
-Standard V155 beam visits positions in scan order. We modify:
-
-1. First placement decisions: corners 0, 15, 240, 255. Beam state = (4 chosen corner pieces in target cp, rotations).
-2. Subsequent placements: same as V181 KEYRING with the corner-constrained edge propagation.
-
-For each target cp = (p_NW, p_NE, p_SW, p_SE):
-- Force piece p_NW at position 0 with valid rotation (W=BORDER, N=BORDER).
-- Same for p_NE at 15 (E=BORDER, N=BORDER), p_SW at 240 (S=BORDER, W=BORDER), p_SE at 255 (S=BORDER, E=BORDER).
-- These are exactly the 4 corner pieces; each has a unique rotation that places the borders correctly.
-
-Then beam search continues over remaining 252 positions.
+## Why this (vol-203 evidence → user-chosen direction)
+Vol-203 established three negatives: PARQUET 2×2 LP capped at 480; F0 counting
+vacuous; 2×2 patch-consistency prunes only ~6%. Canonical row-major DFS is
+"deep & narrow": ~2-3 edge-strict survivors/cell, but paths die deep. So the lever
+is NOT local branching reduction — it's detecting global infeasibility EARLIER.
+The engine's gacolor/multiset propagators do partial color accounting but
+apparently miss the binding frontier constraint (DFS still plateaus ~150-210).
 
 ## Binding items (3 max)
-
-1. Build V189 CORTEZ builder = V181 KEYRING + corner-perm pinning.
-2. Sweep 15 unexplored cps × 4 seeds × 30min ALNS = 60 jobs (parallel 8 at a time).
-3. Any ≥460 in new cp → record. Any ≥461 → BREAKTHROUGH.
-
-## Compute estimate
-
-60 builds × ~5 min each + 60 ALNS × 30 min = 5 hours × 8 cores = ~40 wall-clock minutes if all parallel. Realistic: 1-2h.
+1. **Diagnose the death mechanism**: instrument edge-strict DFS; at each
+   backtrack-to-dead-end record depth + WHY (no candidate at cell c). Test
+   whether a color-flow / Hall check on the frontier would have detected the
+   eventual dead-end EARLIER (how many levels of lookahead it saves). If deaths
+   are supply-exhaustion → WATERSHED has leverage; if not → report + pivot.
+2. **Build the incremental frontier color-flow feasibility check** (sound
+   necessary condition for completion), measure pruning + max-depth gain vs
+   edge-strict baseline at small + canonical scale.
+3. **If it deepens DFS materially**, wire into a MaxScore run; measure score
+   reached. Any ≥460 from-scratch is notable; any new-cp ≥460 a record.
 
 ## Days budget
+3-5 days.
 
-1 day.
+## Audit-at-open compliance
+Supersedes vol-203 PARQUET (closed: bound direction capped). WATERSHED is the
+search-side complement, chosen by user from the vol-203 decision fork.
 
 ## Linked
-
-- [[cortez-corner-perm-targeted]] (TBD)
-- [[vol-188]]
-- [[vol-181]] (V181 KEYRING)
-- [[basin-460-cp0312-v181]]
+- [[watershed-frontier-flow]] (TBD)
+- [[streamlining-for-e2]] (parent technique)
+- [[parquet-overlapping-patch]] (vol-203 bound result)
+- [[depth-40-wall-math]] (frontier supply-exhaustion conjecture)
+- [[lague-rubik-transfer-ideas]] (admissible-bound philosophy)
