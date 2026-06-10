@@ -63,6 +63,36 @@ per run, and CAIRN already memoizes refuted frontiers — WEFT's marginal
 value is pruning FRESH doomed states cheaper than the DFS refutes them.
 Build only if choke maps still show row-12 thrash after LEDGER+CAIRN.
 
+### `verhaard-markov-schedule-optimizer` — status: `unbuilt` — since: vol-213
+The full method behind shortestpath.se (deep-fetched vol-213 night;
+our vault note only had his set-SA): instrument per-depth fit/half-fit
+probabilities, then a Markov-chain model over states (depth,
+cumulative-slips) predicts solutions-per-node for ANY (order, slip
+array); local-search thousands of candidates offline ("thousands of
+combinations per minute" with caching). This is the ANALYTIC superset
+of our empirical choke→auto-gates: it computes optimal gates AND order
+instead of placing gates at death quantiles. We already have the
+death-histogram instrument; add fit-probability counters and the DP
+evaluator. Calibration point: his released slip array starts at depth
+193/256 (75%); our gates 120-171/196 (61-87%).
+
+### `verhaard-piece-class-quotas` — status: `unbuilt` — since: vol-213
+Supply-side pool health (the mechanism our area-law theory says binds):
+partition pieces into good/bad by TILABILITY (# completions of a 2×3
+box; his set-SA generates the groups — that part IS in
+[[reference-verhaard]]), then DEPTH QUOTAS in the DFS: e.g. "until
+depth 63 forbid good pieces; until 96 all useless pieces must be used;
+forbid precious until 100". Forces bad pieces to be consumed early so
+the endgame pool stays rich — attacks the same starvation wall as
+LEDGER but from the supply side. Cheap: piece-class masks + per-depth
+counters. UNBUILT here in any form.
+
+### `verhaard-progress-restarts` — status: `unbuilt` — since: vol-213
+Replace fixed restart_ms with progress-based aborts ("can't reach depth
+128 in 200M nodes → restart; max depth < 165 → abort run") — his claim:
+~5× over fixed-interval restarts. Trivial to add (epoch_max vs node
+thresholds, calibrated from our choke histograms).
+
 ### `verhaard-order-optimization` — status: `unbuilt` — since: vol-213
 Verhaard (shortestpath.se): "the optimal search order depends on the
 score you want to achieve — for 480 scan-row is quite optimal, but far
