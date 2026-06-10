@@ -85,4 +85,4 @@ for score, depth, df, f, cells in cands:
         kept.append((score, depth, df, f, cells))
 
 for score, depth, df, f, _ in kept:
-    print(f, max(20, depth - 35), depth, df)
+    print(f, max(20, depth - 15), depth, df)

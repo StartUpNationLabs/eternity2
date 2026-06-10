@@ -14,7 +14,7 @@ mkdir -p $ROOT
 gates_for() {  # break count scales with uncovered span (~3 cells/break)
   python3 -c "
 k=$1
-nb=min(22, max(14, round((182-k)/3)))
+nb=min(14, max(12, round((182-k)/3.5)))
 print(','.join(str(int(k+2+i*(182-k-2)/(nb-1))) for i in range(nb)))"
 }
 
