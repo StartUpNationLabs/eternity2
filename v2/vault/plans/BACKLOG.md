@@ -13,7 +13,7 @@ REPLAY mode + mcb=2 + et-cap fix: both community strict-460s replay
 EXACTLY (460×8, rescored). See [[replay-prior-over-cost]]. Open
 follow-ons below.
 
-### `unguided-mcb2-ab` — status: `in-progress` — since: vol-213
+### `unguided-mcb2-ab` — status: `refuted` — vol-213 (null both lanes)
 Does double-break lift the unguided 450 plateau, or flood the
 anytime-min? 8 seeds × 300 s, ± `--max-cell-breaks 2`, strict460a
 hinted et14. In the vol-213 evening batch.
@@ -29,12 +29,12 @@ Do any high community boards pay 3 breaks at one cell under row-major
 attribution? Run schedule-from-board across the 123-board corpus; count
 depth-multiplicities. Decides whether mcb=3 is ever needed.
 
-### `hint-compatible-frame-generator` — status: `in-progress` — since: vol-212 (promoted vol-213)
+### `hint-compatible-frame-generator` — status: `built` — vol-213 (73x yield; band universal)
 `framegen` bin built (ring-cycle DFS + 4 chain-feasibility checks).
 Smoke + chains-vs-nochains precision probe + census in the vol-213
 evening batch. Question: does ANY frame escape the 444-450 band?
 
-### `prefix-vault` — status: `unbuilt` — since: vol-212
+### `prefix-vault` — status: `in-progress` — absorbed into vol-214 LADDER
 Bank ≥160-deep perfect prefixes across runs as restart seeds. Would
 open vol-214.
 

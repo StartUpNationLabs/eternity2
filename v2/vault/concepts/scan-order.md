@@ -17,6 +17,7 @@ origin-vol: 4
 | `RowMajorTopDown` | 1 | (0,0) → (0,15) → (1,0) → …  |
 | `RowMajorBottomUp` | 15 | (15,0) → (15,15) → (14,0) → …  (Blackwood) |
 | `SpiralFromCenter` | 14 | spiral outward from center cell |
+| `Scan::SpiralIn` (cloister) | 213 | outer→center on the 14×14 interior — REFUTED, see below |
 | `HintCentric` | 14 | from canonical hint cells outward |
 
 ## Refuted alternatives
@@ -53,6 +54,23 @@ A/B at 5min CP + 10min ALNS on canonical E2 (seed 1):
 Files: `crates/solver-engine/src/lib.rs` (`PathSkeleton::XSkeleton`, `build_x_skeleton_path`, `JOE_DEPTH150_BP_X_PAR`), `crates/bench-audit/src/bin/run_e2_x_skeleton.rs`.
 
 **Generalisation**: every static pre-commit through high-domain interior cells has lost — hint-centric (vol-14), rectangle/layered (vol-14, vol-15), X-skeleton (vol-23). The pattern: **static ordering chooses which region becomes the hard region; piercing the 764-plateau makes the hard region the widest-domain cells**. Border-first MRV remains the only ordering that lets the engine attack low-domain cells first.
+
+### Spiral-IN on the bordered 14×14 interior (vol-213, REFUTED with mechanism)
+
+User-proposed inversion of the vol-14 spiral (outer ring → center;
+the maximal border-first order). Hypotheses for: four-sided exact-
+endgame closure at the center; hints early. Measured (hinted, choke-
+gated, 8 seeds): free-rim — walls 133-141, 0 completions (vs row
+II 344-347); bordered — all seeds jam at depth 26 = the ring-0 closure
+corner; with all gates at the closure, walls 131-140, 0 completions at
+300 s (vs row 446-448). **Mechanism: free-rim spiral has k ≤ 1 across
+ring 0 (unprunable branching); bordered spiral pays a CLOSURE TAX —
+every ring carries 4-5 k=3 cells at its corners/loop-back, spending the
+break budget on geometry instead of pool repair. Row-major is the
+Goldilocks: constant k=2, single damage zone.** External corroboration:
+van Horn et al. 2018 compared scan-row/spiral/inverse-spiral/mirrored —
+scan-row best; Verhaard: optimal order is target-score-dependent and
+computable (see BACKLOG `verhaard-markov-schedule-optimizer`).
 
 ## Mismatch-geometry consequence
 
