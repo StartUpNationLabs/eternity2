@@ -6,6 +6,7 @@ members = [
     "crates/blackwood-fast",
     "crates/blackwood-fast-codegen",
     "crates/cdcl-proto",
+    "crates/cloister",
     "crates/core",
     "crates/cp-lp-search",
     "crates/rl-search",

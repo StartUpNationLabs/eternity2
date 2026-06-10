@@ -1,0 +1,28 @@
+[package]
+name = "eternity2-cloister"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+eternity2-benchmark = { path = "../benchmark" }
+eternity2-core = { path = "../core" }
+rayon = "1.10"
+good_lp = { version = "1.15", default-features = false, features = ["highs"] }
+serde_json = "1"
+
+[[bin]]
+name = "cloister2"
+path = "src/bin/cloister2.rs"
+
+[[bin]]
+name = "attach2"
+path = "src/bin/attach2.rs"
