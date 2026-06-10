@@ -311,6 +311,108 @@ impl Ledger {
     }
 }
 
+/// CAIRN (vol-214): cross-epoch frontier nogoods. State key = Zobrist
+/// XOR over {available pieces} ∪ {active frontier edges (consumer cell,
+/// consumer side, color)} — rim targets on empty cells start active;
+/// placing a cell consumes its constraint edges and exposes its
+/// fwd-side edges (the consumer keys coincide, so place/unplace is one
+/// XOR toggle). The avail set implies depth, so gates/hint_after are
+/// keyed; spent is stored. A refuted (frontier, spent) prunes any
+/// revisit with spent' ≥ spent (less budget room). Inserts only on
+/// CLEAN exhaustion (attempt ran, no TT-prune, free cell) and only when
+/// the explored set is order-independent (no LDS, no perturb). Sound
+/// across the anytime incumbent because best_complete is monotone
+/// non-increasing. 64-bit tags ⇒ false-prune probability negligible
+/// but nonzero (record claims are independently verified anyway).
+struct Cairn {
+    z_avail: Vec<u64>,
+    z_edge: Vec<u64>,
+    ncolors: usize,
+    n: usize,
+    h: u64,
+    h0: u64,
+    /// (tag, spent+1); spent+1 == 0 means empty slot
+    tt: Vec<(u32, u32)>,
+    mask: usize,
+}
+
+impl Cairn {
+    fn new(model: &InteriorModel, tables: &Tables, targets: Option<&RimTargets>) -> Self {
+        let mut rng = Rng::new(0xCA12_57AF_0123_4567);
+        let ncolors = tables.ncolors;
+        let z_avail: Vec<u64> = (0..model.np).map(|_| rng.next_u64()).collect();
+        let z_edge: Vec<u64> = (0..model.cells * 4 * ncolors)
+            .map(|_| rng.next_u64())
+            .collect();
+        let mut h0 = 0u64;
+        for &z in &z_avail {
+            h0 ^= z;
+        }
+        let ze = |cell: usize, side: usize, color: u8| {
+            z_edge[(cell * 4 + side) * ncolors + color as usize]
+        };
+        if let Some(tg) = targets {
+            for (cell, t) in tg.iter().enumerate() {
+                for (side, c) in t.iter().enumerate() {
+                    if let Some(c) = c {
+                        h0 ^= ze(cell, side, *c);
+                    }
+                }
+            }
+        }
+        const TT_BITS: usize = 22;
+        Self {
+            z_avail,
+            z_edge,
+            ncolors,
+            n: model.n,
+            h: h0,
+            h0,
+            tt: vec![(0, 0); 1 << TT_BITS],
+            mask: (1 << TT_BITS) - 1,
+        }
+    }
+
+    fn ze(&self, cell: usize, side: usize, color: u8) -> u64 {
+        self.z_edge[(cell * 4 + side) * self.ncolors + color as usize]
+    }
+
+    /// place == unplace (XOR involution)
+    fn toggle(&mut self, tables: &Tables, plan: &CellPlan, ccol: &[u8; 4], pid: u16, rot: u8) {
+        self.h ^= self.z_avail[pid as usize];
+        let cell = plan.cell as usize;
+        for i in 0..plan.k as usize {
+            self.h ^= self.ze(cell, plan.sides[i] as usize, ccol[i]);
+        }
+        let e = &tables.rot_edges[pid as usize][rot as usize];
+        for i in 0..plan.n_fwd as usize {
+            let s = plan.fwd[i] as usize;
+            let nc = match s {
+                0 => cell - self.n,
+                1 => cell + 1,
+                2 => cell + self.n,
+                _ => cell - 1,
+            };
+            self.h ^= self.ze(nc, (s + 2) % 4, e[s]);
+        }
+    }
+
+    fn probe(&self, spent: u32) -> bool {
+        let e = self.tt[(self.h as usize) & self.mask];
+        e.1 != 0 && e.0 == (self.h >> 32) as u32 && e.1 - 1 <= spent
+    }
+
+    fn insert(&mut self, spent: u32) {
+        let i = (self.h as usize) & self.mask;
+        let tag = (self.h >> 32) as u32;
+        let e = &mut self.tt[i];
+        // keep the more general (lower-spent) entry on tag match
+        if e.1 == 0 || e.0 != tag || e.1 - 1 > spent {
+            *e = (tag, spent + 1);
+        }
+    }
+}
+
 /// constraint colors of `plan`'s cell under the current grid (neighbors
 /// referenced by the plan are guaranteed placed)
 fn ccol_of(tables: &Tables, plan: &CellPlan, grid: &[(u16, u8)]) -> [u8; 4] {
@@ -383,6 +485,10 @@ pub struct DfsParams {
     /// state with spent + Σ_c max(0, F_c − S_c) > budget. Turns the
     /// schedule length into a TOTAL-breaks cap (walked + tail).
     pub ledger: bool,
+    /// CAIRN (vol-214): cross-epoch frontier-nogood table. Auto-disabled
+    /// when max_disc or replay_perturb is set (explored set becomes
+    /// order-dependent, inserts would be unsound).
+    pub cairn: bool,
 }
 
 impl Default for DfsParams {
@@ -403,6 +509,7 @@ impl Default for DfsParams {
             max_cell_breaks: 1,
             replay_perturb: None,
             ledger: false,
+            cairn: false,
         }
     }
 }
@@ -511,6 +618,9 @@ pub fn dfs_run(
         s: vec![0; tables.ncolors],
         deficit: 0,
     };
+    let cairn_on = p.cairn && p.max_disc.is_none() && p.replay_perturb.is_none();
+    let mut cairn = cairn_on.then(|| Cairn::new(model, &tables, targets));
+    let mut tt_pruned = vec![false; cells + 1];
 
     let mut max_depth = 0usize;
     let mut death_hist = vec![0u32; cells + 1];
@@ -557,6 +667,10 @@ pub fn dfs_run(
             }
             led.deficit = (0..tables.ncolors).map(|c| led.surplus(c)).sum();
         }
+        if let Some(ca) = cairn.as_mut() {
+            ca.h = ca.h0;
+        }
+        tt_pruned.iter_mut().for_each(|t| *t = false);
         let epoch_t0 = Instant::now();
 
         let mut d = 0usize;
@@ -664,6 +778,7 @@ pub fn dfs_run(
                 }
             }
 
+            let was_bt = backtrack_now;
             let mut placed = false;
             if !backtrack_now {
                 let plan = &plans[d];
@@ -689,6 +804,9 @@ pub fn dfs_run(
                             spent += cost;
                             if p.ledger {
                                 led.place(&tables, plan, &fcol, fp, fr);
+                            }
+                            if let Some(ca) = cairn.as_mut() {
+                                ca.toggle(&tables, plan, &fcol, fp, fr);
                             }
                             placed = true;
                         }
@@ -721,7 +839,14 @@ pub fn dfs_run(
                     let lds_block = p
                         .max_disc
                         .is_some_and(|m| disc >= m && yields[d] >= 1 && !disc_flag[d]);
-                    if !lds_block {
+                    // CAIRN probe at instance start: a recorded nogood with
+                    // ≤ spent kills the whole instance before enumeration
+                    if let Some(ca) = cairn.as_ref() {
+                        if !cursors[d].started && ca.probe(spent) {
+                            tt_pruned[d] = true;
+                        }
+                    }
+                    if !lds_block && !tt_pruned[d] {
                         let mut cur = cursors[d];
                         let n1 = plan.k as usize;
                         let nseg = if break2_open {
@@ -843,6 +968,9 @@ pub fn dfs_run(
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }
+                                if let Some(ca) = cairn.as_mut() {
+                                    ca.toggle(&tables, plan, &ccol, pid, rot);
+                                }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -919,6 +1047,9 @@ pub fn dfs_run(
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }
+                                if let Some(ca) = cairn.as_mut() {
+                                    ca.toggle(&tables, plan, &ccol, pid, rot);
+                                }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -954,6 +1085,19 @@ pub fn dfs_run(
                 }
             } else {
                 backtrack_now = false;
+                // CAIRN insert: clean exhaustion of a free-cell instance
+                // (attempt ran, not a TT replay, not an endgame/ledger
+                // forced backtrack)
+                if let Some(ca) = cairn.as_mut() {
+                    if !was_bt
+                        && !tt_pruned[d]
+                        && d < cells
+                        && forced_by_cell[plans[d].cell as usize].is_none()
+                    {
+                        ca.insert(spent);
+                    }
+                }
+                tt_pruned[d] = false;
                 cursors[d] = Cursor::FRESH;
                 yields[d] = 0;
                 if disc_flag[d] {
@@ -967,9 +1111,14 @@ pub fn dfs_run(
                 d -= 1;
                 let cell = plans[d].cell as usize;
                 let (pid, rot) = grid[cell];
-                if p.ledger {
+                if p.ledger || cairn.is_some() {
                     let fcol = ccol_of(&tables, &plans[d], &grid);
-                    led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                    if p.ledger {
+                        led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                    }
+                    if let Some(ca) = cairn.as_mut() {
+                        ca.toggle(&tables, &plans[d], &fcol, pid, rot);
+                    }
                 }
                 mask_set(&mut avail, pid);
                 grid[cell] = (u16::MAX, 0);
@@ -985,9 +1134,14 @@ pub fn dfs_run(
                         d -= 1;
                         let cell = plans[d].cell as usize;
                         let (pid, rot) = grid[cell];
-                        if p.ledger {
+                        if p.ledger || cairn.is_some() {
                             let fcol = ccol_of(&tables, &plans[d], &grid);
-                            led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                            if p.ledger {
+                                led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                            }
+                            if let Some(ca) = cairn.as_mut() {
+                                ca.toggle(&tables, &plans[d], &fcol, pid, rot);
+                            }
                         }
                         mask_set(&mut avail, pid);
                         grid[cell] = (u16::MAX, 0);
@@ -1470,6 +1624,65 @@ mod tests {
         let r2 = dfs_run(&m2, Some(&tg2), None, &p2);
         if let Some((grid2, breaks2)) = r2.complete {
             assert_eq!(m2.count_breaks(&grid2, Some(&tg2)), breaks2);
+        }
+    }
+
+    /// CAIRN: hash toggling is consistent (place+unplace restores h),
+    /// and the full DFS with nogoods still solves perfectly / accounts
+    #[test]
+    fn cairn_dfs_solves_and_accounts() {
+        let (m, sol, targets) = InteriorModel::synthetic(6, 5, 41);
+        // toggle involution along a partial solution path
+        let scan = Scan::RowMajor.order(6);
+        let plans = build_plans(&m, &scan, Some(&targets));
+        let tables = Tables::build(&m, false);
+        let mut ca = Cairn::new(&m, &tables, Some(&targets));
+        let h_start = ca.h;
+        let mut grid = vec![(u16::MAX, 0u8); m.cells];
+        for d in 0..10 {
+            let cell = scan[d];
+            let ccol = ccol_of(&tables, &plans[d], &grid);
+            ca.toggle(&tables, &plans[d], &ccol, sol[cell].0, sol[cell].1);
+            grid[cell] = sol[cell];
+        }
+        let h_mid = ca.h;
+        assert_ne!(h_mid, h_start);
+        for d in (0..10).rev() {
+            let cell = scan[d];
+            let (pid, rot) = grid[cell];
+            let ccol = ccol_of(&tables, &plans[d], &grid);
+            ca.toggle(&tables, &plans[d], &ccol, pid, rot);
+            grid[cell] = (u16::MAX, 0);
+        }
+        assert_eq!(ca.h, h_start, "toggle must be an involution");
+        // perfect solve with nogoods on (nogoods may only prune refuted
+        // states — the solution path must survive)
+        let p = DfsParams {
+            seed: 6,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            cairn: true,
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (g, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        assert_eq!(m.count_breaks(&g, Some(&targets)), 0);
+        // break-DFS with cairn + ledger together: accounting holds
+        let (m2, _, tg2) = InteriorModel::synthetic(6, 4, 5);
+        let p2 = DfsParams {
+            seed: 2,
+            budget_ms: 5_000,
+            restart_ms: 1_000,
+            schedule: vec![16, 20, 24, 27, 30, 33],
+            exact_tail_k: 6,
+            ledger: true,
+            cairn: true,
+            ..DfsParams::default()
+        };
+        let r2 = dfs_run(&m2, Some(&tg2), None, &p2);
+        if let Some((g2, b2)) = r2.complete {
+            assert_eq!(m2.count_breaks(&g2, Some(&tg2)), b2);
         }
     }
 

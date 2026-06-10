@@ -76,6 +76,7 @@ fn main() {
         (lo.parse().expect("lo"), hi.parse().expect("hi"))
     });
     let ledger = has("--ledger");
+    let cairn = has("--cairn");
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
         Some(s) if s.starts_with("seam:") => {
@@ -249,7 +250,7 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger}",
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn}",
         scan.name()
     );
     eprintln!(
@@ -291,6 +292,7 @@ fn main() {
                     max_cell_breaks,
                     replay_perturb,
                     ledger,
+                    cairn,
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -325,6 +327,7 @@ fn main() {
                         max_cell_breaks,
                         replay_perturb,
                         ledger,
+                        cairn,
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(
