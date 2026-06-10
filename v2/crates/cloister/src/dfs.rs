@@ -219,6 +219,8 @@ pub struct DfsParams {
     pub exact_tail_k: usize,
     /// two-row endgame as the in-DFS trigger (vol-211: post-hoc only)
     pub tail2: bool,
+    /// node cap per in-DFS tail2 call
+    pub tail2_cap: u64,
     /// LDS-style bound on non-first choices per path
     pub max_disc: Option<u32>,
     pub scan: Scan,
@@ -234,6 +236,7 @@ impl Default for DfsParams {
             schedule: Vec::new(),
             exact_tail_k: 0,
             tail2: false,
+            tail2_cap: 30_000,
             max_disc: None,
             scan: Scan::RowMajor,
         }
@@ -366,7 +369,7 @@ pub fn dfs_run(
                     let (mis, asn) = if p.tail2 {
                         exact_tail2(
                             model, &tables, &grid, &rest, &forced_by_cell, targets,
-                            abort_at, 30_000,
+                            abort_at, p.tail2_cap,
                         )
                     } else {
                         exact_tail(

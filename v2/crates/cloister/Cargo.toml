@@ -26,3 +26,7 @@ path = "src/bin/cloister2.rs"
 [[bin]]
 name = "attach2"
 path = "src/bin/attach2.rs"
+
+[[bin]]
+name = "frame_ub"
+path = "src/bin/frame_ub.rs"

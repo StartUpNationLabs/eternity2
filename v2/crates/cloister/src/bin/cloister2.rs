@@ -61,6 +61,7 @@ fn main() {
     let threads: usize = get("--threads").and_then(|s| s.parse().ok()).unwrap_or(8);
     let exact_tail_k: usize = get("--exact-tail").and_then(|s| s.parse().ok()).unwrap_or(8);
     let tail2 = has("--tail2");
+    let tail2_cap: u64 = get("--tail2-cap").and_then(|s| s.parse().ok()).unwrap_or(30_000);
     let t0: f64 = get("--t0").and_then(|s| s.parse().ok()).unwrap_or(1.5);
     let max_disc: Option<u32> = get("--max-disc").and_then(|s| s.parse().ok());
     let scan = match get("--scan").as_deref() {
@@ -181,6 +182,7 @@ fn main() {
                     schedule: schedule.clone(),
                     exact_tail_k,
                     tail2,
+                    tail2_cap,
                     max_disc,
                     scan,
                 };
@@ -208,6 +210,7 @@ fn main() {
                         schedule: schedule.clone(),
                         exact_tail_k,
                         tail2,
+                        tail2_cap,
                         max_disc,
                         scan,
                     };
@@ -226,7 +229,7 @@ fn main() {
                         |(g, _)| g,
                     ))
                 } else {
-                    None
+                    get("--init-board").map(|p| load_interior_grid(&model, Path::new(&p)))
                 };
                 let p = SaParams {
                     seed,
@@ -456,4 +459,26 @@ impl EntryOr for Vec<(String, Vec<i64>)> {
             &mut self.last_mut().expect("just pushed").1
         }
     }
+}
+
+/// load a board JSON's interior cells into a canonical-local-pid grid
+fn load_interior_grid(
+    model: &InteriorModel,
+    path: &Path,
+) -> Vec<(u16, u8)> {
+    let placement = cio::load_placement(path).expect("init board");
+    let mut g2l = vec![u16::MAX; 256];
+    for (l, &g) in model.global_id.iter().enumerate() {
+        g2l[g as usize] = l as u16;
+    }
+    let mut grid = vec![(u16::MAX, 0u8); model.cells];
+    for &(pos, pid, rot) in &placement {
+        if eternity2_cloister::frame::is_ring(pos) {
+            continue;
+        }
+        let (y, x) = (pos / 16, pos % 16);
+        grid[(y - 1) * model.n + (x - 1)] = (g2l[pid as usize], rot);
+    }
+    assert!(grid.iter().all(|&(p, _)| p != u16::MAX), "incomplete interior");
+    grid
 }
