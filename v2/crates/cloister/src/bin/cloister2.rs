@@ -90,6 +90,16 @@ fn main() {
         let (path, k) = s.rsplit_once(':').expect("file:K");
         (path.to_string(), k.parse::<usize>().expect("K"))
     });
+    // --quota D:M[:frac] — Verhaard piece-class quota: until depth D at
+    // most M "good" pieces (top `frac` by Σ ln(partner-count), default .25)
+    let quota_spec: Option<(usize, u32, f64)> = get("--quota").map(|s| {
+        let parts: Vec<&str> = s.split(':').collect();
+        (
+            parts[0].parse().expect("D"),
+            parts[1].parse().expect("M"),
+            parts.get(2).map_or(0.25, |f| f.parse().expect("frac")),
+        )
+    });
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
         Some("spiral") => Scan::SpiralIn,
@@ -220,6 +230,35 @@ fn main() {
         }
     }
 
+    // QUOTA: goodness = Σ over the piece's 4 sides of ln(partner count)
+    let quota: Option<(usize, u32)> = quota_spec.map(|(d, m, _)| (d, m));
+    let piece_good: Vec<bool> = quota_spec.map_or_else(Vec::new, |(_, _, frac)| {
+        let mut cnt = vec![0u32; 64];
+        for p in 0..model.np {
+            for &c in &model.edges(p as u16, 0) {
+                cnt[c as usize] += 1;
+            }
+        }
+        let mut score: Vec<(f64, usize)> = (0..model.np)
+            .map(|p| {
+                let s: f64 = model
+                    .edges(p as u16, 0)
+                    .iter()
+                    .map(|&c| f64::from(cnt[c as usize]).ln())
+                    .sum();
+                (s, p)
+            })
+            .collect();
+        score.sort_by(|a, b| b.0.partial_cmp(&a.0).expect("finite"));
+        let ngood = ((model.np as f64) * frac) as usize;
+        let mut good = vec![false; model.np];
+        for &(_, p) in &score[..ngood] {
+            good[p] = true;
+        }
+        eprintln!("quota: {ngood}/{} pieces marked good (frac {frac})", model.np);
+        good
+    });
+
     // LADDER: pin the first K scan cells from a banked prefix board
     let forced_prefix: Vec<(usize, u16, u8)> = init_prefix.map_or_else(Vec::new, |(path, k)| {
         let placement = cio::load_placement(Path::new(&path)).expect("prefix board");
@@ -298,7 +337,7 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn};abort={abort_below:?};prefix={}",
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn};abort={abort_below:?};prefix={};quota={quota:?}",
         scan.name(),
         forced_prefix.len()
     );
@@ -344,6 +383,8 @@ fn main() {
                     cairn,
                     abort_below,
                     forced_prefix: forced_prefix.clone(),
+                    quota,
+                    piece_good: piece_good.clone(),
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -382,6 +423,8 @@ fn main() {
                         cairn,
                         abort_below,
                         forced_prefix: forced_prefix.clone(),
+                        quota,
+                        piece_good: piece_good.clone(),
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(

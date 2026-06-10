@@ -591,6 +591,15 @@ pub struct DfsParams {
     /// costs 0). Backtracking through the prefix cascades to an epoch
     /// restart via the existing forced-cell unwind.
     pub forced_prefix: Vec<(usize, u16, u8)>,
+    /// QUOTA (vol-214, Verhaard): until scan depth D, at most M pieces
+    /// from the "good" class may be used — forces bad-piece consumption
+    /// early so the endgame pool stays rich (supply-side pool health).
+    /// Forced cells (hints/prefix) are exempt. None = off.
+    pub quota: Option<(usize, u32)>,
+    /// per-piece good-class membership (local pid indexed); only read
+    /// when `quota` is set. Computed by the caller (e.g. side-color
+    /// partner-count scoring in cloister2).
+    pub piece_good: Vec<bool>,
 }
 
 impl Default for DfsParams {
@@ -614,6 +623,8 @@ impl Default for DfsParams {
             cairn: false,
             abort_below: None,
             forced_prefix: Vec::new(),
+            quota: None,
+            piece_good: Vec::new(),
         }
     }
 }
@@ -756,6 +767,7 @@ pub fn dfs_run(
         disc_flag.iter_mut().for_each(|f| *f = false);
         let mut spent: u32 = 0;
         let mut disc: u32 = 0;
+        let mut good_used: u32 = 0;
         let mut epoch_max = 0usize;
         let skip_depth: usize = p.replay_perturb.map_or(usize::MAX, |(lo, hi)| {
             lo + (rng.next_u64() as usize) % (hi - lo).max(1)
@@ -931,6 +943,9 @@ pub fn dfs_run(
                             if let Some(ca) = cairn.as_mut() {
                                 ca.toggle(&tables, plan, &fcol, fp, fr);
                             }
+                            if p.quota.is_some() {
+                                good_used += u32::from(p.piece_good[fp as usize]);
+                            }
                             placed = true;
                         }
                     }
@@ -969,6 +984,10 @@ pub fn dfs_run(
                             tt_pruned[d] = true;
                         }
                     }
+                    // QUOTA: instance-invariant (good_used below d is fixed)
+                    let quota_block = p
+                        .quota
+                        .is_some_and(|(dd, m)| d < dd && good_used >= m);
                     if !lds_block && !tt_pruned[d] {
                         let mut cur = cursors[d];
                         let n1 = plan.k as usize;
@@ -1025,6 +1044,9 @@ pub fn dfs_run(
                                     for &c in list {
                                         let pid = c >> 2;
                                         if !mask_get(&avail, pid) {
+                                            continue;
+                                        }
+                                        if quota_block && p.piece_good[pid as usize] {
                                             continue;
                                         }
                                         let rot = (c & 3) as u8;
@@ -1094,6 +1116,9 @@ pub fn dfs_run(
                                 if let Some(ca) = cairn.as_mut() {
                                     ca.toggle(&tables, plan, &ccol, pid, rot);
                                 }
+                                if p.quota.is_some() {
+                                    good_used += u32::from(p.piece_good[pid as usize]);
+                                }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -1131,6 +1156,9 @@ pub fn dfs_run(
                                 cur.idx += 1;
                                 let pid = c >> 2;
                                 if !mask_get(&avail, pid) {
+                                    continue;
+                                }
+                                if quota_block && p.piece_good[pid as usize] {
                                     continue;
                                 }
                                 let rot = (c & 3) as u8;
@@ -1172,6 +1200,9 @@ pub fn dfs_run(
                                 }
                                 if let Some(ca) = cairn.as_mut() {
                                     ca.toggle(&tables, plan, &ccol, pid, rot);
+                                }
+                                if p.quota.is_some() {
+                                    good_used += u32::from(p.piece_good[pid as usize]);
                                 }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
@@ -1243,6 +1274,9 @@ pub fn dfs_run(
                         ca.toggle(&tables, &plans[d], &fcol, pid, rot);
                     }
                 }
+                if p.quota.is_some() {
+                    good_used -= u32::from(p.piece_good[pid as usize]);
+                }
                 mask_set(&mut avail, pid);
                 grid[cell] = (u16::MAX, 0);
                 spent -= cost_at[d];
@@ -1265,6 +1299,9 @@ pub fn dfs_run(
                             if let Some(ca) = cairn.as_mut() {
                                 ca.toggle(&tables, &plans[d], &fcol, pid, rot);
                             }
+                        }
+                        if p.quota.is_some() {
+                            good_used -= u32::from(p.piece_good[pid as usize]);
                         }
                         mask_set(&mut avail, pid);
                         grid[cell] = (u16::MAX, 0);
@@ -1843,6 +1880,38 @@ mod tests {
         };
         let r2 = dfs_run(&m, Some(&targets), None, &p2);
         assert!(r2.complete.is_some());
+    }
+
+    /// QUOTA: with M = exactly the solution's good-piece usage before D,
+    /// the solve must still succeed (quota tight but feasible), and the
+    /// final board must respect the per-depth cap
+    #[test]
+    fn quota_dfs_solves_within_cap() {
+        let (m, sol, targets) = InteriorModel::synthetic(6, 6, 7);
+        let scan = Scan::RowMajor.order(6);
+        // mark the even pids "good"; count solution usage before depth 20
+        let piece_good: Vec<bool> = (0..m.np).map(|p| p % 2 == 0).collect();
+        let d_cap = 20usize;
+        let m_cap: u32 = scan[..d_cap]
+            .iter()
+            .map(|&cell| u32::from(piece_good[sol[cell].0 as usize]))
+            .sum();
+        let p = DfsParams {
+            seed: 11,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            quota: Some((d_cap, m_cap)),
+            piece_good: piece_good.clone(),
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        let used: u32 = scan[..d_cap]
+            .iter()
+            .map(|&cell| u32::from(piece_good[grid[cell].0 as usize]))
+            .sum();
+        assert!(used <= m_cap, "quota violated: {used} > {m_cap}");
     }
 
     /// cost-2 segments end-to-end: completes, accounts exactly, and the
