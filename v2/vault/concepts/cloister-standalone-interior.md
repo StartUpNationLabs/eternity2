@@ -262,6 +262,14 @@ community) — the gap is now precisely characterized as rim-compatibility.
 - Frame choice as a search axis (which perfect border to anchor on; vol-76
   frames / border-MIP-generated; hint-compatible).
 
+**Vol-212 resolution**: all three done same-day — clean crate
+`eternity2-cloister` regression-gated (this page's numbers reproduced;
+bitset candidates REFUTED 0.64×, list engine kept); CLOISTER-II built and
+★ CONFIRMED the rim prediction (anchored construction realizes IB 48-50
+vs 34-39 post-hoc); frame axis measured (hint-compat chokes the pool;
+uniform 444-449 band). v1 saturates at 449-strict — the wall moved to the
+II side. See [[cloister-ii-border-anchored]] and [[vol-212]].
+
 ## Linked
 
 - [[three-milestones-from-veteran]] — the milestone this implements

@@ -1,69 +1,55 @@
-# Current Volume — Vol-212 — CLOISTER-II: border-anchored break-DFS
+# Current Volume — Vol-213 — the II-side wall (CLOISTER-III seam scan)
 
-**Status**: drafted at vol-211 close (2026-06-10). Strict-canonical (5/5
-hints) is the primary track per user directive; bar = **461** (community has
-verified 5/5 460s; ours 458).
+**Status**: drafted at vol-212 close (2026-06-10). Strict track (5/5) bar
+unchanged: **461**. Vol-212 proved CLOISTER-II collects IB (48-50) and
+saturates at 449-strict; gap anatomy is pure II (339-345 vs witness 350 at
+IB≈50). The II search under rim+hint constraints is THE wall.
 
-## Why this (the vol-211 result that forces it)
-Vol-211 proved: (a) the standalone interior is highly solvable with break-DFS
-+ exact endgames (II=356 unhinted / 351 hinted in minutes — both best-ever);
-(b) **rim-compatibility is an interior property worth ~14 attachable IB**
-(control: Bucas-469's interior re-attaches to exactly 469; ours cap at IB
-34-39) and it is NOT collectable post-hoc (λ-proxy, tie-breaks, alternation
-all ≤ +1). ⇒ The border must constrain the interior DURING construction.
-The community strict-460s came from border-first WITHOUT our endgame
-machinery — that headroom is the target.
+## Why this
+
+Row-sequential scans dump all leftover-pool damage into the last rows; the
+exact tail then optimizes a starved 14-28 piece pool. Vol-211 proved tails
+are already optimal given prefixes ("prefix diversity, not endgames, is
+the II lever") and vol-212 proved prefix diversity via restarts/LDS/frames
+is exhausted at the 444-449 band. The structural move left: **change where
+the damage lands** — grow two fronts (rows 0-6 top-down anchored on the
+top frame edge; rows 13-7 bottom-up anchored on the bottom frame edge,
+both rim-constrained) and close at a middle seam where (a) the remaining
+pool is largest mid-search, (b) the closure is a fully-two-sided exact
+assignment (stronger than the one-sided tail trigger), (c) both deep hints
+(row 12) sit INSIDE the bottom front's early region (cheap), not at its
+end (starved).
 
 ## Binding items (≤3)
 
-1. **Refactor first**: `crates/cloister/` clean crate (interior model / DFS /
-   endgames / SA / border-MIP as modules; unit tests on 4×4-6×6 generated
-   puzzles + the validated vol-211 numbers as regression). Perf pass: bitset
-   candidate intersection in the DFS hot loop; per-color indexing in
-   tail2's column_pairs. Port, don't re-derive. (User asked for this; do it
-   BEFORE the campaign so the long compute runs through the fast version.)
-2. **CLOISTER-II**: border-anchored break-DFS — fix a perfect frame
-   (BB=60; from border-MIP or vol-76 frames), interior scan where IB edges
-   are REAL edges (rim side vs fixed border inward color enters the
-   cost/break budget), exact-tail scoring rim sides too, 5/5 hints forced.
-   Sweep frames × seeds × schedules; anytime-minimize total breaks.
-   **Record check: total = 480 − breaks ≥ 461 with 5/5 ⇒ strict record.**
-   Verify any candidate with verify_board + interior_split before claiming.
-3. **Campaign + variance discipline**: ≥8 seeds per config, report
-   min/median/max; sweep frame choice (it is a first-class axis); persist
-   everything (history.csv pattern); throughput arithmetic BEFORE multi-day
-   commitments (CLAUDE.md rule — the 176-plateau of vol-122 A1 is the
-   baseline this must beat, and vol-211's machinery is the reason to expect
-   it can).
-
-## Exploration design (user-ratified 2026-06-10: "explore more, explore
-## better, fixed time budget — diminishing returns confirmed")
-
-- **Objective**: II+IB jointly (420 interior-touching edges) under a fixed
-  perfect ring — never II alone (free-rim II grinding = +1/10× compute,
-  measured; rim carries ~14 points).
-- **Breadth over depth**: 30-300 s budgets across a wide
-  (frame × seed × schedule × scan) portfolio; exact endgames mean every
-  short run emits a complete, attachable, scored board. No multi-hour
-  single-tree runs.
-- **Explore better, not just more**: limited-discrepancy-style prefix
-  exploration (near-greedy subtrees first) instead of left-biased DFS
-  restarts; boustrophedon scan (anchored borders break the rotation
-  isomorphism that made column-major redundant on the free rim).
-- **Frame axis**: each perfect ring re-rolls the whole problem; enumerate /
-  sample frames diversely (vol-76 corpus + MIP-generated), measure
-  per-frame completion II+IB distributions, double down on fat tails.
-- **Speed = exploration**: refactor perf pass FIRST (bitset candidates,
-  tail2 per-color indexing) so the fixed time budget buys more prefixes.
+1. **CLOISTER-III seam scan**: generalize `Scan` to two-front orders
+   (plans machinery already takes arbitrary permutations; the bottom-up
+   front needs S-side Placed constraints — already supported by
+   `build_plans`); new `exact_seam` endgame (k ≤ 14 cells with BOTH N and
+   S placed + chain: port `exact_tail` with the extra constraint per cell
+   — strictly tighter B&B). Gates re-derived for two-front geometry
+   (each front has its own wall; measure first: two-front bordered wall,
+   8 seeds × 10 s — the cheap decisive number again).
+2. **Assignment-guided value priors**: per-(cell, piece, rot) prior from a
+   relaxation (Hungarian / LP on the 196×196 assignment with edge terms),
+   used to order candidate lists instead of uniform shuffles (vol-155
+   weaving-prior analogue, now bordered+hinted). Measure II delta at
+   30 s × 8 on strict460a.
+3. **Discipline**: ≥8 seeds, min/median/max; verify + rescore before any
+   claim; timestamped outputs + history.csv; throughput arithmetic before
+   any multi-day run; honest negatives to the vault same-day.
 
 ## Audit-at-open compliance
-- INVENTIONS_BACKLOG §I milestone-3: status flips to `built-standalone`
-  (vol-211); milestone-2 metric: `built+exceeded`; A1/B3 fold into
-  CLOISTER-II (same decomposition, correct direction).
-- The vol-210 "decision point" (single-machine exhausted) is superseded in
-  scope: vol-211 found a genuinely new, productive machine-local frontier.
+
+- Vol-212 closed same-day with all levers measured; no aged unbuilt items
+  added. frame_ub (direct-HiGHS builder) and frame-generator-at-scale go
+  to BACKLOG as `partial`/`unbuilt` (only pick up if items 1-2 stall).
+- The 2 h slope run lands after close — append its number to
+  [[cloister-ii-border-anchored]] when read (expected 451-452; ≥455
+  reopens the grind hypothesis).
 
 ## Linked
-- [[cloister-standalone-interior]] (vol-211 main concept + the rim result)
-- [[linear-placement-metric]], [[blackwood-algorithm]], [[lp-ub-478-basins]]
-- session: [[vol-211]]
+
+- [[cloister-ii-border-anchored]] (vol-212: saturation + gap anatomy)
+- [[cloister-standalone-interior]] (vol-211: rim result, free-rim records)
+- session: [[vol-212]]

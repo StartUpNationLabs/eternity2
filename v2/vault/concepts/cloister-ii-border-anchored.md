@@ -65,14 +65,32 @@ Key facts established:
    search, not frame, on that frame; whether another frame admits ≥ 401
    is the campaign's open question.
 
-## What's open
+## Saturation (vol-212 close — every lever measured)
 
-- 300 s anytime curves (in flight at write time), SA/hybrid polish delta,
-  in-DFS tail2 node-cap sweep (30k → 100k+), LDS + boustro probes.
-- Frame breadth: compat-probe vol-76 corpus + decoded community frames;
-  per-frame total distributions; fat-tail hunting.
-- Frame generation beyond corpora: attach MIP (`--require-bb60`) on our
-  best hinted interiors as a frame sampler.
+| lever | result |
+|---|---|
+| compute (30→300 s) | +2.5 totals/decade ⇒ 461 needs ~10⁵× — ruled out alone |
+| recipe shape (caps/budgets/boustro) | flat ±2 around 445-447 |
+| naive LDS (max-disc 3/8) | REFUTED — depth 83-103, 0 completions |
+| frame axis (24 probed; early-gate bypass) | only strict-460 frames pass gates ≥120; early gates (≤14) open 2/10 vol-76 frames at full strength; ALL completing frames land in one 444-449 band — no fat tail |
+| SA polish (8×120 s from T449, rim-aware) | **null: all seeds return init exactly** — bordered-hinted basins are σ-locked like every high E2 board |
+| tail2polish post-hoc | null at 500M nodes |
+
+**v1 plateau: 449-strict (II 339 + IB 50 + BB 60) / 453-unhinted.** Gap
+anatomy at IB≈50: II 339-345 vs the witness 350 (community 460 on the SAME
+frame) — the bordered+hinted II search is the binding wall. We match the
+460s' IB; we trail their II by ~11 at minutes-scale budgets.
+
+## What's open (→ vol-213)
+
+- Seam-scan CLOISTER-III: two-front growth meeting at an exact-closure
+  middle seam (relocates tail damage to max-supply territory; the seam
+  endgame is fully constrained on both sides).
+- Assignment-relaxation value priors for the II side; frame_ub with a
+  direct-HiGHS builder (good_lp construction stalls); hint-compatible
+  frame generation at scale (row-0 chain CSP as the filter).
+- 2 h slope confirmation in flight at close (expect ≈451-452; ≥455
+  falsifies the saturation read).
 
 ## Linked
 
