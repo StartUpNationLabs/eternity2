@@ -1,135 +1,120 @@
-# Prompt — new Eternity II innovation session (beat *a* record by 1)
+# Prompt — vol-212 session (drafted at vol-211 close, 2026-06-10)
 
-Copy the block below as the opening message (or `/goal`) for a fresh session.
+Copy the block below as the opening message for a fresh session.
 
 ---
 
 You are a senior researcher attacking **Eternity II** (canonical 5-clue,
-Selby-Riordan) in this repo. The goal this session is concrete: **beat one of the
-two records by even a single unit, or make real structural progress toward it.**
-Innovation is the means — new algorithms, new algorithm *classes*, named; math when
-the math is the bottleneck (LP/MIP/SDP, polytopes, group theory, spectral, flows,
-proofs). Reducing the search space beats searching faster. You have all rights, all
-compute on this machine, and multi-day builds are in scope. No limiting thoughts —
-but be rigorous and honest (see Discipline).
+Selby-Riordan) in this repo. This session continues the 14×14 plan: vol-211
+(CLOISTER) cracked the standalone interior and measured exactly where the
+remaining value sits. **The goal: beat the strict-canonical record — total
+≥461 with all 5 hints (HINTS ARE MANDATORY, user directive). Secondary:
+≥464 matched-edges.** Reducing the search space beats searching faster; you
+have all rights and all compute on this machine.
 
-## The two record tracks (verified — do not re-derive, do not conflate)
+## Verified state (do NOT re-derive; vol-211 measured all of this)
 
-1. **Overall / matched-edges record.** Our project record: **463/480** (vol-129,
-   cp=(2,3,0,1)). Strict-canonical (5/5 hints): **458/480** (vol-122). Community
-   ceiling: **469/480** (McGavin 2020, Blackwood solver). 480 unsolved since 2007.
-   - Beating 463 (any hint-compliance) or 458 (strict 5/5) by +1 is a record.
-   - Community-meaningful next step: 471 (= 469+2).
+Records: ours 463 matched-edges (1/5 hints) / 458 strict; **community strict
+record = 460** (5/5, 2023 groups thread, 2 boards verified LEGAL — vol-211
+discovery; the bar is 461, not 459). Community matched ceiling 469.
 
-2. **Linear-placement / "liner" record** (a DIFFERENT metric — depth-class, not
-   complete-board). Veteran milestone: **231/258 linear-placement adjacencies**
-   (a CSP-depth / progress-along-scan metric). Status: **never directly measured**
-   in our pipelines — the diagnostic `csp-depth-231` (at what depth do we hit 231
-   matched adjacencies?) is open. This track is wide open precisely because it's
-   under-instrumented.
+Edge accounting: 480 = 364 II + 56 IB + 60 BB; interior (196) and border
+(60) piece sets are disjoint, coupled ONLY through 56 IB edges. All high
+boards have BB=60.
 
-   The structurally cleanest attack on BOTH tracks is veteran milestone #3:
-   **complete the standalone 14×14 interior** (196 interior pieces, II=364
-   internal-internal adjacencies). This is parity-feasible (8 odd colors absorbable
-   by 56 IB slots — [[interior-14x14-parity-feasible]]) and, critically, **was never
-   solved standalone**. A 0-mismatch interior would resolve ~420 of 480 edges; plus a
-   separately-solved border (LP-UB class A = 478) could exceed 471. A 14×14 puzzle is
-   far smaller than 16×16 → it sidesteps the throughput wall that dooms full-board
-   brute force (see below).
+Vol-211 CLOISTER results (`crates/bench-audit/src/bin/cloister.rs`,
+`cloister_border.rs`, `interior_split.rs`; outputs + history in
+`output/vol-211/`, key concept `vault/concepts/cloister-standalone-interior.md`):
+- Standalone free-rim 14×14: DFS wall 174/196 (sharp). Break-DFS (scheduled
+  gates) + exact 1-row endgame B&B → **complete interiors II=356 unhinted /
+  351 hinted in minutes** (351 beats every known 5/5 board's interior; the
+  only higher interior anywhere is 358 inside the Blackwood+Bucas 469).
+- Exact border-attach MIP (HiGHS, proven optimal): our interiors accept only
+  **IB 33-39** → best assembled **455/480 unhinted, 446/480 strict-5/5**.
+- ★ **Rim-compatibility**: control re-attach of the Bucas-469 interior
+  recovers EXACTLY 469 (IB=51). Equal-II interiors differ by ~14 attachable
+  IB. The property is created by growing the interior INSIDE a border and is
+  NOT retrofittable — λ=1 multiset-overlap (−3 II, refuted), rim-supply DFS
+  tie-break (−2 II, refuted), position-exact alternating projections (+1,
+  converges 446). Border-side algorithmics are DONE (attach is exact).
+- tail2polish PROVED the 356's last-2-rows optimal given its prefix ⇒ II
+  improves only via prefix diversity; pure-II grinding costs ~10× compute
+  per +1 II and is worth only +1 total each — the rim carries ~14.
+- Veteran metric #2 ("231/258") decoded (border-first scan ladder) and
+  already exceeded ([[linear-placement-metric]]).
 
-## Read first (do NOT skip — prevents re-treading 210 volumes)
+## The plan (CURRENT-VOL.md is binding; ≤3 items)
 
-1. `vault/SYNTHESIS_VOL_207_2026-06-10.md` — pre-entropy state of play.
-2. `vault/concepts/isentrope-entropy-growth.md` + `vault/MATH_NOTES_2026-06-10_isentrope_entropy_theorem.md`
-   — vols 209-210 entropy theory: the durable result. **The hardness of E2 is the
-   global DISTINCTNESS (assignment) layer, quantified as an AREA-LAW**
-   ρ(n)=W_distinct/W_reusable ≈ exp(−0.085·n²), collapsing the piece-legal fraction to
-   ~0 at ~80 cells = the universal wall. The matching grammar is rich/uniform; the
-   distinctness is the whole difficulty. Tools built: a validated χ-truncated boundary
-   **MPS contractor reaching width 16** (`crates/peps/src/mps_proper.rs`,
-   `isentrope_peps`, `isentrope_marginals`) + an exact entropy counter
-   (`crates/bench-audit/src/bin/isentrope_count.rs`).
-3. `vault/sessions/vol-210.md` — conditional marginals were a **χ-truncation
-   ARTIFACT** (refuted-as-tool). Lesson: believe an MPS number only after χ-convergence.
-4. `vault/concepts/three-milestones-from-veteran.md` + `interior-14x14-parity-feasible.md`
-   — the two record tracks + the 14×14 decomposition.
-5. `vault/REMINDER_USER_DIRECTIVES.md`, `vault/E2_KNOWN_FACTS.md`, `vault/plans/INVENTIONS_BACKLOG.md`.
-6. Memory: `project_e2_vol209_isentrope_2026_06_10`, `project_e2_vol210_tidemark_2026_06_10`,
-   `project_e2_vol208_conclusion_2026_06_10`, `project_e2_corrected_state_2026_06_09`.
+1. **Refactor FIRST** (user-approved): `crates/cloister/` clean crate —
+   interior model / DFS / endgames / SA / border-MIP as modules; unit tests
+   on generated 4×4-6×6 + vol-211 numbers as regression (wall 174, II 356
+   @30s unhinted, attach obj 97-99, Bucas control = 469). Perf pass: bitset
+   candidate intersection in the DFS hot loop (~2-5×), per-color indexing in
+   tail2's column_pairs. Port, don't re-derive.
+2. **CLOISTER-II: border-anchored break-DFS** (the vol-212 invention; name
+   it). Fix a PERFECT ring (BB=60; generate via the attach MIP or vol-76
+   frames), then run the break-DFS over the interior where the 56 IB edges
+   are REAL edges: rim side vs the fixed border's inward color enters the
+   cost/break budget from cell 1; exact-tail scores rim sides too; 5/5
+   hints forced (all hint machinery exists: break-payable hints, gated
+   pre-filters, 1-break reservation per deep hint at cells 169/180, hint
+   pieces excluded from free cells). Anytime-minimize total breaks.
+   **Record condition: total = 480 − breaks ≥ 461 with 5/5 hints.**
+   The community strict-460s ARE this architecture without break-scheduling
+   or exact endgames — that machinery gap is the headroom.
+3. **Breadth campaign** (user-ratified exploration design): 30-300 s budgets
+   across (frame × seed × schedule × scan) portfolio — NO long single-tree
+   runs (+1 II per ~10× compute, measured). The frame is a first-class axis:
+   each perfect ring re-rolls the problem; sample diversely, measure
+   per-frame II+IB completion distributions, double down on fat tails.
+   Explore BETTER: limited-discrepancy-style prefix exploration instead of
+   left-biased DFS restarts; boustrophedon scan (border anchoring breaks the
+   rotation isomorphism that made column-major redundant on the free rim).
 
-## What is EXHAUSTED on this single machine (do NOT propose — all refuted/closed with cites)
-- Local search / ALNS / SA on known basins; chain-destroy; halo/cluster MaxSAT repair;
-  σ-cycle subset import; MRV ordering; basin-mixing; corner/board symmetry-breaking;
-  Transformer/RLHF generative; survey propagation; boundary-MPS.
-- Sub-480 unconditional bound: **doesn't exist** (480 is achievable; vol-208).
-- Strip/band/stratum decomposition with a separable assign-then-fill: no selective
-  assignment objective (vol-208 TRANSEPT refuted).
-- Scarcity value-ordering: weak / backtrack-neutral (3× confirmed).
-- Conditional marginals via χ-truncated MPS: truncation artifact (vol-210).
-- **Full-board Blackwood-grade brute backtracking: throughput-doomed on one machine.**
-  Blackwood reached 469 with ~295M nps × ~200 cores × ~30 days ≈ 10²¹ node-attempts;
-  this machine ≈ 10¹⁴ in 5 days — ~10⁶–10⁷× short. The "depth-80 wall" is a THROUGHPUT
-  wall, not structural. Do not start a multi-day full-16×16 Blackwood run expecting 469.
+## Implementation lessons (hard-won — do not re-learn)
 
-## The genuinely-open frontiers (pick ONE, go deep, take notes as you go)
+- Hints fix (piece, rot), NOT edge perfection — forced cells pay break
+  costs; strict-matching them walls the search at the deep hints.
+- Removing neighbor pre-filters naively → late-constraint-check blowup
+  (2.7 G nodes stuck at depth 15). Hard filters are sound only for hints
+  before the first break gate.
+- Reserve breaks for unplaced deep hints or ordinary breaks starve them
+  (every seed died at exactly cell 180).
+- Grey-grey adjacencies must never count as matches (corpus "448" artifact).
+- tail2 (2-row exact) as in-DFS trigger loses to 1-row under time pressure
+  (truncated B&B < break-DFS at row 12); its role is post-hoc polish — and
+  needs per-color indexing before it's affordable in-loop.
+- The attach MIP sometimes correctly prefers BB=57-58 + more IB; force
+  BB=60 only as a probe (`--require-bb60`).
+- Output discipline: timestamped dirs, per-seed JSON + .url.txt, global
+  `cloister_history.csv` — keep appending to it.
 
-1. **The standalone 14×14 interior (HIGHEST EV — the cleanest, smallest, never-solved
-   target).** Solve/optimize the 196-piece interior puzzle to maximize II=364
-   internal-internal matches, IGNORING the border (B-I edges lossy). 196 distinct
-   pieces / 22 colors is much smaller than 16×16 — exact/strong methods that are
-   throughput-doomed at 16×16 may be tractable here. Try: a focused MaxSAT/CP solve of
-   the standalone interior; the new MPS contractor on the 14×14 (entanglement is lower
-   at smaller width — conditional marginals MIGHT converge here where they didn't at
-   16×16); a 14×14-specific Blackwood (the brute math is ~10⁵× cheaper than 16×16).
-   A high standalone interior + a good border = a candidate >463/471. **Measure the
-   standalone-interior best first (corpus boards' interior-only scores), then attack the
-   gap to 364.**
+## Read first
 
-2. **The linear-placement (231/258) track — instrument it, then push it.** It's
-   under-measured. Build the `csp-depth-231` diagnostic: in the best pipelines, at what
-   scan-depth is 231 matched-adjacency reached, and what's the deepest consistently
-   reachable? A depth-class record may be closer than the matched-edges record and is a
-   legitimate, distinct record to claim. This is cheap to start and high-information.
+1. `vault/plans/CURRENT-VOL.md` (vol-212 binding items + exploration design)
+2. `vault/concepts/cloister-standalone-interior.md` (all vol-211 numbers)
+3. `vault/sessions/vol-211.md` (compact journal)
+4. `vault/E2_KNOWN_FACTS.md` §Records (corrected: community strict-460,
+   interior records)
+5. Memory: `project_e2_vol211_cloister_2026_06_10`
 
-3. **Exploit the area-law CONSTRUCTIVELY (the one place the entropy theory isn't fully
-   mined).** vol-209 proved distinctness is the hardness. The unbuilt corollary: a
-   constructor that resolves the GLOBAL piece→cell distinctness assignment as a true
-   optimization (min-cost flow / Lagrangian / B&P) on the SMALL interior (frontier 1's
-   subproblem), where it's tractable — vol-208 refuted it at full 16×16 scale (no
-   selective objective) but the 196-cell interior is a different regime. If the
-   interior assignment has structure the full board lacks, that's the lever.
+## Discipline (load-bearing)
 
-4. **Distributed-exact as a SPEC (if cloud is on the table).** The only proven ≥469
-   path. Build Blackwood + the missing #3 (McGavin/Joe in-place prune-back-to-T with
-   no-good learning) on the fast engine, designed to scale to 100+ cores. Even if not
-   run now, a correct, scalable implementation is the asset that converts cloud compute
-   into a record. (#3 is genuinely unbuilt on the fast engine — see
-   [[mcgavin-blackwood-gap-analysis]] / [[blackwood-algorithm]] / [[prune-restart]].)
+- Verify every record candidate: `verify_board` (256/256 unique, 5/5 hints,
+  0 border violations) + `interior_split` before any claim.
+- ≥8 seeds per config; report min/median/max. Single-seed ≠ result.
+- Timestamped output paths; never overwrite; append `cloister_history.csv`.
+- Throughput arithmetic BEFORE any multi-day commitment. The baseline to
+  beat: vol-122 A1's 176-cell plateau (plain CSP-fill from clean borders);
+  vol-211's break+endgame machinery is the reason to expect better — but
+  measure the bordered wall FIRST (cheap), then size the campaign.
+- One named invention per volume; vault notes AS YOU GO; honest negatives
+  are deliverables (vol-211's rim-compatibility result came from three
+  refuted retrofits).
 
-## Discipline (hard rules — these are load-bearing, learned the hard way)
-- **Verify every board** with `rescore_board` + `verify_board` (256/256 unique) before
-  any claim. Generate Bucas URLs via the verified encoder (`scripts/v206_mosaic/mosaic_io.py`,
-  validated vs McGavin). Persist every result timestamped (JSON + URL + history.csv);
-  NEVER overwrite.
-- **Believe a number only after a convergence/variance check.** χ-truncated MPS: sweep χ
-  and confirm convergence (vol-210 nearly reported a truncation artifact as a 40×
-  result). Single-seed point estimates are not results — report min/median/max across
-  ≥8 seeds or a sweep.
-- **"Compute exhausted" is a SOFT conclusion.** If you concluded "wall" from short runs,
-  re-examine. Conversely, **do the throughput arithmetic** before committing days to a
-  brute approach (the Blackwood lesson).
-- **Never call a non-bound a "bound"** (relaxed_bound is a greedy score, NOT a UB).
-- **Label negatives precisely** (scope-limited, not over-generalized). A refutation needs
-  ablation, not a single failed config.
-- **Watch for the comfort-lottery** (config-sweeping one operator / reseeding). When a
-  thread is exhausted, write the rigorous negative and pivot.
-- One named invention per volume; new vol number + CURRENT-VOL + session + concept page.
-  Take research notes in the vault AS YOU GO.
-
-Start by reading the entropy synthesis + the three-milestones concept, measure the
-current standalone-14×14-interior best (corpus interior-only scores) and the
-linear-placement depth, pick the highest-EV open frontier (frontier 1 — the interior —
-is the recommended default), name your invention, and build. Aim to beat ONE record by
-one unit, or to produce the rigorous structural result that makes the next attempt land.
-
----
+Start by reading the four vault files, do the refactor (item 1) with the
+regression numbers as the acceptance gate, measure the bordered-interior
+wall with the ported machinery (the cheap decisive measurement), then build
+CLOISTER-II and launch the breadth campaign. Aim: a verified 461-strict
+board, or the rigorous characterization of why the bordered wall resists —
+either is a real deliverable.
