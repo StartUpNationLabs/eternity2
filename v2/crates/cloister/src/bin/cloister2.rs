@@ -79,6 +79,7 @@ fn main() {
     let cairn = has("--cairn");
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
+        Some("spiral") => Scan::SpiralIn,
         Some(s) if s.starts_with("seam:") => {
             Scan::Seam(s[5..].parse().expect("seam row"))
         }

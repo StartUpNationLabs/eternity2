@@ -44,6 +44,13 @@ pub enum Scan {
     /// pool damage lands mid-board instead of in the starved last rows.
     /// Both deep hints (row 12) sit EARLY in the bottom front.
     Seam(usize),
+    /// vol-213 (user): outer ring of the interior spiraling INWARD — the
+    /// maximal border-first order. Rim-target cells (lowest domain) come
+    /// first; pool damage lands in the CENTER, where the final cells
+    /// have FOUR-sided closure (strongest exact-endgame setting) and the
+    /// center hint anchors the endgame as a forced cell. NOT the refuted
+    /// vol-14 spiral (that one went center-OUTWARD).
+    SpiralIn,
 }
 
 impl Scan {
@@ -74,6 +81,34 @@ impl Scan {
                 v.extend((0..n).map(|x| seam * n + x));
                 v
             }
+            Self::SpiralIn => {
+                let mut v = Vec::with_capacity(n * n);
+                let (mut top, mut bot, mut lef, mut rig) = (0usize, n - 1, 0usize, n - 1);
+                while top <= bot && lef <= rig {
+                    for x in lef..=rig {
+                        v.push(top * n + x);
+                    }
+                    for y in top + 1..=bot {
+                        v.push(y * n + rig);
+                    }
+                    if top < bot && lef < rig {
+                        for x in (lef..rig).rev() {
+                            v.push(bot * n + x);
+                        }
+                        for y in (top + 1..bot).rev() {
+                            v.push(y * n + lef);
+                        }
+                    }
+                    top += 1;
+                    lef += 1;
+                    if bot == 0 || rig == 0 {
+                        break;
+                    }
+                    bot -= 1;
+                    rig -= 1;
+                }
+                v
+            }
         }
     }
 
@@ -83,6 +118,7 @@ impl Scan {
             Self::RowMajor => "row",
             Self::Boustro => "boustro",
             Self::Seam(_) => "seam",
+            Self::SpiralIn => "spiral",
         }
     }
 }
@@ -1765,6 +1801,51 @@ mod tests {
         let r = dfs_run(&m, Some(&targets), None, &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
+    }
+
+    /// spiral-in: permutation, center-last, four-sided closure for the
+    /// innermost cells, and break-DFS + exact endgame accounting
+    #[test]
+    fn spiral_dfs_solves_and_accounts() {
+        let scan = Scan::SpiralIn.order(6);
+        let mut seen = vec![false; 36];
+        for &c in &scan {
+            assert!(!seen[c]);
+            seen[c] = true;
+        }
+        // the last 4 cells are the central 2x2
+        let center: Vec<usize> = vec![2 * 6 + 2, 2 * 6 + 3, 3 * 6 + 3, 3 * 6 + 2];
+        assert!(scan[32..].iter().all(|c| center.contains(c)), "{:?}", &scan[32..]);
+        let (m, _, targets) = InteriorModel::synthetic(6, 6, 7);
+        // innermost cells must carry >= 3 placed constraints
+        let plans = build_plans(&m, &scan, Some(&targets));
+        assert!(plans[34].k >= 3 && plans[35].k >= 3);
+        // perfect solve, bordered
+        let p = DfsParams {
+            seed: 4,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            scan: Scan::SpiralIn,
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), 0);
+        // break-DFS + center exact endgame
+        let (m2, _, tg2) = InteriorModel::synthetic(6, 4, 11);
+        let p2 = DfsParams {
+            seed: 5,
+            budget_ms: 3_000,
+            restart_ms: 1_000,
+            schedule: vec![16, 22, 27],
+            exact_tail_k: 6,
+            scan: Scan::SpiralIn,
+            ..DfsParams::default()
+        };
+        let r2 = dfs_run(&m2, Some(&tg2), None, &p2);
+        let (g2, b2) = r2.complete.expect("complete");
+        assert_eq!(m2.count_breaks(&g2, Some(&tg2)), b2);
     }
 
     #[test]

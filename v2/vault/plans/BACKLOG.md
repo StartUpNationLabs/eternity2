@@ -63,6 +63,17 @@ per run, and CAIRN already memoizes refuted frontiers — WEFT's marginal
 value is pruning FRESH doomed states cheaper than the DFS refutes them.
 Build only if choke maps still show row-12 thrash after LEDGER+CAIRN.
 
+### `verhaard-order-optimization` — status: `unbuilt` — since: vol-213
+Verhaard (shortestpath.se): "the optimal search order depends on the
+score you want to achieve — for 480 scan-row is quite optimal, but far
+from optimal for ≤468"; he COMPUTED per-target orders for his records.
+We pick orders by hand (row/seam/spiral). Optimize the order itself for
+461-strict given frame+hints: e.g. greedy/anneal over cell permutations
+scoring (wall depth × choke mass × endgame closure), or his published
+square-order as a starting point. Composes with choke auto-gates.
+Academic control: van Horn 2018 (scan-row > spiral/inverse-spiral/
+mirrored for raw backtracking).
+
 ### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213
 Both witnesses are 1-deviation-locked in [140:182) (900 s × 8 each,
 ~700k completions/seed, every seed converges back to the witness
