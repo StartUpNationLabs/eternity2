@@ -1,0 +1,62 @@
+---
+name: midden-damage-geometry
+description: "MIDDEN (vol-215): damage-geometry search — mismatches may only be PAID at cells in a mask S; search over S's SHAPE (rows/cols/dispersed/color-driven) and co-design with sacrifice pieces. Generalizes every known damage control (our depth gates, Verhaard slip arrays, Blackwood relaxations are all WHEN; MIDDEN is WHERE). No prior art found in vault, community, or academic sources."
+status: partial
+metadata:
+  type: concept
+---
+
+# MIDDEN — damage-geometry confinement and search
+
+**Origin**: vol-215 (2026-06-11), invented in response to the user's
+"invent new stuff never seen before" directive. **Files**:
+`crates/cloister/src/dfs.rs` (`break_cells` mask in both break-open
+levels), `endgame.rs` (`exact_tail` confinement: non-mask tail cells
+admit only 0-mismatch candidates; `TAIL_INFEASIBLE` sentinel guards
+the anytime recorder), `cloister2 --break-cells rows:|cols:|cells:`.
+
+## The observation behind it
+
+Every damage-control mechanism in E2 history is TEMPORAL: our gate
+schedules, Verhaard's slip arrays, Blackwood's scheduled relaxations
+all say *when* (at which search depth) a mismatch may be paid. Under
+row-major scans "late" ≈ "bottom rows" — which is why every high board
+ever made (both community strict-460s included: breaks at depths
+171-195 = rows 12-13 exactly) has its damage compressed in the last
+rows. That geometry is an ARTIFACT of the shared control variable, not
+a property of the puzzle. Nobody has searched over damage PLACEMENT.
+
+## Definition
+
+`break_cells`: a per-cell mask S. Break candidates (cost 1 and 2) are
+admissible only at cells ∈ S — at ANY scan depth (the schedule still
+caps the budget and may add temporal gates on top). The exact tail
+honors S exactly: tail cells ∉ S only accept 0-mismatch placements;
+if no S-respecting completion exists the tail returns
+`TAIL_INFEASIBLE` (never recorded). Forced cells (hints) are exempt.
+Semantics: S = cells allowed to PAY (mismatches attribute to the
+later-scan cell, matching `schedule-from-board`).
+
+## The search this enables (vol-215 program)
+
+1. **Witness-replication control**: S = rows 12-13 (28 cells), budget
+   20 — witness-proven to admit 460 on strict460a.
+2. **Geometry sweep**: columns, double-seam rows, dispersed lattices,
+   ring patterns, per-column staircases — same budget, same frame:
+   does ANY geometry beat the rows-12-13 default that temporal gating
+   forced on everyone?
+3. **Deficit-driven S**: place the midden where LEDGER says the rare
+   colors pile up (cells adjacent to surplus demands).
+4. **Sacrifice co-design**: choose the ~20 worst-tilability pieces AND
+   the burial cells that absorb their colors; the residual 176-piece
+   problem must complete perfectly (composes with QUOTA and LADDER).
+
+## Measurements
+
+(vol-215 open — first geometry sweep queued behind ladder run-2c.)
+
+## Linked
+
+[[replay-prior-over-cost]] (witness damage anatomy),
+[[ledger-color-deficit]], [[ladder-prefix-racing]],
+[[cloister-ii-border-anchored]], [[scan-order]]
