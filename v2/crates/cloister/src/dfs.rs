@@ -280,6 +280,61 @@ impl Ledger {
         }
         self.deficit = self.deficit + self.surplus(c) - before;
     }
+    /// from-scratch state for the current grid (validation + epoch init)
+    fn recompute(
+        model: &InteriorModel,
+        tables: &Tables,
+        targets: Option<&RimTargets>,
+        grid: &[(u16, u8)],
+    ) -> Self {
+        let mut led = Self {
+            f: vec![0; tables.ncolors],
+            s: vec![0; tables.ncolors],
+            deficit: 0,
+        };
+        let placed: Vec<bool> = grid.iter().map(|&(p, _)| p != u16::MAX).collect();
+        for pid in 0..model.np {
+            if !grid.iter().any(|&(p, _)| p == pid as u16) {
+                for &c in &tables.rot_edges[pid][0] {
+                    led.s[c as usize] += 1;
+                }
+            }
+        }
+        if let Some(tg) = targets {
+            for (cell, t) in tg.iter().enumerate() {
+                if !placed[cell] {
+                    for c in t.iter().flatten() {
+                        led.f[*c as usize] += 1;
+                    }
+                }
+            }
+        }
+        let n = model.n;
+        for cell in 0..model.cells {
+            if !placed[cell] {
+                continue;
+            }
+            let (p, r) = grid[cell];
+            let e = tables.rot_edges[p as usize][r as usize];
+            let (y, x) = (cell / n, cell % n);
+            let nb = [
+                (0usize, (y > 0).then(|| cell - n)),
+                (1, (x + 1 < n).then(|| cell + 1)),
+                (2, (y + 1 < n).then(|| cell + n)),
+                (3, (x > 0).then(|| cell - 1)),
+            ];
+            for (s, nc) in nb {
+                if let Some(ncell) = nc {
+                    if !placed[ncell] {
+                        led.f[e[s] as usize] += 1;
+                    }
+                }
+            }
+        }
+        led.deficit = (0..tables.ncolors).map(|c| led.surplus(c)).sum();
+        led
+    }
+
     /// piece (pid, rot) placed at `plan`'s cell: consumes one demand per
     /// constraint, exposes fwd-side demands, removes its 4 sides from
     /// supply. `ccol` = the constraint colors at this cell.
@@ -602,6 +657,7 @@ pub fn dfs_run(
     // scan's closure row gets two-sided N+S constraints this way).
 
     let trace = std::env::var_os("E2_TRACE").is_some();
+    let ledger_check = std::env::var_os("E2_LEDGER_CHECK").is_some();
     let mut rng = Rng::new(p.seed);
     let mut tables = Tables::build(model, p.hinted);
     let mut grid: Vec<(u16, u8)> = vec![(u16::MAX, 0); cells];
@@ -758,6 +814,12 @@ pub fn dfs_run(
                 backtrack_now = true;
             }
             nodes += 1;
+            if p.ledger && ledger_check && nodes & 0xFFF == 0 {
+                let want = Ledger::recompute(model, &tables, targets, &grid);
+                assert_eq!(led.f, want.f, "LEDGER f desync at node {nodes} d={d}");
+                assert_eq!(led.s, want.s, "LEDGER s desync at node {nodes} d={d}");
+                assert_eq!(led.deficit, want.deficit, "LEDGER deficit desync");
+            }
             if nodes & 0xFFFF == 0 {
                 if t0.elapsed().as_millis() as u64 >= p.budget_ms {
                     return DfsResult {
@@ -1598,7 +1660,7 @@ mod tests {
     /// budget-0 prune, so the bordered perfect solve must still succeed
     #[test]
     fn ledger_dfs_solves_and_accounts() {
-        let (m, _, targets) = InteriorModel::synthetic(6, 6, 17);
+        let (m, _, targets) = InteriorModel::synthetic(5, 6, 33);
         let p = DfsParams {
             seed: 3,
             budget_ms: 20_000,
