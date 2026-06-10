@@ -93,6 +93,10 @@ fn main() {
             v
         },
     );
+    // --schedule-from-board: gates at the scan depths where the given board
+    // pays ITS breaks (II + rim mismatches attributed to the later cell),
+    // computed after the model/frame load below
+    let schedule_board = get("--schedule-from-board");
 
     rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
@@ -149,6 +153,40 @@ fn main() {
             eprintln!("WARN: frame {} has BB={} (<60)", f.label, f.bb);
         }
     }
+
+    let schedule: Vec<usize> = schedule_board.map_or(schedule, |bp| {
+        let grid = load_interior_grid(&model, Path::new(&bp));
+        let so = scan.order(model.n);
+        let plans = eternity2_cloister::dfs::build_plans(
+            &model,
+            &so,
+            frames.first().map(|f| &f.targets),
+        );
+        let mut depths: Vec<usize> = Vec::new();
+        for (d, plan) in plans.iter().enumerate() {
+            let cell = plan.cell as usize;
+            let e = model.edges(grid[cell].0, grid[cell].1);
+            for i in 0..plan.k as usize {
+                let want = match plan.src[i] {
+                    eternity2_cloister::dfs::Src::Fixed(c) => c,
+                    eternity2_cloister::dfs::Src::Placed { cell: nc, their_side } => {
+                        model.edges(grid[nc as usize].0, grid[nc as usize].1)
+                            [their_side as usize]
+                    }
+                };
+                if e[plan.sides[i] as usize] != want {
+                    depths.push(d);
+                }
+            }
+        }
+        depths.sort_unstable();
+        eprintln!(
+            "schedule-from-board {bp}: {} breaks at depths {:?}",
+            depths.len(),
+            depths
+        );
+        depths
+    });
 
     let ts = cio::timestamp();
     let dir = PathBuf::from(format!("{out_root}/cloister2_{mode}_{ts}"));
