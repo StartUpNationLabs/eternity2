@@ -146,17 +146,21 @@ Each invention has:
 
 **Effort.** 1 day.
 
-### B2. Lifted-LP B&P&C — status: `refuted-design` / `unbuilt-implementation`
+### B2. Lifted-LP B&P&C — status: `wont-do` (vol-208 bound frontier CLOSED)
 
 **Idea.** Branch-and-price-and-cut with Lagrangian piece-uniqueness penalty.
 
 **Done.** Vol-47/52/53 partial designs; McCormick formulation refuted. Full B&P&C unbuilt.
 
-**Next steps.** Minimal B&P&C on 6×6/8×8 → measure LP-INT gap reduction → scale.
-
-**EV.** Medium. Tighter UB doesn't directly find records.
-
-**Effort.** 3-4 weeks.
+**vol-208 — the whole sub-480 bound frontier is CLOSED.** Two reasons
+([[MATH_NOTES_2026-06-10_strip_cut_bound]]): (1) window-integer cuts are vacuous
+(every interior window ≤16 cells is internally PERFECT from free piece choice ⇒
+opt_W = perfect ⇒ no cut) or unsound (boundary-conditioned). (2) DECISIVE: a 480
+solution almost certainly EXISTS (E2 designed solvable) ⇒ the TRUE max IS 480 ⇒
+**no sound sub-480 bound can exist**. Every correct relaxation returns 480 because
+480 is the answer. "Prove 480 impossible" chases a non-existent object. Published
+E2 MILP/clique work (arXiv:1709.00252) confirms no sub-480 bound exists (intractable
+>8×8). **A tighter bound cannot help find records.** Bound direction = `wont-do`.
 
 ### B3. Interior LP-UB per border profile — status: `unbuilt`
 
@@ -362,12 +366,19 @@ Concept: [[inv-b4-hall-color-pair-refuted]]. Script: `scripts/vol122_inv_b4_colo
 
 The veteran researcher's three intermediate targets:
 1. **471/480 matched-edges** (community 469 + 2; minimal record-break)
-2. **231/258 linear placement** (CSP-depth metric, untranslated)
-3. **Complete internal 14×14** (interior II=364, current best McGavin=354 — 10 mismatches to fix)
+2. **231/258 linear placement** — **DECODED + EXCEEDED (vol-211)**: lives on
+   the border-first scan ladder (231@d143, 258@d156); our bf_bw boards are
+   258/258 with perfect prefixes to depth 216-221. [[linear-placement-metric]]
+3. **Complete internal 14×14** — **ATTACKED (vol-211 CLOISTER)**: standalone
+   records II=356 unhinted / 351 hinted via break-DFS + exact endgames
+   (best-ever; prior implicit best 358 in Blackwood+Bucas 469, NOT 354).
+   ★ Finding: rim-compatibility worth ~14 attachable IB is an interior
+   property, uncollectable post-hoc ⇒ **CLOISTER-II border-anchored
+   break-DFS is the vol-212 binding item** (subsumes A1+B3 in the correct
+   direction). [[cloister-standalone-interior]]
 
-#3 is the cleanest decomposition and the same target as A1+B3 above (border + interior decomposition).
-
-**Concept**: [[three-milestones-from-veteran]], [[interior-14x14-parity-feasible]].
+**Concept**: [[three-milestones-from-veteran]], [[interior-14x14-parity-feasible]],
+[[cloister-standalone-interior]], [[linear-placement-metric]].
 
 ---
 
@@ -1006,23 +1017,28 @@ If any week's invention finds a ≥460 board: STOP scheduled plan, focus deep on
 
 ## N-series — vol-204/205 scarcity-derived (added 2026-06-09)
 
-### N1. Constructive Lagrangian assignment — status: `unbuilt` (do-later)
+### N1. Constructive Lagrangian assignment — status: `partial-refuted` (vol-208 TRANSEPT)
 Reframe vol-22 bound-ascent CONSTRUCTIVELY: solve the global piece→cell assignment
 respecting (N,W)-pair scarcity via Lagrangian relaxation of piece-uniqueness, round
-into a high-quality seed (scarcity-aware rounding). Attacks piece-theft as the
-global optimization it is (vol-204 finding: theft is a global assignment constraint).
-vol-22 did this for a BOUND (collapsed on integer apply); never as a constructive
-seed generator with scarcity-aware rounding. EV medium-high. Effort ~1 week.
-Linked: [[watershed-frontier-flow]], [[vol-22-bound-ascent]] (if exists).
+into a high-quality seed. **vol-208 TRANSEPT tested the stratum-granular version**
+([[transept-strip-assignment]]) and found NO selective assignment objective exists:
+corpus prior vacuous (pieces float, 0/256 row-pinned), color-balance vacuous (100%
+of random partitions satisfy the per-stratum matching cap). The separable
+assign-then-fill is REFUTED — with no guiding objective the assignment degenerates
+to greedy = refuted J1. A full per-cell (not per-stratum) Lagrangian *might* differ
+but faces the same vacuity (the binding constraint is global edge-consistency at
+92-vs-31 gap, not the scarce pieces). Lower priority now. The constructive payoff
+that DID work (modestly): [[lodestone-demand-prior]] (+2 from-scratch, variance↓).
 
-### N2. Window-MaxSAT constructive engine — status: `unbuilt` (do-later)
-Use Anjou's tractable sequential-AMO window-MaxSAT (uwrmaxsat) FORWARD as a
-constructive engine: build the board window-by-window, each window solved to
-OPTIMALITY with scarcity-pinned pieces RESERVED (not spent). Combines Anjou's
-proven tractable-window result (16×10 strips OPTIMUM in seconds) with our scarcity
-skeleton ([[watershed-frontier-flow]]). The reservation prevents the pool-depletion
-that broke Anjou's sequential scaffolds (em~308). EV medium-high. Effort ~1 week.
-Linked: `reference_anjou_experiments_2026_06_09` (memory), [[watershed-frontier-flow]].
+### N2. Window-MaxSAT constructive engine — status: `partial-refuted` (vol-208 TRANSEPT)
+Use sequential-AMO window-MaxSAT FORWARD as a constructive engine, window-by-window,
+scarcity-pieces RESERVED. **vol-208 built the strip-MaxSAT primitive + sequential
+gate** ([[transept-strip-assignment]] Q3): greedy strip-fill fills rows 0–9
+PERFECTLY (RC2-exact per stratum) then collapses 10–15 as the pool depletes —
+reproducing Anjou's pool-depletion + the refuted-J1 band wall EXACTLY. Reservation
+(MOSAIC) and assignment (TRANSEPT) both fail to fix it (no selective objective).
+Window-MaxSAT IS tractable (≤16-cell windows internally PERFECT, confirmed) but
+composition hits the global-assignment wall. REFUTED as a from-scratch record path.
 
 ### N3. Scarcity-graph forced-chain closure (LATTICE) — status: `IN PROGRESS vol-205`
 The CHOSEN direction. Compute unconditional forced adjacencies from color

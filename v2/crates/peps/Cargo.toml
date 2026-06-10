@@ -38,3 +38,11 @@ path = "src/bin/peps_debug.rs"
 [[bin]]
 name = "peps_bench"
 path = "src/bin/peps_bench.rs"
+
+[[bin]]
+name = "isentrope_peps"
+path = "src/bin/isentrope_peps.rs"
+
+[[bin]]
+name = "isentrope_marginals"
+path = "src/bin/isentrope_marginals.rs"

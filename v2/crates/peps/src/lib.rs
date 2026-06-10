@@ -38,6 +38,7 @@ use std::sync::Arc;
 
 pub mod tensor;
 pub mod mps;
+pub mod mps_proper;
 pub mod lagrangian;
 
 /// Per-piece per-rotation signature: (N, E, S, W) colors.

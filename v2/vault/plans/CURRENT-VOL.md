@@ -1,45 +1,49 @@
-# Current Volume — Vol-204 — WATERSHED: Frontier Color-Flow Streamliner
+# Current Volume — Vol-212 — CLOISTER-II: border-anchored break-DFS
 
-**Theme**: A GLOBAL, incremental feasibility check that prunes a partial board the
-moment its remaining piece supply provably cannot match the exposed frontier's
-color demand (Hall / max-flow on the frontier). Attacks WHY deep edge-strict DFS
-paths die (~depth 150-210) — the real bottleneck, since canonical DFS branching is
-already tiny (~2-3 survivors/cell, measured vol-203).
+**Status**: drafted at vol-211 close (2026-06-10). Strict-canonical (5/5
+hints) is the primary track per user directive; bar = **461** (community has
+verified 5/5 460s; ours 458).
 
-## Naming
-**WATERSHED** — the frontier is a watershed line; the color-flow check decides
-whether remaining-piece "supply" can flow downhill to meet the frontier's "demand".
+## Why this (the vol-211 result that forces it)
+Vol-211 proved: (a) the standalone interior is highly solvable with break-DFS
++ exact endgames (II=356 unhinted / 351 hinted in minutes — both best-ever);
+(b) **rim-compatibility is an interior property worth ~14 attachable IB**
+(control: Bucas-469's interior re-attaches to exactly 469; ours cap at IB
+34-39) and it is NOT collectable post-hoc (λ-proxy, tie-breaks, alternation
+all ≤ +1). ⇒ The border must constrain the interior DURING construction.
+The community strict-460s came from border-first WITHOUT our endgame
+machinery — that headroom is the target.
 
-## Why this (vol-203 evidence → user-chosen direction)
-Vol-203 established three negatives: PARQUET 2×2 LP capped at 480; F0 counting
-vacuous; 2×2 patch-consistency prunes only ~6%. Canonical row-major DFS is
-"deep & narrow": ~2-3 edge-strict survivors/cell, but paths die deep. So the lever
-is NOT local branching reduction — it's detecting global infeasibility EARLIER.
-The engine's gacolor/multiset propagators do partial color accounting but
-apparently miss the binding frontier constraint (DFS still plateaus ~150-210).
+## Binding items (≤3)
 
-## Binding items (3 max)
-1. **Diagnose the death mechanism**: instrument edge-strict DFS; at each
-   backtrack-to-dead-end record depth + WHY (no candidate at cell c). Test
-   whether a color-flow / Hall check on the frontier would have detected the
-   eventual dead-end EARLIER (how many levels of lookahead it saves). If deaths
-   are supply-exhaustion → WATERSHED has leverage; if not → report + pivot.
-2. **Build the incremental frontier color-flow feasibility check** (sound
-   necessary condition for completion), measure pruning + max-depth gain vs
-   edge-strict baseline at small + canonical scale.
-3. **If it deepens DFS materially**, wire into a MaxScore run; measure score
-   reached. Any ≥460 from-scratch is notable; any new-cp ≥460 a record.
-
-## Days budget
-3-5 days.
+1. **Refactor first**: `crates/cloister/` clean crate (interior model / DFS /
+   endgames / SA / border-MIP as modules; unit tests on 4×4-6×6 generated
+   puzzles + the validated vol-211 numbers as regression). Perf pass: bitset
+   candidate intersection in the DFS hot loop; per-color indexing in
+   tail2's column_pairs. Port, don't re-derive. (User asked for this; do it
+   BEFORE the campaign so the long compute runs through the fast version.)
+2. **CLOISTER-II**: border-anchored break-DFS — fix a perfect frame
+   (BB=60; from border-MIP or vol-76 frames), interior scan where IB edges
+   are REAL edges (rim side vs fixed border inward color enters the
+   cost/break budget), exact-tail scoring rim sides too, 5/5 hints forced.
+   Sweep frames × seeds × schedules; anytime-minimize total breaks.
+   **Record check: total = 480 − breaks ≥ 461 with 5/5 ⇒ strict record.**
+   Verify any candidate with verify_board + interior_split before claiming.
+3. **Campaign + variance discipline**: ≥8 seeds per config, report
+   min/median/max; sweep frame choice (it is a first-class axis); persist
+   everything (history.csv pattern); throughput arithmetic BEFORE multi-day
+   commitments (CLAUDE.md rule — the 176-plateau of vol-122 A1 is the
+   baseline this must beat, and vol-211's machinery is the reason to expect
+   it can).
 
 ## Audit-at-open compliance
-Supersedes vol-203 PARQUET (closed: bound direction capped). WATERSHED is the
-search-side complement, chosen by user from the vol-203 decision fork.
+- INVENTIONS_BACKLOG §I milestone-3: status flips to `built-standalone`
+  (vol-211); milestone-2 metric: `built+exceeded`; A1/B3 fold into
+  CLOISTER-II (same decomposition, correct direction).
+- The vol-210 "decision point" (single-machine exhausted) is superseded in
+  scope: vol-211 found a genuinely new, productive machine-local frontier.
 
 ## Linked
-- [[watershed-frontier-flow]] (TBD)
-- [[streamlining-for-e2]] (parent technique)
-- [[parquet-overlapping-patch]] (vol-203 bound result)
-- [[depth-40-wall-math]] (frontier supply-exhaustion conjecture)
-- [[lague-rubik-transfer-ideas]] (admissible-bound philosophy)
+- [[cloister-standalone-interior]] (vol-211 main concept + the rim result)
+- [[linear-placement-metric]], [[blackwood-algorithm]], [[lp-ub-478-basins]]
+- session: [[vol-211]]

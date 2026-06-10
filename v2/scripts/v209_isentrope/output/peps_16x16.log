@@ -1,0 +1,7 @@
+[init] size=16 K=23 n_pieces=256
+[init] built 256 cell tensors
+chi,logW_e,logW_10,density_per_cell,secs
+
+thread 'main' (5598706) panicked at /Users/raphaelanjou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_constructors.rs:329:20:
+ndarray: Shape too large, product of non-zero axis lengths overflows isize
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

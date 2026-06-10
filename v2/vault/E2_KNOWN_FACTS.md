@@ -1,4 +1,4 @@
-# Eternity II (canonical 5-clue) — Known Facts (as of vol-188, 2026-05-20)
+# Eternity II (canonical 5-clue) — Known Facts (as of vol-211, 2026-06-10)
 
 ## Records
 
@@ -7,10 +7,20 @@
 - **469/480**: community ceiling, Peter McGavin 2020-09-09 via
   Joshua Blackwood's solver. Verified canonical. Stored at
   `output/vol-65/mcgavin_469.json`.
+- **460/480 [strict-canonical 5/5 hints], COMMUNITY**: groups.io thread
+  "Highest points (of 480) with using all 5 (!) hints?" (2023-03) —
+  McGavin 460 + "P=NP" 460, both verified LEGAL_COMPLETE 5/5
+  (vol-211 decode: `output/vol-211/corpus_decoded_*/groups_2193*_460.json`,
+  II=350 + IB=50 + BB=60). **Strict-track record target: 461.**
 - **463/480**: **our matched-edges record** (vol-129 PALIMPSEST,
   cp=(2,3,0,1), 15-basin attack on (2,3,0,1)@462 base).
-- **459/480** [strict-canonical 5/5 hints]: our strict-canonical
-  record (vol-122 DB-find; also vol-122 algorithm-produced 458 strict).
+- **458/480** [strict-canonical 5/5 hints]: our strict-canonical
+  record (vol-122; vol-199 second basin). [The old "459 strict" was
+  INVALIDATED by the V199 dup-piece audit.]
+- **Standalone 14×14 interior (II/364)**: best in any known board:
+  **358** (Blackwood+Bucas 469_c, 2020-11). Hinted-5/5 boards: 350.
+  Our CLOISTER vol-211: 356 unhinted / 350 hinted (see
+  [[cloister-standalone-interior]]).
 
 **Unique 469 boards on canonical E2 in our corpus**: 2.
 1. McGavin's original.

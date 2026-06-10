@@ -1,0 +1,14 @@
+[init] interior placements: 784
+variant,n,W,S_log10,S_over_n2,exact,nodes,secs
+A,1,784,2.894316,2.894316,true,,0.00
+[A] n=1: W=784 S=2.8943 S/n2=2.89432 (0.0s)
+B,1,784,2.894316,2.894316,true,785,0.00
+[B] n=1: W=784 S=2.8943 S/n2=2.89432 [exact] nodes=785 (0.0s)
+[SAMPLE] scarcity ratio rho(n)=W_distinct/W_reusable (n=300000 samples each):
+# sampling: variant=R, W column = W_reusable, S_log10 = rho, S_over_n2 = 95%CI
+R,2,4550669,0.891493,0.001113,,300000,3.21
+[R] n=2: W_reusable=4.551e6 rho=0.8915 ±0.0011 S_distinct≈6.608 (S/n²=1.6520) ok=300000 (3.2s)
+R,3,195941569440,0.646050,0.001711,,300000,4.50
+[R] n=3: W_reusable=1.959e11 rho=0.6461 ±0.0017 S_distinct≈11.102 (S/n²=1.2336) ok=300000 (4.5s)
+R,4,62607390876342024,0.325140,0.001676,,300000,11.82
+[R] n=4: W_reusable=6.261e16 rho=0.3251 ±0.0017 S_distinct≈16.309 (S/n²=1.0193) ok=300000 (11.8s)

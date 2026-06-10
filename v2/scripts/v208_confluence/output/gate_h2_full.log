@@ -1,0 +1,8 @@
+=== sequential strip-fill H=2 card=seq ===
+stratum 0 rows 0..1: internal 46/46, seam 0/0, pool->224, 9.3s
+stratum 1 rows 2..3: internal 46/46, seam 16/16, pool->192, 32.1s
+stratum 2 rows 4..5: internal 46/46, seam 16/16, pool->160, 18.2s
+stratum 3 rows 6..7: internal 46/46, seam 16/16, pool->128, 10.3s
+stratum 4 rows 8..9: internal 46/46, seam 16/16, pool->96, 6.7s
+stratum 5 rows 10..11: internal 45/46, seam 14/16, pool->64, 8.9s
+stratum 6 rows 12..13: internal 42/46, seam 15/16, pool->32, 97.0s
