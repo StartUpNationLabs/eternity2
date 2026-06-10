@@ -11,10 +11,11 @@ N=${1:-304}
 ROOT=output/vol-214/ladder2_$(date -u +%Y%m%dT%H%M%S)
 mkdir -p $ROOT
 
-gates_for() {
+gates_for() {  # break count scales with uncovered span (~3 cells/break)
   python3 -c "
 k=$1
-print(','.join(str(int(k+2+i*(182-k-2)/13)) for i in range(14)))"
+nb=min(22, max(14, round((182-k)/3)))
+print(','.join(str(int(k+2+i*(182-k-2)/(nb-1))) for i in range(nb)))"
 }
 
 echo "=== rung 1: $N x 5 s probes ==="
@@ -51,8 +52,9 @@ for line in open(root + '/rung2.txt'):
         rows = list(csv.DictReader(open(d + '/summary.tsv'), delimiter='\t'))
         tot = max([tot] + [int(r['total']) for r in rows if r['breaks'] != '-'])
     best.append((tot, pf, k))
-best.sort(reverse=True)
-for t, pf, k in best[:3]:
+best.sort(key=lambda x: -x[0])
+picked = [b for b in best if b[0] > 0][:3] or best[:3]
+for t, pf, k in picked:
     print(pf, k, t)
 EOF
 while read PF K T; do
