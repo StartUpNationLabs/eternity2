@@ -30,6 +30,13 @@ end (starved).
    — strictly tighter B&B). Gates re-derived for two-front geometry
    (each front has its own wall; measure first: two-front bordered wall,
    8 seeds × 10 s — the cheap decisive number again).
+   **Built at vol-212 close (same-day head start)**: `Scan::Seam(s)` +
+   `pair_sw` bottom-front tables; `exact_tail` proved scan-generic (seam
+   cells get two-sided N+S constraints through plans — no new endgame
+   code needed); tests green. ★ Hint geometry under seam:7 — hint 104
+   (row 7) falls INSIDE the exact closure row; deep hints (row 12) land
+   at scan 113/124, early-bottom-front (the row-major death-at-180
+   chokepoint dissolves). Measurement queued behind the 2 h slope run.
 2. **Assignment-guided value priors**: per-(cell, piece, rot) prior from a
    relaxation (Hungarian / LP on the 196×196 assignment with edge terms),
    used to order candidate lists instead of uniform shuffles (vol-155

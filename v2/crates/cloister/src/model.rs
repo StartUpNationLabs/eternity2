@@ -298,6 +298,9 @@ pub struct Tables {
     pub pair_nw: Vec<Vec<u16>>,
     /// pair_ne[cN * ncolors + cE]: candidates with e[0]==cN && e[1]==cE
     pub pair_ne: Vec<Vec<u16>>,
+    /// pair_sw[cS * ncolors + cW]: candidates with e[2]==cS && e[3]==cW
+    /// (the bottom-up front of the vol-213 seam scan)
+    pub pair_sw: Vec<Vec<u16>>,
     /// single[side][color]: candidates with e[side]==color
     pub single: [Vec<Vec<u16>>; 4],
     /// all (pid, rot) of non-hint pieces
@@ -319,6 +322,7 @@ impl Tables {
         let rot_edges = model.rot_edges.clone();
         let mut pair_nw = vec![Vec::new(); nc * nc];
         let mut pair_ne = vec![Vec::new(); nc * nc];
+        let mut pair_sw = vec![Vec::new(); nc * nc];
         let mut single: [Vec<Vec<u16>>; 4] =
             core::array::from_fn(|_| vec![Vec::new(); nc]);
         let mut free = Vec::with_capacity(np * 4);
@@ -335,18 +339,24 @@ impl Tables {
                 let c = pack(pid as u16, rot);
                 pair_nw[e[0] as usize * nc + e[3] as usize].push(c);
                 pair_ne[e[0] as usize * nc + e[1] as usize].push(c);
+                pair_sw[e[2] as usize * nc + e[3] as usize].push(c);
                 for s in 0..4 {
                     single[s][e[s] as usize].push(c);
                 }
                 free.push(c);
             }
         }
-        Self { rot_edges, np, ncolors: nc, pair_nw, pair_ne, single, free, rotmask }
+        Self { rot_edges, np, ncolors: nc, pair_nw, pair_ne, pair_sw, single, free, rotmask }
     }
 
     /// fresh tie-breaking for a new DFS epoch
     pub fn shuffle_lists(&mut self, rng: &mut Rng) {
-        for v in self.pair_nw.iter_mut().chain(self.pair_ne.iter_mut()) {
+        for v in self
+            .pair_nw
+            .iter_mut()
+            .chain(self.pair_ne.iter_mut())
+            .chain(self.pair_sw.iter_mut())
+        {
             rng.shuffle(v);
         }
         for side in &mut self.single {

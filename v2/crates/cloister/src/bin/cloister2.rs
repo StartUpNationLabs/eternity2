@@ -66,6 +66,9 @@ fn main() {
     let max_disc: Option<u32> = get("--max-disc").and_then(|s| s.parse().ok());
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
+        Some(s) if s.starts_with("seam:") => {
+            Scan::Seam(s[5..].parse().expect("seam row"))
+        }
         _ => Scan::RowMajor,
     };
     let dfs_ms: u64 = get("--dfs-ms")

@@ -37,6 +37,13 @@ use crate::rng::Rng;
 pub enum Scan {
     RowMajor,
     Boustro,
+    /// CLOISTER-III (vol-213): two fronts — rows 0..seam top-down, then
+    /// rows n-1..seam+1 bottom-up — closing at `seam` last. The seam row's
+    /// cells have BOTH N and S placed, so the exact endgame there is
+    /// two-sided (strictly tighter than a bottom tail), and the leftover
+    /// pool damage lands mid-board instead of in the starved last rows.
+    /// Both deep hints (row 12) sit EARLY in the bottom front.
+    Seam(usize),
 }
 
 impl Scan {
@@ -55,6 +62,18 @@ impl Scan {
                 }
                 v
             }
+            Self::Seam(seam) => {
+                assert!(seam > 0 && seam < n - 1, "seam must be an inner row");
+                let mut v = Vec::with_capacity(n * n);
+                for y in 0..seam {
+                    v.extend((0..n).map(|x| y * n + x));
+                }
+                for y in (seam + 1..n).rev() {
+                    v.extend((0..n).map(|x| y * n + x));
+                }
+                v.extend((0..n).map(|x| seam * n + x));
+                v
+            }
         }
     }
 
@@ -63,6 +82,7 @@ impl Scan {
         match self {
             Self::RowMajor => "row",
             Self::Boustro => "boustro",
+            Self::Seam(_) => "seam",
         }
     }
 }
@@ -82,6 +102,7 @@ enum Tab {
     /// pair_nw keyed by (ccol[n], ccol[w])
     PairNW { n: u8, w: u8 },
     PairNE { n: u8, e: u8 },
+    PairSW { s: u8, w: u8 },
     Single { side: u8, i: u8 },
     Free,
 }
@@ -113,13 +134,14 @@ fn make_seg(sides: &[u8; 4], k: usize, exclude: Option<usize>) -> Seg {
     let active: Vec<usize> = (0..k).filter(|&i| Some(i) != exclude).collect();
     let find = |side: u8| active.iter().copied().find(|&i| sides[i] == side);
     let (i_n, i_e, i_s, i_w) = (find(0), find(1), find(2), find(3));
-    let (tab, covered): (Tab, Vec<usize>) = match (i_n, i_w, i_e) {
-        (Some(n), Some(w), _) => (Tab::PairNW { n: n as u8, w: w as u8 }, vec![n, w]),
-        (Some(n), None, Some(e)) => (Tab::PairNE { n: n as u8, e: e as u8 }, vec![n, e]),
-        (Some(n), None, None) => (Tab::Single { side: 0, i: n as u8 }, vec![n]),
-        (None, Some(w), _) => (Tab::Single { side: 3, i: w as u8 }, vec![w]),
-        (None, None, Some(e)) => (Tab::Single { side: 1, i: e as u8 }, vec![e]),
-        (None, None, None) => i_s.map_or((Tab::Free, vec![]), |s| {
+    let (tab, covered): (Tab, Vec<usize>) = match (i_n, i_w, i_e, i_s) {
+        (Some(n), Some(w), _, _) => (Tab::PairNW { n: n as u8, w: w as u8 }, vec![n, w]),
+        (Some(n), None, Some(e), _) => (Tab::PairNE { n: n as u8, e: e as u8 }, vec![n, e]),
+        (None, Some(w), _, Some(s)) => (Tab::PairSW { s: s as u8, w: w as u8 }, vec![s, w]),
+        (Some(n), None, None, _) => (Tab::Single { side: 0, i: n as u8 }, vec![n]),
+        (None, Some(w), _, None) => (Tab::Single { side: 3, i: w as u8 }, vec![w]),
+        (None, None, Some(e), _) => (Tab::Single { side: 1, i: e as u8 }, vec![e]),
+        (None, None, None, _) => i_s.map_or((Tab::Free, vec![]), |s| {
             (Tab::Single { side: 2, i: s as u8 }, vec![s])
         }),
     };
@@ -311,13 +333,20 @@ pub fn dfs_run(
     sched_at.push(usize::MAX);
 
     let k_exact = if p.tail2 { 2 * n } else { p.exact_tail_k.min(n) };
-    if k_exact > 0 {
-        let lo = if p.tail2 { (n - 2) * n } else { cells - k_exact };
+    if p.tail2 {
+        // the column-pair endgame is hard-wired to the last two rows
         assert!(
-            scan[cells - k_exact..].iter().all(|&c| c >= lo),
-            "scan tail must cover the last row(s)"
+            !matches!(p.scan, Scan::Seam(_)),
+            "tail2 requires a row-sequential scan"
+        );
+        assert!(
+            scan[cells - 2 * n..].iter().all(|&c| c >= (n - 2) * n),
+            "scan tail must cover the last two rows"
         );
     }
+    // exact_tail itself is scan-generic: tail-cell constraints come from
+    // plans, which only ever reference earlier scan positions (the seam
+    // scan's closure row gets two-sided N+S constraints this way).
 
     let mut rng = Rng::new(p.seed);
     let mut tables = Tables::build(model, p.hinted);
@@ -522,6 +551,11 @@ pub fn dfs_run(
                                         * tables.ncolors
                                         + ccol[ei as usize] as usize]
                                 }
+                                Tab::PairSW { s: si, w: wi } => {
+                                    &tables.pair_sw[ccol[si as usize] as usize
+                                        * tables.ncolors
+                                        + ccol[wi as usize] as usize]
+                                }
                                 Tab::Single { side, i } => {
                                     &tables.single[side as usize][ccol[i as usize] as usize]
                                 }
@@ -691,6 +725,10 @@ mod tests {
                     &tables.pair_ne
                         [ccol[n as usize] as usize * tables.ncolors + ccol[e as usize] as usize]
                 }
+                Tab::PairSW { s, w } => {
+                    &tables.pair_sw
+                        [ccol[s as usize] as usize * tables.ncolors + ccol[w as usize] as usize]
+                }
                 Tab::Single { side, i } => {
                     &tables.single[side as usize][ccol[i as usize] as usize]
                 }
@@ -843,6 +881,59 @@ mod tests {
         for &(cell, pid, rot) in &m.hints {
             assert_eq!(grid[cell], (pid as u16, rot), "hint at {cell}");
         }
+    }
+
+    #[test]
+    fn seam_scan_orders_and_plans_are_sound() {
+        let (m, _, targets) = InteriorModel::synthetic(6, 5, 8);
+        let scan = Scan::Seam(3).order(6);
+        // permutation; seam row last
+        let mut seen = vec![false; 36];
+        for &c in &scan {
+            assert!(!seen[c]);
+            seen[c] = true;
+        }
+        assert!(scan[30..].iter().all(|&c| (18..24).contains(&c)));
+        // seam cells must carry BOTH N and S placed constraints
+        let plans = build_plans(&m, &scan, Some(&targets));
+        for d in 30..36 {
+            let plan = &plans[d];
+            let has = |side: u8| (0..plan.k as usize).any(|i| plan.sides[i] == side);
+            assert!(has(0) && has(2), "seam cell {d} needs N+S");
+        }
+    }
+
+    #[test]
+    fn seam_dfs_solves_and_accounts() {
+        for seed in [3u64, 7] {
+            let (m, _, targets) = InteriorModel::synthetic(6, 6, seed);
+            // perfect solve, bordered, seam scan
+            let p = DfsParams {
+                seed,
+                budget_ms: 20_000,
+                restart_ms: 2_000,
+                scan: Scan::Seam(3),
+                ..DfsParams::default()
+            };
+            let r = dfs_run(&m, Some(&targets), &p);
+            let (grid, breaks) = r.complete.expect("complete");
+            assert_eq!(breaks, 0);
+            assert_eq!(m.count_breaks(&grid, Some(&targets)), 0);
+        }
+        // break-DFS + seam-row exact endgame accounting
+        let (m, _, targets) = InteriorModel::synthetic(6, 4, 11);
+        let p = DfsParams {
+            seed: 5,
+            budget_ms: 3_000,
+            restart_ms: 1_000,
+            schedule: vec![16, 22, 27],
+            exact_tail_k: 6,
+            scan: Scan::Seam(3),
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
     }
 
     #[test]
