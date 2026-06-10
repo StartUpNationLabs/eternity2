@@ -580,6 +580,17 @@ pub struct DfsParams {
     /// when max_disc or replay_perturb is set (explored set becomes
     /// order-dependent, inserts would be unsound).
     pub cairn: bool,
+    /// LADDER (vol-214, Verhaard-style progress abort): restart the
+    /// epoch early if it hasn't reached depth D within N nodes —
+    /// reallocates time from doomed starts to promising ones (his
+    /// claim: ~5× over fixed-interval restarts).
+    pub abort_below: Option<(usize, u64)>,
+    /// LADDER: pin the first cells of the scan to a banked prefix
+    /// (cell, local pid, rot). Forced like hints but WITHOUT break
+    /// reservation or req pre-filters (a self-consistent perfect prefix
+    /// costs 0). Backtracking through the prefix cascades to an epoch
+    /// restart via the existing forced-cell unwind.
+    pub forced_prefix: Vec<(usize, u16, u8)>,
 }
 
 impl Default for DfsParams {
@@ -601,6 +612,8 @@ impl Default for DfsParams {
             replay_perturb: None,
             ledger: false,
             cairn: false,
+            abort_below: None,
+            forced_prefix: Vec::new(),
         }
     }
 }
@@ -644,6 +657,11 @@ pub fn dfs_run(
     // must present the hint's color (sound: those mismatches are unpayable)
     let mut req: Vec<[Option<u8>; 4]> = vec![[None; 4]; cells];
     let mut forced_by_cell: Vec<Option<(u16, u8)>> = vec![None; cells];
+    // LADDER prefix pins: forced WITHOUT reservation/req (cost-0 by
+    // construction for self-consistent perfect prefixes)
+    for &(cell, pid, rot) in &p.forced_prefix {
+        forced_by_cell[cell] = Some((pid, rot));
+    }
     let mut hint_scanpos: Vec<usize> = Vec::new();
     if p.hinted {
         for &(cell, pid, rot) in &model.hints {
@@ -763,6 +781,7 @@ pub fn dfs_run(
             ca.h = ca.h0;
         }
         tt_pruned.iter_mut().for_each(|t| *t = false);
+        let epoch_nodes0 = nodes;
         let epoch_t0 = Instant::now();
 
         let mut d = 0usize;
@@ -873,6 +892,12 @@ pub fn dfs_run(
                 if epoch_t0.elapsed().as_millis() as u64 >= p.restart_ms {
                     death_hist[epoch_max] += 1;
                     continue 'epoch;
+                }
+                if let Some((min_d, by_nodes)) = p.abort_below {
+                    if nodes - epoch_nodes0 > by_nodes && epoch_max < min_d {
+                        death_hist[epoch_max] += 1;
+                        continue 'epoch;
+                    }
                 }
             }
 
@@ -1782,6 +1807,42 @@ mod tests {
         if let Some((g2, b2)) = r2.complete {
             assert_eq!(m2.count_breaks(&g2, Some(&tg2)), b2);
         }
+    }
+
+    /// LADDER prefix pinning: the first K scan cells are forced; the
+    /// solve must complete with the pinned cells intact and exact
+    /// accounting (also exercises forced-cascade restarts above K)
+    #[test]
+    fn forced_prefix_pins_and_solves() {
+        let (m, sol, targets) = InteriorModel::synthetic(6, 6, 7);
+        let scan = Scan::RowMajor.order(6);
+        let pins: Vec<(usize, u16, u8)> = scan[..10]
+            .iter()
+            .map(|&cell| (cell, sol[cell].0, sol[cell].1))
+            .collect();
+        let p = DfsParams {
+            seed: 9,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            forced_prefix: pins.clone(),
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        for &(cell, pid, rot) in &pins {
+            assert_eq!(grid[cell], (pid, rot), "pin at {cell}");
+        }
+        // abort-below smoke: tight envelope still finds the solution
+        let p2 = DfsParams {
+            seed: 9,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            abort_below: Some((20, 50_000)),
+            ..DfsParams::default()
+        };
+        let r2 = dfs_run(&m, Some(&targets), None, &p2);
+        assert!(r2.complete.is_some());
     }
 
     /// cost-2 segments end-to-end: completes, accounts exactly, and the

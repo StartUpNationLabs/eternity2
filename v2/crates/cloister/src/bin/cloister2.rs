@@ -42,6 +42,8 @@ struct JobOut {
     ms_at_max: u128,
     /// per-depth epoch-death counts (choke map; dfs mode only)
     death_hist: Vec<u32>,
+    /// deepest prefix reached (scan-position indexed), for --save-prefix
+    best_prefix: Vec<(u16, u8)>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -77,6 +79,17 @@ fn main() {
     });
     let ledger = has("--ledger");
     let cairn = has("--cairn");
+    // LADDER (vol-214)
+    let abort_below: Option<(usize, u64)> = get("--abort-below").map(|s| {
+        let (d, n) = s.split_once(':').expect("D:N");
+        (d.parse().expect("D"), n.parse().expect("N"))
+    });
+    let save_prefix = has("--save-prefix");
+    // --init-prefix <board.json>:<K> — pin the first K scan cells
+    let init_prefix = get("--init-prefix").map(|s| {
+        let (path, k) = s.rsplit_once(':').expect("file:K");
+        (path.to_string(), k.parse::<usize>().expect("K"))
+    });
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
         Some("spiral") => Scan::SpiralIn,
@@ -207,6 +220,40 @@ fn main() {
         }
     }
 
+    // LADDER: pin the first K scan cells from a banked prefix board
+    let forced_prefix: Vec<(usize, u16, u8)> = init_prefix.map_or_else(Vec::new, |(path, k)| {
+        let placement = cio::load_placement(Path::new(&path)).expect("prefix board");
+        let mut g2l = vec![u16::MAX; 256];
+        for (l, &g) in model.global_id.iter().enumerate() {
+            g2l[g as usize] = l as u16;
+        }
+        let mut by_cell: Vec<Option<(u16, u8)>> = vec![None; model.cells];
+        for &(pos, pid, rot) in &placement {
+            if frame::is_ring(pos) {
+                continue;
+            }
+            let (y, x) = (pos / 16, pos % 16);
+            if !(1..=model.n).contains(&y) || !(1..=model.n).contains(&x) {
+                continue;
+            }
+            let l = g2l[pid as usize];
+            if l != u16::MAX {
+                by_cell[(y - 1) * model.n + (x - 1)] = Some((l, rot));
+            }
+        }
+        let so = scan.order(model.n);
+        let v: Vec<(usize, u16, u8)> = so[..k]
+            .iter()
+            .map(|&cell| {
+                let (pid, rot) =
+                    by_cell[cell].unwrap_or_else(|| panic!("prefix missing cell {cell}"));
+                (cell, pid, rot)
+            })
+            .collect();
+        eprintln!("init-prefix {path}: pinned first {k} scan cells");
+        v
+    });
+
     let schedule: Vec<usize> = schedule_board.map_or(schedule, |bp| {
         let grid = load_interior_grid(&model, Path::new(&bp));
         let so = scan.order(model.n);
@@ -251,8 +298,9 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn}",
-        scan.name()
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn};abort={abort_below:?};prefix={}",
+        scan.name(),
+        forced_prefix.len()
     );
     eprintln!(
         "cloister2 mode={mode} frames={} seeds={seeds} {params_str}",
@@ -294,6 +342,8 @@ fn main() {
                     replay_perturb,
                     ledger,
                     cairn,
+                    abort_below,
+                    forced_prefix: forced_prefix.clone(),
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -308,6 +358,7 @@ fn main() {
                     sa_pair: None,
                     ms_at_max: r.ms_at_max,
                     death_hist: r.death_hist,
+                    best_prefix: r.best_prefix,
                 }
             }
             "sa" | "hybrid" => {
@@ -329,6 +380,8 @@ fn main() {
                         replay_perturb,
                         ledger,
                         cairn,
+                        abort_below,
+                        forced_prefix: forced_prefix.clone(),
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(
@@ -367,6 +420,7 @@ fn main() {
                     sa_pair: Some((r.best_ii, r.best_ib)),
                     ms_at_max: 0,
                     death_hist: Vec::new(),
+                    best_prefix: Vec::new(),
                 }
             }
             m => panic!("unknown mode {m}"),
@@ -448,6 +502,7 @@ fn main() {
             sa_pair: None,
             ms_at_max: 0,
             death_hist: Vec::new(),
+            best_prefix: Vec::new(),
         }]
     } else {
         jobs.par_iter().map(run_job).collect()
@@ -561,6 +616,34 @@ fn main() {
             ts_[ts_.len() / 2],
             ts_[ts_.len() - 1]
         );
+    }
+    // LADDER: bank deepest prefixes from incomplete jobs
+    if save_prefix {
+        let so = scan.order(model.n);
+        for r in &results {
+            if r.complete.is_some() || r.best_prefix.is_empty() {
+                continue;
+            }
+            let placement: Vec<(usize, u16, u8)> = r
+                .best_prefix
+                .iter()
+                .enumerate()
+                .map(|(j, &(pid, rot))| {
+                    let cell = so[j];
+                    let pos = (cell / model.n + 1) * 16 + (cell % model.n + 1);
+                    (pos, model.global_id[pid as usize], rot)
+                })
+                .collect();
+            let name = format!(
+                "prefix_d{}_{}_seed{}.json",
+                r.max_depth, r.frame_label, r.seed
+            );
+            let meta = format!(
+                "\"prefix_depth\":{},\"frame\":\"{}\",\"seed\":{},",
+                r.max_depth, r.frame_label, r.seed
+            );
+            cio::save_board(&dir, &name, &puzzle, &placement, &meta);
+        }
     }
     // choke profiles: per-frame death histograms summed over seeds
     {
