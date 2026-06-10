@@ -89,8 +89,12 @@ frame) — the bordered+hinted II search is the binding wall. We match the
 - Assignment-relaxation value priors for the II side; frame_ub with a
   direct-HiGHS builder (good_lp construction stalls); hint-compatible
   frame generation at scale (row-0 chain CSP as the filter).
-- 2 h slope confirmation in flight at close (expect ≈451-452; ≥455
-  falsifies the saturation read).
+- ~~2 h slope confirmation in flight at close~~ **LANDED (same day)**:
+  strict460a 448/450/450, strict460b 449/449/449 (4 seeds each, all 5/5;
+  II 340-344, IB 45-50). 300 s → 7200 s = **+1 to +1.5 total** — the slope
+  FLATTENS (+2.5/decade at small budgets → ~+1/decade). Saturation
+  confirmed; **final CLOISTER-II v1 plateau = 450-strict / 453-unhinted.**
+  The II wall (340-344 vs witness 350) holds at every budget tested.
 
 ## Linked
 
