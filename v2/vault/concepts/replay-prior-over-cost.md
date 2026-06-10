@@ -56,6 +56,20 @@ The mcb=1 result ties the all-time strict record 458 (provenance:
 witness-derived, community-460-adjacent basin — distinct from the
 vol-122 ALNS 458 basin).
 
+## Theory note: reachability is scan-relative
+
+"Cell pays 2 at placement" is a property of the SCAN's edge
+attribution, not of the board: row-major attributes N+W edges to the
+later cell; a seam scan attributes S+W in its bottom front, migrating
+one of the two mismatches to a different cell. A board double-broken
+under row-major may be all-single under another scan — so scan
+diversity and `max_cell_breaks` are partially interchangeable levers.
+mcb=2 subsumes the per-cell-≤2 case directly and is the cleaner
+operator. The violate-≤1 rule was a hidden GREEDINESS constraint on
+construction paths: the witnesses prove optimal boards place pieces
+that are doubly-wrong locally because their other sides enable perfect
+continuations (local sacrifice, global pool health).
+
 ## What's still open
 
 - Unguided double-break: does mcb=2 lift the 450 plateau without

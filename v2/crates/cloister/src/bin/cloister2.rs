@@ -40,6 +40,8 @@ struct JobOut {
     complete: Option<(Vec<(u16, u8)>, u32)>,
     sa_pair: Option<(u32, u32)>,
     ms_at_max: u128,
+    /// per-depth epoch-death counts (choke map; dfs mode only)
+    death_hist: Vec<u32>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -60,12 +62,19 @@ fn main() {
     let hinted = has("--hints");
     let threads: usize = get("--threads").and_then(|s| s.parse().ok()).unwrap_or(8);
     let exact_tail_k: usize = get("--exact-tail").and_then(|s| s.parse().ok()).unwrap_or(8);
+    let exact_tail_cap: u64 = get("--et-cap")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(eternity2_cloister::endgame::TAIL_CAP);
     let tail2 = has("--tail2");
     let tail2_cap: u64 = get("--tail2-cap").and_then(|s| s.parse().ok()).unwrap_or(30_000);
     let t0: f64 = get("--t0").and_then(|s| s.parse().ok()).unwrap_or(1.5);
     let max_disc: Option<u32> = get("--max-disc").and_then(|s| s.parse().ok());
     let prior_over_cost = has("--prior-over-cost");
     let max_cell_breaks: u8 = get("--max-cell-breaks").and_then(|s| s.parse().ok()).unwrap_or(1);
+    let replay_perturb: Option<(usize, usize)> = get("--replay-perturb").map(|s| {
+        let (lo, hi) = s.split_once(':').expect("lo:hi");
+        (lo.parse().expect("lo"), hi.parse().expect("hi"))
+    });
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
         Some(s) if s.starts_with("seam:") => {
@@ -99,6 +108,45 @@ fn main() {
     // pays ITS breaks (II + rim mismatches attributed to the later cell),
     // computed after the model/frame load below
     let schedule_board = get("--schedule-from-board");
+    // --schedule-from-choke <choke.tsv>,<B>[,<floor>]: B gates at the CDF
+    // quantile depths of a measured death histogram (deaths at depth D are
+    // absorbed by a gate ≤ D; mass-proportional placement)
+    let schedule: Vec<usize> = get("--schedule-from-choke").map_or(schedule, |spec| {
+        let parts: Vec<&str> = spec.split(',').collect();
+        let b: usize = parts[1].parse().expect("choke B");
+        let floor: usize = parts.get(2).map_or(60, |s| s.parse().expect("floor"));
+        let txt = std::fs::read_to_string(parts[0]).expect("choke tsv");
+        let mut hist: Vec<(usize, u64)> = txt
+            .lines()
+            .skip(1)
+            .filter_map(|l| {
+                let mut it = l.split('\t');
+                Some((it.next()?.parse().ok()?, it.next()?.parse().ok()?))
+            })
+            .filter(|&(d, _)| d >= floor)
+            .collect();
+        hist.sort_unstable();
+        let total: u64 = hist.iter().map(|&(_, c)| c).sum();
+        assert!(total > 0, "empty choke histogram above floor {floor}");
+        let mut cum = 0u64;
+        let cdf: Vec<(usize, u64)> = hist
+            .iter()
+            .map(|&(d, c)| {
+                cum += c;
+                (d, cum)
+            })
+            .collect();
+        let gates: Vec<usize> = (0..b)
+            .map(|j| {
+                let target = (j as f64 + 0.5) / b as f64 * total as f64;
+                cdf.iter()
+                    .find(|&&(_, c)| c as f64 >= target)
+                    .map_or(hist.last().expect("nonempty").0, |&(d, _)| d)
+            })
+            .collect();
+        eprintln!("schedule-from-choke {}: gates {gates:?}", parts[0]);
+        gates
+    });
 
     rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
@@ -200,7 +248,7 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks}",
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?}",
         scan.name()
     );
     eprintln!(
@@ -233,12 +281,14 @@ fn main() {
                     hinted,
                     schedule: schedule.clone(),
                     exact_tail_k,
+                    exact_tail_cap,
                     tail2,
                     tail2_cap,
                     max_disc,
                     scan,
                     prior_over_cost,
                     max_cell_breaks,
+                    replay_perturb,
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -252,6 +302,7 @@ fn main() {
                     complete: r.complete,
                     sa_pair: None,
                     ms_at_max: r.ms_at_max,
+                    death_hist: r.death_hist,
                 }
             }
             "sa" | "hybrid" => {
@@ -263,12 +314,14 @@ fn main() {
                         hinted,
                         schedule: schedule.clone(),
                         exact_tail_k,
+                        exact_tail_cap,
                         tail2,
                         tail2_cap,
                         max_disc,
                         scan,
                         prior_over_cost,
                         max_cell_breaks,
+                        replay_perturb,
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(
@@ -306,6 +359,7 @@ fn main() {
                     complete: Some((r.best_state, breaks)),
                     sa_pair: Some((r.best_ii, r.best_ib)),
                     ms_at_max: 0,
+                    death_hist: Vec::new(),
                 }
             }
             m => panic!("unknown mode {m}"),
@@ -386,6 +440,7 @@ fn main() {
             complete: Some((out, breaks)),
             sa_pair: None,
             ms_at_max: 0,
+            death_hist: Vec::new(),
         }]
     } else {
         jobs.par_iter().map(run_job).collect()
@@ -499,6 +554,34 @@ fn main() {
             ts_[ts_.len() / 2],
             ts_[ts_.len() - 1]
         );
+    }
+    // choke profiles: per-frame death histograms summed over seeds
+    {
+        let mut chokes: Vec<(String, Vec<u64>)> = Vec::new();
+        for r in &results {
+            if r.death_hist.is_empty() {
+                continue;
+            }
+            let e = if let Some(i) = chokes.iter().position(|(l, _)| *l == r.frame_label) {
+                &mut chokes[i].1
+            } else {
+                chokes.push((r.frame_label.clone(), vec![0; r.death_hist.len()]));
+                &mut chokes.last_mut().expect("pushed").1
+            };
+            for (d, &c) in r.death_hist.iter().enumerate() {
+                e[d] += u64::from(c);
+            }
+        }
+        for (label, hist) in chokes {
+            let mut f = std::fs::File::create(dir.join(format!("choke_{label}.tsv")))
+                .expect("choke tsv");
+            writeln!(f, "depth\tdeaths").expect("hdr");
+            for (d, &c) in hist.iter().enumerate() {
+                if c > 0 {
+                    writeln!(f, "{d}\t{c}").expect("row");
+                }
+            }
+        }
     }
     println!("run dir: {}", dir.display());
 }

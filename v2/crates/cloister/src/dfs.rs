@@ -257,6 +257,10 @@ pub struct DfsParams {
     pub schedule: Vec<usize>,
     /// 0 = off; clamped to n (one row)
     pub exact_tail_k: usize,
+    /// node cap per exact_tail call (vol-213: witness A's 13-mismatch
+    /// 3-double tail needs > 2M nodes — the default cap returned the
+    /// greedy 15 and silently cost the replay 2 breaks)
+    pub exact_tail_cap: u64,
     /// two-row endgame as the in-DFS trigger (vol-211: post-hoc only)
     pub tail2: bool,
     /// node cap per in-DFS tail2 call
@@ -277,6 +281,12 @@ pub struct DfsParams {
     /// placement — unreachable at 1). 1 = vol-212 behavior; 2 enables
     /// cost-2 segments, each gated as two break spends.
     pub max_cell_breaks: u8,
+    /// deviate-then-replay (vol-213): per epoch, sample one depth in
+    /// [lo, hi); at that depth the prior buffer's TOP candidate is
+    /// excluded for the whole epoch — forcing a single deviation off the
+    /// witness walk, with fully guided continuation. Samples the
+    /// perfect-prefix neighborhood one deviation at a time.
+    pub replay_perturb: Option<(usize, usize)>,
 }
 
 impl Default for DfsParams {
@@ -288,12 +298,14 @@ impl Default for DfsParams {
             hinted: false,
             schedule: Vec::new(),
             exact_tail_k: 0,
+            exact_tail_cap: crate::endgame::TAIL_CAP,
             tail2: false,
             tail2_cap: 30_000,
             max_disc: None,
             scan: Scan::RowMajor,
             prior_over_cost: false,
             max_cell_breaks: 1,
+            replay_perturb: None,
         }
     }
 }
@@ -310,6 +322,9 @@ pub struct DfsResult {
     /// cells scan[0..max_depth] at the max-depth moment
     pub best_prefix: Vec<(u16, u8)>,
     pub epochs: u64,
+    /// choke map (vol-213): death_hist[d] = # epochs whose deepest reach
+    /// was d when they ended (restart timeout or root exhaustion)
+    pub death_hist: Vec<u32>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -382,6 +397,7 @@ pub fn dfs_run(
     // plans, which only ever reference earlier scan positions (the seam
     // scan's closure row gets two-sided N+S constraints this way).
 
+    let trace = std::env::var_os("E2_TRACE").is_some();
     let mut rng = Rng::new(p.seed);
     let mut tables = Tables::build(model, p.hinted);
     let mut grid: Vec<(u16, u8)> = vec![(u16::MAX, 0); cells];
@@ -395,6 +411,7 @@ pub fn dfs_run(
     let mut pbuf_idx = vec![0u32; cells + 1];
 
     let mut max_depth = 0usize;
+    let mut death_hist = vec![0u32; cells + 1];
     let mut ms_at_max: u128 = 0;
     let mut best_prefix: Vec<(u16, u8)> = Vec::new();
     let mut best_complete: Option<(Vec<(u16, u8)>, u32)> = None;
@@ -417,6 +434,10 @@ pub fn dfs_run(
         disc_flag.iter_mut().for_each(|f| *f = false);
         let mut spent: u32 = 0;
         let mut disc: u32 = 0;
+        let mut epoch_max = 0usize;
+        let skip_depth: usize = p.replay_perturb.map_or(usize::MAX, |(lo, hi)| {
+            lo + (rng.next_u64() as usize) % (hi - lo).max(1)
+        });
         let epoch_t0 = Instant::now();
 
         let mut d = 0usize;
@@ -441,7 +462,7 @@ pub fn dfs_run(
                     } else {
                         exact_tail(
                             &tables, &plans, &scan, &mut grid, d, &rest,
-                            &forced_by_cell, abort_at,
+                            &forced_by_cell, abort_at, p.exact_tail_cap,
                         )
                     };
                     completes_found += 1;
@@ -470,6 +491,7 @@ pub fn dfs_run(
                                 completes_found,
                                 best_prefix: full,
                                 epochs,
+                                death_hist,
                             };
                         }
                     }
@@ -493,6 +515,7 @@ pub fn dfs_run(
                         completes_found,
                         best_prefix: grid,
                         epochs,
+                        death_hist,
                     };
                 }
                 backtrack_now = true;
@@ -509,9 +532,11 @@ pub fn dfs_run(
                         completes_found,
                         best_prefix,
                         epochs,
+                        death_hist,
                     };
                 }
                 if epoch_t0.elapsed().as_millis() as u64 >= p.restart_ms {
+                    death_hist[epoch_max] += 1;
                     continue 'epoch;
                 }
             }
@@ -681,7 +706,10 @@ pub fn dfs_run(
                                         c >> PB_COST_SHIFT,
                                     )
                                 });
-                                pbuf_idx[d] = 0;
+                                // deviate-then-replay: at the epoch's
+                                // sampled depth, never take the top
+                                // candidate (forces one deviation)
+                                pbuf_idx[d] = u32::from(d == skip_depth && buf.len() > 1);
                             }
                             if (pbuf_idx[d] as usize) < pbuf[d].len() {
                                 let raw = pbuf[d][pbuf_idx[d] as usize];
@@ -783,7 +811,17 @@ pub fn dfs_run(
             }
 
             if placed {
+                if trace && epochs == 1 && d >= 160 {
+                    let cell = plans[d].cell as usize;
+                    eprintln!(
+                        "TRACE d={d} cell={cell} pid={} rot={} cost={} spent={spent}",
+                        grid[cell].0, grid[cell].1, cost_at[d]
+                    );
+                }
                 d += 1;
+                if d > epoch_max {
+                    epoch_max = d;
+                }
                 if d > max_depth {
                     max_depth = d;
                     ms_at_max = t0.elapsed().as_millis();
@@ -798,6 +836,7 @@ pub fn dfs_run(
                     disc_flag[d] = false;
                 }
                 if d == 0 {
+                    death_hist[epoch_max] += 1;
                     continue 'epoch;
                 }
                 d -= 1;
@@ -811,6 +850,7 @@ pub fn dfs_run(
                     cursors[d] = Cursor::FRESH;
                     loop {
                         if d == 0 {
+                            death_hist[epoch_max] += 1;
                             continue 'epoch;
                         }
                         d -= 1;

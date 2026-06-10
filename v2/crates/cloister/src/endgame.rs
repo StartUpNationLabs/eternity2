@@ -148,6 +148,7 @@ pub fn exact_tail(
     pieces: &[u16],
     forced_by_cell: &[Option<(u16, u8)>],
     abort_at: u32,
+    cap: u64,
 ) -> (u32, Vec<(u16, u8)>) {
     let k = pieces.len();
     debug_assert_eq!(start_d + k, scan.len());
@@ -209,7 +210,7 @@ pub fn exact_tail(
         reserved,
         sat,
         nodes: 0,
-        cap: TAIL_CAP,
+        cap,
         abort_at,
         best_mis: 0,
         best_asn: vec![(0, 0); k],
@@ -573,7 +574,10 @@ mod tests {
             let pieces: Vec<u16> = (start_d..m.cells).map(|d| sol[so[d]].0).collect();
             let forced: Vec<Option<(u16, u8)>> = vec![None; m.cells];
             let (mis, asn) =
-                exact_tail(&tables, &plans, &so, &mut grid, start_d, &pieces, &forced, u32::MAX);
+                exact_tail(
+                    &tables, &plans, &so, &mut grid, start_d, &pieces, &forced, u32::MAX,
+                    TAIL_CAP,
+                );
             let want = brute_min(&tables, &plans, &mut grid, start_d, &pieces);
             assert_eq!(mis, want, "seed {seed} scan {}", scan.name());
             // assignment must reproduce the claimed mismatch count
