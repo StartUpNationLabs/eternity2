@@ -6,6 +6,40 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ---
 
+## Vol-213 entries
+
+### `replay-prior-over-cost + double-break` — status: `built` — vol-213 (2026-06-10)
+REPLAY mode + mcb=2 + et-cap fix: both community strict-460s replay
+EXACTLY (460×8, rescored). See [[replay-prior-over-cost]]. Open
+follow-ons below.
+
+### `unguided-mcb2-ab` — status: `in-progress` — since: vol-213
+Does double-break lift the unguided 450 plateau, or flood the
+anytime-min? 8 seeds × 300 s, ± `--max-cell-breaks 2`, strict460a
+hinted et14. In the vol-213 evening batch.
+
+### `silent-cap-audit` — status: `unbuilt` — since: vol-213
+TAIL_CAP lesson: capped "exact" methods must surface cap-hit instead of
+silently returning the incumbent (cost 2 invisible breaks in vol-213).
+Audit exact_tail2 / attach MIP / frame_ub for the same pattern; add a
+cap-hit flag to exact_tail's return or an eprintln-once.
+
+### `triple-break-census` — status: `unbuilt` — since: vol-213
+Do any high community boards pay 3 breaks at one cell under row-major
+attribution? Run schedule-from-board across the 123-board corpus; count
+depth-multiplicities. Decides whether mcb=3 is ever needed.
+
+### `hint-compatible-frame-generator` — status: `in-progress` — since: vol-212 (promoted vol-213)
+`framegen` bin built (ring-cycle DFS + 4 chain-feasibility checks).
+Smoke + chains-vs-nochains precision probe + census in the vol-213
+evening batch. Question: does ANY frame escape the 444-450 band?
+
+### `prefix-vault` — status: `unbuilt` — since: vol-212
+Bank ≥160-deep perfect prefixes across runs as restart seeds. Would
+open vol-214.
+
+---
+
 ## Vol-109 open candidates (highest-priority)
 
 ### `oracle-aware-alns-repair` — status: `unbuilt` — vol-109 candidate

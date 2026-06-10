@@ -50,7 +50,14 @@ part of the unguided 450 plateau.
 |---|---|
 | REPLAY mcb=1, witness A | **458/458/458 — all 8 seeds the IDENTICAL board** (II 352 + IB 46 + BB 60, 22 breaks, 5/5 hints, independently rescored). Diff vs witness: 14 cells, ALL in rows 12-13, first divergence = pos 212 = the depth-171 double-break cell. Replay walked the witness perfectly to its first double-break, then re-solved the tail within violate-≤1: II +2, IB −4 ⇒ −2 total. |
 | REPLAY mcb=1, witness B | 456 ×8 (5/5) — forks at B's 171 double (the 167 single replays). |
-| REPLAY mcb=2 | see [[vol-213]] — the exact-replay + neighborhood run. |
+| REPLAY mcb=2, witness B | **460 ×8 — all seeds reproduce the community strict-460 EXACTLY (0-cell diff, rescored 460/480, 5/5).** 300 s neighborhood: nothing better. |
+| REPLAY mcb=2, witness A (TAIL_CAP=2M) | 458 ×8 — walk PERFECT (trace: doubles paid at 171/177, depth 182 @ spent 7) but exact_tail's 2M node cap silently returned greedy 15 instead of optimum 13 (3-double tail, weak LB). |
+| REPLAY mcb=2 + `--et-cap 100M`, witness A | **460 exact replay** (probe; 22k completions/15 s — abort_at keeps later calls cheap). |
+
+★ **TAIL_CAP lesson (load-bearing)**: a capped "exact" endgame that
+silently returns its incumbent is a greedy-in-disguise — it cost 2
+breaks invisibly and was only caught because the pre-registered
+prediction (460) failed. Capped exact methods must surface cap-hit.
 
 The mcb=1 result ties the all-time strict record 458 (provenance:
 witness-derived, community-460-adjacent basin — distinct from the

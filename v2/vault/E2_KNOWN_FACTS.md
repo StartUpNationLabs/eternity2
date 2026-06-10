@@ -1,4 +1,4 @@
-# Eternity II (canonical 5-clue) — Known Facts (as of vol-211, 2026-06-10)
+# Eternity II (canonical 5-clue) — Known Facts (as of vol-213, 2026-06-10)
 
 ## Records
 
@@ -15,8 +15,15 @@
 - **463/480**: **our matched-edges record** (vol-129 PALIMPSEST,
   cp=(2,3,0,1), 15-basin attack on (2,3,0,1)@462 base).
 - **458/480** [strict-canonical 5/5 hints]: our strict-canonical
-  record (vol-122; vol-199 second basin). [The old "459 strict" was
-  INVALIDATED by the V199 dup-piece audit.]
+  record for ORIGINAL boards (vol-122; vol-199 second basin; vol-213
+  witness-derived third basin). [The old "459 strict" was INVALIDATED
+  by the V199 dup-piece audit.] **Vol-213: both community strict-460s
+  are now exactly RE-CONSTRUCTIBLE by our engine** (REPLAY + double-
+  break + et-cap, [[replay-prior-over-cost]]) — 460 reproduced ≠ 460
+  original; the original-board strict target stays 461.
+- ★★ **Community strict-460s contain 4-5 DOUBLE-BREAK cells** (one
+  cell paying 2 mismatches at placement, row-major attribution) —
+  violate-≤1 break-DFS provably cannot reach them (vol-213).
 - **Standalone 14×14 interior (II/364)**: best in any known board:
   **358** (Blackwood+Bucas 469_c, 2020-11). Hinted-5/5 boards: 350.
   Our CLOISTER vol-211: 356 unhinted / 350 hinted (see
