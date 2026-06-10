@@ -600,6 +600,14 @@ pub struct DfsParams {
     /// when `quota` is set. Computed by the caller (e.g. side-color
     /// partner-count scoring in cloister2).
     pub piece_good: Vec<bool>,
+    /// MIDDEN (vol-215): damage-geometry confinement — mismatches may
+    /// only be PAID at cells in this mask (anywhere in the scan, budget
+    /// still capped by the schedule). Generalizes depth gates: under
+    /// row-major, "late gates" ≈ "bottom rows"; this decouples damage
+    /// placement from scan order (columns, dispersed, color-driven
+    /// sets). Forced cells (hints) are exempt. The exact tail honors
+    /// the mask (non-S tail cells must place at 0 mismatches).
+    pub break_cells: Option<Vec<bool>>,
 }
 
 impl Default for DfsParams {
@@ -625,6 +633,7 @@ impl Default for DfsParams {
             forced_prefix: Vec::new(),
             quota: None,
             piece_good: Vec::new(),
+            break_cells: None,
         }
     }
 }
@@ -705,6 +714,10 @@ pub fn dfs_run(
     let mut sched_at = p.schedule.clone();
     sched_at.push(usize::MAX);
 
+    assert!(
+        !(p.tail2 && p.break_cells.is_some()),
+        "MIDDEN requires exact_tail (tail2 unsupported in v1)"
+    );
     let k_exact = if p.tail2 { 2 * n } else { p.exact_tail_k.min(n) };
     if p.tail2 {
         // the column-pair endgame is hard-wired to the last two rows
@@ -823,10 +836,13 @@ pub fn dfs_run(
                         exact_tail(
                             &tables, &plans, &scan, &mut grid, d, &rest,
                             &forced_by_cell, abort_at, p.exact_tail_cap,
+                            p.break_cells.as_deref(),
                         )
                     };
                     completes_found += 1;
-                    if best_complete.as_ref().is_none_or(|&(_, b)| spent + mis < b) {
+                    if mis < crate::endgame::TAIL_INFEASIBLE
+                        && best_complete.as_ref().is_none_or(|&(_, b)| spent + mis < b)
+                    {
                         let mut full = grid.clone();
                         if p.tail2 {
                             let start = (n - 2) * n;
@@ -961,13 +977,17 @@ pub fn dfs_run(
                             }
                         };
                     }
-                    let break1_open = spent + 1 + hint_after[d] <= budget
+                    // MIDDEN: this cell may pay mismatches only if in the mask
+                    let midden_ok = p.break_cells.as_ref().is_none_or(|m| m[cell]);
+                    let break1_open = midden_ok
+                        && spent + 1 + hint_after[d] <= budget
                         && d >= sched_at[(spent as usize).min(budget as usize)]
                         && plan.k >= 2;
                     // paying 2 at once needs room for both AND the
                     // (spent+2)-th gate reached (sorted schedule ⇒ implies
                     // the (spent+1)-th); break2_open ⊆ break1_open
                     let break2_open = p.max_cell_breaks >= 2
+                        && midden_ok
                         && spent + 2 + hint_after[d] <= budget
                         && d >= sched_at[(spent as usize + 1).min(budget as usize)]
                         && plan.k >= 2;
@@ -1880,6 +1900,45 @@ mod tests {
         };
         let r2 = dfs_run(&m, Some(&targets), None, &p2);
         assert!(r2.complete.is_some());
+    }
+
+    /// MIDDEN: with damage confined to the last row, the break-DFS must
+    /// complete with every PAYING cell inside the mask (verified by
+    /// post-hoc per-cell cost attribution)
+    #[test]
+    fn midden_confines_damage_to_mask() {
+        let (m, _, targets) = InteriorModel::synthetic(6, 4, 5);
+        let scan = Scan::RowMajor.order(6);
+        // rows 4-5 open EXCEPT cell 35 — exercises the exact-tail-side
+        // must-be-perfect filter on a tail cell outside the midden
+        let mask: Vec<bool> = (0..36).map(|c| c / 6 >= 4 && c != 35).collect();
+        let p = DfsParams {
+            seed: 2,
+            budget_ms: 10_000,
+            restart_ms: 2_000,
+            schedule: vec![0, 0, 0, 0, 0, 0],
+            exact_tail_k: 6,
+            break_cells: Some(mask.clone()),
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
+        // attribute each mismatch to its paying (later-scan) cell
+        let tables = Tables::build(&m, false);
+        let plans = build_plans(&m, &scan, Some(&targets));
+        for (d, plan) in plans.iter().enumerate() {
+            let cell = plan.cell as usize;
+            let e = tables.rot_edges[grid[cell].0 as usize][grid[cell].1 as usize];
+            let ccol = ccol_of(&tables, plan, &grid);
+            let cost: u32 = (0..plan.k as usize)
+                .map(|i| u32::from(e[plan.sides[i] as usize] != ccol[i]))
+                .sum();
+            assert!(
+                cost == 0 || mask[cell],
+                "cell {cell} (scan {d}) pays {cost} outside the midden"
+            );
+        }
     }
 
     /// QUOTA: with M = exactly the solution's good-piece usage before D,

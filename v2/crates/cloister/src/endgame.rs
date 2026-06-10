@@ -13,6 +13,10 @@ use crate::model::{InteriorModel, RimTargets, Tables};
 
 pub const TAIL_CAP: u64 = 2_000_000;
 
+/// MIDDEN: returned when no mask-respecting completion was found —
+/// callers must NOT record completions at or above this value
+pub const TAIL_INFEASIBLE: u32 = 1_000_000;
+
 /// once-per-process cap-hit warning (vol-213 TAIL_CAP lesson)
 static CAP_HIT_WARNED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
@@ -37,6 +41,8 @@ struct TailCtx<'a> {
     best_mis: u32,
     best_asn: Vec<(u16, u8)>,
     asn: Vec<(u16, u8)>,
+    /// MIDDEN: cells allowed to pay mismatches (None = all)
+    break_cells: Option<&'a [bool]>,
 }
 
 fn mismatches_at(
@@ -111,6 +117,8 @@ impl TailCtx<'_> {
             return;
         }
         // candidates ordered by local mismatch (pool ≤ 14 ⇒ ≤ 56 entries)
+        // MIDDEN: non-mask cells admit only 0-mismatch candidates
+        let must_be_perfect = self.break_cells.is_some_and(|m| !m[cell]);
         let mut order = [(0u32, 0u8, 0u8); 56];
         let mut no = 0;
         for (pi, &pid) in self.pieces.iter().enumerate() {
@@ -119,7 +127,11 @@ impl TailCtx<'_> {
             }
             for rot in 0..4u8 {
                 let e = self.tables.rot_edges[pid as usize][rot as usize];
-                order[no] = (mismatches_at(self.tables, plan, grid, &e), pi as u8, rot);
+                let m = mismatches_at(self.tables, plan, grid, &e);
+                if must_be_perfect && m > 0 {
+                    continue;
+                }
+                order[no] = (m, pi as u8, rot);
                 no += 1;
             }
         }
@@ -153,6 +165,7 @@ pub fn exact_tail(
     forced_by_cell: &[Option<(u16, u8)>],
     abort_at: u32,
     cap: u64,
+    break_cells: Option<&[bool]>,
 ) -> (u32, Vec<(u16, u8)>) {
     let k = pieces.len();
     debug_assert_eq!(start_d + k, scan.len());
@@ -219,13 +232,16 @@ pub fn exact_tail(
         best_mis: 0,
         best_asn: vec![(0, 0); k],
         asn: vec![(0, 0); k],
+        break_cells,
     };
     {
         let mut used = 0u64;
         let mut mis = 0u32;
+        let mut greedy_ok = true;
         for j in 0..k {
             let plan = &ctx.plans[start_d + j];
             let cell = plan.cell as usize;
+            let must_be_perfect = break_cells.is_some_and(|m| !m[cell]);
             let mut bm = u32::MAX;
             let mut bpick = (0usize, 0u8);
             if let Some((fp, fr)) = ctx.forced[j] {
@@ -241,6 +257,9 @@ pub fn exact_tail(
                     for rot in 0..4u8 {
                         let e = tables.rot_edges[pid as usize][rot as usize];
                         let m = mismatches_at(tables, plan, grid, &e);
+                        if must_be_perfect && m > 0 {
+                            continue;
+                        }
                         if m < bm {
                             bm = m;
                             bpick = (pi, rot);
@@ -248,13 +267,21 @@ pub fn exact_tail(
                     }
                 }
             }
+            if bm == u32::MAX {
+                greedy_ok = false;
+                break;
+            }
             let (pi, rot) = bpick;
             used |= 1 << pi;
             grid[cell] = (pieces[pi], rot);
             ctx.best_asn[j] = (pieces[pi], rot);
             mis += bm;
         }
-        ctx.best_mis = mis;
+        ctx.best_mis = if greedy_ok {
+            mis
+        } else {
+            ctx.abort_at.min(TAIL_INFEASIBLE)
+        };
         // clear tail for the B&B
         for j in 0..k {
             grid[ctx.plans[start_d + j].cell as usize] = (u16::MAX, 0);
@@ -590,7 +617,7 @@ mod tests {
             let (mis, asn) =
                 exact_tail(
                     &tables, &plans, &so, &mut grid, start_d, &pieces, &forced, u32::MAX,
-                    TAIL_CAP,
+                    TAIL_CAP, None,
                 );
             let want = brute_min(&tables, &plans, &mut grid, start_d, &pieces);
             assert_eq!(mis, want, "seed {seed} scan {}", scan.name());

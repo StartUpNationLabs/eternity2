@@ -230,6 +230,27 @@ fn main() {
         }
     }
 
+    // MIDDEN (vol-215): --break-cells rows:12,13 | cols:0,13 | cells:5,19,...
+    let break_cells: Option<Vec<bool>> = get("--break-cells").map(|s| {
+        let n = model.n;
+        let mut mask = vec![false; model.cells];
+        let (kind, list) = s.split_once(':').expect("kind:list");
+        for tok in list.split(',') {
+            let v: usize = tok.trim().parse().expect("index");
+            match kind {
+                "rows" => (0..n).for_each(|x| mask[v * n + x] = true),
+                "cols" => (0..n).for_each(|y| mask[y * n + v] = true),
+                "cells" => mask[v] = true,
+                k => panic!("unknown break-cells kind {k}"),
+            }
+        }
+        eprintln!(
+            "midden: {} cells open for damage ({s})",
+            mask.iter().filter(|&&b| b).count()
+        );
+        mask
+    });
+
     // QUOTA: goodness = Σ over the piece's 4 sides of ln(partner count)
     let quota: Option<(usize, u32)> = quota_spec.map(|(d, m, _)| (d, m));
     let piece_good: Vec<bool> = quota_spec.map_or_else(Vec::new, |(_, _, frac)| {
@@ -337,9 +358,10 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn};abort={abort_below:?};prefix={};quota={quota:?}",
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks};perturb={replay_perturb:?};ledger={ledger};cairn={cairn};abort={abort_below:?};prefix={};quota={quota:?};midden={}",
         scan.name(),
-        forced_prefix.len()
+        forced_prefix.len(),
+        break_cells.is_some()
     );
     eprintln!(
         "cloister2 mode={mode} frames={} seeds={seeds} {params_str}",
@@ -385,6 +407,7 @@ fn main() {
                     forced_prefix: forced_prefix.clone(),
                     quota,
                     piece_good: piece_good.clone(),
+                    break_cells: break_cells.clone(),
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -425,6 +448,7 @@ fn main() {
                         forced_prefix: forced_prefix.clone(),
                         quota,
                         piece_good: piece_good.clone(),
+                        break_cells: break_cells.clone(),
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(
