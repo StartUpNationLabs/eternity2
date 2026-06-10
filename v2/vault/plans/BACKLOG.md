@@ -55,9 +55,13 @@ candidate #2.
 
 ### `weft-row-lb` — status: `unbuilt` — since: vol-213
 Admissible next-row lower bound at each row boundary: DP over
-(cell, west color) with pool relaxed to color counts; prune when
-spent + rowLB > budget. The assignment-relaxation bound made cheap;
-choke maps say which rows it must be sharp at. Vol-214 candidate #3.
+(cell, west color) with piece-reuse relaxation (N colors known at row
+entry under row-major); prune when spent + rowLB > budget. DEFERRED
+behind LEDGER+CAIRN measurement (vol-213 evening analysis): the DP
+costs ~36k ops per row-entry instance; row-12 entries number 10⁵-10⁶
+per run, and CAIRN already memoizes refuted frontiers — WEFT's marginal
+value is pruning FRESH doomed states cheaper than the DFS refutes them.
+Build only if choke maps still show row-12 thrash after LEDGER+CAIRN.
 
 ### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213
 Both witnesses are 1-deviation-locked in [140:182) (900 s × 8 each,
