@@ -1,7 +1,7 @@
 ---
 name: ladder-prefix-racing
 description: "LADDER (vol-214): successive-halving prefix racing — many cheap single-epoch probes bank their deepest prefixes; top-k deep AND mutually-diverse prefixes get pinned (--init-prefix) and promoted through budget rungs (5 s → 30 s → 300 s) with exact endgames. User idea + Verhaard progress-aborts (--abort-below) + diversity dedup. Engine: forced_prefix in DfsParams; backtracking through the pin cascades to epoch restart."
-status: partial
+status: built
 metadata:
   type: concept
 ---
@@ -48,9 +48,21 @@ interval restarts discard them. Verhaard's restart criteria are the
 
 ## Measurements
 
-- First full run: vol-214 opening (in flight at page creation —
-  numbers land in [[vol-214]]). Band to beat: 444-450 (universal,
-  55 frames); hinted walls 139-153.
+**Run 1 (2026-06-10 night, strict460a bordered+hinted, ~25 min total):**
+- Rung 1: 104 × 5 s probes → 104 banked prefixes, depths 125-151
+  (median 140) — the heavy tail is real (d151 found in 5 s).
+- Rung 3 (top-3 at 300 s × 8): d146-prefix → **450/451/451, all 5/5,
+  rescored 451/480** (II 342 + IB 49 + BB 60); d151 → 448/449/450;
+  d148 → ~447/449.
+- **FIRST ESCAPE from the universal 444-450 band** (55 frames, every
+  recipe): +1 over the vol-212 plateau (which needed 2 h budgets), +3
+  over the same-budget hinted control (446/447/448), robust across
+  seeds (median = max). Provenance: no witness interior guidance; the
+  frame is the witness ring (strict460a).
+
+Open: scale N; recursive ladders (probe beyond a pinned prefix → bank
+deeper prefixes → re-pin); LEDGER-deficit promotion scoring;
+per-prefix choke gates; multi-frame ladders via [[framegen-chain-feasibility]].
 
 ## Linked
 
