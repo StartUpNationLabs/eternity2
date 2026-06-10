@@ -36,6 +36,26 @@ machinery — that headroom is the target.
    baseline this must beat, and vol-211's machinery is the reason to expect
    it can).
 
+## Exploration design (user-ratified 2026-06-10: "explore more, explore
+## better, fixed time budget — diminishing returns confirmed")
+
+- **Objective**: II+IB jointly (420 interior-touching edges) under a fixed
+  perfect ring — never II alone (free-rim II grinding = +1/10× compute,
+  measured; rim carries ~14 points).
+- **Breadth over depth**: 30-300 s budgets across a wide
+  (frame × seed × schedule × scan) portfolio; exact endgames mean every
+  short run emits a complete, attachable, scored board. No multi-hour
+  single-tree runs.
+- **Explore better, not just more**: limited-discrepancy-style prefix
+  exploration (near-greedy subtrees first) instead of left-biased DFS
+  restarts; boustrophedon scan (anchored borders break the rotation
+  isomorphism that made column-major redundant on the free rim).
+- **Frame axis**: each perfect ring re-rolls the whole problem; enumerate /
+  sample frames diversely (vol-76 corpus + MIP-generated), measure
+  per-frame completion II+IB distributions, double down on fat tails.
+- **Speed = exploration**: refactor perf pass FIRST (bitset candidates,
+  tail2 per-color indexing) so the fixed time budget buys more prefixes.
+
 ## Audit-at-open compliance
 - INVENTIONS_BACKLOG §I milestone-3: status flips to `built-standalone`
   (vol-211); milestone-2 metric: `built+exceeded`; A1/B3 fold into

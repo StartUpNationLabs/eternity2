@@ -273,6 +273,16 @@ fn main() {
         }
         constraints.push(constraint!(s == 1.0));
     }
+    // optional: force a PERFECT ring (all 60 BB edges matched)
+    if args.iter().any(|a| a == "--require-bb60") {
+        let mut all_z = Expression::from(0.0);
+        for (_, zc) in &z_vars {
+            for &(_, z) in zc {
+                all_z += z;
+            }
+        }
+        constraints.push(constraint!(all_z == 60.0));
+    }
     // z linking
     for (i, zc) in &z_vars {
         let a = ring[*i];
