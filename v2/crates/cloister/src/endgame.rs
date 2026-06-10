@@ -13,6 +13,10 @@ use crate::model::{InteriorModel, RimTargets, Tables};
 
 pub const TAIL_CAP: u64 = 2_000_000;
 
+/// once-per-process cap-hit warning (vol-213 TAIL_CAP lesson)
+static CAP_HIT_WARNED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 struct TailCtx<'a> {
     tables: &'a Tables,
     plans: &'a [CellPlan],
@@ -258,6 +262,16 @@ pub fn exact_tail(
     }
     if ctx.best_mis > 0 && ctx.abort_at > 0 {
         ctx.go(grid, 0, 0, 0);
+    }
+    // vol-213 lesson: a silently-capped "exact" method is greedy in
+    // disguise (cost 2 invisible breaks on witness A). Surface it once.
+    if ctx.nodes > ctx.cap
+        && !CAP_HIT_WARNED.swap(true, std::sync::atomic::Ordering::Relaxed)
+    {
+        eprintln!(
+            "WARN exact_tail: node cap {} hit — incumbent may be non-optimal (raise --et-cap)",
+            ctx.cap
+        );
     }
     // ensure tail empty on exit
     for j in 0..k {

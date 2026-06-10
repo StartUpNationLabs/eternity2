@@ -38,6 +38,34 @@ evening batch. Question: does ANY frame escape the 444-450 band?
 Bank ≥160-deep perfect prefixes across runs as restart seeds. Would
 open vol-214.
 
+### `ledger-color-deficit-prune` — status: `unbuilt` — since: vol-213
+Admissible in-DFS prune: per color c maintain F_c (frontier edges
+demanding c: placed sides + rim targets facing empty cells) and S_c
+(pool sides of color c); prune when spent + Σ_c max(0, F_c − S_c) >
+budget. O(1) incremental. First prune that SEES pool starvation — the
+vol-209 distinctness wall mechanism. ~50 lines. Vol-214 candidate #1.
+
+### `cairn-frontier-nogoods` — status: `unbuilt` — since: vol-213
+CDCL lens: cross-epoch nogood learning. Row-major state =
+(depth, 14-color frontier vector, avail bitmask, spent); record
+refuted-at-budget frontiers (bloom/hash, memory-bounded), prune
+revisits with ≤ budget. Restarts stop being amnesiac — replay runs
+proved the walk distribution is extremely concentrated. Vol-214
+candidate #2.
+
+### `weft-row-lb` — status: `unbuilt` — since: vol-213
+Admissible next-row lower bound at each row boundary: DP over
+(cell, west color) with pool relaxed to color counts; prune when
+spent + rowLB > budget. The assignment-relaxation bound made cheap;
+choke maps say which rows it must be sharp at. Vol-214 candidate #3.
+
+### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213
+Both witnesses are 1-deviation-locked in [140:182) (900 s × 8 each,
+~700k completions/seed, every seed converges back to the witness
+exactly). If wide-window single deviation is also null, the next
+enumerator is k=2 deviations (sample two depths per epoch) — or accept
+that these frames cap at 460 and shift to the frame axis (framegen).
+
 ---
 
 ## Vol-109 open candidates (highest-priority)
