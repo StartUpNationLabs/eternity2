@@ -693,6 +693,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eternity2-cloister"
+version = "0.1.0"
+dependencies = [
+ "eternity2-benchmark",
+ "eternity2-core",
+ "good_lp",
+ "rayon",
+ "serde_json",
+]
+
+[[package]]
 name = "eternity2-core"
 version = "0.1.0"
 dependencies = [

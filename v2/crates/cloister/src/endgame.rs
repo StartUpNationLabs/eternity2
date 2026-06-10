@@ -513,7 +513,6 @@ mod tests {
         start_d: usize,
         pieces: &[u16],
     ) -> u32 {
-        let k = pieces.len();
         fn rec(
             tables: &Tables,
             plans: &[CellPlan],

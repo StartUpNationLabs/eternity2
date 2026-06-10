@@ -1,62 +1,55 @@
-# Current Volume — Vol-213 — the II-side wall (CLOISTER-III seam scan)
+# Current Volume — Vol-213 (day 2) — REPLAY mode + frame generator
 
-**Status**: drafted at vol-212 close (2026-06-10). Strict track (5/5) bar
-unchanged: **461**. Vol-212 proved CLOISTER-II collects IB (48-50) and
-saturates at 449-strict; gap anatomy is pure II (339-345 vs witness 350 at
-IB≈50). The II search under rim+hint constraints is THE wall.
-
-## Why this
-
-Row-sequential scans dump all leftover-pool damage into the last rows; the
-exact tail then optimizes a starved 14-28 piece pool. Vol-211 proved tails
-are already optimal given prefixes ("prefix diversity, not endgames, is
-the II lever") and vol-212 proved prefix diversity via restarts/LDS/frames
-is exhausted at the 444-449 band. The structural move left: **change where
-the damage lands** — grow two fronts (rows 0-6 top-down anchored on the
-top frame edge; rows 13-7 bottom-up anchored on the bottom frame edge,
-both rim-constrained) and close at a middle seam where (a) the remaining
-pool is largest mid-search, (b) the closure is a fully-two-sided exact
-assignment (stronger than the one-sided tail trigger), (c) both deep hints
-(row 12) sit INSIDE the bottom front's early region (cheap), not at its
-end (starved).
+**Status**: re-drafted 2026-06-10 (day 2). Strict track (5/5) bar
+unchanged: **461**. Day 1 banked: seam family ≤ row-major (II wall is
+scan-geometry-invariant), self-pool priors asymptote null, witness track
+saturates at 456-457 because break candidates are NOT prior-ordered
+(the walk forks at the witness's first break cell), 500-frame census
+1/500 hint-compatible with the killer cell pinpointed ((0,1)/(0,12)
+triple-constraint chains).
 
 ## Binding items (≤3)
 
-1. **CLOISTER-III seam scan**: generalize `Scan` to two-front orders
-   (plans machinery already takes arbitrary permutations; the bottom-up
-   front needs S-side Placed constraints — already supported by
-   `build_plans`); new `exact_seam` endgame (k ≤ 14 cells with BOTH N and
-   S placed + chain: port `exact_tail` with the extra constraint per cell
-   — strictly tighter B&B). Gates re-derived for two-front geometry
-   (each front has its own wall; measure first: two-front bordered wall,
-   8 seeds × 10 s — the cheap decisive number again).
-   **Built at vol-212 close (same-day head start)**: `Scan::Seam(s)` +
-   `pair_sw` bottom-front tables; `exact_tail` proved scan-generic (seam
-   cells get two-sided N+S constraints through plans — no new endgame
-   code needed); tests green. ★ Hint geometry under seam:7 — hint 104
-   (row 7) falls INSIDE the exact closure row; deep hints (row 12) land
-   at scan 113/124, early-bottom-front (the row-major death-at-180
-   chokepoint dissolves). Measurement queued behind the 2 h slope run.
-2. **Assignment-guided value priors**: per-(cell, piece, rot) prior from a
-   relaxation (Hungarian / LP on the 196×196 assignment with edge terms),
-   used to order candidate lists instead of uniform shuffles (vol-155
-   weaving-prior analogue, now bordered+hinted). Measure II delta at
-   30 s × 8 on strict460a.
-3. **Discipline**: ≥8 seeds, min/median/max; verify + rescore before any
-   claim; timestamped outputs + history.csv; throughput arithmetic before
-   any multi-day run; honest negatives to the vault same-day.
+1. **REPLAY mode (`--prior-over-cost`)** — the live 460+ shot. In
+   dfs.rs's priors branch: when `break_open`, ALSO drain break-segment
+   candidates into the per-depth buffer; sort by (Reverse(weight),
+   cost). Effect: the witness walk takes its break pieces AT its break
+   cells ⇒ exact replay to depth 182, exact tail ≥ its row 13, then
+   anytime backtracking explores the perfect-prefix NEIGHBORHOOD with
+   exact endgames. Run both witnesses (460a/b), 8 seeds × 300 s, then
+   hours if the curve moves. Every board ≥458: verify + rescore +
+   provenance (witness-derived) stated.
+2. **Hint-compatible frame GENERATOR** — unlock the frame pool. Ring
+   enumeration with the four chain-feasibility constraints baked in
+   (for each killer cell, ≥1 compatible interior (piece,rot) given the
+   ring's inward colors), or generate-and-probe (diverse BB=60 rings +
+   6 s hinted probe). Target 50+ compatible frames; v1-recipe census;
+   the question: does ANY frame escape the 444-450 band? (vol-212's
+   uniform-band claim is 5-frame-based — widen or refute.)
+3. **Choke-map instrument + auto-gates** — per-depth death histograms
+   from epoch ends; per-(frame, scan, hinted) choke profiles; gates AT
+   measured chokes vs hand-spread (≥8 seeds, min/med/max). Also answers
+   "are hint positions the choke?" quantitatively on the wider pool.
+
+Standing invitation if items finish/stall: PREFIX VAULT (bank ≥160-deep
+perfect prefixes as restart seeds — would open vol-214); frame_ub
+direct-HiGHS builder (calibrate Bucas-469 → 409, strict460a → 400).
 
 ## Audit-at-open compliance
 
-- Vol-212 closed same-day with all levers measured; no aged unbuilt items
-  added. frame_ub (direct-HiGHS builder) and frame-generator-at-scale go
-  to BACKLOG as `partial`/`unbuilt` (only pick up if items 1-2 stall).
-- The 2 h slope run lands after close — append its number to
-  [[cloister-ii-border-anchored]] when read (expected 451-452; ≥455
-  reopens the grind hypothesis).
+- Day-1 items closed: seam scan (measured, ≤ row-major, interim verdict
+  in [[vol-213]]), priors (built, asymptote null, witness diagnostic ★).
+- BACKLOG items frame_ub (`partial`) and frame-generator (`unbuilt`,
+  since vol-212): generator is NOW binding item 2 (promoted); frame_ub
+  stays parked behind the standing invitation.
+
+## Discipline
+
+≥8 seeds min/median/max; verify + independently rescore every ≥458
+before any claim; timestamped outputs (UTC tags); append history CSV;
+8 cores max TOTAL; honest negatives to the vault same-day.
 
 ## Linked
 
-- [[cloister-ii-border-anchored]] (vol-212: saturation + gap anatomy)
-- [[cloister-standalone-interior]] (vol-211: rim result, free-rim records)
-- session: [[vol-212]]
+- [[cloister-ii-border-anchored]] (architecture + plateau + witness ladder)
+- session: [[vol-213]]

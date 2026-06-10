@@ -64,6 +64,8 @@ fn main() {
     let tail2_cap: u64 = get("--tail2-cap").and_then(|s| s.parse().ok()).unwrap_or(30_000);
     let t0: f64 = get("--t0").and_then(|s| s.parse().ok()).unwrap_or(1.5);
     let max_disc: Option<u32> = get("--max-disc").and_then(|s| s.parse().ok());
+    let prior_over_cost = has("--prior-over-cost");
+    let max_cell_breaks: u8 = get("--max-cell-breaks").and_then(|s| s.parse().ok()).unwrap_or(1);
     let scan = match get("--scan").as_deref() {
         Some("boustro") => Scan::Boustro,
         Some(s) if s.starts_with("seam:") => {
@@ -198,7 +200,7 @@ fn main() {
     )
     .expect("hdr");
     let params_str = format!(
-        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms}",
+        "budget_ms={budget_ms};hinted={hinted};sched={schedule:?};et={exact_tail_k};tail2={tail2};restart={restart_ms};scan={};disc={max_disc:?};dfs_ms={dfs_ms};poc={prior_over_cost};mcb={max_cell_breaks}",
         scan.name()
     );
     eprintln!(
@@ -235,6 +237,8 @@ fn main() {
                     tail2_cap,
                     max_disc,
                     scan,
+                    prior_over_cost,
+                    max_cell_breaks,
                 };
                 let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
@@ -263,6 +267,8 @@ fn main() {
                         tail2_cap,
                         max_disc,
                         scan,
+                        prior_over_cost,
+                        max_cell_breaks,
                     };
                     let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(

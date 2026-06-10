@@ -95,7 +95,9 @@ pub enum Src {
     Fixed(u8),
 }
 
-const NO_VIOLATE: u8 = 0xFF;
+/// priors-buffer entries: bits 0-11 = pid<<2|rot (≤ 1023), bits 12-13 = cost
+const PB_COST_SHIFT: u16 = 12;
+const PB_CODE_MASK: u16 = 0x0FFF;
 
 #[derive(Clone, Copy)]
 enum Tab {
@@ -108,16 +110,20 @@ enum Tab {
 }
 
 /// one candidate segment: a base list + post-filters. Segment 0 is the
-/// cost-0 segment (all constraints matched); later segments each violate
-/// exactly one constraint (cost 1) and exist only for cells with k ≥ 2.
+/// cost-0 segment (all constraints matched); cost-1 segments violate
+/// exactly one constraint; cost-2 segments (vol-213 double-break: the
+/// community strict-460s contain 4-5 cells paying two mismatches at
+/// placement — unreachable with cost-1 only) violate exactly two.
+/// Non-zero-cost segments exist only for cells with k ≥ 2.
 #[derive(Clone, Copy)]
 struct Seg {
     tab: Tab,
     /// constraint indices that must additionally match
     extra: [u8; 3],
     n_extra: u8,
-    /// constraint index that must mismatch (NO_VIOLATE for segment 0)
-    violate: u8,
+    /// constraint indices that must mismatch
+    violate: [u8; 2],
+    n_violate: u8,
 }
 
 pub struct CellPlan {
@@ -130,8 +136,8 @@ pub struct CellPlan {
     segs: Vec<Seg>,
 }
 
-fn make_seg(sides: &[u8; 4], k: usize, exclude: Option<usize>) -> Seg {
-    let active: Vec<usize> = (0..k).filter(|&i| Some(i) != exclude).collect();
+fn make_seg(sides: &[u8; 4], k: usize, exclude: &[usize]) -> Seg {
+    let active: Vec<usize> = (0..k).filter(|i| !exclude.contains(i)).collect();
     let find = |side: u8| active.iter().copied().find(|&i| sides[i] == side);
     let (i_n, i_e, i_s, i_w) = (find(0), find(1), find(2), find(3));
     let (tab, covered): (Tab, Vec<usize>) = match (i_n, i_w, i_e, i_s) {
@@ -153,11 +159,16 @@ fn make_seg(sides: &[u8; 4], k: usize, exclude: Option<usize>) -> Seg {
             n_extra += 1;
         }
     }
+    let mut violate = [0u8; 2];
+    for (vi, &i) in exclude.iter().enumerate() {
+        violate[vi] = i as u8;
+    }
     Seg {
         tab,
         extra,
         n_extra,
-        violate: exclude.map_or(NO_VIOLATE, |i| i as u8),
+        violate,
+        n_violate: exclude.len() as u8,
     }
 }
 
@@ -206,10 +217,17 @@ pub fn build_plans(
                     }
                 }
             }
-            let mut segs = vec![make_seg(&sides, k as usize, None)];
+            // order: cost-0, then all cost-1, then all cost-2 (cheap-first;
+            // nseg at runtime exposes a prefix of this list)
+            let mut segs = vec![make_seg(&sides, k as usize, &[])];
             if k >= 2 {
                 for i in 0..k as usize {
-                    segs.push(make_seg(&sides, k as usize, Some(i)));
+                    segs.push(make_seg(&sides, k as usize, &[i]));
+                }
+                for i in 0..k as usize {
+                    for j in i + 1..k as usize {
+                        segs.push(make_seg(&sides, k as usize, &[i, j]));
+                    }
                 }
             }
             CellPlan { cell: cell as u16, k, sides, src, segs }
@@ -246,6 +264,19 @@ pub struct DfsParams {
     /// LDS-style bound on non-first choices per path
     pub max_disc: Option<u32>,
     pub scan: Scan,
+    /// REPLAY mode (vol-213): with priors, ALSO drain break-segment
+    /// candidates into the weight-ordered buffer, sorted by
+    /// (Reverse(weight), cost) — a high-weight break candidate is taken
+    /// BEFORE unseen cost-0 candidates, so a witness walk pays its breaks
+    /// at the witness's break cells instead of detouring into cost-0
+    /// subtrees. Sound because break_open is invariant within a cell
+    /// instance (any backtrack through d resets the cursor).
+    pub prior_over_cost: bool,
+    /// max breaks payable at ONE free cell (vol-213 double-break: the
+    /// community strict-460s have 4-5 cells paying 2 mismatches at
+    /// placement — unreachable at 1). 1 = vol-212 behavior; 2 enables
+    /// cost-2 segments, each gated as two break spends.
+    pub max_cell_breaks: u8,
 }
 
 impl Default for DfsParams {
@@ -261,6 +292,8 @@ impl Default for DfsParams {
             tail2_cap: 30_000,
             max_disc: None,
             scan: Scan::RowMajor,
+            prior_over_cost: false,
+            max_cell_breaks: 1,
         }
     }
 }
@@ -528,8 +561,15 @@ pub fn dfs_run(
                             }
                         };
                     }
-                    let break_open = spent + 1 + hint_after[d] <= budget
+                    let break1_open = spent + 1 + hint_after[d] <= budget
                         && d >= sched_at[(spent as usize).min(budget as usize)]
+                        && plan.k >= 2;
+                    // paying 2 at once needs room for both AND the
+                    // (spent+2)-th gate reached (sorted schedule ⇒ implies
+                    // the (spent+1)-th); break2_open ⊆ break1_open
+                    let break2_open = p.max_cell_breaks >= 2
+                        && spent + 2 + hint_after[d] <= budget
+                        && d >= sched_at[(spent as usize + 1).min(budget as usize)]
                         && plan.k >= 2;
                     // LDS: once the discrepancy budget is full, a cell that
                     // already yielded may not deviate further — unless it
@@ -539,79 +579,120 @@ pub fn dfs_run(
                         .is_some_and(|m| disc >= m && yields[d] >= 1 && !disc_flag[d]);
                     if !lds_block {
                         let mut cur = cursors[d];
-                        let nseg = if break_open { plan.segs.len() } else { 1 };
+                        let n1 = plan.k as usize;
+                        let nseg = if break2_open {
+                            1 + n1 + n1 * (n1 - 1) / 2
+                        } else if break1_open {
+                            1 + n1
+                        } else {
+                            1
+                        };
                         let rq = &req[cell];
                         let has_req = cell_has_req[cell];
                         // priors: cost-0 candidates are drained into a
                         // weight-ordered buffer at the first visit of the
                         // instance (the per-epoch list shuffle remains the
-                        // tie-break); break segments stay lazy via cursor
+                        // tie-break); break segments stay lazy via cursor —
+                        // unless prior_over_cost (REPLAY), which drains ALL
+                        // open segments and sorts (Reverse(weight), cost)
                         if let Some(pri) = priors {
                             if !cur.started {
                                 cur.started = true;
-                                cur.seg = 1;
-                                cur.idx = 0;
-                                let seg = &plan.segs[0];
-                                let list: &[u16] = match seg.tab {
-                                    Tab::PairNW { n: ni, w: wi } => {
-                                        &tables.pair_nw[ccol[ni as usize] as usize
-                                            * tables.ncolors
-                                            + ccol[wi as usize] as usize]
-                                    }
-                                    Tab::PairNE { n: ni, e: ei } => {
-                                        &tables.pair_ne[ccol[ni as usize] as usize
-                                            * tables.ncolors
-                                            + ccol[ei as usize] as usize]
-                                    }
-                                    Tab::PairSW { s: si, w: wi } => {
-                                        &tables.pair_sw[ccol[si as usize] as usize
-                                            * tables.ncolors
-                                            + ccol[wi as usize] as usize]
-                                    }
-                                    Tab::Single { side, i } => {
-                                        &tables.single[side as usize]
-                                            [ccol[i as usize] as usize]
-                                    }
-                                    Tab::Free => &tables.free,
+                                let nfill = if p.prior_over_cost && break1_open {
+                                    nseg
+                                } else {
+                                    1
                                 };
+                                cur.seg = nfill as u8;
+                                cur.idx = 0;
                                 let buf = &mut pbuf[d];
                                 buf.clear();
-                                for &c in list {
-                                    let pid = c >> 2;
-                                    if !mask_get(&avail, pid) {
-                                        continue;
-                                    }
-                                    let rot = (c & 3) as u8;
-                                    let e = &tables.rot_edges[pid as usize][rot as usize];
-                                    let mut ok = true;
-                                    for xi in 0..seg.n_extra as usize {
-                                        let i = seg.extra[xi] as usize;
-                                        if e[plan.sides[i] as usize] != ccol[i] {
-                                            ok = false;
-                                            break;
+                                for seg in plan.segs.iter().take(nfill) {
+                                    let list: &[u16] = match seg.tab {
+                                        Tab::PairNW { n: ni, w: wi } => {
+                                            &tables.pair_nw[ccol[ni as usize] as usize
+                                                * tables.ncolors
+                                                + ccol[wi as usize] as usize]
                                         }
-                                    }
-                                    if ok
-                                        && (!has_req
-                                            || !(0..4).any(|s| {
+                                        Tab::PairNE { n: ni, e: ei } => {
+                                            &tables.pair_ne[ccol[ni as usize] as usize
+                                                * tables.ncolors
+                                                + ccol[ei as usize] as usize]
+                                        }
+                                        Tab::PairSW { s: si2, w: wi } => {
+                                            &tables.pair_sw[ccol[si2 as usize] as usize
+                                                * tables.ncolors
+                                                + ccol[wi as usize] as usize]
+                                        }
+                                        Tab::Single { side, i } => {
+                                            &tables.single[side as usize]
+                                                [ccol[i as usize] as usize]
+                                        }
+                                        Tab::Free => &tables.free,
+                                    };
+                                    for &c in list {
+                                        let pid = c >> 2;
+                                        if !mask_get(&avail, pid) {
+                                            continue;
+                                        }
+                                        let rot = (c & 3) as u8;
+                                        let e = &tables.rot_edges[pid as usize][rot as usize];
+                                        let mut ok = true;
+                                        for xi in 0..seg.n_extra as usize {
+                                            let i = seg.extra[xi] as usize;
+                                            if e[plan.sides[i] as usize] != ccol[i] {
+                                                ok = false;
+                                                break;
+                                            }
+                                        }
+                                        if !ok {
+                                            continue;
+                                        }
+                                        let mut viol = true;
+                                        for vi in 0..seg.n_violate as usize {
+                                            let i = seg.violate[vi] as usize;
+                                            if e[plan.sides[i] as usize] == ccol[i] {
+                                                viol = false;
+                                                break;
+                                            }
+                                        }
+                                        if !viol {
+                                            continue;
+                                        }
+                                        if has_req
+                                            && (0..4).any(|s| {
                                                 rq[s].is_some_and(|c2| c2 != e[s])
-                                            }))
-                                    {
-                                        buf.push(c);
+                                            })
+                                        {
+                                            continue;
+                                        }
+                                        buf.push(
+                                            c | (u16::from(seg.n_violate) << PB_COST_SHIFT),
+                                        );
                                     }
                                 }
                                 buf.sort_by_key(|&c| {
-                                    std::cmp::Reverse(pri.weight(cell, c >> 2, (c & 3) as u8))
+                                    (
+                                        std::cmp::Reverse(pri.weight(
+                                            cell,
+                                            (c & PB_CODE_MASK) >> 2,
+                                            (c & 3) as u8,
+                                        )),
+                                        c >> PB_COST_SHIFT,
+                                    )
                                 });
                                 pbuf_idx[d] = 0;
                             }
                             if (pbuf_idx[d] as usize) < pbuf[d].len() {
-                                let c = pbuf[d][pbuf_idx[d] as usize];
+                                let raw = pbuf[d][pbuf_idx[d] as usize];
                                 pbuf_idx[d] += 1;
+                                let cost = u32::from(raw >> PB_COST_SHIFT);
+                                let c = raw & PB_CODE_MASK;
                                 let (pid, rot) = (c >> 2, (c & 3) as u8);
                                 grid[cell] = (pid, rot);
                                 mask_clear(&mut avail, pid);
-                                cost_at[d] = 0;
+                                cost_at[d] = cost;
+                                spent += cost;
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -664,18 +745,23 @@ pub fn dfs_run(
                                 if !ok {
                                     continue;
                                 }
-                                if seg.violate != NO_VIOLATE {
-                                    let i = seg.violate as usize;
+                                let mut viol = true;
+                                for vi in 0..seg.n_violate as usize {
+                                    let i = seg.violate[vi] as usize;
                                     if e[plan.sides[i] as usize] == ccol[i] {
-                                        continue;
+                                        viol = false;
+                                        break;
                                     }
+                                }
+                                if !viol {
+                                    continue;
                                 }
                                 if has_req
                                     && (0..4).any(|s| rq[s].is_some_and(|c2| c2 != e[s]))
                                 {
                                     continue;
                                 }
-                                let cost = u32::from(seg.violate != NO_VIOLATE);
+                                let cost = u32::from(seg.n_violate);
                                 grid[cell] = (pid, rot);
                                 mask_clear(&mut avail, pid);
                                 cost_at[d] = cost;
@@ -756,7 +842,7 @@ mod tests {
         plan: &CellPlan,
         ccol: &[u8; 4],
         avail: &PieceMask,
-        break_open: bool,
+        max_mis: u32,
         hinted: bool,
     ) -> Vec<(u16, u8, u32)> {
         let mut hint_piece = vec![false; model.np];
@@ -780,8 +866,8 @@ mod tests {
                 }
                 if mis == 0 {
                     out.push((pid, rot, 0));
-                } else if mis == 1 && break_open && plan.k >= 2 {
-                    out.push((pid, rot, 1));
+                } else if mis <= max_mis && plan.k >= 2 {
+                    out.push((pid, rot, mis));
                 }
             }
         }
@@ -794,11 +880,16 @@ mod tests {
         plan: &CellPlan,
         ccol: &[u8; 4],
         avail: &PieceMask,
-        break_open: bool,
+        max_mis: u32,
     ) -> Vec<(u16, u8, u32)> {
         let mut out = Vec::new();
-        let nseg = if break_open { plan.segs.len() } else { 1 };
-        for (si, seg) in plan.segs.iter().enumerate().take(nseg) {
+        let n1 = plan.k as usize;
+        let nseg = match max_mis {
+            0 => 1,
+            1 => 1 + n1,
+            _ => plan.segs.len(),
+        };
+        for seg in plan.segs.iter().take(nseg) {
             let list: &[u16] = match seg.tab {
                 Tab::PairNW { n, w } => {
                     &tables.pair_nw
@@ -835,13 +926,18 @@ mod tests {
                 if !ok {
                     continue;
                 }
-                if seg.violate != NO_VIOLATE {
-                    let i = seg.violate as usize;
+                let mut viol = true;
+                for vi in 0..seg.n_violate as usize {
+                    let i = seg.violate[vi] as usize;
                     if e[plan.sides[i] as usize] == ccol[i] {
-                        continue;
+                        viol = false;
+                        break;
                     }
                 }
-                out.push((pid, rot, u32::from(si > 0)));
+                if !viol {
+                    continue;
+                }
+                out.push((pid, rot, u32::from(seg.n_violate)));
             }
         }
         out
@@ -883,18 +979,17 @@ mod tests {
                         }
                     };
                 }
-                for break_open in [false, true] {
-                    let got = drain(&tables, plan, &ccol, &avail, break_open);
+                for max_mis in [0u32, 1, 2] {
+                    let got = drain(&tables, plan, &ccol, &avail, max_mis);
                     let mut got_sorted = got.clone();
                     got_sorted.sort_unstable();
                     let mut want =
-                        reference_cands(&tables, &m, plan, &ccol, &avail, break_open, hinted);
+                        reference_cands(&tables, &m, plan, &ccol, &avail, max_mis, hinted);
                     want.sort_unstable();
-                    assert_eq!(got_sorted, want, "d={d} break_open={break_open}");
-                    // cost-0 strictly before breaks in yield order
-                    if let Some(fb) = got.iter().position(|&(_, _, c)| c > 0) {
-                        assert!(got[..fb].iter().all(|&(_, _, c)| c == 0));
-                        assert!(got[fb..].iter().all(|&(_, _, c)| c == 1));
+                    assert_eq!(got_sorted, want, "d={d} max_mis={max_mis}");
+                    // cheap-first: cost non-decreasing across the yield order
+                    for w in got.windows(2) {
+                        assert!(w[0].2 <= w[1].2, "d={d} max_mis={max_mis}");
                     }
                 }
             }
@@ -1012,6 +1107,99 @@ mod tests {
             schedule: vec![16, 22, 27],
             exact_tail_k: 6,
             scan: Scan::Seam(3),
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
+    }
+
+    fn priors_from_grids(
+        m: &InteriorModel,
+        grids: &[&Vec<(u16, u8)>],
+        tag: &str,
+    ) -> crate::priors::Priors {
+        let dir = std::env::temp_dir()
+            .join(format!("cloister_dfs_pri_{}_{tag}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("tmp");
+        for (bi, g) in grids.iter().enumerate() {
+            let body: Vec<String> = g
+                .iter()
+                .enumerate()
+                .map(|(cell, &(pid, rot))| {
+                    let pos = (cell / m.n + 1) * 16 + (cell % m.n + 1);
+                    format!("{{\"pos\":{pos},\"piece_id\":{pid},\"rotation\":{rot}}}")
+                })
+                .collect();
+            std::fs::write(
+                dir.join(format!("{bi}.json")),
+                format!("{{\"placement\":[{}]}}", body.join(",")),
+            )
+            .expect("write");
+        }
+        let pri = crate::priors::Priors::from_board_dir(m, &dir).expect("priors");
+        std::fs::remove_dir_all(&dir).ok();
+        pri
+    }
+
+    /// REPLAY: a pool holding the exact solution + prior-over-cost must
+    /// walk straight to it (weight-1 candidates first at every depth,
+    /// including through the all-segment fill at gated depths)
+    #[test]
+    fn prior_over_cost_replays_pool_solution() {
+        let (m, sol, targets) = InteriorModel::synthetic(6, 6, 21);
+        let pri = priors_from_grids(&m, &[&sol], "replay");
+        let p = DfsParams {
+            seed: 9,
+            budget_ms: 10_000,
+            restart_ms: 5_000,
+            schedule: vec![6, 12, 18],
+            exact_tail_k: 6,
+            prior_over_cost: true,
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), Some(&pri), &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), 0);
+        assert_eq!(r.epochs, 1);
+        assert!(r.nodes < 100, "replay must not detour: {} nodes", r.nodes);
+    }
+
+    /// foreign pool steers into breaks; placements (incl. cost-1 from the
+    /// buffer) must keep exact break accounting (the in-DFS recount
+    /// asserts fire on any mismatch)
+    #[test]
+    fn prior_over_cost_break_accounting() {
+        let (m, _, targets) = InteriorModel::synthetic(6, 4, 5);
+        let (_, sol_b, _) = InteriorModel::synthetic(6, 4, 23);
+        let pri = priors_from_grids(&m, &[&sol_b], "foreign");
+        let p = DfsParams {
+            seed: 2,
+            budget_ms: 3_000,
+            restart_ms: 1_000,
+            schedule: vec![20, 26, 30],
+            exact_tail_k: 6,
+            prior_over_cost: true,
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), Some(&pri), &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
+    }
+
+    /// cost-2 segments end-to-end: completes, accounts exactly, and the
+    /// double-break gate semantics (2 spends at one cell) hold
+    #[test]
+    fn double_break_dfs_completes_and_accounts() {
+        let (m, _, targets) = InteriorModel::synthetic(6, 4, 13);
+        let p = DfsParams {
+            seed: 7,
+            budget_ms: 3_000,
+            restart_ms: 1_000,
+            schedule: vec![18, 22, 26, 30],
+            exact_tail_k: 6,
+            max_cell_breaks: 2,
             ..DfsParams::default()
         };
         let r = dfs_run(&m, Some(&targets), None, &p);

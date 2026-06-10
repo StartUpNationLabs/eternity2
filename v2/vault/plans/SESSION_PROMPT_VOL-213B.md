@@ -105,6 +105,7 @@ strict460a hinted → 400) for per-frame ceiling certificates.
   word-split `$VAR` — quote schedules.
 - The attach MIP sometimes prefers BB<60 + more IB; `--require-bb60` to
   force.
+- Always store output of your scripts (bucas url + csv and/or json)
 
 ## Read first
 
