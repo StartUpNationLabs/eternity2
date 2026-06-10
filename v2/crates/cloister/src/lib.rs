@@ -33,3 +33,4 @@ pub mod model;
 pub mod rng;
 pub mod sa;
 pub mod verify;
+pub mod priors;

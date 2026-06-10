@@ -283,6 +283,7 @@ pub struct DfsResult {
 pub fn dfs_run(
     model: &InteriorModel,
     targets: Option<&RimTargets>,
+    priors: Option<&crate::priors::Priors>,
     p: &DfsParams,
 ) -> DfsResult {
     let cells = model.cells;
@@ -355,6 +356,10 @@ pub fn dfs_run(
     let mut cost_at = vec![0u32; cells + 1];
     let mut yields = vec![0u32; cells + 1];
     let mut disc_flag = vec![false; cells + 1];
+    // priors: per-depth cost-0 candidate buffers, weight-ordered at the
+    // first visit of a cell instance (list shuffle supplies tie-breaking)
+    let mut pbuf: Vec<Vec<u16>> = vec![Vec::new(); cells + 1];
+    let mut pbuf_idx = vec![0u32; cells + 1];
 
     let mut max_depth = 0usize;
     let mut ms_at_max: u128 = 0;
@@ -534,11 +539,89 @@ pub fn dfs_run(
                         .is_some_and(|m| disc >= m && yields[d] >= 1 && !disc_flag[d]);
                     if !lds_block {
                         let mut cur = cursors[d];
-                        cur.started = true;
                         let nseg = if break_open { plan.segs.len() } else { 1 };
                         let rq = &req[cell];
                         let has_req = cell_has_req[cell];
-                        'segs: while (cur.seg as usize) < nseg {
+                        // priors: cost-0 candidates are drained into a
+                        // weight-ordered buffer at the first visit of the
+                        // instance (the per-epoch list shuffle remains the
+                        // tie-break); break segments stay lazy via cursor
+                        if let Some(pri) = priors {
+                            if !cur.started {
+                                cur.started = true;
+                                cur.seg = 1;
+                                cur.idx = 0;
+                                let seg = &plan.segs[0];
+                                let list: &[u16] = match seg.tab {
+                                    Tab::PairNW { n: ni, w: wi } => {
+                                        &tables.pair_nw[ccol[ni as usize] as usize
+                                            * tables.ncolors
+                                            + ccol[wi as usize] as usize]
+                                    }
+                                    Tab::PairNE { n: ni, e: ei } => {
+                                        &tables.pair_ne[ccol[ni as usize] as usize
+                                            * tables.ncolors
+                                            + ccol[ei as usize] as usize]
+                                    }
+                                    Tab::PairSW { s: si, w: wi } => {
+                                        &tables.pair_sw[ccol[si as usize] as usize
+                                            * tables.ncolors
+                                            + ccol[wi as usize] as usize]
+                                    }
+                                    Tab::Single { side, i } => {
+                                        &tables.single[side as usize]
+                                            [ccol[i as usize] as usize]
+                                    }
+                                    Tab::Free => &tables.free,
+                                };
+                                let buf = &mut pbuf[d];
+                                buf.clear();
+                                for &c in list {
+                                    let pid = c >> 2;
+                                    if !mask_get(&avail, pid) {
+                                        continue;
+                                    }
+                                    let rot = (c & 3) as u8;
+                                    let e = &tables.rot_edges[pid as usize][rot as usize];
+                                    let mut ok = true;
+                                    for xi in 0..seg.n_extra as usize {
+                                        let i = seg.extra[xi] as usize;
+                                        if e[plan.sides[i] as usize] != ccol[i] {
+                                            ok = false;
+                                            break;
+                                        }
+                                    }
+                                    if ok
+                                        && (!has_req
+                                            || !(0..4).any(|s| {
+                                                rq[s].is_some_and(|c2| c2 != e[s])
+                                            }))
+                                    {
+                                        buf.push(c);
+                                    }
+                                }
+                                buf.sort_by_key(|&c| {
+                                    std::cmp::Reverse(pri.weight(cell, c >> 2, (c & 3) as u8))
+                                });
+                                pbuf_idx[d] = 0;
+                            }
+                            if (pbuf_idx[d] as usize) < pbuf[d].len() {
+                                let c = pbuf[d][pbuf_idx[d] as usize];
+                                pbuf_idx[d] += 1;
+                                let (pid, rot) = (c >> 2, (c & 3) as u8);
+                                grid[cell] = (pid, rot);
+                                mask_clear(&mut avail, pid);
+                                cost_at[d] = 0;
+                                yields[d] += 1;
+                                if yields[d] == 2 {
+                                    disc += 1;
+                                    disc_flag[d] = true;
+                                }
+                                placed = true;
+                            }
+                        }
+                        cur.started = true;
+                        'segs: while !placed && (cur.seg as usize) < nseg {
                             let seg = &plan.segs[cur.seg as usize];
                             let list: &[u16] = match seg.tab {
                                 Tab::PairNW { n: ni, w: wi } => {
@@ -830,7 +913,7 @@ mod tests {
                     exact_tail_k: 0,
                     ..DfsParams::default()
                 };
-                let r = dfs_run(&m, tg, &p);
+                let r = dfs_run(&m, tg, None, &p);
                 let (grid, breaks) =
                     r.complete.unwrap_or_else(|| panic!("no completion seed {seed}"));
                 assert_eq!(breaks, 0);
@@ -855,7 +938,7 @@ mod tests {
             exact_tail_k: 6,
             ..DfsParams::default()
         };
-        let r = dfs_run(&m, Some(&targets), &p);
+        let r = dfs_run(&m, Some(&targets), None, &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
     }
@@ -875,7 +958,7 @@ mod tests {
             exact_tail_k: 5,
             ..DfsParams::default()
         };
-        let r = dfs_run(&m, Some(&targets), &p);
+        let r = dfs_run(&m, Some(&targets), None, &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
         for &(cell, pid, rot) in &m.hints {
@@ -915,7 +998,7 @@ mod tests {
                 scan: Scan::Seam(3),
                 ..DfsParams::default()
             };
-            let r = dfs_run(&m, Some(&targets), &p);
+            let r = dfs_run(&m, Some(&targets), None, &p);
             let (grid, breaks) = r.complete.expect("complete");
             assert_eq!(breaks, 0);
             assert_eq!(m.count_breaks(&grid, Some(&targets)), 0);
@@ -931,7 +1014,7 @@ mod tests {
             scan: Scan::Seam(3),
             ..DfsParams::default()
         };
-        let r = dfs_run(&m, Some(&targets), &p);
+        let r = dfs_run(&m, Some(&targets), None, &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
     }
@@ -948,7 +1031,7 @@ mod tests {
             scan: Scan::Boustro,
             ..DfsParams::default()
         };
-        let r = dfs_run(&m, Some(&targets), &p);
+        let r = dfs_run(&m, Some(&targets), None, &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
     }

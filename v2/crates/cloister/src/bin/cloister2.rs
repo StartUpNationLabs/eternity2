@@ -105,6 +105,15 @@ fn main() {
     let (puzzle, hints) = load_puzzle_with_hints(&puzzle_path).expect("load puzzle");
     let model = InteriorModel::from_puzzle(&puzzle, &hints);
 
+    // V155-pattern empirical priors from a pool of completed boards
+    let priors = get("--prior-boards").map(|p| {
+        let pr = eternity2_cloister::priors::Priors::from_board_dir(&model, Path::new(&p))
+            .expect("priors");
+        eprintln!("priors: {} complete boards from {p}", pr.n_boards);
+        pr
+    });
+    let priors_ref = priors.as_ref();
+
     // frames: none (free rim), a single file, or a directory to sweep
     let frames: Vec<Frame> = match get("--frame") {
         None => Vec::new(),
@@ -189,7 +198,7 @@ fn main() {
                     max_disc,
                     scan,
                 };
-                let r = dfs_run(&model, targets, &p);
+                let r = dfs_run(&model, targets, priors_ref, &p);
                 JobOut {
                     frame_label: label,
                     frame_idx: fidx,
@@ -217,7 +226,7 @@ fn main() {
                         max_disc,
                         scan,
                     };
-                    let r = dfs_run(&model, targets, &p);
+                    let r = dfs_run(&model, targets, priors_ref, &p);
                     Some(r.complete.map_or_else(
                         || {
                             let so = scan.order(model.n);
