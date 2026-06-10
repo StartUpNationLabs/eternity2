@@ -133,6 +133,9 @@ pub struct CellPlan {
     /// my side for constraint i
     pub sides: [u8; 4],
     pub src: [Src; 4],
+    /// my sides facing LATER in-grid cells (LEDGER: demands I expose)
+    pub fwd: [u8; 4],
+    pub n_fwd: u8,
     segs: Vec<Seg>,
 }
 
@@ -188,6 +191,8 @@ pub fn build_plans(
             let mut sides = [0u8; 4];
             let mut src = [Src::Fixed(0); 4];
             let mut k = 0u8;
+            let mut fwd = [0u8; 4];
+            let mut n_fwd = 0u8;
             let nb: [(usize, Option<usize>); 4] = [
                 (0, (y > 0).then(|| cell - n)),
                 (1, (x + 1 < n).then(|| cell + 1)),
@@ -204,6 +209,9 @@ pub fn build_plans(
                                 their_side: ((s + 2) % 4) as u8,
                             };
                             k += 1;
+                        } else {
+                            fwd[n_fwd as usize] = s as u8;
+                            n_fwd += 1;
                         }
                     }
                     None => {
@@ -230,9 +238,93 @@ pub fn build_plans(
                     }
                 }
             }
-            CellPlan { cell: cell as u16, k, sides, src, segs }
+            CellPlan { cell: cell as u16, k, sides, src, fwd, n_fwd, segs }
         })
         .collect()
+}
+
+/// LEDGER (vol-214): admissible color-deficit accounting. f[c] = open
+/// demands of color c (rim targets on empty cells + placed sides facing
+/// empty cells); s[c] = sides of color c among available pieces (hint
+/// pieces included — they deploy at forced cells). Every surplus demand
+/// max(0, f[c]−s[c]) is ≥ 1 future mismatch (walked or in-tail), so
+/// spent + deficit > budget is a sound prune that turns the schedule
+/// length into a TOTAL-breaks cap (record hunt: budget 19 ⇔ ≥ 461).
+struct Ledger {
+    f: Vec<u32>,
+    s: Vec<u32>,
+    deficit: u32,
+}
+
+impl Ledger {
+    fn surplus(&self, c: usize) -> u32 {
+        self.f[c].saturating_sub(self.s[c])
+    }
+    fn add_f(&mut self, c: u8, up: bool) {
+        let c = c as usize;
+        let before = self.surplus(c);
+        if up {
+            self.f[c] += 1;
+        } else {
+            self.f[c] -= 1;
+        }
+        self.deficit = self.deficit + self.surplus(c) - before;
+    }
+    fn add_s(&mut self, c: u8, up: bool) {
+        let c = c as usize;
+        let before = self.surplus(c);
+        if up {
+            self.s[c] += 1;
+        } else {
+            self.s[c] -= 1;
+        }
+        self.deficit = self.deficit + self.surplus(c) - before;
+    }
+    /// piece (pid, rot) placed at `plan`'s cell: consumes one demand per
+    /// constraint, exposes fwd-side demands, removes its 4 sides from
+    /// supply. `ccol` = the constraint colors at this cell.
+    fn place(&mut self, tables: &Tables, plan: &CellPlan, ccol: &[u8; 4], pid: u16, rot: u8) {
+        for i in 0..plan.k as usize {
+            self.add_f(ccol[i], false);
+        }
+        let e = &tables.rot_edges[pid as usize][rot as usize];
+        for i in 0..plan.n_fwd as usize {
+            self.add_f(e[plan.fwd[i] as usize], true);
+        }
+        let base = &tables.rot_edges[pid as usize][0];
+        for &c in base {
+            self.add_s(c, false);
+        }
+    }
+    fn unplace(&mut self, tables: &Tables, plan: &CellPlan, ccol: &[u8; 4], pid: u16, rot: u8) {
+        for i in 0..plan.k as usize {
+            self.add_f(ccol[i], true);
+        }
+        let e = &tables.rot_edges[pid as usize][rot as usize];
+        for i in 0..plan.n_fwd as usize {
+            self.add_f(e[plan.fwd[i] as usize], false);
+        }
+        let base = &tables.rot_edges[pid as usize][0];
+        for &c in base {
+            self.add_s(c, true);
+        }
+    }
+}
+
+/// constraint colors of `plan`'s cell under the current grid (neighbors
+/// referenced by the plan are guaranteed placed)
+fn ccol_of(tables: &Tables, plan: &CellPlan, grid: &[(u16, u8)]) -> [u8; 4] {
+    let mut ccol = [0u8; 4];
+    for i in 0..plan.k as usize {
+        ccol[i] = match plan.src[i] {
+            Src::Fixed(c) => c,
+            Src::Placed { cell: nc, their_side } => {
+                let (np_, nr) = grid[nc as usize];
+                tables.rot_edges[np_ as usize][nr as usize][their_side as usize]
+            }
+        };
+    }
+    ccol
 }
 
 #[derive(Clone, Copy)]
@@ -287,6 +379,10 @@ pub struct DfsParams {
     /// witness walk, with fully guided continuation. Samples the
     /// perfect-prefix neighborhood one deviation at a time.
     pub replay_perturb: Option<(usize, usize)>,
+    /// LEDGER (vol-214): admissible color-deficit prune — backtrack any
+    /// state with spent + Σ_c max(0, F_c − S_c) > budget. Turns the
+    /// schedule length into a TOTAL-breaks cap (walked + tail).
+    pub ledger: bool,
 }
 
 impl Default for DfsParams {
@@ -306,6 +402,7 @@ impl Default for DfsParams {
             prior_over_cost: false,
             max_cell_breaks: 1,
             replay_perturb: None,
+            ledger: false,
         }
     }
 }
@@ -409,6 +506,11 @@ pub fn dfs_run(
     // first visit of a cell instance (list shuffle supplies tie-breaking)
     let mut pbuf: Vec<Vec<u16>> = vec![Vec::new(); cells + 1];
     let mut pbuf_idx = vec![0u32; cells + 1];
+    let mut led = Ledger {
+        f: vec![0; tables.ncolors],
+        s: vec![0; tables.ncolors],
+        deficit: 0,
+    };
 
     let mut max_depth = 0usize;
     let mut death_hist = vec![0u32; cells + 1];
@@ -438,11 +540,32 @@ pub fn dfs_run(
         let skip_depth: usize = p.replay_perturb.map_or(usize::MAX, |(lo, hi)| {
             lo + (rng.next_u64() as usize) % (hi - lo).max(1)
         });
+        if p.ledger {
+            led.f.iter_mut().for_each(|v| *v = 0);
+            led.s.iter_mut().for_each(|v| *v = 0);
+            for pid in 0..model.np {
+                for &c in &tables.rot_edges[pid][0] {
+                    led.s[c as usize] += 1;
+                }
+            }
+            if let Some(tg) = targets {
+                for t in tg {
+                    for c in t.iter().flatten() {
+                        led.f[*c as usize] += 1;
+                    }
+                }
+            }
+            led.deficit = (0..tables.ncolors).map(|c| led.surplus(c)).sum();
+        }
         let epoch_t0 = Instant::now();
 
         let mut d = 0usize;
         let mut backtrack_now = false;
         loop {
+            // LEDGER prune: state cannot complete within total budget
+            if p.ledger && !backtrack_now && spent + led.deficit > budget {
+                backtrack_now = true;
+            }
             if k_exact > 0 && d == cells - k_exact && !backtrack_now {
                 let mut rest: Vec<u16> = Vec::with_capacity(k_exact);
                 for pid in 0..model.np as u16 {
@@ -549,17 +672,10 @@ pub fn dfs_run(
                     if !cursors[d].started && mask_get(&avail, fp) {
                         cursors[d].started = true;
                         let e = tables.rot_edges[fp as usize][fr as usize];
+                        let fcol = ccol_of(&tables, plan, &grid);
                         let mut cost = 0u32;
                         for i in 0..plan.k as usize {
-                            let want = match plan.src[i] {
-                                Src::Fixed(c) => c,
-                                Src::Placed { cell: nc, their_side } => {
-                                    let (np_, nr) = grid[nc as usize];
-                                    tables.rot_edges[np_ as usize][nr as usize]
-                                        [their_side as usize]
-                                }
-                            };
-                            if e[plan.sides[i] as usize] != want {
+                            if e[plan.sides[i] as usize] != fcol[i] {
                                 cost += 1;
                             }
                         }
@@ -571,6 +687,9 @@ pub fn dfs_run(
                             mask_clear(&mut avail, fp);
                             cost_at[d] = cost;
                             spent += cost;
+                            if p.ledger {
+                                led.place(&tables, plan, &fcol, fp, fr);
+                            }
                             placed = true;
                         }
                     }
@@ -721,6 +840,9 @@ pub fn dfs_run(
                                 mask_clear(&mut avail, pid);
                                 cost_at[d] = cost;
                                 spent += cost;
+                                if p.ledger {
+                                    led.place(&tables, plan, &ccol, pid, rot);
+                                }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -794,6 +916,9 @@ pub fn dfs_run(
                                 mask_clear(&mut avail, pid);
                                 cost_at[d] = cost;
                                 spent += cost;
+                                if p.ledger {
+                                    led.place(&tables, plan, &ccol, pid, rot);
+                                }
                                 yields[d] += 1;
                                 if yields[d] == 2 {
                                     disc += 1;
@@ -841,7 +966,11 @@ pub fn dfs_run(
                 }
                 d -= 1;
                 let cell = plans[d].cell as usize;
-                let (pid, _) = grid[cell];
+                let (pid, rot) = grid[cell];
+                if p.ledger {
+                    let fcol = ccol_of(&tables, &plans[d], &grid);
+                    led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                }
                 mask_set(&mut avail, pid);
                 grid[cell] = (u16::MAX, 0);
                 spent -= cost_at[d];
@@ -855,7 +984,11 @@ pub fn dfs_run(
                         }
                         d -= 1;
                         let cell = plans[d].cell as usize;
-                        let (pid, _) = grid[cell];
+                        let (pid, rot) = grid[cell];
+                        if p.ledger {
+                            let fcol = ccol_of(&tables, &plans[d], &grid);
+                            led.unplace(&tables, &plans[d], &fcol, pid, rot);
+                        }
                         mask_set(&mut avail, pid);
                         grid[cell] = (u16::MAX, 0);
                         spent -= cost_at[d];
@@ -1226,6 +1359,118 @@ mod tests {
         let r = dfs_run(&m, Some(&targets), Some(&pri), &p);
         let (grid, breaks) = r.complete.expect("complete");
         assert_eq!(m.count_breaks(&grid, Some(&targets)), breaks);
+    }
+
+    /// LEDGER incremental bookkeeping must agree with a from-scratch
+    /// recomputation after any place/unplace sequence
+    #[test]
+    fn ledger_incremental_matches_recompute() {
+        let (m, sol, targets) = InteriorModel::synthetic(6, 5, 31);
+        let scan = Scan::RowMajor.order(6);
+        let plans = build_plans(&m, &scan, Some(&targets));
+        let tables = Tables::build(&m, false);
+        let mut grid = vec![(u16::MAX, 0u8); m.cells];
+        let init = |grid: &Vec<(u16, u8)>| -> Ledger {
+            let mut led = Ledger {
+                f: vec![0; tables.ncolors],
+                s: vec![0; tables.ncolors],
+                deficit: 0,
+            };
+            for pid in 0..m.np {
+                if grid.iter().all(|&(p, _)| p != pid as u16) {
+                    for &c in &tables.rot_edges[pid][0] {
+                        led.s[c as usize] += 1;
+                    }
+                }
+            }
+            // demands: rim targets on empty cells + placed sides facing empty
+            for (cell, t) in targets.iter().enumerate() {
+                if grid[cell].0 == u16::MAX {
+                    for c in t.iter().flatten() {
+                        led.f[*c as usize] += 1;
+                    }
+                }
+            }
+            for cell in 0..m.cells {
+                let (p, r) = grid[cell];
+                if p == u16::MAX {
+                    continue;
+                }
+                let e = tables.rot_edges[p as usize][r as usize];
+                let (y, x) = (cell / m.n, cell % m.n);
+                let nb = [
+                    (0usize, (y > 0).then(|| cell - m.n)),
+                    (1, (x + 1 < m.n).then(|| cell + 1)),
+                    (2, (y + 1 < m.n).then(|| cell + m.n)),
+                    (3, (x > 0).then(|| cell - 1)),
+                ];
+                for (s, nc) in nb {
+                    if let Some(ncell) = nc {
+                        if grid[ncell].0 == u16::MAX {
+                            led.f[e[s] as usize] += 1;
+                        }
+                    }
+                }
+            }
+            led.deficit = (0..tables.ncolors).map(|c| led.surplus(c)).sum();
+            led
+        };
+        let mut led = init(&grid);
+        // place the first 12 solution cells, checking after each
+        for d in 0..12 {
+            let cell = scan[d];
+            let ccol = ccol_of(&tables, &plans[d], &grid);
+            grid[cell] = sol[cell];
+            led.place(&tables, &plans[d], &ccol, sol[cell].0, sol[cell].1);
+            let want = init(&grid);
+            assert_eq!(led.f, want.f, "f after place d={d}");
+            assert_eq!(led.s, want.s, "s after place d={d}");
+            assert_eq!(led.deficit, want.deficit, "deficit after place d={d}");
+        }
+        // unplace back down, checking after each
+        for d in (6..12).rev() {
+            let cell = scan[d];
+            let (pid, rot) = grid[cell];
+            let ccol = ccol_of(&tables, &plans[d], &grid);
+            led.unplace(&tables, &plans[d], &ccol, pid, rot);
+            grid[cell] = (u16::MAX, 0);
+            let want = init(&grid);
+            assert_eq!(led.f, want.f, "f after unplace d={d}");
+            assert_eq!(led.deficit, want.deficit, "deficit after unplace d={d}");
+        }
+    }
+
+    /// LEDGER admissibility: a perfect solution path never violates the
+    /// budget-0 prune, so the bordered perfect solve must still succeed
+    #[test]
+    fn ledger_dfs_solves_and_accounts() {
+        let (m, _, targets) = InteriorModel::synthetic(6, 6, 17);
+        let p = DfsParams {
+            seed: 3,
+            budget_ms: 20_000,
+            restart_ms: 2_000,
+            ledger: true,
+            ..DfsParams::default()
+        };
+        let r = dfs_run(&m, Some(&targets), None, &p);
+        let (grid, breaks) = r.complete.expect("complete");
+        assert_eq!(breaks, 0);
+        assert_eq!(m.count_breaks(&grid, Some(&targets)), 0);
+        // break-DFS under ledger: total stays within budget and accounts
+        let (m2, _, tg2) = InteriorModel::synthetic(6, 4, 5);
+        let p2 = DfsParams {
+            seed: 2,
+            budget_ms: 5_000,
+            restart_ms: 1_000,
+            schedule: vec![16, 20, 24, 27, 30, 33],
+            exact_tail_k: 6,
+            ledger: true,
+            ..DfsParams::default()
+        };
+        let r2 = dfs_run(&m2, Some(&tg2), None, &p2);
+        if let Some((grid2, breaks2)) = r2.complete {
+            assert_eq!(m2.count_breaks(&grid2, Some(&tg2)), breaks2);
+        }
     }
 
     /// cost-2 segments end-to-end: completes, accounts exactly, and the
