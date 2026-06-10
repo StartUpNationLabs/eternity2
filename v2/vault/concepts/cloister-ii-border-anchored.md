@@ -81,6 +81,25 @@ anatomy at IB≈50: II 339-345 vs the witness 350 (community 460 on the SAME
 frame) — the bordered+hinted II search is the binding wall. We match the
 460s' IB; we trail their II by ~11 at minutes-scale budgets.
 
+## Vol-213 amendments
+
+- **The 444-450 unguided band is UNIVERSAL across 55 frames** (5
+  original + 50 framegen-generated, census-1b: 399/400 completions,
+  per-frame medians 444-446.5, max 449). Frame identity is irrelevant
+  to the v1 recipe. [[framegen-chain-feasibility]] unlocks compatible
+  frames at will (73% yield); none escape the band.
+- **Double-break (mcb=2) is null unguided on BOTH lanes** (unhinted
+  et14: 451/451/453 vs 450/452/453; hinted tail2: 446/447/448
+  identical) — its value is witness REPLAY exclusively, where it is
+  decisive ([[replay-prior-over-cost]]: both community 460s replay
+  exactly).
+- **Hinted lane gates must start ≤ 120** (the hinted wall is 139-144,
+  measured by the choke instrument); the `--breaks` default spread
+  (154+) is an UNHINTED schedule — two run-batches were lost to this.
+- **Choke auto-gates** (`--schedule-from-choke`): moved the hinted et14
+  wall 146 → 180 at budget 14; budget 18 → first-ever completion in
+  that lane (443). Reliability/depth tool; totals still ≤ tail2 lane.
+
 ## What's open (→ vol-213)
 
 - Seam-scan CLOISTER-III: two-front growth meeting at an exact-closure
