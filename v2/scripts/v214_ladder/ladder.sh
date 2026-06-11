@@ -9,6 +9,7 @@ cd "$(dirname "$0")/../.."
 BIN=./target/release/cloister2
 FRAME=${FRAME:-output/vol-212/frames_best/strict460a.json}
 N=${1:-104}
+SEED0=${2:-1}
 ROOT=output/vol-214/ladder_$(date -u +%Y%m%dT%H%M%S)
 mkdir -p $ROOT
 
@@ -21,7 +22,7 @@ print(','.join(str(int(k+2+i*(182-k-2)/13)) for i in range(14)))"
 echo "=== rung 1: $N x 5 s probes ==="
 $BIN --mode dfs --frame $FRAME --hints --exact-tail 0 \
   --save-prefix --abort-below 100:2000000 \
-  --seeds $N --budget-ms 5000 --restart-ms 5000 --threads 8 \
+  --seeds $N --seed0 $SEED0 --budget-ms 5000 --restart-ms 5000 --threads 8 \
   --out-root $ROOT
 R1=$(ls -td $ROOT/cloister2_dfs_* | head -1)
 ls $R1/prefix_d*.json | wc -l | xargs echo "banked prefixes:"
