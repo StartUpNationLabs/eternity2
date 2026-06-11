@@ -110,6 +110,16 @@ not a workaround; it is the only measurement that sees the signal.
 (Also calibrated: the star prefix needs ≥300 s finals to show 451;
 at 60 s it reads 447 — rung budgets must respect this.)
 
+## Basin ceiling (vol-215 evening): the curve is FLAT
+
+Incumbent at 6 h × 8: **451 × 8 exactly** (one seed's IB-trade variant,
+no 452). With 30 min → 451, 1 h → 451-452 (452 = 1/32 tail), 6 h → 451:
+the d146 basin ceiling is 451 typical / 452 tail. More time buys
+nothing; the +1-per-6× extrapolation is refuted. Unguided strict
+ceiling stands at **452 verified**. Remaining levers: lottery volume
+(rate ~1/1400/probe), MIDDEN economics (open), markov-optimized
+order/gates (unbuilt), k=2 witness deviations (unbuilt).
+
 ## Linked
 
 [[replay-prior-over-cost]], [[ledger-color-deficit]],
