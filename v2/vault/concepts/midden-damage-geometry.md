@@ -53,7 +53,27 @@ later-scan cell, matching `schedule-from-board`).
 
 ## Measurements
 
-(vol-215 open — first geometry sweep queued behind ladder run-2c.)
+**Sweep 1 (strict460a hinted, budget 20, gates open, 300 s × 8 per
+geometry): 0 completions everywhere — with a structural find inside.**
+
+| S (28 cells each) | wall (min/med/max depth) |
+|---|---|
+| rows:12,13 (witness shape) | 153/153/158 — the perfect wall: S deeper than the wall is unreachable |
+| rows:6,7 | 148/153/156 |
+| cols:6,7 | 125/152/153 |
+| **dispersed (every 7th cell)** | **167/167/174** |
+
+★ **Dispersed damage availability extends the perfect-walk wall
+153 → 167-174 (+14 to +21)** — sparse break opportunities along the
+whole walk keep the pool healthy far deeper than any contiguous
+geometry. It fails only at the endgame (nothing absorbs row-13
+damage). The witness shape is UNREACHABLE for an unguided walk —
+confirming vol-213's account of why only perfect-prefix lotteries (or
+witness guidance) ever reach it. Hybrid v2 (dispersed ∪ tail rows,
+density sweep) queued.
+
+QUOTA A/B same night (v1 hinted tail2, 96:20:0.25): 446/447/449 vs
+control 446/447/448 — marginal at this single config.
 
 ## Linked
 
