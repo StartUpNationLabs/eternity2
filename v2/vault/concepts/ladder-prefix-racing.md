@@ -96,6 +96,20 @@ fit-statistics (per-depth fit/half-fit probabilities) — per-depth
 structure rather than aggregates, doubling as the markov-optimizer
 input (BACKLOG `verhaard-markov-schedule-optimizer`).
 
+## Triple-null on prefix-quality signals (vol-215 close of analysis)
+
+The 451-producer is indistinguishable from its 446-twins by:
+1. aggregate pool statistics (deficit vacuous, tilability depth-proxy);
+2. placement neighborhood (10% median overlap — isolated draws);
+3. **local search dynamics** (FITSTAT curves: yield/visit and death
+   rates identical across all depth bands beyond the pin).
+Prefix quality is an emergent GLOBAL property — which completions
+exist — consistent with [[isentrope-entropy-growth]] distinctness.
+Operational consequence: empirical racing with long-budget finals is
+not a workaround; it is the only measurement that sees the signal.
+(Also calibrated: the star prefix needs ≥300 s finals to show 451;
+at 60 s it reads 447 — rung budgets must respect this.)
+
 ## Linked
 
 [[replay-prior-over-cost]], [[ledger-color-deficit]],
