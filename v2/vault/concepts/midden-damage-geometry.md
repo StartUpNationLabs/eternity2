@@ -89,6 +89,15 @@ scores were computed with this pollution — the "deficit scoring null"
 verdicts are REOPENED. Fixed ranker: d155 probe prefix = deficit 0,
 breaks 6. ladder5b (budget-14 probes) relaunched.
 
+**ladder5b (fixed ranker): rung-2 walls 159-167, 0 completions — third
+straight completion-failure of the composition.** Anti-thrash call
+(vol-43-reframing): config iteration stopped at dawn; overnight
+deciders launched instead — (a) hybrid choke diagnosis (where exactly
+does the 168-182 region kill walks? per-depth death histograms,
+8 × 60 s), (b) the never-run incumbent extension (d146-seed63 at
+3600 s × 8 — does the 451 basin extend?). Morning analysis decides
+MIDDEN v3 (temporal × spatial gating) vs pivot.
+
 ## Linked
 
 [[replay-prior-over-cost]] (witness damage anatomy),
