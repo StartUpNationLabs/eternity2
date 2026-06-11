@@ -84,6 +84,18 @@ With the fixed ranker, over 35 prefixes with measured finishes:
 promoter. Finish spread at equal depth/deficit/tilability: 446-451 —
 whatever distinguishes prefixes lives in positional/pairwise structure.
 
+## The hidden-signal problem (vol-215 mid-day)
+
+Placement diff of the 451-producer vs all 1034 banked prefixes: median
+overlap 10%, max 24% — every probe draw is an isolated arrangement
+(area-law). Piece SETS overlap 69-76% (consumption is forced); the
+discriminator is pure arrangement, invisible to aggregate stats AND to
+neighborhood structure. Escape rate ≈ 1/1400 probes and falling.
+⇒ flat lottery does not scale to 453+. Next instrument: Verhaard
+fit-statistics (per-depth fit/half-fit probabilities) — per-depth
+structure rather than aggregates, doubling as the markov-optimizer
+input (BACKLOG `verhaard-markov-schedule-optimizer`).
+
 ## Linked
 
 [[replay-prior-over-cost]], [[ledger-color-deficit]],
