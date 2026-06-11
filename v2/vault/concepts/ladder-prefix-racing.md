@@ -71,6 +71,19 @@ verified (5/5, rescored)** — seed 8 found a different in-basin trade:
 II 339 + IB 53 (highest non-witness IB ever; witnesses sit at 50).
 Unguided ladder: 450 → 451 → 452. Basin sampling at 16 × 1 h running.
 
+## Static prefix-scoring: CLOSED (vol-215 morning analysis)
+
+With the fixed ranker, over 35 prefixes with measured finishes:
+- **Clean LEDGER deficit = 0 for EVERY perfect-walk prefix** (depths
+  139-153) — color-flow accounting is structurally VACUOUS there, not
+  noisy; the wall is finer than color counts (vol-209 distinctness).
+- **Pool tilability**: r = −0.456 with finish, but it is a depth proxy
+  (shallower prefix ⇒ more good pieces left); no ordering at fixed
+  depth (the 451-producer is indistinguishable from 446-producers).
+⇒ The empirical race (measured 30 s finishes) is the only validated
+promoter. Finish spread at equal depth/deficit/tilability: 446-451 —
+whatever distinguishes prefixes lives in positional/pairwise structure.
+
 ## Linked
 
 [[replay-prior-over-cost]], [[ledger-color-deficit]],
