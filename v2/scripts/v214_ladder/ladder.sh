@@ -7,7 +7,7 @@
 set -e
 cd "$(dirname "$0")/../.."
 BIN=./target/release/cloister2
-FRAME=output/vol-212/frames_best/strict460a.json
+FRAME=${FRAME:-output/vol-212/frames_best/strict460a.json}
 N=${1:-104}
 ROOT=output/vol-214/ladder_$(date -u +%Y%m%dT%H%M%S)
 mkdir -p $ROOT
