@@ -28,7 +28,8 @@ def edges_of(pid, rot):
     return [e[(s - rot) % 4] for s in range(4)]
 
 ring = {e['pos']: (e['piece_id'], e['rotation'])
-        for e in json.load(open(frame_json))['placement'] }
+        for e in json.load(open(frame_json))['placement']
+        if e['pos'] // 16 in (0, 15) or e['pos'] % 16 in (0, 15)}
 interior_pids = {pid for pid in range(256) if 0 not in pieces[pid]}
 
 def rim_target(pos, side):

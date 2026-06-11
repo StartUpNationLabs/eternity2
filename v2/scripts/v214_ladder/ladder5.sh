@@ -18,8 +18,8 @@ HYBRID="cells:$D7,$TAIL"
 
 echo "=== probes: dispersed midden, budget 6, bank prefixes ==="
 $BIN --mode dfs --frame $FRAME --hints --exact-tail 0 \
-  --break-schedule "0,0,0,0,0,0" --break-cells "cells:$D7" \
-  --save-prefix --abort-below 110:2000000 \
+  --break-schedule "0,0,0,0,0,0,0,0,0,0,0,0,0,0" --break-cells "cells:$D7" \
+  --save-prefix --abort-below 120:2000000 \
   --seeds 304 --seed0 70000 --budget-ms 5000 --restart-ms 5000 --threads 8 \
   --out-root $ROOT
 R1=$(ls -td $ROOT/cloister2_dfs_* | head -1)
