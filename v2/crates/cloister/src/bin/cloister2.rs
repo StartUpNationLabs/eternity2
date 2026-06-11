@@ -44,6 +44,7 @@ struct JobOut {
     death_hist: Vec<u32>,
     /// deepest prefix reached (scan-position indexed), for --save-prefix
     best_prefix: Vec<(u16, u8)>,
+    fitstats: (Vec<u64>, Vec<u64>, Vec<u64>),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -423,6 +424,7 @@ fn main() {
                     ms_at_max: r.ms_at_max,
                     death_hist: r.death_hist,
                     best_prefix: r.best_prefix,
+                    fitstats: (r.fit_visits, r.fit_yields, r.fit_deaths),
                 }
             }
             "sa" | "hybrid" => {
@@ -488,6 +490,7 @@ fn main() {
                     ms_at_max: 0,
                     death_hist: Vec::new(),
                     best_prefix: Vec::new(),
+                    fitstats: (Vec::new(), Vec::new(), Vec::new()),
                 }
             }
             m => panic!("unknown mode {m}"),
@@ -570,6 +573,7 @@ fn main() {
             ms_at_max: 0,
             death_hist: Vec::new(),
             best_prefix: Vec::new(),
+            fitstats: (Vec::new(), Vec::new(), Vec::new()),
         }]
     } else {
         jobs.par_iter().map(run_job).collect()
@@ -710,6 +714,36 @@ fn main() {
                 r.max_depth, r.frame_label, r.seed
             );
             cio::save_board(&dir, &name, &puzzle, &placement, &meta);
+        }
+    }
+    // FITSTAT: per-frame fit curves summed over seeds
+    {
+        let mut agg: Vec<(String, Vec<[u64; 3]>)> = Vec::new();
+        for r in &results {
+            if r.fitstats.0.is_empty() {
+                continue;
+            }
+            let e = if let Some(i) = agg.iter().position(|(l, _)| *l == r.frame_label) {
+                &mut agg[i].1
+            } else {
+                agg.push((r.frame_label.clone(), vec![[0; 3]; r.fitstats.0.len()]));
+                &mut agg.last_mut().expect("pushed").1
+            };
+            for d in 0..r.fitstats.0.len() {
+                e[d][0] += r.fitstats.0[d];
+                e[d][1] += r.fitstats.1[d];
+                e[d][2] += r.fitstats.2[d];
+            }
+        }
+        for (label, rows) in agg {
+            let mut f = std::fs::File::create(dir.join(format!("fitstats_{label}.tsv")))
+                .expect("fitstats tsv");
+            writeln!(f, "depth	visits	yields	deaths").expect("hdr");
+            for (d, v) in rows.iter().enumerate() {
+                if v[0] > 0 {
+                    writeln!(f, "{d}	{}	{}	{}", v[0], v[1], v[2]).expect("row");
+                }
+            }
         }
     }
     // choke profiles: per-frame death histograms summed over seeds

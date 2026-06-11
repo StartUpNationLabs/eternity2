@@ -653,6 +653,12 @@ pub struct DfsResult {
     /// choke map (vol-213): death_hist[d] = # epochs whose deepest reach
     /// was d when they ended (restart timeout or root exhaustion)
     pub death_hist: Vec<u32>,
+    /// FITSTAT (vol-215, Verhaard): per depth — fresh instances started,
+    /// placements yielded, instances that yielded nothing. Feeds the
+    /// fit-probability curves / markov schedule model.
+    pub fit_visits: Vec<u64>,
+    pub fit_yields: Vec<u64>,
+    pub fit_deaths: Vec<u64>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -758,6 +764,9 @@ pub fn dfs_run(
 
     let mut max_depth = 0usize;
     let mut death_hist = vec![0u32; cells + 1];
+    let mut fit_visits = vec![0u64; cells + 1];
+    let mut fit_yields = vec![0u64; cells + 1];
+    let mut fit_deaths = vec![0u64; cells + 1];
     let mut ms_at_max: u128 = 0;
     let mut best_prefix: Vec<(u16, u8)> = Vec::new();
     let mut best_complete: Option<(Vec<(u16, u8)>, u32)> = None;
@@ -868,6 +877,9 @@ pub fn dfs_run(
                                 best_prefix: full,
                                 epochs,
                                 death_hist,
+                                fit_visits,
+                                fit_yields,
+                                fit_deaths,
                             };
                         }
                     }
@@ -892,6 +904,9 @@ pub fn dfs_run(
                         best_prefix: grid,
                         epochs,
                         death_hist,
+                        fit_visits,
+                        fit_yields,
+                        fit_deaths,
                     };
                 }
                 backtrack_now = true;
@@ -915,6 +930,9 @@ pub fn dfs_run(
                         best_prefix,
                         epochs,
                         death_hist,
+                        fit_visits,
+                        fit_yields,
+                        fit_deaths,
                     };
                 }
                 if epoch_t0.elapsed().as_millis() as u64 >= p.restart_ms {
@@ -1259,6 +1277,12 @@ pub fn dfs_run(
                 }
             } else {
                 backtrack_now = false;
+                // FITSTAT: an instance at d just ended
+                fit_visits[d] += 1;
+                fit_yields[d] += u64::from(yields[d]);
+                if yields[d] == 0 {
+                    fit_deaths[d] += 1;
+                }
                 // CAIRN insert: clean exhaustion of a free-cell instance
                 // (attempt ran, not a TT replay, not an endgame/ledger
                 // forced backtrack)
