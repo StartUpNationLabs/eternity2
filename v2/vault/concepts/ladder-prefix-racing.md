@@ -64,6 +64,13 @@ Open: scale N; recursive ladders (probe beyond a pinned prefix → bank
 deeper prefixes → re-pin); LEDGER-deficit promotion scoring;
 per-prefix choke gates; multi-frame ladders via [[framegen-chain-feasibility]].
 
+## Vol-215 extension
+
+Incumbent at 3600 s × 8 (6× the reproduction budget): **452/480
+verified (5/5, rescored)** — seed 8 found a different in-basin trade:
+II 339 + IB 53 (highest non-witness IB ever; witnesses sit at 50).
+Unguided ladder: 450 → 451 → 452. Basin sampling at 16 × 1 h running.
+
 ## Linked
 
 [[replay-prior-over-cost]], [[ledger-color-deficit]],
