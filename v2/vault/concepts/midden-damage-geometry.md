@@ -98,6 +98,15 @@ does the 168-182 region kill walks? per-depth death histograms,
 3600 s × 8 — does the 451 basin extend?). Morning analysis decides
 MIDDEN v3 (temporal × spatial gating) vs pivot.
 
+★ **Diagnosis from ladder5b's own choke histograms (53M epoch deaths
+aggregated): deaths concentrate at depths 159-167 — exactly the
+6-cell PERFECT-ONLY GAP in the hybrid geometry** (D7 lattice ends at
+161; tail opens at 168). The composition died in its own blind spot,
+not at the tail. MIDDEN v3 = one-variable fix: depth-GRADED lattice
+(every 7th < 140, every 3rd 140-161, contiguous 162-195; 62 cells),
+budget 20, chained behind the overnight pair. Design rule emerging:
+**midden density should follow the measured choke gradient.**
+
 ## Linked
 
 [[replay-prior-over-cost]] (witness damage anatomy),
