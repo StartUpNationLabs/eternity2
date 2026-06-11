@@ -75,6 +75,20 @@ density sweep) queued.
 QUOTA A/B same night (v1 hinted tail2, 96:20:0.25): 446/447/449 vs
 control 446/447/448 — marginal at this single config.
 
+**Sweep 2 (hybrids, dispersed ∪ tail, budget 20 gates-open)**: still 0
+completions; walls 162-178 (D10+tail max 178 — 4 cells short of the
+trigger). All-zero gates drain the budget early ⇒ temporal × spatial
+composition needed (gate the dispersed region, keep the tail open).
+Density: sparser ≥ denser (D10 ≥ D7 > D5).
+
+**ladder5 run-1 invalidated by a ranker bug**, now fixed: the frame
+JSON is a FULL board, so the ranker's "ring" included the witness
+interior — `breaks_of`/`deficit_of` measured divergence-from-witness
+(280 fake breaks ⇒ budget-292 schedules). ⚠ All ladder3/2c deficit
+scores were computed with this pollution — the "deficit scoring null"
+verdicts are REOPENED. Fixed ranker: d155 probe prefix = deficit 0,
+breaks 6. ladder5b (budget-14 probes) relaunched.
+
 ## Linked
 
 [[replay-prior-over-cost]] (witness damage anatomy),
