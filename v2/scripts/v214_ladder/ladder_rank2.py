@@ -84,5 +84,22 @@ for score, depth, df, f, cells in cands:
            / min(len(cells), len(kc)) <= MAXOV for *_, kc in kept):
         kept.append((score, depth, df, f, cells))
 
-for score, depth, df, f, _ in kept:
-    print(f, max(20, depth - 15), depth, df)
+def breaks_of(cells):
+    b = 0
+    for pos in sorted(cells, key=lambda p: ((p // 16) - 1) * 14 + (p % 16) - 1):
+        pid, rot = cells[pos]
+        e = edges_of(pid, rot)
+        for s_, d_ in ((0, -16), (3, -1)):
+            npos = pos + d_
+            if npos in cells:
+                b += e[s_] != edges_of(*cells[npos])[(s_ + 2) % 4]
+            elif npos in ring:
+                b += e[s_] != edges_of(*ring[npos])[(s_ + 2) % 4]
+        for s_, d_ in ((1, 1), (2, 16)):
+            npos = pos + d_
+            if npos in ring:
+                b += e[s_] != edges_of(*ring[npos])[(s_ + 2) % 4]
+    return b
+
+for score, depth, df, f, cells in kept:
+    print(f, max(20, depth - 15), depth, df, breaks_of(cells))
