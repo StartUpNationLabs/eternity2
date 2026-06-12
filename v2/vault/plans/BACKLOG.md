@@ -16,18 +16,47 @@ cloister track closes.
 
 ---
 
+## Vol-217 entries
+
+### `crossing-oracle` — status: `in-progress` — vol-217 binding 1 (named invention)
+The instrument the vol-216 witness-pool experiment demands: 3-row
+break-profile transfer over interior rows 10-12, conditioned on the
+prefix's ACTUAL placed frontier (N boundary of row 10 = exact placed
+row-9 south colors; placed cells forced; row-12 hints pinned; S of
+row 12 free; all edges break-tolerant). Sharper than [[band-oracle]]
+by construction (no free-N). Pre-registered gate: witness d146 pools
+separate decisively below banked prefixes on crossing floor
+(prediction: 3-4 vs 8-11); secondary ρ vs ≥300s labels > 0.335.
+Files: `scripts/v217_crossing/crossing_oracle.py`.
+
+### `crossing-guided-construction` — status: `unbuilt` — since: vol-217 (binding 3)
+Invert the build target: construct rows 8-10 to optimize the frontier
+presented to the crossing; oracle steers DURING construction at band
+granularity; spend MIDDEN dispersed damage + ACTUARY gates INSIDE
+rows 10-12 (witness double-break cells at depths 171-195). Pipeline:
+probes bank (prefix, frontier) → crossing oracle scores → promote →
+finish with tight gates + et14.
+
+---
+
 ## Vol-216 entries
 
-### `actuary-markov-schedule-optimizer` — status: `in-progress` — vol-216 binding 1
+### `actuary-markov-schedule-optimizer` — status: `partial` — vol-216 binding 1 (vol-217 status correction)
+Calibrated to 5% self-consistency; race-1 honest negative (lane
+fallback + wrong objective); iteration 2 scoped: per-arrival
+(spent, tail_mis) quality histogram in dfs.rs, pooled refit,
+corridor-restricted trust region. The vol-216 crossing finding
+REFRAMES the objective: optimize gates for CROSSING cost, not
+arrival volume.
 Named invention of vol-216 (= `verhaard-markov-schedule-optimizer`
 picked). Fit per-depth fit/half-fit probabilities from FITSTAT TSVs →
 Markov DP over (depth, slips-spent) predicting expected
 solutions-per-node for ANY (scan order, gate schedule) → offline local
 search over thousands of candidates → race computed-optimal config vs
-hand recipes (≥8 seeds, min/med/max). Concept page to come:
+hand recipes (≥8 seeds, min/med/max). Concept page:
 `concepts/actuary-markov-optimizer.md`.
 
-### `assignment-lp-prefix-scoring` — status: `in-progress` — vol-216 binding 2
+### `assignment-lp-prefix-scoring` — status: `built` — vol-216 binding 2 (validated + adopted)
 The lens the triple-null never tested: per-prefix assignment LP with
 edge terms over the remaining pool (HiGHS, ~ms). Kill-or-promote in one
 afternoon against the 35+ prefixes with measured finishes: the
@@ -117,6 +146,8 @@ latent pool-health factor, two lenses; combination adds little.
 ⇒ PROMOTED: wire as LADDER rung-0; next steps = band-2→3 boundary
 oracle + staged pipeline proper + 8×8 rig for the count-guided-vs-
 blind question.
+
+### `sinkhorn-lp-surrogate` — status: `unbuilt` — since: vol-216 (Q&A) [header restored vol-217: text below had merged into the previous entry]
 Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
 matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
 0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
@@ -143,11 +174,15 @@ the principled fix for race-1's out-of-region failure. Cheap
 (the tensor is 51×15×3-ish); test against the pooled calib+race data
 where ground truth for held-out cells exists.
 
-### `exact-region-growth` — status: `in-progress` — vol-216 binding 3
+### `exact-region-growth` — status: `partial` — vol-216 binding 3 (vol-217 status correction)
 Grow et14 → et20+/et28-class: last-two-rows exact B&B with stronger
 admissible bounds (assignment-LP bound per node). The only
 practical-complexity lever per the 480 perspective. Includes
 `silent-cap-audit`. MIDDEN-confined exact regions as stretch.
+**Vol-216 result**: k>14 made safe + value-LB + Hungarian root cut
+shipped, brute-verified; et18/et20 in-DFS growth NET NEGATIVE at
+current bound strength (walk diversity > per-arrival optimality).
+Next rung = `sa2-tail-bound`.
 
 ---
 
