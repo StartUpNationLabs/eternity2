@@ -163,6 +163,21 @@ fn main() {
         }
     }
 
+    // Vol-217 fix: when hints are pinned, the hint PIECES must be excluded
+    // from all normal buckets — otherwise the DFS consumes them off-hint and
+    // every banked shallow state is silently non-strict (94% of the first
+    // stage-2 census was poisoned this way; vol-35 bug class, new costume).
+    // Hint cells get their entries via the separate hint pool below.
+    let mut reserved_pid: [bool; N_PIECES] = [false; N_PIECES];
+    if pin_hints {
+        for h in hints.hints.iter() {
+            reserved_pid[h.piece_id as usize] = true;
+        }
+    }
+    for &(_, pid, _) in &extra_hints {
+        reserved_pid[pid as usize] = true;
+    }
+
     // For each pos, group candidates by (N, W) into a contiguous slice.
     // Layout: bucket_data is one big Vec<u32>. bucket_starts[pos * NW_KEYS + key] gives
     // start index; bucket_lens stores length. Both indexed by pos * NW_KEYS + key.
@@ -180,6 +195,7 @@ fn main() {
         let need_s_border = need_south_border(pos);
         let need_w_border = need_west_border(pos);
         for pr in piece_rots.iter() {
+            if reserved_pid[pr.piece_id as usize] { continue; }  // vol-217
             let n_is_border = pr.n == BORDER;
             let e_is_border = pr.e == BORDER;
             let s_is_border = pr.s == BORDER;
@@ -212,6 +228,7 @@ fn main() {
         let need_s_border = need_south_border(pos);
         let need_w_border = need_west_border(pos);
         for pr in piece_rots.iter() {
+            if reserved_pid[pr.piece_id as usize] { continue; }  // vol-217
             let n_is_border = pr.n == BORDER;
             let e_is_border = pr.e == BORDER;
             let s_is_border = pr.s == BORDER;
