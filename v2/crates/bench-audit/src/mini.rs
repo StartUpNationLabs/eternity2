@@ -359,6 +359,14 @@ pub fn exact_count_pruned(
 /// Exact for the relaxed model — selftested against brute force.
 #[must_use]
 pub fn relax_profile(band: &Band, bmax: u32) -> Vec<f64> {
+    weighted_profile(band, bmax, None)
+}
+
+/// z-weighted repeats-allowed profile: each filling contributes
+/// prod_p z[pool_idx(p)]^{uses of p}. z = None ⇒ all 1 (plain count).
+/// The grand-canonical object the fugacity correction needs.
+#[must_use]
+pub fn weighted_profile(band: &Band, bmax: u32, z: Option<&[f64]>) -> Vec<f64> {
     let m = band.mini;
     let n = m.n;
     let nc = m.nc;
@@ -385,7 +393,8 @@ pub fn relax_profile(band: &Band, bmax: u32) -> Vec<f64> {
             // group candidates by (n, w, e, s)
             let mut groups: HashMap<(u8, u8, u8, u8), f64> = HashMap::new();
             for cd in &cands[d] {
-                *groups.entry((cd.n, cd.w, cd.e, cd.s)).or_insert(0.0) += 1.0;
+                *groups.entry((cd.n, cd.w, cd.e, cd.s)).or_insert(0.0) +=
+                    z.map_or(1.0, |zz| zz[cd.pi as usize]);
             }
             // output tensor
             let out_has_s = !last;
@@ -591,6 +600,77 @@ pub fn relax_floor(band: &Band, bmax0: u32) -> u32 {
         bmax *= 2;
         assert!(bmax <= 4096, "relax_floor: no filling at any cost?");
     }
+}
+
+pub struct FugacityResult {
+    pub ln_naive: f64,
+    pub ln_corrected: f64,
+    pub iters: u32,
+    pub max_usage_err: f64,
+}
+
+/// Equal-case fugacity correction (vol-216 method) for the
+/// distinct-piece count of fillings at cost <= bmax:
+///   ln N ≈ min_z [ ln Z_{<=bmax}(z) − Σ_p ln z_p ]
+/// solved by damped Sinkhorn z_p ← z_p / u_p^damp with
+/// u_p = z_p ∂ln Z/∂z_p (forward finite differences — O(pool)
+/// profile evaluations per iteration; fine at testbed scale).
+/// Forced pieces keep z = 1 (used exactly once; factor cancels).
+#[must_use]
+pub fn fugacity_corrected_lncount(
+    band: &Band,
+    bmax: u32,
+    tol: f64,
+    max_iters: u32,
+) -> FugacityResult {
+    let np = band.pool.len();
+    let forced_pi: Vec<bool> = {
+        let mut v = vec![false; np];
+        for (i, &p) in band.pool.iter().enumerate() {
+            if band.forced.values().any(|&(fp, _)| fp == p) {
+                v[i] = true;
+            }
+        }
+        v
+    };
+    let lnz_total = |z: &[f64]| -> f64 {
+        let prof = weighted_profile(band, bmax, Some(z));
+        prof.iter().sum::<f64>().ln()
+    };
+    let mut z = vec![1.0f64; np];
+    let naive = lnz_total(&z);
+    let h = 0.05f64;
+    let mut iters = 0;
+    let mut max_err = f64::INFINITY;
+    while iters < max_iters {
+        iters += 1;
+        let base = lnz_total(&z);
+        let mut usage = vec![1.0f64; np];
+        max_err = 0.0;
+        for p in 0..np {
+            if forced_pi[p] {
+                continue;
+            }
+            let zp = z[p];
+            z[p] = zp * (1.0 + h);
+            let up = (lnz_total(&z) - base) / (1.0 + h).ln();
+            z[p] = zp;
+            usage[p] = up.max(1e-12);
+            max_err = max_err.max((up - 1.0).abs());
+        }
+        if max_err < tol {
+            break;
+        }
+        for p in 0..np {
+            if !forced_pi[p] {
+                // damped multiplicative step toward u_p = 1
+                z[p] /= usage[p].powf(0.6);
+            }
+        }
+    }
+    let zfinal = lnz_total(&z);
+    let corr: f64 = zfinal - z.iter().map(|&x| x.ln()).sum::<f64>();
+    FugacityResult { ln_naive: naive, ln_corrected: corr, iters, max_usage_err: max_err }
 }
 
 const INF: u32 = u32::MAX / 4;

@@ -26,7 +26,7 @@ use eternity2_bench_audit::mini::{
     relax_floor, relax_profile, tropical_suffix, Band, Mini,
 };
 
-const NODE_CAP: u64 = 4_000_000_000;
+
 
 fn load_entries(path: &PathBuf, n: usize) -> Vec<Vec<Option<(u16, u8)>>> {
     let raw = std::fs::read_to_string(path).expect("read entries");
@@ -72,6 +72,7 @@ fn bb_ground_truth(
     band: &Band,
     start: u32,
     budget_ms: u64,
+    node_cap: u64,
     suffix: &[Vec<u32>],
 ) -> (Option<u32>, u64, u128, bool) {
     let mut ceil = start;
@@ -82,7 +83,7 @@ fn bb_ground_truth(
         if remaining == 0 {
             return (None, nodes, ms, true);
         }
-        let r = bb_min_break(band, ceil, remaining, NODE_CAP, Some(suffix));
+        let r = bb_min_break(band, ceil, remaining, node_cap, Some(suffix));
         nodes += r.nodes;
         ms += r.elapsed_ms;
         if r.capped {
@@ -108,6 +109,7 @@ fn main() {
     let mut entries_path = PathBuf::new();
     let mut grid_n = 20usize;
     let mut bb_budget_ms = 600_000u64;
+    let mut node_cap: u64 = 4_000_000_000;
     let mut i = 0;
     while i < raw.len() {
         match raw[i].as_str() {
@@ -119,6 +121,7 @@ fn main() {
             "--entries" => { entries_path = PathBuf::from(&raw[i + 1]); i += 2; }
             "--grid-n" => { grid_n = raw[i + 1].parse().unwrap(); i += 2; }
             "--bb-budget-ms" => { bb_budget_ms = raw[i + 1].parse().unwrap(); i += 2; }
+            "--node-cap" => { node_cap = raw[i + 1].parse().unwrap(); i += 2; }
             other => panic!("unknown arg {other}"),
         }
     }
@@ -152,9 +155,9 @@ fn main() {
                 band.frontier = Some(f);
                 let sfx = tropical_suffix(&band);
                 let floor = relax_floor(&band, 8);
-                let saw = bandsaw(&band, floor, NODE_CAP);
+                let saw = bandsaw(&band, floor, node_cap);
                 let (bb_best, _bn, bb_ms2, bb_capped) =
-                    bb_ground_truth(&band, floor, bb_budget_ms, &sfx);
+                    bb_ground_truth(&band, floor, bb_budget_ms, node_cap, &sfx);
                 let matched = match (saw.best, bb_best) {
                     (Some(a), Some(b)) => u8::from(a == b),
                     _ => 0,
@@ -182,7 +185,7 @@ fn main() {
                     let band = sub_band(&full, k);
                     let bmax = 3u32;
                     let relax = relax_profile(&band, bmax);
-                    let exact = exact_count(&band, bmax, NODE_CAP);
+                    let exact = exact_count(&band, bmax, node_cap);
                     let mut rc = 0.0f64;
                     let mut ec = 0u64;
                     for b in 0..=bmax as usize {
@@ -205,13 +208,13 @@ fn main() {
                 let floor = relax_floor(&band, 8);
                 assert_eq!(*sfx[0].iter().min().unwrap(), floor, "suffix floor != relax floor");
                 eprintln!("[m23] idx {idx}: floor {floor}, saw...");
-                let saw = bandsaw(&band, floor, NODE_CAP);
+                let saw = bandsaw(&band, floor, node_cap);
                 eprintln!(
                     "[m23] idx {idx}: saw {:?} (B={}, {} ms), bb...",
                     saw.best, saw.final_budget, saw.elapsed_ms
                 );
                 let (bb_best, bb_nodes, bb_ms, bb_capped) =
-                    bb_ground_truth(&band, floor, bb_budget_ms, &sfx);
+                    bb_ground_truth(&band, floor, bb_budget_ms, node_cap, &sfx);
                 let matched = match (saw.best, bb_best) {
                     (Some(a), Some(b)) => u8::from(a == b),
                     _ => 0,
@@ -219,7 +222,7 @@ fn main() {
                 // relaxation gap at the achievable frontier b*
                 let (mut exact_b, mut exact_capped, mut relax_b) = (0u64, 0u8, 0.0f64);
                 if let Some(bstar) = saw.best {
-                    let ec = exact_count_pruned(&band, bstar, NODE_CAP, Some(&sfx));
+                    let ec = exact_count_pruned(&band, bstar, node_cap, Some(&sfx));
                     exact_b = ec.by_b.iter().sum();
                     exact_capped = u8::from(ec.capped);
                     relax_b = relax_profile(&band, bstar).iter().sum();
@@ -254,8 +257,8 @@ fn main() {
                 let band = endgame_band(&m, grid, rows);
                 let sfx = tropical_suffix(&band);
                 let floor = relax_floor(&band, 8);
-                let greedy = bb_min_break(&band, 64, 100, NODE_CAP, Some(&sfx));
-                let saw = bandsaw(&band, floor, NODE_CAP);
+                let greedy = bb_min_break(&band, 64, 100, node_cap, Some(&sfx));
+                let saw = bandsaw(&band, floor, node_cap);
                 println!(
                     "{seed}\t{idx}\t{floor}\t{}\t{}\t{}\t{}\t{}",
                     greedy.best.map_or(-1, |x| i64::from(x)),
