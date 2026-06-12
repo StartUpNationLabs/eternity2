@@ -85,13 +85,29 @@ construction).
 3. **The b*-graded corruption ladder** — a controlled-difficulty
    exactness gate for any future endgame solver.
 
+## M3 final (160 blind entries, 8 instances)
+
+- Decidability horizon b\* ≈ 6-7 at 10×10/8c: bb decided 56/56
+  graded-ladder rungs (b\* ≤ 6) and 0/160 blind entries (120 s);
+  saw 0/160 (4e9-node rounds).
+- Certified LB on blind entries: floors 2-7 (med 5) → LB 5-8
+  (med 7), **median lift +2 over the relaxation**.
+- MITM pathology: final-round tops to 57.7M raw / 35.6M keys / 6.2M
+  mask groups with **bottom_raw = 0 on every final round** — the
+  join never fires (9/160 earlier-round joins, UBs 11-14).
+- **Registered deployment rule → NO 16×16 MITM deployment.** The
+  deployed instruments are the suffix tables, suffix-pruned ID-B&B,
+  the LB ladder, and the v2 labeler (all validated on the real board
+  same-day; see [[vol-218]]: 437/480 track best, label v2, 1.83 ms
+  what-if asks).
+
 ## Open
 
-- M3/M4 full distributions (8 instances) — in flight at write time.
-- 16×16 deployment decision per prereg rule (M2 ✓ on decided set;
-  wall-clock + join-size data pending).
+- M4 instrument-ordering verdicts (phase C) + M5 stretch.
 - Fugacity side gate: 10×10 equal-case validation vs exact counts,
   then the registered 16×16 ρ bar (or its honest deferral).
+- Perf levers logged: NEON min-plus vectorization; compact cost-0
+  index (the full (tn,tw) index L2-thrashes on M1 — measured).
 
 ## Linked
 
