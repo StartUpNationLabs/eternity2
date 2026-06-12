@@ -9,11 +9,16 @@
 > MIRROR stays as a gated days-scale experiment (mechanism: b1≈20
 > per break ⇒ ~10¹³× conditional-subtree inflation).
 > Bindings = CURRENT-VOL.md: (1) MIRROR gate, (2) distinctness
-> instrument (fugacity-counts vs the 149 measured labels + exact
-> 64-cell min-break certificates), (3) label factory at scale +
-> learned ranker.
-> USER DIRECTIVE (2026-06-12): the 8×8 full enumeration is WONT-DO.
-> Never re-propose it.
+> instrument — USER-DIRECTED vehicle: `band-split-exact-solve`
+> validated RIGOROUSLY on 10×10 E2-like instances first
+> (build_puzzle(10,8,seed), ≥8 seeds, pre-registered M1-M5 incl.
+> the M2 exactness gate and the M4 instrument-ordering measurement;
+> sub-problem rigor only), then 16×16 deployment; fugacity-counts
+> vs the 149 labels as the same-day side gate, (3) label factory at
+> scale + learned ranker.
+> USER DIRECTIVES (2026-06-12): the 8×8 full-solution enumeration is
+> WONT-DO (never re-propose); the 10×10 program is SUB-PROBLEM rigor,
+> not full enumeration.
 
 You are a senior researcher attacking **Eternity II** (canonical
 5-clue, Selby-Riordan) in this repo. **Unlimited time and resources;
