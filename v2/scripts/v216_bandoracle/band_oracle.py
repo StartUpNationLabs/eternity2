@@ -35,6 +35,9 @@ NC = 23
 BMAX = 10
 GAMMA = 0.3
 ROW_T, ROW_B = 12, 13   # interior rows of the band
+# vol-217 sanity A/B: drop within-column distinctness (the 3-row
+# crossing oracle's relaxation) to check ranking stability
+NODISTINCT = os.environ.get("E2_BAND_NODISTINCT") == "1"
 
 
 def build_ctx():
@@ -75,7 +78,7 @@ def band_profile(rot_edges, rim, pool, forced_top):
             if col == 13 and tgt[1] is not None and ot[1] != tgt[1]:
                 cost_t += 1
             for pb in pool:
-                if pb == pt:
+                if pb == pt and not NODISTINCT:
                     continue
                 for rb in range(4):
                     ob = rot_edges[pb][rb]

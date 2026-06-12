@@ -84,21 +84,28 @@ def crossing_profile(rot_edges, rim, pool, forced, t_n, ncols=N):
             f = forced.get((row, col))
             return [f] if f is not None else pool_or
 
-        # ---- TOP (row 10): north = exact target ----
+        # ---- TOP (row 10): north = exact target, or (for d139-class
+        # prefixes) a marginalized pre-cell: t_n[col] is a list of
+        # (pre_cost, south, count) over candidates for the missing
+        # row-9 cell, whose own 3 edge costs ride along in b ----
         g = {}
         rimt = rim.get(ROW_T * N + col, [None] * 4)
+        tn = t_n[col]
+        tn_groups = tn if isinstance(tn, list) else [(0, tn, 1)]
         for (p, r) in cands(ROW_T):
             o = rot_edges[p][r]
-            cb = int(o[0] != t_n[col])
+            cb0 = 0
             if last and rimt[1] is not None and o[1] != rimt[1]:
-                cb += 1
-            if col == 0:
-                if rimt[3] is not None and o[3] != rimt[3]:
-                    cb += 1
-                k = (cb, o[1], o[2])
-            else:
-                k = (cb, o[3], o[1], o[2])
-            g[k] = g.get(k, 0) + 1
+                cb0 += 1
+            if col == 0 and rimt[3] is not None and o[3] != rimt[3]:
+                cb0 += 1
+            for (pc, s9, mult) in tn_groups:
+                cb = cb0 + pc + int(o[0] != s9)
+                if col == 0:
+                    k = (cb, o[1], o[2])
+                else:
+                    k = (cb, o[3], o[1], o[2])
+                g[k] = g.get(k, 0) + mult
         W1 = np.zeros((NC, NC, NC, NC, B))  # (s10, e10', e11, e12, b)
         if col == 0:
             for (cb, e, s), m in g.items():
@@ -190,7 +197,7 @@ def crossing_profile(rot_edges, rim, pool, forced, t_n, ncols=N):
     return V.sum(axis=(0, 1, 2)), logscale
 
 
-def load_prefix(ctx, path, truncate=None):
+def load_prefix(ctx, path, truncate=None, rim=None):
     _pieces, g2l, rot_edges, ih = ctx
     pj = json.load(open(path))
     placed = {}
@@ -202,7 +209,8 @@ def load_prefix(ctx, path, truncate=None):
             continue
         placed[cell] = (g2l[e["piece_id"]], e["rotation"])
     missing = [c for c in range(140) if c not in placed]
-    assert not missing, f"{path}: rows 0-9 incomplete, e.g. {missing[:5]}"
+    assert missing in ([], [139]), \
+        f"{path}: rows 0-9 incomplete beyond (9,13), e.g. {missing[:5]}"
     used = {lp for lp, _ in placed.values()}
     assert len(used) == len(placed), f"{path}: duplicate pieces"
     forced = {}
@@ -219,7 +227,22 @@ def load_prefix(ctx, path, truncate=None):
         forced[(r, c)] = (lp, rot)
     pool = [lp for lp in range(196) if lp not in used]
     t_n = [rot_edges[placed[9 * N + c][0]][placed[9 * N + c][1]][2]
-           for c in range(N)]
+           if 9 * N + c in placed else None for c in range(N)]
+    if missing == [139]:
+        # marginalized pre-cell (9,13): N/W known from placed, E from
+        # rim; candidates from pool (repeats vs band relaxed, declared)
+        n_t = rot_edges[placed[8 * N + 13][0]][placed[8 * N + 13][1]][2]
+        w_t = rot_edges[placed[9 * N + 12][0]][placed[9 * N + 12][1]][1]
+        e_t = (rim or {}).get(9 * N + 13, [None] * 4)[1]
+        grp = {}
+        for p in pool:
+            for r in range(4):
+                o = rot_edges[p][r]
+                c0 = (int(o[0] != n_t) + int(o[3] != w_t)
+                      + int(e_t is not None and o[1] != e_t))
+                k = (c0, o[2])
+                grp[k] = grp.get(k, 0) + 1
+        t_n[13] = [(c0, s, m) for (c0, s), m in sorted(grp.items())]
     return placed, forced, pool, t_n
 
 
@@ -248,7 +271,7 @@ def prefix_breaks(ctx, rim, placed):
 def score_prefix(ctx, rim, path, truncate=None):
     _pieces, _g2l, rot_edges, _ih = ctx
     t0 = time.time()
-    placed, forced, pool, t_n = load_prefix(ctx, path, truncate)
+    placed, forced, pool, t_n = load_prefix(ctx, path, truncate, rim)
     pb = prefix_breaks(ctx, rim, placed)
     counts, logscale = crossing_profile(rot_edges, rim, pool, forced, t_n)
     logs = np.full(B, -np.inf)

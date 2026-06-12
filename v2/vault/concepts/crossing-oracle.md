@@ -76,11 +76,50 @@ Crossing cost is to first order a property of THE FRONTIER ROWS 8-10
 PRESENT — measurable statically in 0.8 s, steerable during
 construction (the premise of crossing-guided construction).
 
-## Secondary gate (population, n≈75 homogeneous ≥300s)
+## Secondary gate (population, n=81 homogeneous ≥300s) — honest split
 
-(pending — sweep of all 257 banked prefixes in flight; protocol
-identical to [[assignment-lp-prefix-scoring]]: depth-residualized
-Spearman vs max/median finish; bar = beat LP's 0.335.)
+Same-set comparison (my homog filter keeps 81 rows vs vol-216's 75;
+all instruments evaluated on the identical n=81):
+
+| instrument | ρ(resid, max) | ρ(resid, MEDIAN) |
+|---|---|---|
+| LP (ub_total) | **+0.365** | +0.192 |
+| band (soft) | +0.259 | +0.284 |
+| crossing (soft) | +0.270 | **+0.381** |
+| crossing (−floor) | +0.200 | +0.240 |
+
+- **Registered bar (ρ_max > 0.335): FAIL** (0.270).
+- **ρ vs MEDIAN = 0.381 — best median signal ever measured** (band
+  0.297 in vol-216 / 0.284 here; LP 0.192). Combined crossing+band
+  rank-sum: ρ(med) = 0.413.
+- Inter-instrument residuals: crossing↔band only **0.220**
+  (band↔LP = 0.627) — the crossing oracle carries a substantially
+  NEW factor, not another copy of the endgame-pool latent.
+- Star ranks #3/81 by crossing resid; top-quartile enrichment for
+  max≥450: 1.6×.
+
+Sanity A/B (pre-registered): band oracle with within-column
+distinctness dropped — trio ordering preserved exactly (63>36>24
+soft), floors shift ≤1 (7→6 for 63 only). Relaxation benign.
+
+## ★ Floor census: the bank contains ZERO witness-grade frontiers
+
+Across the 255 labeled banked prefixes: floors 6-11 (mode 9), exactly
+ONE floor-6, none ≤5. Witnesses sit at 3-4 — **2-3 floor-breaks
+outside the entire bank distribution**. This is the 452 ceiling,
+mechanistically: the d14x perfect-walk probe stream produces
+witness-grade crossings at rate <0.4%. Within-bank ρ is bounded by
+class homogeneity (range 6-11) + label noise; the witness separation
+is BETWEEN-class. ⇒ the oracle's value = selector for rare frontier
+outliers + steering objective for construction, not a within-class
+regressor. Bar for binding 2: floor ≤5 interesting, ≤4
+witness-grade, ≤3 a 461-grade candidate (crude budget law: witnesses
+realize floor+4 in-region).
+
+d139 support (1,666 bank prefixes): missing cell (9,13) handled as a
+marginalized pre-cell (N/W/E targets known; candidate souths +
+own-edge costs ride along in b). d139 floors thus include up to 3
+extra edges — comparable within-d139, offset vs d140+.
 
 ## Open
 
