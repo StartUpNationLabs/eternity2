@@ -69,6 +69,33 @@ validate vs the 75-prefix ≥300s label set like the LP was. Known
 limits: repeats-allowed (relaxation), single-row slices (SEMAPHORE
 pool-coupling caution), don't scale to full 2D (vol-209/210 χ-walls).
 
+### `sinkhorn-lp-surrogate` — status: `unbuilt` — since: vol-216 (Q&A)
+Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
+matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
+0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
+LP scores on the 257 banked prefixes); (b) THE per-node steering
+prize: LP-grade global vision at a price payable inside the search
+loop ("forward vision while walking" — currently 10^7× too expensive
+via the LP). If (b) works it is a new value-order class, the first
+global one. Composes with `learned prefix ranking` (distill LP/
+Sinkhorn into a net) as the fallback if raw Sinkhorn is too slow.
+
+### `sa2-tail-bound` — status: `unbuilt` — since: vol-216 (Q&A)
+The next bound rung for exact-region growth (et20's failure mode =
+too-weak bound): Sherali-Adams level-2 / SDP lift of the tail-region
+LP — add pairwise joint variables y[c,c',j,j'] (4-tensor) over the
+14-28 tail cells only. Strictly tighter than the value-LB + Hungarian
+root cut that proved insufficient at k=20. Feasible at region scale,
+hopeless at board scale (by design).
+
+### `actuary-rate-tensor-completion` — status: `unbuilt` — since: vol-216 (Q&A)
+Replace ACTUARY's hand-rolled lane-coherent fallback with low-rank
+tensor completion of the (depth × spent × rate-type) tensor: fills
+unmeasured corridors from the global structure of measured ones —
+the principled fix for race-1's out-of-region failure. Cheap
+(the tensor is 51×15×3-ish); test against the pooled calib+race data
+where ground truth for held-out cells exists.
+
 ### `exact-region-growth` — status: `in-progress` — vol-216 binding 3
 Grow et14 → et20+/et28-class: last-two-rows exact B&B with stronger
 admissible bounds (assignment-LP bound per node). The only
