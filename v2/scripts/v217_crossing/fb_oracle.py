@@ -177,9 +177,12 @@ def load_board(paths, truncate_rows=None, frame=None):
         placed[(r, c)] = cur
 
     for path in paths:
-        for e in json.load(open(path))["placement"]:
-            put(e["pos"] // 16, e["pos"] % 16,
-                (e["piece_id"], e["rotation"]))
+        pl = json.load(open(path))["placement"]
+        for i, e in enumerate(pl):
+            if e is None:
+                continue  # indexed format (vanilla_fast snapshots)
+            pos = e.get("pos", i)  # sparse format has pos; indexed = index
+            put(pos // 16, pos % 16, (e["piece_id"], e["rotation"]))
     if frame:  # ring cells only (frame files are full boards)
         for e in json.load(open(frame))["placement"]:
             r, c = e["pos"] // 16, e["pos"] % 16
