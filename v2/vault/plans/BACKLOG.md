@@ -93,9 +93,28 @@ row 10; first error allowance must land in stage 3, rows 9-12 — the
 wall). Known failure modes designed around: SEMAPHORE row-stitching
 pool starvation (vol-183), CLIMB first-found re-basing pool poison
 (vol-214) — both die from FIRST-FOUND stage choices; count-ranking is
-the fix under test. Sequence: validate on `8x8-exact-counting-rig`
-first, then 12×12, then E2. Composes with `strip-oracle-sat` (exact
+the fix under test. Composes with `strip-oracle-sat` (exact
 mid-filter) and `fugacity-corrected-counts` (the estimator).
+
+**Band anatomy on official E2 (vol-216 close, measured)**: bands 1-2
+(rows 0-7) = free (ms, astronomically many, zero signal); band 3
+(rows 8-11) = THE WALL (perfect band-3 ≈ the d146-153 LADDER
+prefixes, ~8%/probe); band 4 (rows 12-15) = perfect NONEXISTENT
+(proved: pools can't close one row; carries ~all ~28 breaks). ⇒ the
+pipeline already exists at cell granularity; the NEW component is the
+INTER-STAGE ORACLE at two boundaries: after band 2 ("how many perfect
+band-3s does this pool admit?" — informative, sometimes zero) and
+after band 3 (band-4 min-break estimate). Oracle granularity
+adaptive: none before row 8, per-row near the wall (9-12), budget-
+mode band 4.
+
+**Validation shortcut — DO THIS FIRST (1 day, existing data)**: no
+need to build the pipeline to test the oracle. Score the 75
+≥300s-labeled prefixes (+ d146 trio gate) with the band-3/band-4
+oracle exactly like the LP was validated (vol-216 protocol). If it
+ranks the star / correlates: wire as LADDER stage gate, then build
+staging. If null: 1 day spent. The 8×8 rig then calibrates the
+count-guided-vs-blind question independently.
 Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
 matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
 0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
