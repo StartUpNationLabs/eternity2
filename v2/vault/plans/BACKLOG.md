@@ -18,7 +18,22 @@ cloister track closes.
 
 ## Vol-218 entries
 
-### `sota-mirrored-stage1` — status: `unbuilt` — since: vol-217 close (PRESUMPTIVE vol-218 binding)
+### `band-split-exact-solve` — status: `unbuilt` — since: vol-217 close (user Q&A on the vertical-coupling collapse; CANDIDATE implementation of vol-218 binding 2)
+The 10¹⁵→10³ vertical-coupling collapse + the measured subtree
+exhaustibility (pinned 8-row subtrees enumerate in seconds) imply:
+TIGHT band sub-problems are exactly solvable by enumeration.
+(a) Exact rows-12-13 certificates: enumerate ALL distinct-piece
+fillings at cost ≤ floor+2 given (frontier, pool) → true min-break +
+the fillings themselves — the distinctness instrument without
+MaxSAT. (b) Stage-4 EXACT solve: meet-in-the-middle over two 2-row
+bands, join on (south-vector, complement pool); group by interface
+to compress. CAVEAT: LIGHTHOUSE (vol-184) refuted heuristic
+bidirectional MERGE — this differs by exact complementary-pool
+accounting; treat the precedent as a hazard list, pre-register the
+join-size measurement. (c) Bottom-up: index "all legal last-2-row
+objects per pool class" → stage-3 selection by exact non-emptiness
+of cheap bottom families. Useless in free regions (rows 0-7) by
+design; granularity switch where measured counts cross enumerable.
 The only break geometry ever to reach 469/470: ~10 deliberate breaks
 in rows 0-4 (Blackwood's "scheduled relaxations" are literally
 visible there), then PERFECT rows 4/5-15. Build: stage-1 generator
