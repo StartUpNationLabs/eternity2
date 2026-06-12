@@ -6,6 +6,43 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ---
 
+## Vol-219 audit-at-open (2026-06-12)
+
+Cohort audited: the vol-216 Q&A entries (now aged 3 vols) + vol-217
+stragglers. The vol-218 strategic conclusion governs every decision:
+relaxation-class instruments are fiction at band depth ≥2 (M1) and
+floor-ranked selection ≈ random (M4); exact certification crawls
+×20/rung (M2/M3); only MEASURED labels touch the achievable region.
+Decisions inline at each entry; summary:
+
+- `sinkhorn-lp-surrogate` → **wont-do** (relaxation-class; M1/M4;
+  the per-node steering ask is served by the measured
+  fb-suffix-incremental what-if floors at 1.83 ms; LP/Sinkhorn
+  marginals may return later as RANKER FEATURES without this item)
+- `sa2-tail-bound` → **wont-do** (certificate-strength direction
+  dominated: ×20/rung wall + et18/et20 in-DFS growth already net
+  negative at vol-216)
+- `fast-probe-generator` → **wont-do** (serves the frame-conditioned
+  LADDER pipeline retired by the standing frame-free directive)
+- `strip-oracle-sat` → **wont-do/superseded** (vol-218 built the
+  better form: suffix-pruned ID-B&B + certified-LB ladder)
+- `transfer-profile-features` → **PICKED** (absorbed into vol-219
+  binding 1 as the ASSAYER ranker's feature library)
+- `actuary-rate-tensor-completion` → **wont-do** (ACTUARY parked;
+  no gated-walk schedule exists in the staged frame-free pipeline)
+- `staged-count-guided-construction` → **resolved-as-split** (staged
+  pipeline BUILT vol-217; count-guidance REFUTED vol-218 M1/M4;
+  label-guidance ADOPTED = vol-219 binding 1)
+- `perturb-multi-deviation` → **wont-do** (guided witness track
+  retired by the standing no-witness-material directive)
+- `endgame-friendly-frame-design` → **wont-do** (frame choice
+  violates the emergent-border directive; staged track subsumes)
+- `mitm-completion-probe` → **PICKED** (vol-219 binding 2)
+- `greedy-finish-label-factory` → **PICKED** (vol-219 binding 1:
+  factory at scale + ASSAYER, the first learned ranker)
+
+---
+
 ## Vol-216 audit-at-open (2026-06-12)
 
 Cohort audited: the vol-213 entries (now aged 3 vols). Decisions
@@ -51,7 +88,7 @@ PROVEN (469/470 exist); the question is reachability of
 admitting-tops at our compute. Selection by greedy-finish labels,
 NOT relaxed floors (vol-217 refutation).
 
-### `greedy-finish-label-factory` — status: `built` (v2 labeler, vol-218) — vol-217 v1
+### `greedy-finish-label-factory` — status: `in-progress` — vol-219 binding 1 (v3: factory at scale + ASSAYER, the first learned ranker)
 Vol-218: column-major + tropical-suffix 1.5 s labels are never worse
 and 1-2 breaks better than v1 where both complete (mini_e2); 400-entry
 relabel batch run. v1 text below.
@@ -131,7 +168,7 @@ steering at ~1-3 ms. Needed for cell-granular row-11-entry steering
 (the row-11 decision point finding); population-granular steering
 works today without it.
 
-### `endgame-friendly-frame-design` — status: `unbuilt` — since: vol-217 (user frame Q&A)
+### `endgame-friendly-frame-design` — status: `wont-do` — resolved vol-219 (frame choice up front violates the standing emergent-border directive; the staged frame-free track subsumes the use case)
 Nobody ever chose a frame ON MERIT: framegen checks hint-compatibility
 + chain feasibility, then we raced blind (444-450 band, n=55). The
 frame's real influence concentrates exactly where the problem lives:
@@ -170,7 +207,7 @@ afternoon against the 35+ prefixes with measured finishes: the
 451-producer (d146-seed63) must outrank its 446-twins (d146-seed24/36)
 or it's a quadruple-null. If it ranks: LADDER promotion adopts it.
 
-### `fast-probe-generator` — status: `unbuilt` — since: vol-216 (user question)
+### `fast-probe-generator` — status: `wont-do` — resolved vol-219 (serves the frame-conditioned LADDER pipeline retired by the standing frame-free directive; the staged track's generator is vanilla_fast at 300M pp/s aggregate already)
 Port the perfect-walk probe mode (frame + hints + bank-deepest-prefix
 + abort-below) to a blackwood-fast-class engine. cloister2 probes run
 ~15M nodes/s/thread; blackwood-fast does 79M nps single-thread (PGO),
@@ -180,7 +217,7 @@ cost; flat lottery refuted at scale). BECOMES the cost driver once
 LP rung-0 replaces empirical rung-2 racing (LP = 0.9 s/prefix absorbs
 any probe rate). Pairs with `strip-oracle-sat` as the second filter.
 
-### `strip-oracle-sat` — status: `unbuilt` — since: vol-216 (user question)
+### `strip-oracle-sat` — status: `wont-do` — resolved vol-219 (SUPERSEDED: vol-218 built the strictly better form — suffix-pruned ID-B&B + certified-LB ladder, exact and distinctness-aware; measured decidability horizon b*≈6-7 shows blind mid-size exact decisions are unreachable; the ladder is the deployed instrument)
 Mid-size exact certifier between LP (instant, loose) and the 300 s
 race (exact-ish, slow): SAT/DLX min-break decision on the last 3
 interior rows (42 cells) per candidate prefix, "min breaks ≥ B?".
@@ -188,7 +225,7 @@ Vol-55 cluster-MIP precedent suggests minutes/instance. Growing-proofs
 class. Caution: graph/counting necessary conditions are vacuous on
 realistic pools (LEDGER lesson) — must be real combinatorial search.
 
-### `transfer-profile-features` — status: `unbuilt` — since: vol-216 (user Q&A, live demo)
+### `transfer-profile-features` — status: `in-progress` — PICKED vol-219 (absorbed into binding 1: the ASSAYER ranker's feature library — break-profiles, chain-entropy, suffix floors as covariates; labels as target)
 Pool-conditioned transfer-matrix DP features, microseconds each:
 (a) row break-profiles — count of row-r completions paying exactly b
 mismatches given the prefix's remaining pool + actual rim targets
@@ -218,7 +255,7 @@ PERFECT? If null even with perfect counts → saves the 16×16 invest.
 Caveat (vol-35): size governs landscape — calibrates instruments,
 not 16×16 difficulty.
 
-### `staged-count-guided-construction` — status: `unbuilt` — since: vol-216 (user proposal, session close)
+### `staged-count-guided-construction` — status: `resolved-as-split` — vol-219 (staged pipeline BUILT vol-217 [[staged-fullboard-construction]]; COUNT-guidance REFUTED vol-218 M1/M4 — relaxed counts are fiction at depth ≥2, floor cohorts ≈ random; LABEL-guidance adopted as vol-219 binding 1)
 User's staged 4-row program, hardened against the graveyard: build in
 row-band stages; per stage, rank candidate stage-fillings by their
 ESTIMATED continuation count (fugacity/transfer oracles — the global
@@ -254,7 +291,7 @@ latent pool-health factor, two lenses; combination adds little.
 oracle + staged pipeline proper + 8×8 rig for the count-guided-vs-
 blind question.
 
-### `sinkhorn-lp-surrogate` — status: `unbuilt` — since: vol-216 (Q&A) [header restored vol-217: text below had merged into the previous entry]
+### `sinkhorn-lp-surrogate` — status: `wont-do` — resolved vol-219 (vol-218 M1/M4: relaxation-class scores ≈ random for selection; steering ask served by fb-suffix-incremental; marginals may return as ranker FEATURES) [header restored vol-217: text below had merged into the previous entry]
 Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
 matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
 0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
@@ -265,7 +302,7 @@ via the LP). If (b) works it is a new value-order class, the first
 global one. Composes with `learned prefix ranking` (distill LP/
 Sinkhorn into a net) as the fallback if raw Sinkhorn is too slow.
 
-### `sa2-tail-bound` — status: `unbuilt` — since: vol-216 (Q&A)
+### `sa2-tail-bound` — status: `wont-do` — resolved vol-219 (vol-218 exactness wall: certification crawls ×20/rung, stronger bounds buy ~1-2 rungs at large constant cost; et18/et20 in-DFS growth already net negative vol-216; invest in measurement instead)
 The next bound rung for exact-region growth (et20's failure mode =
 too-weak bound): Sherali-Adams level-2 / SDP lift of the tail-region
 LP — add pairwise joint variables y[c,c',j,j'] (4-tensor) over the
@@ -273,7 +310,7 @@ LP — add pairwise joint variables y[c,c',j,j'] (4-tensor) over the
 root cut that proved insufficient at k=20. Feasible at region scale,
 hopeless at board scale (by design).
 
-### `actuary-rate-tensor-completion` — status: `unbuilt` — since: vol-216 (Q&A)
+### `actuary-rate-tensor-completion` — status: `wont-do` — resolved vol-219 (ACTUARY parked since vol-216; the staged frame-free pipeline has no gated-walk schedule to optimize; revisit only if deep gated walks return as the primary generator)
 Replace ACTUARY's hand-rolled lane-coherent fallback with low-rank
 tensor completion of the (depth × spent × rate-type) tensor: fills
 unmeasured corridors from the global structure of measured ones —
@@ -410,7 +447,7 @@ square-order as a starting point. Composes with choke auto-gates.
 Academic control: van Horn 2018 (scan-row > spiral/inverse-spiral/
 mirrored for raw backtracking).
 
-### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213 — ARGUED at vol-216 audit
+### `perturb-multi-deviation` — status: `wont-do` — resolved vol-219 (the guided witness-replay track it belongs to is retired by the standing USER DIRECTIVE: no witness material; corpus = break-anatomy reconnaissance only)
 Both witnesses are 1-deviation-locked in [140:182) (900 s × 8 each,
 ~700k completions/seed, every seed converges back to the witness
 exactly). If wide-window single deviation is also null, the next
@@ -843,7 +880,7 @@ descent engine or ≥100× compute per top. Prereg:
 `plans/archive/vol-218-prereg-mirror.md`; data
 `output/vol-218/mirror_race2_20260612T142831/`.
 
-### `mitm-completion-probe` — status: `unbuilt` — since: vol-218 (M4 discovery, logged-not-chased)
+### `mitm-completion-probe` — status: `in-progress` — PICKED vol-219 binding 2
 M4 data: where BANDSAW's join fires (24/1600 blind 10×10 entries, 2%),
 its completions beat the greedy label by med 12 breaks (7-17; 17/17
 head-to-heads; saw UBs 10-15 vs greedy 16-34). The join assembles
