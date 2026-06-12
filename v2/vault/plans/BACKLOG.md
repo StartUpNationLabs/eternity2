@@ -6,6 +6,42 @@ Status tags: `unbuilt` | `in-progress` | `built` | `refuted` | `wont-do` | `part
 
 ---
 
+## Vol-216 audit-at-open (2026-06-12)
+
+Cohort audited: the vol-213 entries (now aged 3 vols). Decisions
+inline below. Pre-cloister-era items (vol-109 and older) remain in
+their last-audited state — they belong to the engine/ALNS era and are
+dominated by the cloister-track levers; re-audit them only if the
+cloister track closes.
+
+---
+
+## Vol-216 entries
+
+### `actuary-markov-schedule-optimizer` — status: `in-progress` — vol-216 binding 1
+Named invention of vol-216 (= `verhaard-markov-schedule-optimizer`
+picked). Fit per-depth fit/half-fit probabilities from FITSTAT TSVs →
+Markov DP over (depth, slips-spent) predicting expected
+solutions-per-node for ANY (scan order, gate schedule) → offline local
+search over thousands of candidates → race computed-optimal config vs
+hand recipes (≥8 seeds, min/med/max). Concept page to come:
+`concepts/actuary-markov-optimizer.md`.
+
+### `assignment-lp-prefix-scoring` — status: `in-progress` — vol-216 binding 2
+The lens the triple-null never tested: per-prefix assignment LP with
+edge terms over the remaining pool (HiGHS, ~ms). Kill-or-promote in one
+afternoon against the 35+ prefixes with measured finishes: the
+451-producer (d146-seed63) must outrank its 446-twins (d146-seed24/36)
+or it's a quadruple-null. If it ranks: LADDER promotion adopts it.
+
+### `exact-region-growth` — status: `in-progress` — vol-216 binding 3
+Grow et14 → et20+/et28-class: last-two-rows exact B&B with stronger
+admissible bounds (assignment-LP bound per node). The only
+practical-complexity lever per the 480 perspective. Includes
+`silent-cap-audit`. MIDDEN-confined exact regions as stretch.
+
+---
+
 ## Vol-213 entries
 
 ### `replay-prior-over-cost + double-break` — status: `built` — vol-213 (2026-06-10)
@@ -18,16 +54,22 @@ Does double-break lift the unguided 450 plateau, or flood the
 anytime-min? 8 seeds × 300 s, ± `--max-cell-breaks 2`, strict460a
 hinted et14. In the vol-213 evening batch.
 
-### `silent-cap-audit` — status: `unbuilt` — since: vol-213
+### `silent-cap-audit` — status: `in-progress` — vol-216 (folded into binding 3)
 TAIL_CAP lesson: capped "exact" methods must surface cap-hit instead of
 silently returning the incumbent (cost 2 invisible breaks in vol-213).
 Audit exact_tail2 / attach MIP / frame_ub for the same pattern; add a
 cap-hit flag to exact_tail's return or an eprintln-once.
+**Vol-216**: absorbed into the exact-region binding item — any et20+
+work touches exactly these code paths.
 
-### `triple-break-census` — status: `unbuilt` — since: vol-213
+### `triple-break-census` — status: `wont-do` — resolved vol-216
 Do any high community boards pay 3 breaks at one cell under row-major
 attribution? Run schedule-from-board across the 123-board corpus; count
 depth-multiplicities. Decides whether mcb=3 is ever needed.
+**Vol-216 decision**: the information would not change any current
+decision. Unguided mcb=2 is refuted (both lanes, vol-213); guided
+replay reproduces witnesses but cannot exceed them; mcb=3 unguided
+would flood worse than mcb=2. Revisit only if a guided track re-opens.
 
 ### `hint-compatible-frame-generator` — status: `built` — vol-213 (73x yield; band universal)
 `framegen` bin built (ring-cycle DFS + 4 chain-feasibility checks).
@@ -38,22 +80,30 @@ evening batch. Question: does ANY frame escape the 444-450 band?
 Bank ≥160-deep perfect prefixes across runs as restart seeds. Would
 open vol-214.
 
-### `ledger-color-deficit-prune` — status: `unbuilt` — since: vol-213
+### `ledger-color-deficit-prune` — status: `built` — vol-213/214 (`--ledger` + E2_LEDGER_CHECK)
 Admissible in-DFS prune: per color c maintain F_c (frontier edges
 demanding c: placed sides + rim targets facing empty cells) and S_c
 (pool sides of color c); prune when spent + Σ_c max(0, F_c − S_c) >
 budget. O(1) incremental. First prune that SEES pool starvation — the
 vol-209 distinctness wall mechanism. ~50 lines. Vol-214 candidate #1.
+**Vol-216 status correction**: BUILT (`--ledger` flag + E2_LEDGER_CHECK
+validator, synthesis vols-213-215). Vol-215 measured the signal
+VACUOUS on perfect-walk prefixes (deficit ≡ 0, triple-null) — as a
+prune it only fires post-break where budgets already bind. Keep flag;
+no further investment.
 
-### `cairn-frontier-nogoods` — status: `unbuilt` — since: vol-213
+### `cairn-frontier-nogoods` — status: `built` — vol-213/214 (`--cairn`)
 CDCL lens: cross-epoch nogood learning. Row-major state =
 (depth, 14-color frontier vector, avail bitmask, spent); record
 refuted-at-budget frontiers (bloom/hash, memory-bounded), prune
 revisits with ≤ budget. Restarts stop being amnesiac — replay runs
 proved the walk distribution is extremely concentrated. Vol-214
 candidate #2.
+**Vol-216 status correction**: BUILT (`--cairn` flag, synthesis
+vols-213-215, tested). No record-moving measurement on file; treat as
+available infrastructure.
 
-### `weft-row-lb` — status: `unbuilt` — since: vol-213
+### `weft-row-lb` — status: `wont-do` — resolved vol-216
 Admissible next-row lower bound at each row boundary: DP over
 (cell, west color) with piece-reuse relaxation (N colors known at row
 entry under row-major); prune when spent + rowLB > budget. DEFERRED
@@ -62,8 +112,13 @@ costs ~36k ops per row-entry instance; row-12 entries number 10⁵-10⁶
 per run, and CAIRN already memoizes refuted frontiers — WEFT's marginal
 value is pruning FRESH doomed states cheaper than the DFS refutes them.
 Build only if choke maps still show row-12 thrash after LEDGER+CAIRN.
+**Vol-216 decision**: wont-do. Its color-count relaxation is the same
+lens vol-215 proved vacuous (LEDGER deficit ≡ 0 on perfect walks; the
+wall is distinctness, not color flow). The exact-region program
+(vol-216 binding 3) subsumes the tail-pruning use case with sound
+exact bounds instead.
 
-### `verhaard-markov-schedule-optimizer` — status: `unbuilt` — since: vol-213
+### `verhaard-markov-schedule-optimizer` — status: `in-progress` — PICKED vol-216 binding 1 (named ACTUARY)
 The full method behind shortestpath.se (deep-fetched vol-213 night;
 our vault note only had his set-SA): instrument per-depth fit/half-fit
 probabilities, then a Markov-chain model over states (depth,
@@ -76,7 +131,7 @@ death-histogram instrument; add fit-probability counters and the DP
 evaluator. Calibration point: his released slip array starts at depth
 193/256 (75%); our gates 120-171/196 (61-87%).
 
-### `verhaard-piece-class-quotas` — status: `unbuilt` — since: vol-213
+### `verhaard-piece-class-quotas` — status: `built (marginal at first config)` — vol-214 `--quota`; vol-216 audit: no further investment pending ACTUARY
 Supply-side pool health (the mechanism our area-law theory says binds):
 partition pieces into good/bad by TILABILITY (# completions of a 2×3
 box; his set-SA generates the groups — that part IS in
@@ -87,13 +142,13 @@ the endgame pool stays rich — attacks the same starvation wall as
 LEDGER but from the supply side. Cheap: piece-class masks + per-depth
 counters. UNBUILT here in any form.
 
-### `verhaard-progress-restarts` — status: `unbuilt` — since: vol-213
+### `verhaard-progress-restarts` — status: `built` — vol-214 `--abort-below` (LADDER rung-1 uses it)
 Replace fixed restart_ms with progress-based aborts ("can't reach depth
 128 in 200M nodes → restart; max depth < 165 → abort run") — his claim:
 ~5× over fixed-interval restarts. Trivial to add (epoch_max vs node
 thresholds, calibrated from our choke histograms).
 
-### `verhaard-order-optimization` — status: `unbuilt` — since: vol-213
+### `verhaard-order-optimization` — status: `in-progress` — absorbed into ACTUARY (vol-216 binding 1: the DP evaluates order AND gates jointly)
 Verhaard (shortestpath.se): "the optimal search order depends on the
 score you want to achieve — for 480 scan-row is quite optimal, but far
 from optimal for ≤468"; he COMPUTED per-target orders for his records.
@@ -104,12 +159,16 @@ square-order as a starting point. Composes with choke auto-gates.
 Academic control: van Horn 2018 (scan-row > spiral/inverse-spiral/
 mirrored for raw backtracking).
 
-### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213
+### `perturb-multi-deviation` — status: `unbuilt` — since: vol-213 — ARGUED at vol-216 audit
 Both witnesses are 1-deviation-locked in [140:182) (900 s × 8 each,
 ~700k completions/seed, every seed converges back to the witness
 exactly). If wide-window single deviation is also null, the next
 enumerator is k=2 deviations (sample two depths per epoch) — or accept
 that these frames cap at 460 and shift to the frame axis (framegen).
+**Vol-216 argument for keeping**: it is the guided track's ONLY
+remaining enumeration and the cheapest path to 461 IF the multiplier
+track (ACTUARY) lifts the unguided engine close to witness territory.
+Standing alternate; promote if all three vol-216 bindings close early.
 
 ---
 

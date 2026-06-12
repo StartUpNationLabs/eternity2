@@ -659,6 +659,15 @@ pub struct DfsResult {
     pub fit_visits: Vec<u64>,
     pub fit_yields: Vec<u64>,
     pub fit_deaths: Vec<u64>,
+    /// ACTUARY (vol-216): cost-split placements — perfect (cost-0) vs
+    /// break (cost ≥ 1) — plus instance STARTS (= arrivals; `fit_visits`
+    /// counts instance ENDS and is survivorship-biased at break depths)
+    /// and starts with break segments enumerable (gate open).
+    /// b0(d) = y0/starts, b1(d) = y1/starts_open feed the markov DP.
+    pub fit_y0: Vec<u64>,
+    pub fit_y1: Vec<u64>,
+    pub fit_starts: Vec<u64>,
+    pub fit_starts_open: Vec<u64>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -767,6 +776,10 @@ pub fn dfs_run(
     let mut fit_visits = vec![0u64; cells + 1];
     let mut fit_yields = vec![0u64; cells + 1];
     let mut fit_deaths = vec![0u64; cells + 1];
+    let mut fit_y0 = vec![0u64; cells + 1];
+    let mut fit_y1 = vec![0u64; cells + 1];
+    let mut fit_starts = vec![0u64; cells + 1];
+    let mut fit_starts_open = vec![0u64; cells + 1];
     let mut ms_at_max: u128 = 0;
     let mut best_prefix: Vec<(u16, u8)> = Vec::new();
     let mut best_complete: Option<(Vec<(u16, u8)>, u32)> = None;
@@ -880,6 +893,10 @@ pub fn dfs_run(
                                 fit_visits,
                                 fit_yields,
                                 fit_deaths,
+                                fit_y0,
+                                fit_y1,
+                                fit_starts,
+                                fit_starts_open,
                             };
                         }
                     }
@@ -907,6 +924,10 @@ pub fn dfs_run(
                         fit_visits,
                         fit_yields,
                         fit_deaths,
+                        fit_y0,
+                        fit_y1,
+                        fit_starts,
+                        fit_starts_open,
                     };
                 }
                 backtrack_now = true;
@@ -933,6 +954,10 @@ pub fn dfs_run(
                         fit_visits,
                         fit_yields,
                         fit_deaths,
+                        fit_y0,
+                        fit_y1,
+                        fit_starts,
+                        fit_starts_open,
                     };
                 }
                 if epoch_t0.elapsed().as_millis() as u64 >= p.restart_ms {
@@ -955,6 +980,7 @@ pub fn dfs_run(
                 if let Some((fp, fr)) = forced_by_cell[cell] {
                     if !cursors[d].started && mask_get(&avail, fp) {
                         cursors[d].started = true;
+                        fit_starts[d] += 1;
                         let e = tables.rot_edges[fp as usize][fr as usize];
                         let fcol = ccol_of(&tables, plan, &grid);
                         let mut cost = 0u32;
@@ -971,6 +997,11 @@ pub fn dfs_run(
                             mask_clear(&mut avail, fp);
                             cost_at[d] = cost;
                             spent += cost;
+                            if cost == 0 {
+                                fit_y0[d] += 1;
+                            } else {
+                                fit_y1[d] += 1;
+                            }
                             if p.ledger {
                                 led.place(&tables, plan, &fcol, fp, fr);
                             }
@@ -1015,6 +1046,13 @@ pub fn dfs_run(
                     let lds_block = p
                         .max_disc
                         .is_some_and(|m| disc >= m && yields[d] >= 1 && !disc_flag[d]);
+                    // ACTUARY: instance start = arrival; break-segment
+                    // availability is instance-invariant (same argument
+                    // as REPLAY soundness) — record both at start
+                    if !cursors[d].started {
+                        fit_starts[d] += 1;
+                        fit_starts_open[d] += u64::from(break1_open);
+                    }
                     // CAIRN probe at instance start: a recorded nogood with
                     // ≤ spent kills the whole instance before enumeration
                     if let Some(ca) = cairn.as_ref() {
@@ -1148,6 +1186,11 @@ pub fn dfs_run(
                                 mask_clear(&mut avail, pid);
                                 cost_at[d] = cost;
                                 spent += cost;
+                                if cost == 0 {
+                                    fit_y0[d] += 1;
+                                } else {
+                                    fit_y1[d] += 1;
+                                }
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }
@@ -1233,6 +1276,11 @@ pub fn dfs_run(
                                 mask_clear(&mut avail, pid);
                                 cost_at[d] = cost;
                                 spent += cost;
+                                if cost == 0 {
+                                    fit_y0[d] += 1;
+                                } else {
+                                    fit_y1[d] += 1;
+                                }
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }

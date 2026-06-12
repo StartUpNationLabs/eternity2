@@ -32,15 +32,20 @@ struct TailCtx<'a> {
     forced_pi: Vec<Option<usize>>,
     /// pool indices reserved for forced cells (unusable elsewhere)
     reserved: u64,
-    /// sat[j] = pool-index mask of pieces with a rot satisfying every
-    /// prefix-known constraint of tail cell j (admissible LB ingredient)
-    sat: Vec<u64>,
+    /// static_cands[j]: (cost vs prefix-known constraints, pool idx),
+    /// cost-sorted. Admissible per-cell LB = first available entry's
+    /// cost (vol-216: value-based, strictly ≥ the old 0/1 sat bound).
+    static_cands: Vec<Vec<(u32, u8)>>,
+    /// forced cells' static cost (their LB contribution)
+    static_forced: Vec<u32>,
     nodes: u64,
     cap: u64,
     abort_at: u32,
     best_mis: u32,
     best_asn: Vec<(u16, u8)>,
     asn: Vec<(u16, u8)>,
+    /// per-level candidate scratch (k>14 safe; was a [_; 56] array)
+    scratch: Vec<Vec<(u32, u8, u8)>>,
     /// MIDDEN: cells allowed to pay mismatches (None = all)
     break_cells: Option<&'a [bool]>,
 }
@@ -72,15 +77,15 @@ impl TailCtx<'_> {
         let k = self.pieces.len();
         let mut lb = 0;
         for jj in j..k {
-            if let Some(pi) = self.forced_pi[jj] {
-                if self.sat[jj] >> pi & 1 == 0 {
-                    lb += 1;
-                }
+            if self.forced_pi[jj].is_some() {
+                lb += self.static_forced[jj];
                 continue;
             }
-            if self.sat[jj] & !used & !self.reserved == 0 {
-                lb += 1;
-            }
+            let blocked = used | self.reserved;
+            lb += self.static_cands[jj]
+                .iter()
+                .find(|&&(_, pi)| blocked >> pi & 1 == 0)
+                .map_or(TAIL_INFEASIBLE, |&(c, _)| c);
         }
         lb
     }
@@ -116,11 +121,11 @@ impl TailCtx<'_> {
             grid[cell] = (u16::MAX, 0);
             return;
         }
-        // candidates ordered by local mismatch (pool ≤ 14 ⇒ ≤ 56 entries)
+        // candidates ordered by local mismatch
         // MIDDEN: non-mask cells admit only 0-mismatch candidates
         let must_be_perfect = self.break_cells.is_some_and(|m| !m[cell]);
-        let mut order = [(0u32, 0u8, 0u8); 56];
-        let mut no = 0;
+        let mut order = std::mem::take(&mut self.scratch[j]);
+        order.clear();
         for (pi, &pid) in self.pieces.iter().enumerate() {
             if used >> pi & 1 == 1 || self.reserved >> pi & 1 == 1 {
                 continue;
@@ -131,15 +136,14 @@ impl TailCtx<'_> {
                 if must_be_perfect && m > 0 {
                     continue;
                 }
-                order[no] = (m, pi as u8, rot);
-                no += 1;
+                order.push((m, pi as u8, rot));
             }
         }
-        order[..no].sort_unstable_by_key(|&(m, ..)| m);
-        for &(m, pi, rot) in &order[..no] {
+        order.sort_unstable_by_key(|&(m, ..)| m);
+        for &(m, pi, rot) in &order {
             self.nodes += 1;
             if mis + m >= self.best_mis.min(self.abort_at) || self.nodes > self.cap {
-                return;
+                break;
             }
             let pid = self.pieces[pi as usize];
             grid[cell] = (pid, rot);
@@ -147,7 +151,69 @@ impl TailCtx<'_> {
             self.go(grid, j + 1, mis + m, used | 1 << pi);
             grid[cell] = (u16::MAX, 0);
         }
+        self.scratch[j] = order;
     }
+}
+
+/// Exact min-cost bipartite assignment (Hungarian, O(k³)) on a square
+/// cost matrix with `INF_COST` for forbidden entries. Used as the root
+/// lower bound of `exact_tail` (vol-216): assignment-aware, strictly ≥
+/// the per-cell Σ-min bound.
+const INF_COST: i64 = 1 << 40;
+
+fn hungarian_lb(cost: &[Vec<i64>]) -> i64 {
+    let k = cost.len();
+    let mut u = vec![0i64; k + 1];
+    let mut v = vec![0i64; k + 1];
+    let mut p = vec![0usize; k + 1];
+    let mut way = vec![0usize; k + 1];
+    for i in 1..=k {
+        p[0] = i;
+        let mut j0 = 0usize;
+        let mut minv = vec![i64::MAX; k + 1];
+        let mut used = vec![false; k + 1];
+        loop {
+            used[j0] = true;
+            let i0 = p[j0];
+            let mut delta = i64::MAX;
+            let mut j1 = 0usize;
+            for j in 1..=k {
+                if used[j] {
+                    continue;
+                }
+                let cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+                if cur < minv[j] {
+                    minv[j] = cur;
+                    way[j] = j0;
+                }
+                if minv[j] < delta {
+                    delta = minv[j];
+                    j1 = j;
+                }
+            }
+            for j in 0..=k {
+                if used[j] {
+                    u[p[j]] += delta;
+                    v[j] -= delta;
+                } else {
+                    minv[j] -= delta;
+                }
+            }
+            j0 = j1;
+            if p[j0] == 0 {
+                break;
+            }
+        }
+        loop {
+            let j1 = way[j0];
+            p[j0] = p[j1];
+            j0 = j1;
+            if j0 == 0 {
+                break;
+            }
+        }
+    }
+    (1..=k).map(|j| cost[p[j] - 1][j - 1]).sum()
 }
 
 /// Optimal assignment of the k = pieces.len() leftover pieces to the last k
@@ -182,39 +248,56 @@ pub fn exact_tail(
         .iter()
         .flatten()
         .fold(0u64, |m, &pi| m | 1 << pi);
-    // prefix-known constraints per tail cell -> sat masks
-    let sat: Vec<u64> = (0..k)
-        .map(|j| {
-            let plan = &plans[start_d + j];
-            // (side, color) pairs decided by the prefix (not by tail cells)
-            let mut known: Vec<(u8, u8)> = Vec::with_capacity(4);
-            for i in 0..plan.k as usize {
-                match plan.src[i] {
-                    Src::Fixed(c) => known.push((plan.sides[i], c)),
-                    Src::Placed { cell, their_side } => {
-                        let (p, r) = grid[cell as usize];
-                        if p != u16::MAX {
-                            known.push((
-                                plan.sides[i],
-                                tables.rot_edges[p as usize][r as usize][their_side as usize],
-                            ));
-                        }
+    // static per-(cell, piece) min-rot cost vs PREFIX-KNOWN constraints
+    // (vol-216): value-based admissible LB inputs + Hungarian root bound
+    let mut static_cands: Vec<Vec<(u32, u8)>> = Vec::with_capacity(k);
+    let mut static_forced: Vec<u32> = vec![0; k];
+    let mut static_cost: Vec<Vec<u32>> = vec![vec![0; k]; k];
+    for j in 0..k {
+        let plan = &plans[start_d + j];
+        // (side, color) pairs decided by the prefix (not by tail cells)
+        let mut known: Vec<(u8, u8)> = Vec::with_capacity(4);
+        for i in 0..plan.k as usize {
+            match plan.src[i] {
+                Src::Fixed(c) => known.push((plan.sides[i], c)),
+                Src::Placed { cell, their_side } => {
+                    let (p, r) = grid[cell as usize];
+                    if p != u16::MAX {
+                        known.push((
+                            plan.sides[i],
+                            tables.rot_edges[p as usize][r as usize][their_side as usize],
+                        ));
                     }
                 }
             }
-            let mut m = 0u64;
-            for (pi, &pid) in pieces.iter().enumerate() {
-                let mut rots = 0xFu8;
-                for &(s, c) in &known {
-                    rots &= tables.rotmask(s as usize, c, pid as usize);
-                }
-                if rots != 0 {
-                    m |= 1 << pi;
-                }
+        }
+        let cost_of = |pid: u16, rot: u8| -> u32 {
+            let e = tables.rot_edges[pid as usize][rot as usize];
+            known
+                .iter()
+                .filter(|&&(s, c)| e[s as usize] != c)
+                .count() as u32
+        };
+        let must_be_perfect =
+            break_cells.is_some_and(|m| !m[plan.cell as usize]);
+        let mut cands: Vec<(u32, u8)> = Vec::with_capacity(k);
+        for (pi, &pid) in pieces.iter().enumerate() {
+            let c = (0..4u8).map(|r| cost_of(pid, r)).min().expect("rot");
+            static_cost[j][pi] = if must_be_perfect && c > 0 {
+                TAIL_INFEASIBLE
+            } else {
+                c
+            };
+            if !(must_be_perfect && c > 0) {
+                cands.push((c, pi as u8));
             }
-            m
-        })
-        .collect();
+        }
+        cands.sort_unstable();
+        static_cands.push(cands);
+        if let Some((fp, fr)) = forced[j] {
+            static_forced[j] = cost_of(fp, fr);
+        }
+    }
 
     // greedy incumbent
     let mut ctx = TailCtx {
@@ -225,13 +308,15 @@ pub fn exact_tail(
         forced,
         forced_pi,
         reserved,
-        sat,
+        static_cands,
+        static_forced,
         nodes: 0,
         cap,
         abort_at,
         best_mis: 0,
         best_asn: vec![(0, 0); k],
         asn: vec![(0, 0); k],
+        scratch: vec![Vec::with_capacity(4 * k); k],
         break_cells,
     };
     {
@@ -288,7 +373,26 @@ pub fn exact_tail(
         }
     }
     if ctx.best_mis > 0 && ctx.abort_at > 0 {
-        ctx.go(grid, 0, 0, 0);
+        // vol-216 root cut: exact assignment relaxation (Hungarian) over
+        // static costs. If even the relaxation can't beat the cut, the
+        // whole B&B is skippable. Forced cells admit only their piece.
+        let cut = i64::from(ctx.best_mis.min(ctx.abort_at));
+        let cost_mat: Vec<Vec<i64>> = (0..k)
+            .map(|j| {
+                (0..k)
+                    .map(|pi| match ctx.forced_pi[j] {
+                        Some(fpi) if pi == fpi => i64::from(ctx.static_forced[j]),
+                        Some(_) => INF_COST,
+                        None if ctx.reserved >> pi & 1 == 1 => INF_COST,
+                        None => i64::from(static_cost[j][pi]).min(INF_COST),
+                    })
+                    .collect()
+            })
+            .collect();
+        let root_lb = hungarian_lb(&cost_mat);
+        if root_lb < cut {
+            ctx.go(grid, 0, 0, 0);
+        }
     }
     // vol-213 lesson: a silently-capped "exact" method is greedy in
     // disguise (cost 2 invisible breaks on witness A). Surface it once.
@@ -588,6 +692,77 @@ mod tests {
         let mut best = u32::MAX;
         rec(tables, plans, grid, start_d, pieces, 0, 0, 0, &mut best);
         best
+    }
+
+    #[test]
+    fn exact_tail_k6_optimal_vs_brute_force() {
+        // vol-216 bound upgrade must preserve exactness at k=6
+        for seed in 0..4u64 {
+            let (m, sol, targets) = InteriorModel::synthetic(4, 5, 300 + seed);
+            let so = Scan::RowMajor.order(m.n);
+            let plans = build_plans(&m, &so, Some(&targets));
+            let tables = Tables::build(&m, false);
+            let k = 6usize;
+            let start_d = m.cells - k;
+            let mut grid: Vec<(u16, u8)> = vec![(u16::MAX, 0); m.cells];
+            let mut rng = Rng::new(seed);
+            for d in 0..start_d {
+                let cell = so[d];
+                let (p, mut r) = sol[cell];
+                if rng.below(3) == 0 {
+                    r = (r + 1) & 3;
+                }
+                grid[cell] = (p, r);
+            }
+            let pieces: Vec<u16> = (start_d..m.cells).map(|d| sol[so[d]].0).collect();
+            let forced: Vec<Option<(u16, u8)>> = vec![None; m.cells];
+            let (mis, _) = exact_tail(
+                &tables, &plans, &so, &mut grid, start_d, &pieces, &forced, u32::MAX,
+                TAIL_CAP, None,
+            );
+            let want = brute_min(&tables, &plans, &mut grid, start_d, &pieces);
+            assert_eq!(mis, want, "seed {seed}");
+        }
+    }
+
+    #[test]
+    fn exact_tail_k20_smoke() {
+        // k > 14 support (the old fixed [_;56] candidate array would
+        // overflow at k=20); perfect tail of a clean solution must be 0
+        let (m, sol, targets) = InteriorModel::synthetic(5, 6, 42);
+        let so = Scan::RowMajor.order(m.n);
+        let plans = build_plans(&m, &so, Some(&targets));
+        let tables = Tables::build(&m, false);
+        let k = 20usize;
+        let start_d = m.cells - k;
+        let mut grid: Vec<(u16, u8)> = vec![(u16::MAX, 0); m.cells];
+        for d in 0..start_d {
+            grid[so[d]] = sol[so[d]];
+        }
+        let pieces: Vec<u16> = (start_d..m.cells).map(|d| sol[so[d]].0).collect();
+        let forced: Vec<Option<(u16, u8)>> = vec![None; m.cells];
+        let (mis, _) = exact_tail(
+            &tables, &plans, &so, &mut grid, start_d, &pieces, &forced, u32::MAX,
+            TAIL_CAP, None,
+        );
+        assert_eq!(mis, 0, "clean prefix must complete perfectly at k=20");
+    }
+
+    #[test]
+    fn hungarian_lb_basic() {
+        // 3x3 with known optimum 5 (1+3+1)
+        let c = vec![
+            vec![1, 2, 9],
+            vec![4, 3, 7],
+            vec![9, 8, 1],
+        ];
+        assert_eq!(hungarian_lb(&c), 1 + 3 + 1);
+        // forbidden entries force the expensive diagonal
+        let c2 = vec![
+            vec![5, INF_COST],
+            vec![INF_COST, 5],
+        ];
+        assert_eq!(hungarian_lb(&c2), 10);
     }
 
     #[test]

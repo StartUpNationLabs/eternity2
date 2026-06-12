@@ -44,7 +44,8 @@ struct JobOut {
     death_hist: Vec<u32>,
     /// deepest prefix reached (scan-position indexed), for --save-prefix
     best_prefix: Vec<(u16, u8)>,
-    fitstats: (Vec<u64>, Vec<u64>, Vec<u64>),
+    /// (visits, yields, deaths, y0, y1, starts, starts_open) per depth
+    fitstats: (Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -424,7 +425,9 @@ fn main() {
                     ms_at_max: r.ms_at_max,
                     death_hist: r.death_hist,
                     best_prefix: r.best_prefix,
-                    fitstats: (r.fit_visits, r.fit_yields, r.fit_deaths),
+                    fitstats: (r.fit_visits, r.fit_yields, r.fit_deaths,
+                               r.fit_y0, r.fit_y1, r.fit_starts,
+                               r.fit_starts_open),
                 }
             }
             "sa" | "hybrid" => {
@@ -490,7 +493,8 @@ fn main() {
                     ms_at_max: 0,
                     death_hist: Vec::new(),
                     best_prefix: Vec::new(),
-                    fitstats: (Vec::new(), Vec::new(), Vec::new()),
+                    fitstats: (Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                               Vec::new(), Vec::new(), Vec::new()),
                 }
             }
             m => panic!("unknown mode {m}"),
@@ -573,7 +577,8 @@ fn main() {
             ms_at_max: 0,
             death_hist: Vec::new(),
             best_prefix: Vec::new(),
-            fitstats: (Vec::new(), Vec::new(), Vec::new()),
+            fitstats: (Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                       Vec::new(), Vec::new(), Vec::new()),
         }]
     } else {
         jobs.par_iter().map(run_job).collect()
@@ -717,8 +722,9 @@ fn main() {
         }
     }
     // FITSTAT: per-frame fit curves summed over seeds
+    // (y0/y1/starts/starts_open = ACTUARY cost-split, vol-216)
     {
-        let mut agg: Vec<(String, Vec<[u64; 3]>)> = Vec::new();
+        let mut agg: Vec<(String, Vec<[u64; 7]>)> = Vec::new();
         for r in &results {
             if r.fitstats.0.is_empty() {
                 continue;
@@ -726,22 +732,32 @@ fn main() {
             let e = if let Some(i) = agg.iter().position(|(l, _)| *l == r.frame_label) {
                 &mut agg[i].1
             } else {
-                agg.push((r.frame_label.clone(), vec![[0; 3]; r.fitstats.0.len()]));
+                agg.push((r.frame_label.clone(), vec![[0; 7]; r.fitstats.0.len()]));
                 &mut agg.last_mut().expect("pushed").1
             };
             for d in 0..r.fitstats.0.len() {
                 e[d][0] += r.fitstats.0[d];
                 e[d][1] += r.fitstats.1[d];
                 e[d][2] += r.fitstats.2[d];
+                e[d][3] += r.fitstats.3[d];
+                e[d][4] += r.fitstats.4[d];
+                e[d][5] += r.fitstats.5[d];
+                e[d][6] += r.fitstats.6[d];
             }
         }
         for (label, rows) in agg {
             let mut f = std::fs::File::create(dir.join(format!("fitstats_{label}.tsv")))
                 .expect("fitstats tsv");
-            writeln!(f, "depth	visits	yields	deaths").expect("hdr");
+            writeln!(f, "depth	visits	yields	deaths	y0	y1	starts	starts_open")
+                .expect("hdr");
             for (d, v) in rows.iter().enumerate() {
-                if v[0] > 0 {
-                    writeln!(f, "{d}	{}	{}	{}", v[0], v[1], v[2]).expect("row");
+                if v[0] > 0 || v[5] > 0 {
+                    writeln!(
+                        f,
+                        "{d}	{}	{}	{}	{}	{}	{}	{}",
+                        v[0], v[1], v[2], v[3], v[4], v[5], v[6]
+                    )
+                    .expect("row");
                 }
             }
         }
