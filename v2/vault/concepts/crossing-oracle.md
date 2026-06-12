@@ -121,6 +121,39 @@ marginalized pre-cell (N/W/E targets known; candidate souths +
 own-edge costs ride along in b). d139 floors thus include up to 3
 extra edges — comparable within-d139, offset vs d140+.
 
+## ★ Full-board generalization (fb_oracle) + the row-11 decision point
+
+`scripts/v217_crossing/fb_oracle.py` (same vol, user-directed
+full-board pivot): N-row 16-wide bands, frame-free — flank/bottom
+candidates from the REMAINING border pieces, border sides structural,
+corners handled; exact selftest PASS. Validation produced the
+sharpest finding of the day. Floors at the rows-0-10 frontier
+(flanks free) vs after each board's own first 6 row-11 cells:
+
+| board | frontier floor | after 6 row-11 commits |
+|---|---|---|
+| witnesses | **3** (soft 19.1) | **3 / 4** (preserved) |
+| seed24 | **3** (witness-grade!) | 8 (destroyed, +5) |
+| seed63 / our 452 | 6 (soft 15.5) | 7 (+1) |
+
+**The crossing floor is decided at the row-11 entry cells.** seed24
+HAD a witness-grade frontier and wrecked it in six placements;
+witnesses preserved theirs; our best banked prefix never had one.
+Decomposition: crossing quality = frontier quality × commitment
+quality — BOTH measurable, the second steerable cell-by-cell.
+⇒ (a) cheap shot: pin seed24 rows 0-10, rebuild row 11
+oracle-ranked, race floor-≤4 results; (b) the staged builder's
+stage-3 step must be oracle-steered exactly at the row-11 entry;
+(c) per-candidate Δfloor needs ms-grade asks → Rust port (incremental
+suffix recompute: per-candidate cost ~ms).
+
+Cross-checks that fell out: T452 rows-0-10 EXACTLY equals seed63's
+(it is a seed63-basin finish — piece-id identical); ★ **witnesses A
+and B share 172/176 cells in rows 0-10** — the two community 460s
+are SIBLINGS (one construction to row ~10, two endgames; different
+rings below). Honest correction: our witness evidence is ~1
+independent frontier, not 2.
+
 ## Open
 
 - Population ρ + inter-instrument correlation vs LP/band (does the
