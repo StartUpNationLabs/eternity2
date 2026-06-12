@@ -55,6 +55,33 @@ pub fn hint_cells(n: usize) -> [usize; 5] {
 }
 
 impl Mini {
+    /// Wrap an already-loaded puzzle (e.g. the official E2 CSV) in the
+    /// band machinery. `solution` stays empty (unknown).
+    #[must_use]
+    pub fn from_puzzle(puzzle: &eternity2_core::Puzzle, hints: Vec<(usize, u16, u8)>) -> Self {
+        let n = puzzle.width as usize;
+        let mut rot = vec![[[0u8; 4]; 4]; n * n];
+        let mut maxc = 0u8;
+        for p in puzzle.pieces() {
+            let e = [p.edges.top(), p.edges.right(), p.edges.bottom(), p.edges.left()];
+            maxc = maxc.max(*e.iter().max().unwrap());
+            let mut rr = [[0u8; 4]; 4];
+            for r in 0..4 {
+                rr[r] = rotate_edges(e, r as u8);
+            }
+            rot[p.id as usize] = rr;
+        }
+        Mini {
+            n,
+            colors: u32::from(maxc),
+            seed: 0,
+            nc: usize::from(maxc) + 1,
+            rot,
+            hints,
+            solution: Vec::new(),
+        }
+    }
+
     #[must_use]
     pub fn from_seed(n: usize, colors: u32, seed: u64, hint_cells: &[usize]) -> Self {
         let (puzzle, solution) = generate_with_solution(GeneratorConfig {
@@ -824,10 +851,14 @@ fn enumerate_band(
     (raw, nodes, capped)
 }
 
-/// Exact min-break of a 2h-row band via meet-in-the-middle: split
-/// into two h-row bands, enumerate both at budget B, hash-join on
-/// (complement pool mask, interface vector), iterative deepening on B
-/// from an admissible lower bound. Exact when not capped.
+/// Exact min-break of a 2h-row band via meet-in-the-middle with EXACT
+/// complementary-pool accounting: enumerate the top h rows at budget
+/// B keyed by (pool mask, south vector); group tops by mask; for each
+/// distinct top mask enumerate the bottom h rows from EXACTLY the
+/// complement pool (narrow branching — this is where the
+/// vertical-coupling collapse pays); join on interface vectors.
+/// Iterative deepening on B from an admissible lower bound.
+/// Exact when not capped.
 #[must_use]
 pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
     assert!(band.k % 2 == 0, "bandsaw needs an even row count");
@@ -835,52 +866,89 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
     let h = band.k / 2;
     let t0 = std::time::Instant::now();
 
-    let full_mask: u64 = if band.pool.len() == 64 {
-        u64::MAX
-    } else {
-        (1u64 << band.pool.len()) - 1
+    let top_band = Band {
+        mini: m,
+        r0: band.r0,
+        k: h,
+        frontier: band.frontier.clone(),
+        pool: band.pool.clone(),
+        forced: band.forced.clone(),
     };
-    let split = |rows_lo: bool| -> Band {
-        Band {
-            mini: m,
-            r0: if rows_lo { band.r0 } else { band.r0 + h },
-            k: h,
-            frontier: if rows_lo { band.frontier.clone() } else { None },
-            pool: band.pool.clone(),
-            forced: band.forced.clone(),
-        }
-    };
-    let top_band = split(true);
-    let bot_band = split(false);
 
     let mut budget = lb;
     loop {
         let mut top: HashMap<(u64, u128), u32> = HashMap::new();
-        let (top_raw, _tn, tcap) = enumerate_band(&top_band, budget, true, true, node_cap, |mask, v, cost| {
-            top.entry((mask, v))
-                .and_modify(|e| *e = (*e).min(cost))
-                .or_insert(cost);
-        });
-        let mut bottom: HashMap<u64, HashMap<u128, u32>> = HashMap::new();
-        let mut bottom_keys = 0usize;
-        let (bottom_raw, _bn, bcap) = enumerate_band(&bot_band, budget, false, false, node_cap, |mask, v, cost| {
-            let g = bottom.entry(mask).or_default();
-            let e = g.entry(v).or_insert(u32::MAX);
-            if cost < *e {
-                if *e == u32::MAX {
-                    bottom_keys += 1;
-                }
-                *e = cost;
-            }
-        });
-        let capped = tcap || bcap;
+        let (top_raw, _tn, tcap) =
+            enumerate_band(&top_band, budget, true, true, node_cap, |mask, v, cost| {
+                top.entry((mask, v))
+                    .and_modify(|e| *e = (*e).min(cost))
+                    .or_insert(cost);
+            });
+
+        // group tops by pool mask
+        let mut groups: HashMap<u64, Vec<(u128, u32)>> = HashMap::new();
+        for (&(mask, v), &ct) in &top {
+            groups.entry(mask).or_default().push((v, ct));
+        }
 
         let mut best: Option<u32> = None;
         let mut join_pairs = 0u64;
-        for (&(mask, v), &ct) in &top {
-            let comp = full_mask & !mask;
-            if let Some(g) = bottom.get(&comp) {
-                for (&u, &cb) in g {
+        let mut bottom_raw = 0u64;
+        let mut bottom_keys = 0usize;
+        let mut capped = tcap;
+        let mask_groups = groups.len();
+
+        for (mask, tops) in &groups {
+            if capped {
+                break;
+            }
+            let ct_min = tops.iter().map(|&(_, c)| c).min().unwrap();
+            if ct_min > budget {
+                continue;
+            }
+            // complement pool, in band-pool index space
+            let comp_pool: Vec<u16> = band
+                .pool
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| mask & (1u64 << i) == 0)
+                .map(|(_, &p)| p)
+                .collect();
+            // a top that consumed a bottom-forced piece admits no bottom
+            let bottom_forced_ok = band
+                .forced
+                .iter()
+                .filter(|&(&pos, _)| pos >= (band.r0 + h) * m.n)
+                .all(|(_, &(p, _))| comp_pool.contains(&p));
+            if !bottom_forced_ok {
+                continue;
+            }
+            let bot_band = Band {
+                mini: m,
+                r0: band.r0 + h,
+                k: h,
+                frontier: None,
+                pool: comp_pool,
+                forced: band.forced.clone(),
+            };
+            let mut bots: HashMap<u128, u32> = HashMap::new();
+            let (braw, _bn, bcap) = enumerate_band(
+                &bot_band,
+                budget - ct_min,
+                false,
+                false,
+                node_cap,
+                |_bmask, u, cb| {
+                    bots.entry(u)
+                        .and_modify(|e| *e = (*e).min(cb))
+                        .or_insert(cb);
+                },
+            );
+            bottom_raw += braw;
+            bottom_keys += bots.len();
+            capped |= bcap;
+            for &(v, ct) in tops {
+                for (&u, &cb) in &bots {
                     join_pairs += 1;
                     let tot = ct + cb + vec_mismatch(v, u, m.n);
                     if best.is_none_or(|bv| tot < bv) {
@@ -889,6 +957,7 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
                 }
             }
         }
+
         let done = best.is_some_and(|bv| bv <= budget);
         if done || capped || budget > 512 {
             return BandsawResult {
@@ -898,7 +967,7 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
                 bottom_raw,
                 top_keys: top.len(),
                 bottom_keys,
-                bottom_mask_groups: bottom.len(),
+                bottom_mask_groups: mask_groups,
                 join_pairs,
                 elapsed_ms: t0.elapsed().as_millis(),
                 capped,
