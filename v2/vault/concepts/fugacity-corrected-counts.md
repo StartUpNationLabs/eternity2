@@ -49,6 +49,24 @@ boundary, pool = exactly the board's pieces there):
 (Bands from rows 12-13 have exact count 0 — no perfect filling exists
 where the board pays its breaks; the count detects this correctly.)
 
+## Vol-218 ground-truth validation (equal case, b-graded)
+
+10×10 testbed, b\*-graded ladder, exact distinct counts as truth
+(56 rungs, 8 instances): gap recovery **98%/91%/86% at b\*=2/3/4**
+(naive ×150 → corrected ×1.1 at b\*=2), decaying to **53%/43% at
+b\*=5/6** with saddle pathologies (one over-correction to 0, one
+non-convergence). ★ Structural limit found: the correction is
+FIRST-MOMENT only — **exchange-symmetric overcounting (piece-swap
+cycles) has uniform usage marginals and is invisible to fugacities**
+(measured at b\*=0: naive=corrected, exact ×2 lower). The vol-216
+validations were usage-asymmetric cases. Consequence: the 16×16
+corrected-floor gate (vol-218 prereg S1) is deferred on measured
+grounds — recovery trend unpromising at b≈44 and finite-difference
+saddles infeasible at NC=23 (adjoint build = the open alternate).
+Data: `output/vol-218/fugladder_*.tsv`; code: `weighted_profile` /
+`fugacity_corrected_lncount` in `bench-audit/src/mini.rs`,
+`fugacity_lab --seed N` (ladder mode).
+
 ## Documented negative: the subset case
 
 Pool > cells (e.g. 18 pieces, 10 cells): uniform-usage targets
