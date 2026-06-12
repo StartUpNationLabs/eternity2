@@ -115,7 +115,15 @@ breaks (argmin path through the tropical DP). The interpretable
 steering signal the vacuous bigram certificate couldn't provide:
 tells the builder WHERE the floor pays, not just how much.
 
-### `fb-suffix-incremental` — status: `unbuilt` — since: vol-217 (perf pass)
+### `fb-suffix-incremental` — status: `built` — vol-218 (user-prompted mid-vol)
+Delivered as prefix/suffix tropical tables + single-column splice
+(`tropical_prefix`, `whatif_floor` in mini.rs): per-candidate what-if
+floor at 16×16 k=3 = **1.83 ms** (16× vs full recompute; k=4: 65 ms,
+population-reranking tier). Validated: prefix+suffix identity at
+every boundary + what-if ≡ full recompute on all (c,color). Bonus
+from the same session's profile pass: B&B per-entry Vec allocs were
+~half of all samples; 3-pass retained-buffer fix = 2.2-2.3×
+solver-wide. Original text below.
 Per-candidate Δfloor at a cell: the DP prefix for columns < c is
 shared across all candidates — cache it, recompute only the suffix.
 With the tropical mode (~30 ms full ask) this puts per-candidate
