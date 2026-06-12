@@ -18,7 +18,14 @@ cloister track closes.
 
 ## Vol-218 entries
 
-### `band-split-exact-solve` — status: `unbuilt` — since: vol-217 close (user Q&A on the vertical-coupling collapse; CANDIDATE implementation of vol-218 binding 2)
+### `band-split-exact-solve` — status: `built` — vol-218 binding 2 (named invention: BANDSAW; see [[bandsaw-band-split-exact]])
+Vol-218 verdict: machinery exact (M2 ladder gate: zero wrong answers);
+the MITM join is DOMINATED by suffix-pruned ID-B&B (12 s vs DNF at
+b*=6); the durable instruments are the tropical-suffix tables +
+exact LB certificates + the relaxation-gap curve
+([[relaxation-gap-curve]]). Exactness wall: budget trees grow
+~x20/break — exact certification crawls; only measured labels touch
+the achievable region. Original text below.
 The 10¹⁵→10³ vertical-coupling collapse + the measured subtree
 exhaustibility (pinned 8-row subtrees enumerate in seconds) imply:
 TIGHT band sub-problems are exactly solvable by enumeration.
@@ -44,7 +51,10 @@ PROVEN (469/470 exist); the question is reachability of
 admitting-tops at our compute. Selection by greedy-finish labels,
 NOT relaxed floors (vol-217 refutation).
 
-### `greedy-finish-label-factory` — status: `built` (v1) — vol-217
+### `greedy-finish-label-factory` — status: `built` (v2 labeler, vol-218) — vol-217 v1
+Vol-218: column-major + tropical-suffix 1.5 s labels are never worse
+and 1-2 breaks better than v1 where both complete (mini_e2); 400-entry
+relabel batch run. v1 text below.
 stage4_finish at --budget-ms 1500 = a measured, distinctness-aware
 finish-cost label in 1.5 s (vs 300-s races). v1 labeled 149 entries
 (min 44/med 52). Scale-up: millions of labeled (state, cost) pairs
