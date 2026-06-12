@@ -1297,11 +1297,20 @@ mod tests {
             }
             band.frontier = Some(f);
             let lb = relax_floor(&band, 8);
-            let bb = bb_min_break(&band, 64, 600_000, u64::MAX);
-            assert!(!bb.capped, "bb must exhaust (seed {seed})");
+            // iterative-deepening bb (a slack ceiling explodes: 600 s+)
+            let mut ceil = lb;
+            let bb_best = loop {
+                let bb = bb_min_break(&band, ceil, 600_000, u64::MAX);
+                assert!(!bb.capped, "bb must exhaust (seed {seed} ceil {ceil})");
+                if bb.best.is_some() {
+                    break bb.best;
+                }
+                ceil += 1;
+                assert!(ceil <= 64);
+            };
             let saw = bandsaw(&band, lb, u64::MAX);
             assert!(!saw.capped);
-            assert_eq!(saw.best, bb.best, "seed {seed} corrupt {ncorrupt}");
+            assert_eq!(saw.best, bb_best, "seed {seed} corrupt {ncorrupt}");
         }
     }
 }

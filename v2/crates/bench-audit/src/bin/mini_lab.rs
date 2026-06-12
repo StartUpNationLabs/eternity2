@@ -63,15 +63,21 @@ fn sub_band<'a>(full: &Band<'a>, k: usize) -> Band<'a> {
     }
 }
 
-/// Independent exhaustive ground truth: escalate the break ceiling
-/// until a completion is found and proven optimal (never seeded by
-/// BANDSAW's answer).
+/// Independent exhaustive ground truth: iterative deepening on the
+/// break ceiling, +1 from the admissible floor (a slack ceiling makes
+/// the pre-completion tree explode — measured 600 s+ at 10×10 even
+/// for near-canonical entries). Never seeded by BANDSAW's answer.
+/// budget_ms bounds the TOTAL across rounds.
 fn bb_ground_truth(band: &Band, start: u32, budget_ms: u64) -> (Option<u32>, u64, u128, bool) {
     let mut ceil = start;
     let mut nodes = 0u64;
     let mut ms = 0u128;
     loop {
-        let r = bb_min_break(band, ceil, budget_ms, NODE_CAP);
+        let remaining = budget_ms.saturating_sub(u64::try_from(ms).unwrap_or(u64::MAX));
+        if remaining == 0 {
+            return (None, nodes, ms, true);
+        }
+        let r = bb_min_break(band, ceil, remaining, NODE_CAP);
         nodes += r.nodes;
         ms += r.elapsed_ms;
         if r.capped {
@@ -83,7 +89,7 @@ fn bb_ground_truth(band: &Band, start: u32, budget_ms: u64) -> (Option<u32>, u64
         if ceil >= 64 {
             return (None, nodes, ms, false);
         }
-        ceil += 8;
+        ceil += 1;
     }
 }
 
@@ -146,7 +152,7 @@ fn main() {
                 let floor = relax_floor(&band, 8);
                 let saw = bandsaw(&band, floor, NODE_CAP);
                 let (bb_best, bb_nodes, bb_ms, bb_capped) =
-                    bb_ground_truth(&band, floor + 8, bb_budget_ms);
+                    bb_ground_truth(&band, floor, bb_budget_ms);
                 let matched = match (saw.best, bb_best) {
                     (Some(a), Some(b)) => u8::from(a == b),
                     _ => 0,
