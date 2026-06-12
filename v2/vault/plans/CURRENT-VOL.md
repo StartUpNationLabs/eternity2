@@ -1,4 +1,4 @@
-# Current Volume — Vol-218 — DRAFT (prepared at vol-217 close, 2026-06-12)
+# Current Volume — Vol-218 — FORMAL (opened 2026-06-12, ~13:07 UTC)
 
 **Theme: the MIRROR — SOTA-shaped budget placement × measured-label
 selection.** Vol-217 built the frame-free staged full-board pipeline
@@ -70,6 +70,26 @@ Do not re-propose.
 Alternates (pick only if bindings close early): finisher v2 (exact
 bottom-row DP, gates, parallel B&B); fb-floor-attribution;
 suffix-incremental.
+
+## Audit-at-open compliance (vol-218 open, 2026-06-12)
+
+- BACKLOG swept in full. Vol-216 cohort (`sinkhorn-lp-surrogate`,
+  `sa2-tail-bound`, `fast-probe-generator`, `strip-oracle-sat`,
+  `transfer-profile-features`, `actuary-rate-tensor-completion`)
+  aged 2 vols — no forced decision yet; all remain coherent with or
+  dominated by the vol-218 bindings (strip-oracle-sat is conceptually
+  SUBSUMED by binding 2 if BANDSAW works: exact band min-break by
+  enumeration replaces the SAT decision oracle; noted for next audit).
+- `8x8-exact-counting-rig` stays `wont-do` (user directive); the
+  10×10 program is SUB-PROBLEM rigor only — no full enumeration.
+- Vol-217 promises vs delivery: all 3 bindings delivered or
+  user-re-scoped same-day (see [[vol-217]] scorecard).
+- Open-at-close items carried: MIRROR (binding 1), band-split
+  (binding 2), label factory (binding 3) — exactly this vol's list.
+- Named invention of vol-218: **BANDSAW** (band-split exact endgame
+  solver: meet-in-the-middle over two 2-row bands, hash join on
+  (complement-pool mask, interface vector), iterative deepening on
+  total budget — exact distinctness-aware min-break).
 
 ## Audit-at-open musts
 
