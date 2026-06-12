@@ -880,6 +880,30 @@ descent engine or ≥100× compute per top. Prereg:
 `plans/archive/vol-218-prereg-mirror.md`; data
 `output/vol-218/mirror_race2_20260612T142831/`.
 
+### `vanilla-fast-hint-neighbor-prefilter` — status: `unbuilt` — since: vol-219 (community provenance: Mike #3098 `LookupNSW`, 2007)
+Port the vol-218 mirror_gen clue-compat pre-filter into vanilla_fast's
+bucket build: at the N- and W-neighbor positions of every forced cell
+(hints 34/45/135/210/221 → neighbors 18/33, 29/44, 119/134, 194/209,
+205/220), drop candidates whose S (resp. E) color mismatches the
+forced piece. Zero completeness loss. Measured cost of NOT having it:
+2/8 threads of the vol-217 stage-2 gen spent their entire 20-min
+budget at the d34 clue wall (85M pp/s of pure churn) — ~25% of
+stage-2 generation throughput, which is the supply bottleneck after
+the vol-219 exhaustibility finding. In-scope for vol-219 binding 1's
+supply chain (not a pivot). See
+[[reference-mike-3098-fast-backtracker]].
+
+### `stage2-producer-signal` — status: `unbuilt` — since: vol-219 (exhaustibility finding)
+Only 3.8% of floor-0 stage-2 states admit ANY perfect rows-8-11
+completion, and admission is an order-invariant state property (the
+subtree exhausts in ms — vol-219). The producer flag is a free,
+exact, binary label on every stage-2 state the pipeline generates →
+tier-2 ranker target (predict producers from stage-2 features
+WITHOUT the 5 ms exhaust — or just exhaust, since it's 5 ms; the
+real value is understanding WHAT makes a producer, i.e., the
+constructive signal for stage-2 steering). Tier-2 ASSAYER territory;
+logged, not chased, per mid-vol discipline.
+
 ### `mitm-completion-probe` — status: `in-progress` — PICKED vol-219 binding 2
 M4 data: where BANDSAW's join fires (24/1600 blind 10×10 entries, 2%),
 its completions beat the greedy label by med 12 breaks (7-17; 17/17

@@ -116,7 +116,11 @@ the count.**
    if vol-9's solver-engine isn't already using this. Matches the
    295M/s target.
 3. **Read Mike's 2007 post #3098** for the original optimization
-   techniques.
+   techniques. → DONE vol-219: distilled with a mapping table to our
+   stack in `vault/reference/reference-mike-3098-fast-backtracker.md`
+   (verdict: we have 7/8 techniques, often in stronger form; the
+   actionable delta is the `LookupNSW` hint-neighbor pre-filter for
+   vanilla_fast).
 
 **Vol-11 candidates**:
 
