@@ -16,9 +16,52 @@ cloister track closes.
 
 ---
 
+## Vol-218 entries
+
+### `sota-mirrored-stage1` — status: `unbuilt` — since: vol-217 close (PRESUMPTIVE vol-218 binding)
+The only break geometry ever to reach 469/470: ~10 deliberate breaks
+in rows 0-4 (Blackwood's "scheduled relaxations" are literally
+visible there), then PERFECT rows 4/5-15. Build: stage-1 generator
+with budget ~10 (break-budget DFS over rows 0-3, MIDDEN/oracle-placed
+damage) → vanilla_fast --init-board --init-rows 4 perfect probes →
+the existing staged pipeline below row 4. Feasibility of the shape is
+PROVEN (469/470 exist); the question is reachability of
+admitting-tops at our compute. Selection by greedy-finish labels,
+NOT relaxed floors (vol-217 refutation).
+
+### `greedy-finish-label-factory` — status: `built` (v1) — vol-217
+stage4_finish at --budget-ms 1500 = a measured, distinctness-aware
+finish-cost label in 1.5 s (vs 300-s races). v1 labeled 149 entries
+(min 44/med 52). Scale-up: millions of labeled (state, cost) pairs
+per night → select on or LEARN from reality (the triple-null's
+global lens, obtained empirically). Next: parallel labeling, label
+the stage-2 tier too (label of best-child), train a ranker.
+
+---
+
 ## Vol-217 entries
 
-### `crossing-oracle` — status: `in-progress` — vol-217 binding 1 (named invention)
+### `crossing-oracle` — status: `built` — vol-217 binding 1 (named invention; scope refined at close)
+Gate passed decisively; passage filter CAUSAL; REFUTED as
+finishability certificate (relaxation gap 38-45). See
+[[crossing-oracle]] scope-refutation section.
+
+### `staged-fullboard-construction` — status: `built` — vol-217 binding 3 (user-directed)
+End-to-end day-one pipeline; 436/480 from scratch (5/5 hints,
+emergent border); full measurements in
+[[staged-fullboard-construction]].
+
+### `stage4-finisher` — status: `built` (v1) — vol-217
+B&B min-break rows 12-15; cost-ordered candidates (pool-order
+measured useless: 500M nodes, zero completions). v2 levers: exact
+bottom-row DP (memoized on edge-set key), late-release gates,
+parallel B&B, MRV cell order.
+
+### `crossing-oracle-legacy-track` — status: `wont-do` — resolved vol-217 (user directive)
+Binding 2 (re-rank/race the 3,416 banked witness-frame prefixes) and
+the seed24 row-11 rebuild: killed mid-vol — "STOP using the borders
+from the 460." Banked corpus retired to reference. The one floor-5
+banked prefix (d143-seed66) stays unraced by design.
 The instrument the vol-216 witness-pool experiment demands: 3-row
 break-profile transfer over interior rows 10-12, conditioned on the
 prefix's ACTUAL placed frontier (N boundary of row 10 = exact placed

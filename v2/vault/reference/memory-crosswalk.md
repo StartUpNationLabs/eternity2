@@ -194,3 +194,4 @@ When **adding new findings** in future volumes:
 4. If a wholly new concept emerges, create a new vault page + add to [[INDEX]].
 
 This ensures the vault stays **complete and discoverable** while memory stays **agent-loadable**.
+- `project_e2_vol217_staged_fullboard_2026_06_12.md` → [[staged-fullboard-construction]], [[crossing-oracle]], [[vol-217]]

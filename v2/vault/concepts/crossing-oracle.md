@@ -154,16 +154,25 @@ are SIBLINGS (one construction to row ~10, two endgames; different
 rings below). Honest correction: our witness evidence is ~1
 independent frontier, not 2.
 
+## Scope refutation (vol-217 close): floors ≠ finishability
+
+The relaxed floor is REAL for **passage** (penetration experiment:
+floor-0 vs floor≥1 separates with zero overlap, causally — every
+floor≥1 state dies at the center clue) and for witness-class
+SEPARATION (the gate). It is REFUTED as a **finishability**
+certificate at the endgame boundary: stage-4 entries with relaxed
+floor 6 finish (measured, stage4_finish B&B) at 44+ breaks —
+**relaxation gap ≈ 38-45** (repeats-allowed counting cannot see the
+distinctness wall; [[isentrope-entropy-growth]] quantified at this
+boundary). Successor instrument: **greedy-finish labels**
+(stage4_finish, ~1.5 s, measured and distinctness-aware) for entry
+ranking; the tropical floor stays as the cheap passage filter.
+
 ## Open
 
-- Population ρ + inter-instrument correlation vs LP/band (does the
-  crossing oracle carry the latent factor the 0.644-correlated pair
-  measures, or a second factor?).
-- Re-rank the full 3,416-prefix bank; race top-k 300 s × 8
-  (vol-217 binding 2).
-- Crossing-guided construction (binding 3): optimize rows 8-10 FOR
-  the frontier the oracle scores.
-- 4-row variant (couple row 13) if floor sharpness needs it.
+- fb-floor-attribution (argmin backtrace) — steering interpretability.
+- fb-suffix-incremental — per-candidate Δfloor at ~ms.
+- 4-row coupled ask in Rust (k=4) if entry asks return.
 
 ## Linked
 
