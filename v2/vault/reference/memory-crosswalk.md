@@ -195,3 +195,4 @@ When **adding new findings** in future volumes:
 
 This ensures the vault stays **complete and discoverable** while memory stays **agent-loadable**.
 - `project_e2_vol217_staged_fullboard_2026_06_12.md` → [[staged-fullboard-construction]], [[crossing-oracle]], [[vol-217]]
+- `feedback_e2_no_8x8_enumeration.md` → BACKLOG `8x8-exact-counting-rig` (wont-do, user directive 2026-06-12)

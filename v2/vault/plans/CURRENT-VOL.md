@@ -32,15 +32,21 @@ labels on disk make that attackable immediately.
    (b) exact min-break certificates for 64-cell stage-4s
    (MaxSAT/RC2 or proof-grade B&B; vol-55 scale precedent) —
    calibrate label looseness, define witness-grade entries exactly.
-3. **8×8 EXACT RIG** (`8x8-exact-counting-rig`, user-proposed
-   vol-216, deferred twice — now binding): enumerate ALL solutions;
-   measure what ACTUALLY separates completable prefixes from doomed
-   ones with perfect ground truth; decisive test of count-guided vs
-   blind construction. The likeliest birthplace of the missing idea.
+3. **LABEL FACTORY AT SCALE + LEARNED RANKER**
+   (`greedy-finish-label-factory`): parallel greedy-finish labeling
+   across every entry tier and generation recipe (millions of
+   measured (state, cost) pairs/night now possible); train the first
+   ranker on measured cost — the empirical distinctness signal,
+   learned from reality rather than derived from relaxations.
+   Composes with binding 2 (certificates calibrate the labels the
+   ranker trains on).
 
-Alternates (pick only if bindings close early): label factory
-scale-up + learned ranker; finisher v2 (exact bottom-row DP, gates,
-parallel B&B); fb-floor-attribution; suffix-incremental.
+USER DIRECTIVE (2026-06-12): the 8×8 full enumeration is wont-do.
+Do not re-propose.
+
+Alternates (pick only if bindings close early): finisher v2 (exact
+bottom-row DP, gates, parallel B&B); fb-floor-attribution;
+suffix-incremental.
 
 ## Audit-at-open musts
 

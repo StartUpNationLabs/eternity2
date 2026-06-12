@@ -5,13 +5,15 @@
 > alone mirrors the RESIDUE of SOTA's method (their break geometry),
 > not the method (weeks-scale pre-pruned guided search). The
 > program's center of gravity moves to the capability today's
-> negative explicitly names — an instrument that sees DISTINCTNESS —
-> plus the user's twice-deferred 8×8 ground-truth rig. MIRROR stays
-> as a gated days-scale experiment (mechanism: b1≈20 per break ⇒
-> ~10¹³× conditional-subtree inflation). Bindings = CURRENT-VOL.md:
-> (1) MIRROR gate, (2) distinctness instrument (fugacity-counts vs
-> the 149 measured labels + exact 64-cell min-break certificates),
-> (3) 8×8 exact rig.
+> negative explicitly names — an instrument that sees DISTINCTNESS.
+> MIRROR stays as a gated days-scale experiment (mechanism: b1≈20
+> per break ⇒ ~10¹³× conditional-subtree inflation).
+> Bindings = CURRENT-VOL.md: (1) MIRROR gate, (2) distinctness
+> instrument (fugacity-counts vs the 149 measured labels + exact
+> 64-cell min-break certificates), (3) label factory at scale +
+> learned ranker.
+> USER DIRECTIVE (2026-06-12): the 8×8 full enumeration is WONT-DO.
+> Never re-propose it.
 
 You are a senior researcher attacking **Eternity II** (canonical
 5-clue, Selby-Riordan) in this repo. **Unlimited time and resources;

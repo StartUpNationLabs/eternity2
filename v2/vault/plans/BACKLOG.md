@@ -172,7 +172,7 @@ validate vs the 75-prefix ≥300s label set like the LP was. Known
 limits: repeats-allowed (relaxation), single-row slices (SEMAPHORE
 pool-coupling caution), don't scale to full 2D (vol-209/210 χ-walls).
 
-### `8x8-exact-counting-rig` — status: `unbuilt` — since: vol-216 (user proposal, session close)
+### `8x8-exact-counting-rig` — status: `wont-do` — resolved vol-217 close (USER DIRECTIVE 2026-06-12: "we wont do the 8x8 full enumeration, stop suggesting it"). Do not re-propose in any form.
 Exhaustively enumerate ALL solutions of an 8×8 E2-like puzzle
 (hours-days; color count tuned E2-like). The only scale where
 EVERYTHING is knowable: every prefix's true completion count, every
