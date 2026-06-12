@@ -13,7 +13,8 @@
 use std::path::PathBuf;
 
 use eternity2_bench_audit::mini::{
-    endgame_band, fugacity_corrected_lncount, hint_cells, Mini,
+    bb_min_break, endgame_band, exact_count_pruned, fugacity_corrected_lncount, hint_cells,
+    tropical_suffix, Band, Mini,
 };
 
 fn main() {
@@ -39,6 +40,55 @@ fn main() {
         }
     }
     let m = Mini::from_seed(size, colors, seed, &hint_cells(size));
+
+    if entries_path.as_os_str().is_empty() {
+        // LADDER mode: canonical-prefix corruption family — b* known
+        // exactly (suffix-pruned ID-B&B), exact counts cheap. The
+        // equal-case fugacity validation set the blind entries can't
+        // provide (vol-218 M3: no blind b* decidable).
+        const COLS: [usize; 6] = [1, 4, 7, 2, 5, 8];
+        println!("seed\tncorrupt\tbstar\texact_ln\tnaive_ln\tcorr_ln\titers\tusage_err");
+        for ncorrupt in 0..=6usize {
+            let n = m.n;
+            let mut grid: Vec<Option<(u16, u8)>> = vec![None; n * n];
+            for pos in 0..rows * n {
+                grid[pos] = Some(m.solution[pos]);
+            }
+            let mut band = endgame_band(&m, &grid, rows);
+            let mut f = band.frontier.clone().unwrap();
+            for &col in COLS.iter().take(ncorrupt) {
+                f[col] = if f[col] == 1 { 2 } else { 1 };
+            }
+            band.frontier = Some(f);
+            let sfx = tropical_suffix(&band);
+            let floor = *sfx[0].iter().min().unwrap();
+            let mut ceil = floor;
+            let bstar = loop {
+                let r = bb_min_break(&band, ceil, 600_000, u64::MAX, Some(&sfx));
+                assert!(!r.capped, "ladder bb must exhaust");
+                if let Some(b) = r.best {
+                    break b;
+                }
+                ceil += 1;
+            };
+            let ec = exact_count_pruned(&band, bstar, u64::MAX, Some(&sfx));
+            assert!(!ec.capped);
+            let exact: u64 = ec.by_b.iter().sum();
+            let t0 = std::time::Instant::now();
+            let r = fugacity_corrected_lncount(&band, bstar, 0.02, 40);
+            #[allow(clippy::cast_precision_loss)]
+            let exact_ln = (exact as f64).ln();
+            println!(
+                "{seed}\t{ncorrupt}\t{bstar}\t{exact_ln:.4}\t{:.4}\t{:.4}\t{}\t{:.4}",
+                r.ln_naive, r.ln_corrected, r.iters, r.max_usage_err
+            );
+            eprintln!(
+                "[fug-ladder] ncorrupt {ncorrupt}: b*={bstar} exact_ln={exact_ln:.2} naive={:.2} corr={:.2} ({} iters, {:.0} s)",
+                r.ln_naive, r.ln_corrected, r.iters, t0.elapsed().as_secs_f64()
+            );
+        }
+        return;
+    }
 
     // entries
     let raw_entries = std::fs::read_to_string(&entries_path).expect("entries");
