@@ -842,3 +842,15 @@ weeks-scale pipelines). Revisit only with a fundamentally different
 descent engine or ≥100× compute per top. Prereg:
 `plans/archive/vol-218-prereg-mirror.md`; data
 `output/vol-218/mirror_race2_20260612T142831/`.
+
+### `mitm-completion-probe` — status: `unbuilt` — since: vol-218 (M4 discovery, logged-not-chased)
+M4 data: where BANDSAW's join fires (24/1600 blind 10×10 entries, 2%),
+its completions beat the greedy label by med 12 breaks (7-17; 17/17
+head-to-heads; saw UBs 10-15 vs greedy 16-34). The join assembles
+globally-coordinated halves the greedy descent's commitment ordering
+never reaches — and join-fires is itself an entry-quality signal
+(complement pool admits cheap legal bottoms). Candidate vol-219 use:
+budget-capped MITM probe as (a) a second-opinion finisher on
+label-selected 16×16 entries, (b) a "structured entry" detector for
+the label factory. Compose with [[bandsaw-band-split-exact]] verdicts:
+exact solver NO, probe YES (pending 16×16 join-fire rate).
