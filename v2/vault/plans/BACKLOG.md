@@ -69,7 +69,33 @@ validate vs the 75-prefix ≥300s label set like the LP was. Known
 limits: repeats-allowed (relaxation), single-row slices (SEMAPHORE
 pool-coupling caution), don't scale to full 2D (vol-209/210 χ-walls).
 
-### `sinkhorn-lp-surrogate` — status: `unbuilt` — since: vol-216 (Q&A)
+### `8x8-exact-counting-rig` — status: `unbuilt` — since: vol-216 (user proposal, session close)
+Exhaustively enumerate ALL solutions of an 8×8 E2-like puzzle
+(hours-days; color count tuned E2-like). The only scale where
+EVERYTHING is knowable: every prefix's true completion count, every
+stage's true feasibility. Purpose (sharpened): (1) calibrate the
+[[fugacity-corrected-counts]] estimator at 64 cells (validation
+currently stops at 15 — the error-vs-size curve needs this point);
+(2) decisive cheap test of the STRATEGIC hypothesis: does
+count-guided construction beat blind construction when counts are
+PERFECT? If null even with perfect counts → saves the 16×16 invest.
+Caveat (vol-35): size governs landscape — calibrates instruments,
+not 16×16 difficulty.
+
+### `staged-count-guided-construction` — status: `unbuilt` — since: vol-216 (user proposal, session close)
+User's staged 4-row program, hardened against the graveyard: build in
+row-band stages; per stage, rank candidate stage-fillings by their
+ESTIMATED continuation count (fugacity/transfer oracles — the global
+signal the triple-null says nothing local provides); stage-level
+backtrack on UNSAT certificates; graded break budgets per stage
+ALIGNED TO THE CHOKE PROFILE (perfect stages survive to ~full-board
+row 10; first error allowance must land in stage 3, rows 9-12 — the
+wall). Known failure modes designed around: SEMAPHORE row-stitching
+pool starvation (vol-183), CLIMB first-found re-basing pool poison
+(vol-214) — both die from FIRST-FOUND stage choices; count-ranking is
+the fix under test. Sequence: validate on `8x8-exact-counting-rig`
+first, then 12×12, then E2. Composes with `strip-oracle-sat` (exact
+mid-filter) and `fugacity-corrected-counts` (the estimator).
 Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
 matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
 0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
