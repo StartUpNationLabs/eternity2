@@ -76,6 +76,8 @@ fn main() {
     // These are applied IN ADDITION to canonical hints (when --pin-hints is set).
     let mut extra_hints: Vec<(usize, u16, u8)> = Vec::new();
     let mut save_best: Option<PathBuf> = None;
+    let mut init_board: Option<PathBuf> = None;
+    let mut init_rows: usize = 0;
     let mut threads: usize = 1;
     // Vol-34/35 — offset the thread_id used to seed the per-thread
     // bucket shuffle. Lets a sweep find productive bucket-orderings
@@ -120,6 +122,12 @@ fn main() {
                 i += 2;
             }
             "--snapshot-on-visit" => { snapshot_on_visit = true; i += 1; }
+            // Vol-217 — staged full-board construction: pin a complete
+            // row-prefix (e.g. a stage-2 state, rows 0..R-1) and DFS on top
+            // of it. Backtrack floor = the pin boundary; a thread exits if
+            // it exhausts the subtree (practically unreachable for R<=12).
+            "--init-board" => { init_board = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--init-rows" => { init_rows = raw[i + 1].parse().expect("init-rows"); i += 2; }
             "--thread-id-offset" => {
                 thread_id_offset = raw[i + 1].parse().expect("thread-id-offset");
                 i += 2;
@@ -298,6 +306,47 @@ fn main() {
         }
     }
 
+    // Vol-217 — load + pack the pinned row-prefix (indexed or pos format)
+    let init_pos: usize = init_rows * N;
+    let init_entries: Vec<u32> = if let Some(ib) = &init_board {
+        assert!(init_rows > 0, "--init-board requires --init-rows");
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(ib).expect("read init board"))
+                .expect("parse init board");
+        let mut cells: Vec<Option<(u16, u8)>> = vec![None; init_pos];
+        for (idx, e) in v["placement"].as_array().expect("placement").iter().enumerate() {
+            if e.is_null() { continue; }
+            let pos = e.get("pos").and_then(|p| p.as_u64()).unwrap_or(idx as u64) as usize;
+            if pos < init_pos {
+                cells[pos] = Some((
+                    e["piece_id"].as_u64().unwrap() as u16,
+                    e["rotation"].as_u64().unwrap() as u8,
+                ));
+            }
+        }
+        let mut seen = [false; N_PIECES];
+        cells
+            .iter()
+            .enumerate()
+            .map(|(pos, c)| {
+                let (pid, rot) = c.unwrap_or_else(|| panic!("init board missing pos {pos}"));
+                assert!(!seen[pid as usize], "duplicate piece {pid} in init board");
+                seen[pid as usize] = true;
+                let pr = piece_rots
+                    .iter()
+                    .find(|pr| pr.piece_id == pid && pr.rot == rot)
+                    .expect("init piece+rot not found");
+                pack_entry(pr.piece_id, pr.rot, pr.s, pr.e)
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    if !init_entries.is_empty() {
+        eprintln!("[init] pinned {} rows ({} cells) from {:?}", init_rows, init_pos,
+                  init_board.as_ref().unwrap());
+    }
+
     let t0 = Instant::now();
     let deadline = t0 + std::time::Duration::from_millis(budget_ms);
 
@@ -406,7 +455,18 @@ fn main() {
             }};
         }
 
-        enter_fresh!(0);
+        // Vol-217 — apply the pinned prefix
+        for (pos, &entry) in init_entries.iter().enumerate() {
+            chosen[pos] = entry;
+            used[(entry >> 12) as usize] = true;
+        }
+        depth = init_pos;
+        if init_pos > 0 {
+            max_depth = init_pos as u32;
+            best_depth = max_depth;
+            best_chosen.copy_from_slice(&chosen);
+        }
+        enter_fresh!(depth);
 
         'outer: loop {
             if (total_placements & 0x3FFFF) == 0 && Instant::now() >= deadline {
@@ -517,7 +577,7 @@ fn main() {
                 }
                 enter_fresh!(depth);
             } else {
-                if depth == 0 { break 'outer; }
+                if depth <= init_pos { break 'outer; }  // vol-217: pin floor
                 depth -= 1;
                 total_backtracks += 1;
                 let pid = (chosen[depth] >> 12) as usize;

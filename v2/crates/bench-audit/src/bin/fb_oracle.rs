@@ -487,6 +487,7 @@ struct AskResult {
     bmin: i32,
     log_at_bmin: f64,
     pools: [usize; 3],
+    bc: Option<(i32, f64)>,
 }
 
 fn ask(
@@ -494,6 +495,7 @@ fn ask(
     placed: &HashMap<(usize, usize), (u16, u8)>,
     rows: &[usize],
     bmax: usize,
+    want_bc: bool,
 ) -> AskResult {
     let r0 = rows[0];
     let mut t_n = [0u8; 16];
@@ -548,12 +550,77 @@ fn ask(
     };
     let bmin = counts.iter().position(|&x| x > 0.0).map(|i| i as i32).unwrap_or(-1);
     let log_at_bmin = if bmin >= 0 { logs[bmin as usize] } else { f64::NEG_INFINITY };
+    let bc = if want_bc { Some(bottom_chain(ctx, &pools, bmax)) } else { None };
     AskResult {
         soft,
         bmin,
         log_at_bmin,
         pools: [pools[2].len(), pools[1].len(), pools[0].len()],
+        bc,
     }
+}
+
+/// H5 (vol-217): bottom-row 1D chain profile — count row-15 fillings
+/// (corner + 14 bottom edges + corner, S sides structural) paying b
+/// mismatches on the 15 horizontal edges, over the REMAINING border
+/// pool, repeats-allowed. V edges to row 14 excluded (relaxation).
+/// The border-partition lever: stage 1's top-edge choice fixes the
+/// complement available here; frames froze this, frame-free steers it.
+fn bottom_chain(ctx: &Ctx, pools: &[Vec<u16>; 3], bmax: usize) -> (i32, f64) {
+    let b = bmax + 1;
+    let mut v = vec![0.0f64; NC * b];
+    for c in 0..16 {
+        let cands = cell_cands(ctx, 15, c, pools);
+        let mut nv = vec![0.0f64; NC * b];
+        if c == 0 {
+            for (p, rt) in cands {
+                let o = ctx.rot[p as usize][rt as usize];
+                nv[(o[1] as usize) * b] += 1.0;
+            }
+        } else {
+            let mut tot = vec![0.0f64; b];
+            for e in 0..NC {
+                for x in 0..b {
+                    tot[x] += v[e * b + x];
+                }
+            }
+            for (p, rt) in cands {
+                let o = ctx.rot[p as usize][rt as usize];
+                let (w, e) = (o[3] as usize, o[1] as usize);
+                for x in 0..b {
+                    nv[e * b + x] += v[w * b + x];
+                }
+                for x in 1..b {
+                    nv[e * b + x] += tot[x - 1] - v[w * b + x - 1];
+                }
+            }
+        }
+        v = nv;
+    }
+    let mut counts = vec![0.0f64; b];
+    for e in 0..NC {
+        for x in 0..b {
+            counts[x] += v[e * b + x];
+        }
+    }
+    let bmin = counts.iter().position(|&x| x > 0.0).map(|i| i as i32).unwrap_or(-1);
+    let lg = GAMMA.log10();
+    let mut wmax = f64::NEG_INFINITY;
+    let w: Vec<f64> = counts
+        .iter()
+        .enumerate()
+        .map(|(i, &x)| {
+            let l = if x > 0.0 { x.log10() + i as f64 * lg } else { f64::NEG_INFINITY };
+            wmax = wmax.max(l);
+            l
+        })
+        .collect();
+    let soft = if wmax.is_finite() {
+        wmax + w.iter().map(|&x| 10f64.powf(x - wmax)).sum::<f64>().log10()
+    } else {
+        f64::NEG_INFINITY
+    };
+    (bmin, soft)
 }
 
 // ---------------- selftest (mirror of the Python selftest) ----------------
@@ -635,6 +702,7 @@ fn main() {
     let mut batch: Option<PathBuf> = None;
     let mut out_path: Option<PathBuf> = None;
     let mut threads: usize = 1;
+    let mut want_bc = false;
     let mut want_selftest = false;
     let mut boards: Vec<PathBuf> = Vec::new();
     let mut i = 0;
@@ -649,6 +717,7 @@ fn main() {
             "--batch" => { batch = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--out" => { out_path = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--threads" => { threads = raw[i + 1].parse().unwrap(); i += 2; }
+            "--bottom-chain" => { want_bc = true; i += 1; }
             "--selftest" => { want_selftest = true; i += 1; }
             other => { boards.push(PathBuf::from(other)); i += 1; }
         }
@@ -684,11 +753,15 @@ fn main() {
                 truncate,
                 frame.as_ref(),
             );
-            let r = ask(&ctx, &placed, &rows, bmax);
+            let r = ask(&ctx, &placed, &rows, bmax, want_bc);
             let ms = t0.elapsed().as_millis();
             let tag = bpath.file_stem().unwrap().to_string_lossy().to_string();
+            let bc_cols = match r.bc {
+                Some((bf, bs)) => format!("\t{bf}\t{bs:.4}"),
+                None => String::new(),
+            };
             format!(
-                "{tag}\t{}..{}\t{:.4}\t{}\t{:.3}\t{}/{}/{}\t{ms}",
+                "{tag}\t{}..{}\t{:.4}\t{}\t{:.3}\t{}/{}/{}\t{ms}{bc_cols}",
                 rows[0],
                 rows[k - 1],
                 r.soft,
@@ -701,7 +774,11 @@ fn main() {
         })
         .collect();
 
-    let header = "tag\trows\tsoft_g03\tbmin\tlog_at_bmin\tpool_i/e/c\tms";
+    let header = if want_bc {
+        "tag\trows\tsoft_g03\tbmin\tlog_at_bmin\tpool_i/e/c\tms\tbc_floor\tbc_soft"
+    } else {
+        "tag\trows\tsoft_g03\tbmin\tlog_at_bmin\tpool_i/e/c\tms"
+    };
     match out_path {
         Some(p) => {
             let mut f = std::fs::File::create(p).expect("out");
