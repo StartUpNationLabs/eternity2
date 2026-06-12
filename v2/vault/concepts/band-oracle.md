@@ -67,6 +67,35 @@ Cost: **1.4 s/prefix** (pure Python; trivially optimizable).
    lower-bound-flavored difficulty certificate for the bottom band
    (relaxed, repeats-allowed, so a true bound only in the relaxation).
 
+## ★★ The witness-pool experiment (same session): the gap is the CROSSING
+
+Scoring the community 460 witnesses' own depth-146 pools with this
+oracle (their first 146 row-major interior cells as "prefix"):
+
+| pool | soft | floor | realized band breaks | total breaks |
+|---|---|---|---|---|
+| witness A (460) | 3.09 | 7 | 17 | 20 |
+| witness B (460) | 5.60 | 6 | 16 | 20 |
+| our 452 | 5.82 | 7 | 17 | 28 |
+
+**Witness endgame pools are ORDINARY** (A scores below our 452's) and
+their realized bottom-band cost EQUALS ours (16-17). They pay only
+3-4 breaks outside the band; we pay ~11. Both prefix classes are
+perfect to 146 ⇒ **the entire 452→460 gap (~8 breaks) lives in the
+wall-crossing rows ~10.5-12** — not the endgame, not the early board.
+Consequences:
+1. Explains the ρ≈0.3 ceiling of ALL three vol-216 static
+   instruments: they measure endgame-pool health; the dominant
+   variance component (crossing cost) is unmeasured.
+2. The next oracle is the CROSSING ORACLE: rows 10-12 band profile
+   with N boundary = the prefix's ACTUAL frontier colors (known, no
+   free-N relaxation — sharper than this oracle by construction) +
+   row-12 hints pinned. Pre-registered prediction for its gate:
+   witness crossing floor ≈ 3-4, our banked prefixes ≈ 8-11.
+3. Converges with [[midden-damage-geometry]] (dispersed lattices move
+   the perfect wall 153→174 — MIDDEN manipulates exactly this region)
+   and the budget laws (hinted gates ≤120, wall 139).
+
 ## Adoption + open
 
 - Wire as LADDER rung-0 alongside/instead of the LP (band oracle
