@@ -152,10 +152,26 @@ fn main() {
         tn12[c] = rot[p as usize][rc as usize][2];
     }
 
-    // DFS state
-    let mut chosen: Vec<usize> = vec![usize::MAX; 64]; // index into cands[cell]
+    // Pre-extract west colors for cost evaluation
+    let west_of: Vec<Vec<u8>> = cands
+        .iter()
+        .map(|list| {
+            list.iter()
+                .map(|cd| rot[cd.pid as usize][cd.rotc as usize][3])
+                .collect()
+        })
+        .collect();
+
+    // DFS state. At each fresh cell entry we bucket the available
+    // candidates by cost (0,1,2) so breaks are spent as late and as
+    // reluctantly as possible — the leftmost path is the greedy
+    // perfect walk (pool-order scanning never completed: 500M nodes,
+    // zero completions — measured before this ordering existed).
+    let mut chosen: Vec<usize> = vec![usize::MAX; 64]; // index into order[depth]
+    let mut order: Vec<Vec<u16>> = vec![Vec::new(); 64];
+    let mut ocost: Vec<Vec<u8>> = vec![Vec::new(); 64];
     let mut spent: Vec<i32> = vec![0; 65];
-    let mut south: Vec<[u8; N]> = vec![[0; N]; 5]; // souths per stage-4 row built
+    let mut south: Vec<[u8; N]> = vec![[0; N]; 5];
     let mut east: [u8; 64] = [0; 64];
     let mut used4 = [false; 256];
     let mut best = i32::MAX;
@@ -165,84 +181,116 @@ fn main() {
     let deadline = t0 + std::time::Duration::from_millis(budget_ms);
     let mut capped = false;
 
-    // iterative DFS over cells 0..64 (stage-4 local index)
     let mut cursor: Vec<usize> = vec![0; 65];
     let mut depth: usize = 0;
+
+    macro_rules! enter_fresh {
+        ($d:expr) => {{
+            let d = $d;
+            let (r, c) = ((12 * N + d) / N, (12 * N + d) % N);
+            let rrow = r - 12;
+            let tn = if rrow == 0 { tn12[c] } else { south[rrow - 1][c] };
+            let we = if c > 0 { Some(east[d - 1]) } else { None };
+            let list = &cands[d];
+            let wlist = &west_of[d];
+            let (mut b0, mut b1, mut b2) = (Vec::new(), Vec::new(), Vec::new());
+            for (ci, cd) in list.iter().enumerate() {
+                if used4[cd.pid as usize] {
+                    continue;
+                }
+                let mut cost = u8::from(cd.n != tn);
+                if let Some(w) = we {
+                    cost += u8::from(wlist[ci] != w);
+                }
+                match cost {
+                    0 => b0.push(ci as u16),
+                    1 => b1.push(ci as u16),
+                    _ => b2.push(ci as u16),
+                }
+            }
+            let ord = &mut order[d];
+            let oc = &mut ocost[d];
+            ord.clear();
+            oc.clear();
+            for &x in &b0 { ord.push(x); oc.push(0); }
+            for &x in &b1 { ord.push(x); oc.push(1); }
+            for &x in &b2 { ord.push(x); oc.push(2); }
+            cursor[d] = 0;
+        }};
+    }
+
+    enter_fresh!(0);
     loop {
         if (nodes & 0xFFFF) == 0 && (Instant::now() >= deadline || nodes >= node_cap) {
             capped = true;
             break;
         }
-        if depth == 64 {
-            let total = spent[64];
-            if total < best {
-                best = total;
-                best_board = chosen
-                    .iter()
-                    .enumerate()
-                    .map(|(cell, &ci)| {
-                        let cd = cands[cell][ci];
-                        (cd.pid, cd.rotc)
-                    })
-                    .collect();
-                eprintln!(
-                    "[best] breaks={best} total={} nodes={nodes} t={}ms",
-                    480 - best,
-                    t0.elapsed().as_millis()
-                );
-                if best == 0 {
-                    break;
-                }
-            }
-            // force backtrack
-            depth -= 1;
-            let cd = cands[depth][chosen[depth]];
-            used4[cd.pid as usize] = false;
-            cursor[depth] = chosen[depth] + 1;
-            continue;
-        }
-        let (r, c) = ((12 * N + depth) / N, depth % N);
-        let rrow = r - 12;
         let budget = best.min(max_breaks + 1) - 1; // strictly better than best
         let mut advanced = false;
-        let mut ci = cursor[depth];
-        while ci < cands[depth].len() {
-            let cd = cands[depth][ci];
-            if used4[cd.pid as usize] {
-                ci += 1;
-                continue;
-            }
-            let tn = if rrow == 0 { tn12[c] } else { south[rrow - 1][c] };
-            let mut cost = i32::from(cd.n != tn);
-            if c > 0 {
-                cost += i32::from(east[depth - 1] != {
-                    // west side of candidate
-                    let o = rot[cd.pid as usize][cd.rotc as usize];
-                    o[3]
-                });
-            }
-            let ns = spent[depth] + cost;
-            if ns <= budget {
+        {
+            let mut oi = cursor[depth];
+            while oi < order[depth].len() {
+                let ns = spent[depth] + ocost[depth][oi] as i32;
+                if ns > budget {
+                    // costs are sorted: nothing further fits
+                    oi = order[depth].len();
+                    break;
+                }
+                let ci = order[depth][oi] as usize;
+                let cd = cands[depth][ci];
+                if used4[cd.pid as usize] {
+                    oi += 1;
+                    continue;
+                }
                 nodes += 1;
-                chosen[depth] = ci;
+                chosen[depth] = oi;
                 used4[cd.pid as usize] = true;
                 spent[depth + 1] = ns;
-                south[rrow][c] = cd.s;
+                let (r, c) = ((12 * N + depth) / N, (12 * N + depth) % N);
+                south[r - 12][c] = cd.s;
                 east[depth] = cd.e;
-                cursor[depth] = ci; // resume point on backtrack
+                cursor[depth] = oi;
                 depth += 1;
-                cursor[depth] = 0;
                 advanced = true;
                 break;
             }
-            ci += 1;
+            if !advanced {
+                cursor[depth] = oi;
+            }
         }
-        if !advanced {
+        if advanced {
+            if depth == 64 {
+                let total = spent[64];
+                if total < best {
+                    best = total;
+                    best_board = (0..64)
+                        .map(|cell| {
+                            let cd = cands[cell][order[cell][chosen[cell]] as usize];
+                            (cd.pid, cd.rotc)
+                        })
+                        .collect();
+                    eprintln!(
+                        "[best] breaks={best} total={} nodes={nodes} t={}ms",
+                        480 - best,
+                        t0.elapsed().as_millis()
+                    );
+                    if best == 0 {
+                        break;
+                    }
+                }
+                depth -= 1;
+                let cd = cands[depth][order[depth][chosen[depth]] as usize];
+                used4[cd.pid as usize] = false;
+                cursor[depth] = chosen[depth] + 1;
+            } else {
+                enter_fresh!(depth);
+            }
+        } else {
             if depth == 0 {
                 break;
             }
             depth -= 1;
-            let cd = cands[depth][chosen[depth]];
+            let cd = cands[depth][order[depth][chosen[depth]] as usize];
             used4[cd.pid as usize] = false;
             cursor[depth] = chosen[depth] + 1;
         }
