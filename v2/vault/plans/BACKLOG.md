@@ -108,13 +108,15 @@ after band 3 (band-4 min-break estimate). Oracle granularity
 adaptive: none before row 8, per-row near the wall (9-12), budget-
 mode band 4.
 
-**Validation shortcut — DO THIS FIRST (1 day, existing data)**: no
-need to build the pipeline to test the oracle. Score the 75
-≥300s-labeled prefixes (+ d146 trio gate) with the band-3/band-4
-oracle exactly like the LP was validated (vol-216 protocol). If it
-ranks the star / correlates: wire as LADDER stage gate, then build
-staging. If null: 1 day spent. The 8×8 rig then calibrates the
-count-guided-vs-blind question independently.
+**Validation shortcut — DONE same day (vol-216 PoC, user-directed)**:
+[[band-oracle]] built + validated. Gate passed decisively (seed63
+soft 5.82/floor 7 vs twins 1.3-2.5/floors 8-9); ρ(resid, max)=0.300,
+ρ(resid, MEDIAN)=0.297 (3× the LP's median signal); star #2/75
+combined; 1.4 s/prefix. Band-oracle vs LP correlation 0.644 — one
+latent pool-health factor, two lenses; combination adds little.
+⇒ PROMOTED: wire as LADDER rung-0; next steps = band-2→3 boundary
+oracle + staged pipeline proper + 8×8 rig for the count-guided-vs-
+blind question.
 Doubly-stochastic (Sinkhorn) rescaling of the cell×piece compatibility
 matrix approximates the assignment-LP marginals in ~µs-ms vs the LP's
 0.9 s. Two uses: (a) cheap rung-0 surrogate (validate correlation with
