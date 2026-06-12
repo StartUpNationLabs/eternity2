@@ -41,6 +41,20 @@ frame-free stage-1/2 generator, stage-3 population builder (no
 first-found commits — SEMAPHORE/CLIMB), stage-4 min-break endgame.
 Graveyard guards + triple-null (only pool-global scores rank) apply.
 
+### `fb-floor-attribution` — status: `unbuilt` — since: vol-217 (H4 refinement)
+Extend fb_oracle to backtrace WHICH edge classes carry the b_min
+breaks (argmin path through the tropical DP). The interpretable
+steering signal the vacuous bigram certificate couldn't provide:
+tells the builder WHERE the floor pays, not just how much.
+
+### `fb-suffix-incremental` — status: `unbuilt` — since: vol-217 (perf pass)
+Per-candidate Δfloor at a cell: the DP prefix for columns < c is
+shared across all candidates — cache it, recompute only the suffix.
+With the tropical mode (~30 ms full ask) this puts per-candidate
+steering at ~1-3 ms. Needed for cell-granular row-11-entry steering
+(the row-11 decision point finding); population-granular steering
+works today without it.
+
 ### `endgame-friendly-frame-design` — status: `unbuilt` — since: vol-217 (user frame Q&A)
 Nobody ever chose a frame ON MERIT: framegen checks hint-compatibility
 + chain feasibility, then we raced blind (444-450 band, n=55). The
