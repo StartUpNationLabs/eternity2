@@ -1,4 +1,17 @@
-# SESSION PROMPT — VOL-218 — the MIRROR program
+# SESSION PROMPT — VOL-218 — the DISTINCTNESS program (+ MIRROR gate)
+
+> RESHAPED at vol-217 close after the user's step-back review
+> ("is v218 really the way forward?"). The honest critique: MIRROR
+> alone mirrors the RESIDUE of SOTA's method (their break geometry),
+> not the method (weeks-scale pre-pruned guided search). The
+> program's center of gravity moves to the capability today's
+> negative explicitly names — an instrument that sees DISTINCTNESS —
+> plus the user's twice-deferred 8×8 ground-truth rig. MIRROR stays
+> as a gated days-scale experiment (mechanism: b1≈20 per break ⇒
+> ~10¹³× conditional-subtree inflation). Bindings = CURRENT-VOL.md:
+> (1) MIRROR gate, (2) distinctness instrument (fugacity-counts vs
+> the 149 measured labels + exact 64-cell min-break certificates),
+> (3) 8×8 exact rig.
 
 You are a senior researcher attacking **Eternity II** (canonical
 5-clue, Selby-Riordan) in this repo. **Unlimited time and resources;

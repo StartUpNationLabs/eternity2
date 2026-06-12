@@ -10,22 +10,37 @@ is a perfect ~12-row block + ≤11-break band in rows 0-4 (band built
 FIRST). User target: **<10 errors**. USER DIRECTIVES standing: no
 witness-frame material anywhere; full-board frame-free only.
 
-## Binding items (≤3, formalize at open)
+## Binding items (≤3, reshaped after the user's step-back review)
 
-1. **SOTA-MIRRORED GENERATOR** (`sota-mirrored-stage1`, the named
-   build): stage-1 rows 0-3 with ~8-12 DELIBERATE breaks
-   (break-budget DFS; placement informed by MIDDEN damage geometry +
-   the 469/470 break maps) → demand perfect rows 4-15
-   (vanilla_fast --init-board --init-rows 4, 207M pp/s). Measure: do
-   broken-tops admit deeper perfect penetration than perfect-tops
-   (the 469/470 existence argument)? Pre-register the comparison.
-2. **LABEL FACTORY at scale** (`greedy-finish-label-factory`):
-   parallel greedy-finish labeling of every banked entry tier;
-   distribution tails by generation recipe; if volume permits, first
-   learned ranker on (state → measured cost).
-3. **Finisher v2** (`stage4-finisher`): exact bottom-row DP
-   (memoized), late-release break gates, parallel B&B — then re-run
-   the 149-entry curve (does v2 move 44 → 30s? The lever audit).
+STRATEGIC FRAME (user challenge, vol-217 close): MIRROR alone is
+still the multiplier/lottery class — the residue of SOTA's method,
+not the method. The day's central negative names the missing
+capability: AN INSTRUMENT THAT SEES DISTINCTNESS. The 149 measured
+labels on disk make that attackable immediately.
+
+1. **SOTA-MIRRORED GENERATOR** (`sota-mirrored-stage1`; gated,
+   days-scale, keep): stage-1 rows 0-3 with ~8-12 deliberate breaks
+   (MIDDEN/469-470-informed placement) → perfect rows 4-15 demanded.
+   Mechanism: b1≈20 per break ⇒ ~10¹³× conditional-subtree inflation
+   over the exhaustible perfect tree. PRE-REGISTER broken-tops vs
+   perfect-tops penetration at matched compute; honest null
+   same-day if flat.
+2. **THE DISTINCTNESS INSTRUMENT** (the strategic build):
+   (a) gate [[fugacity-corrected-counts]] against the 149 measured
+   labels (count estimate vs measured finish cost — the cheapest
+   validation that program will ever get; pre-register ρ bar);
+   (b) exact min-break certificates for 64-cell stage-4s
+   (MaxSAT/RC2 or proof-grade B&B; vol-55 scale precedent) —
+   calibrate label looseness, define witness-grade entries exactly.
+3. **8×8 EXACT RIG** (`8x8-exact-counting-rig`, user-proposed
+   vol-216, deferred twice — now binding): enumerate ALL solutions;
+   measure what ACTUALLY separates completable prefixes from doomed
+   ones with perfect ground truth; decisive test of count-guided vs
+   blind construction. The likeliest birthplace of the missing idea.
+
+Alternates (pick only if bindings close early): label factory
+scale-up + learned ranker; finisher v2 (exact bottom-row DP, gates,
+parallel B&B); fb-floor-attribution; suffix-incremental.
 
 ## Audit-at-open musts
 
