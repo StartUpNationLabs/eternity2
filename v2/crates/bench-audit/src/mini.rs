@@ -237,6 +237,65 @@ impl Band<'_> {
     }
 }
 
+/// Per-cell cost-sorted candidate lists indexed by the (north, west)
+/// target colors — `enter` becomes a pointer assignment instead of a
+/// 200-candidate scan (the post-alloc-fix profile's residual hot
+/// zone). Slot layout: [cell][tn * (nc+1) + tw], NONE targets mapped
+/// to slot `nc`. Within a slot, candidates are ordered cost-0 then
+/// cost-1 then cost-2, preserving cand-list order within each class —
+/// IDENTICAL iteration order to the scan version (labels comparable).
+pub struct CostIndex {
+    pub ncw: usize,
+    pub slots: Vec<Vec<Vec<(u16, u8)>>>, // [cell][tn*ncw+tw] -> (ci, cost)
+}
+
+#[must_use]
+pub fn build_cost_index(band: &Band, cands: &[Vec<Cand>]) -> CostIndex {
+    let nc = band.mini.nc;
+    let ncw = nc + 1;
+    let none = nc; // slot for NONE_COLOR
+    let mut slots = Vec::with_capacity(cands.len());
+    for list in cands {
+        let mut cell = vec![Vec::new(); ncw * ncw];
+        for (slot, entry) in cell.iter_mut().enumerate() {
+            let (tn, tw) = (slot / ncw, slot % ncw);
+            for want in 0u8..3 {
+                for (ci, cd) in list.iter().enumerate() {
+                    let mut cost = 0u8;
+                    if tn != none {
+                        cost += u8::from(cd.n as usize != tn);
+                    }
+                    if tw != none {
+                        cost += u8::from(cd.w as usize != tw);
+                    }
+                    if cost == want {
+                        entry.push((u16::try_from(ci).unwrap(), cost));
+                    }
+                }
+            }
+        }
+        slots.push(cell);
+    }
+    CostIndex { ncw, slots }
+}
+
+impl CostIndex {
+    #[inline]
+    #[must_use]
+    pub fn slot(&self, tn: u8, tw: u8) -> u32 {
+        let nc = self.ncw - 1;
+        let ti = if tn == NONE_COLOR { nc } else { tn as usize };
+        let wi = if tw == NONE_COLOR { nc } else { tw as usize };
+        u32::try_from(ti * self.ncw + wi).unwrap()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn list(&self, d: usize, slot: u32) -> &[(u16, u8)] {
+        &self.slots[d][slot as usize]
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Cand {
     pub pid: u16,
@@ -1083,6 +1142,16 @@ pub fn bb_min_break(
     node_cap: u64,
     suffix: Option<&[Vec<u32>]>,
 ) -> BbResult {
+    bb_scan_core(band, max_breaks, budget_ms, node_cap, suffix)
+}
+
+fn bb_scan_core(
+    band: &Band,
+    max_breaks: u32,
+    budget_ms: u64,
+    node_cap: u64,
+    suffix: Option<&[Vec<u32>]>,
+) -> BbResult {
     let m = band.mini;
     let n = m.n;
     let cells = band.cells();
@@ -1225,6 +1294,164 @@ pub fn bb_min_break(
             depth -= 1;
             let cd = cands[depth][order[depth][chosen[depth]].0 as usize];
             used[cd.pi as usize] = false;
+            cursor[depth] = chosen[depth] + 1;
+        }
+    }
+    BbResult { best, nodes, elapsed_ms: t0.elapsed().as_millis(), capped, best_fill }
+}
+
+
+
+/// EXPERIMENTAL indexed variant of `bb_min_break` (per-cell (tn,tw)
+/// cost-sorted lists). Vol-218 contended A/B: label phase 2.1×
+/// faster, deterministic proof tree 1.86× SLOWER — the ~27 MB index
+/// thrashes M1's L2 where the scan's ~100 KB tables stay hot. Bench
+/// on a quiet machine before adopting; the scan core stays default.
+#[must_use]
+pub fn bb_min_break_idx(
+    band: &Band,
+    max_breaks: u32,
+    budget_ms: u64,
+    node_cap: u64,
+    suffix: Option<&[Vec<u32>]>,
+    idx_in: Option<&CostIndex>,
+) -> BbResult {
+    let m = band.mini;
+    let n = m.n;
+    let cells = band.cells();
+    let cands = band.cand_table();
+    let built_idx: Option<CostIndex> = if idx_in.is_none() {
+        Some(build_cost_index(band, &cands))
+    } else {
+        None
+    };
+    let idx: &CostIndex = idx_in.unwrap_or_else(|| built_idx.as_ref().unwrap());
+    let total = cells.len();
+    let t0 = std::time::Instant::now();
+
+    let mut used = vec![false; band.pool.len()];
+    let mut south = vec![vec![0u8; n]; band.k];
+    let mut east = vec![0u8; total];
+    const PRUNED: u32 = u32::MAX;
+    // order stores the (tn,tw) SLOT id per depth; lists live in idx
+    let mut order: Vec<u32> = vec![PRUNED; total];
+    let mut cursor = vec![0usize; total];
+    let mut chosen = vec![0usize; total];
+    let mut spent = vec![0u32; total + 1];
+    let mut best: Option<u32> = None;
+    let mut best_fill: Vec<(usize, u16, u8)> = Vec::new();
+    let mut nodes = 0u64;
+    let mut capped = false;
+
+    let enter = |d: usize,
+                 spent_here: u32,
+                 budget_now: u32,
+                 south: &[Vec<u8>],
+                 east: &[u8],
+                 order: &mut Vec<u32>,
+                 cursor: &mut Vec<usize>| {
+        if d > 0 && d % band.k == 0 {
+            if let Some(sfx) = suffix {
+                let cc = d / band.k;
+                if spent_here + sfx[cc][band.col_state(east, cc)] > budget_now {
+                    order[d] = PRUNED;
+                    cursor[d] = 0;
+                    return;
+                }
+            }
+        }
+        let (r, c) = cells[d];
+        let i = r - band.r0;
+        let tn = if i == 0 {
+            band.frontier.as_ref().map_or(NONE_COLOR, |f| f[c])
+        } else {
+            south[i - 1][c]
+        };
+        let tw = if c == 0 { NONE_COLOR } else { east[d - band.k] };
+        // O(1): record the (tn,tw) slot; the precomputed cost-sorted
+        // list lives in idx. used[] filtering happens at iteration.
+        // Identical visit order to the scan version.
+        order[d] = idx.slot(tn, tw);
+        cursor[d] = 0;
+    };
+
+    let mut depth = 0usize;
+    enter(0, 0, max_breaks, &south, &east, &mut order, &mut cursor);
+    loop {
+        if (nodes & 0x3FFF) == 0
+            && (t0.elapsed().as_millis() as u64 >= budget_ms || nodes >= node_cap)
+        {
+            capped = true;
+            break;
+        }
+        let budget = best.map_or(max_breaks, |bv| bv.saturating_sub(1).min(max_breaks));
+        let mut advanced = false;
+        {
+            let list = if order[depth] == PRUNED {
+                &[][..]
+            } else {
+                idx.list(depth, order[depth])
+            };
+            let mut oi = cursor[depth];
+            while oi < list.len() {
+                let (ci, cost) = list[oi];
+                let ns = spent[depth] + u32::from(cost);
+                if ns > budget {
+                    oi = list.len();
+                    break;
+                }
+                let cd = cands[depth][ci as usize];
+                if used[cd.pi as usize] {
+                    oi += 1;
+                    continue;
+                }
+                nodes += 1;
+                chosen[depth] = oi;
+                used[cd.pi as usize] = true;
+                let (r, c) = cells[depth];
+                south[r - band.r0][c] = cd.s;
+                east[depth] = cd.e;
+                spent[depth + 1] = ns;
+                cursor[depth] = oi;
+                depth += 1;
+                advanced = true;
+                break;
+            }
+            if !advanced {
+                cursor[depth] = oi;
+            }
+        }
+        if advanced {
+            if depth == total {
+                let tot = spent[total];
+                if best.is_none_or(|bv| tot < bv) {
+                    best = Some(tot);
+                    best_fill = (0..total)
+                        .map(|d| {
+                            let ci = idx.list(d, order[d])[chosen[d]].0;
+                            let cd = cands[d][ci as usize];
+                            let (r, c) = cells[d];
+                            (r * n + c, cd.pid, cd.rt)
+                        })
+                        .collect();
+                    if tot == 0 {
+                        break;
+                    }
+                }
+                depth -= 1;
+                let ci = idx.list(depth, order[depth])[chosen[depth]].0;
+                used[cands[depth][ci as usize].pi as usize] = false;
+                cursor[depth] = chosen[depth] + 1;
+            } else {
+                enter(depth, spent[depth], best.map_or(max_breaks, |bv| bv.saturating_sub(1).min(max_breaks)), &south, &east, &mut order, &mut cursor);
+            }
+        } else {
+            if depth == 0 {
+                break;
+            }
+            depth -= 1;
+            let ci = idx.list(depth, order[depth])[chosen[depth]].0;
+            used[cands[depth][ci as usize].pi as usize] = false;
             cursor[depth] = chosen[depth] + 1;
         }
     }
