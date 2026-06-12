@@ -12,7 +12,8 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eternity2_bench_audit::mini::{
-    bb_min_break, endgame_band, relax_floor, tropical_suffix, Mini,
+    bb_min_break, endgame_band, relax_floor, tropical_prefix, tropical_suffix, whatif_floor,
+    Mini,
 };
 use eternity2_benchmark::loader::load_puzzle_with_hints;
 
@@ -24,6 +25,9 @@ fn main() {
     let mut label_ms = 1_500u64;
     let mut max_lb_rungs = 40u32;
     let mut profile_check = false;
+    let mut k_rows = 4usize;
+    let mut save_best: Option<PathBuf> = None;
+    let mut whatif_bench = false;
     let mut i = 0;
     while i < raw.len() {
         match raw[i].as_str() {
@@ -35,6 +39,9 @@ fn main() {
             // counting-profile floor cross-check (30 s at 16×16; the
             // suffix floor is the same number in ~1.7 s)
             "--profile-check" => { profile_check = true; i += 1; }
+            "--k" => { k_rows = raw[i + 1].parse().unwrap(); i += 2; }
+            "--save-best" => { save_best = Some(PathBuf::from(&raw[i + 1])); i += 2; }
+            "--whatif-bench" => { whatif_bench = true; i += 1; }
             other => panic!("unknown arg {other}"),
         }
     }
@@ -63,8 +70,49 @@ fn main() {
             ));
         }
     }
-    let band = endgame_band(&m, &grid, 12);
+    let mut band = endgame_band(&m, &grid, 12);
+    if k_rows < band.k {
+        band.k = k_rows;
+        let lim = (band.r0 + k_rows) * n;
+        band.forced.retain(|&pos, _| pos < lim);
+    }
 
+    if whatif_bench {
+        let cands = band.cand_table();
+        let tb = Instant::now();
+        let sfx = tropical_suffix(&band);
+        let t_sfx = tb.elapsed().as_secs_f64();
+        let tb = Instant::now();
+        let pfx = tropical_prefix(&band);
+        let t_pfx = tb.elapsed().as_secs_f64();
+        let floor = *sfx[0].iter().min().unwrap();
+        // identity check on the real board
+        for c in 0..n {
+            let v = pfx[c]
+                .iter()
+                .zip(sfx[c].iter())
+                .map(|(&p, &s)| p.saturating_add(s))
+                .min()
+                .unwrap();
+            assert_eq!(v, floor, "identity broken at c {c}");
+        }
+        let tb = Instant::now();
+        let mut asks = 0u64;
+        let mut acc = 0u64;
+        for c in 0..n {
+            for color in 0..u8::try_from(m.nc).unwrap() {
+                acc += u64::from(whatif_floor(&band, &cands, &pfx, &sfx, c, color));
+                asks += 1;
+            }
+        }
+        let t_ask = tb.elapsed().as_secs_f64();
+        println!(
+            "{{\"k\":{},\"floor\":{floor},\"suffix_s\":{t_sfx:.3},\"prefix_s\":{t_pfx:.3},\"asks\":{asks},\"ms_per_ask\":{:.2},\"checksum\":{acc}}}",
+            band.k,
+            1000.0 * t_ask / asks as f64
+        );
+        return;
+    }
     let t0 = Instant::now();
     let sfx = tropical_suffix(&band);
     let sfx_ms = t0.elapsed().as_millis();
@@ -86,6 +134,41 @@ fn main() {
         "[e2] greedy label {:?} ({} nodes, {} ms)",
         label.best, label.nodes, label.elapsed_ms
     );
+    if let (Some(out), false) = (&save_best, label.best_fill.is_empty()) {
+        let mut full = grid.clone();
+        for &(pos, pid, rt) in &label.best_fill {
+            assert!(full[pos].is_none(), "fill overlaps entry");
+            full[pos] = Some((pid, rt));
+        }
+        let total_breaks = m.breaks_of(&full);
+        assert_eq!(
+            Some(total_breaks),
+            label.best,
+            "rescore mismatch: board {total_breaks} vs label {:?}",
+            label.best
+        );
+        for &(hp, p, rt) in &m.hints {
+            assert_eq!(full[hp], Some((p, rt)), "hint violated in saved board");
+        }
+        let mut seen = vec![false; n * n];
+        let cells: Vec<String> = full
+            .iter()
+            .enumerate()
+            .map(|(pos, c)| {
+                let (p, rt) = c.expect("board incomplete");
+                assert!(!seen[p as usize], "dup piece");
+                seen[p as usize] = true;
+                format!("{{\"pos\":{pos},\"piece_id\":{p},\"rotation\":{rt}}}")
+            })
+            .collect();
+        std::fs::write(out, format!("{{\"placement\": [{}]}}", cells.join(",")))
+            .expect("write best");
+        eprintln!(
+            "[e2] saved full board: {} breaks = {}/480, 5/5 hints, no dups",
+            total_breaks,
+            480 - total_breaks
+        );
+    }
 
     // certified LB ladder: ID rounds, each must EXHAUST within rung_ms
     let mut lb = rfloor; // b* >= floor certified by the relaxation

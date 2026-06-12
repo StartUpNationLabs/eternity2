@@ -205,7 +205,8 @@ impl Band<'_> {
 
     /// Per-cell structural candidates over the band pool (pool-index
     /// based). Forced cells get exactly their single candidate.
-    fn cand_table(&self) -> Vec<Vec<Cand>> {
+    #[must_use]
+    pub fn cand_table(&self) -> Vec<Vec<Cand>> {
         let m = self.mini;
         let mut avail = vec![false; m.n * m.n];
         for &p in &self.pool {
@@ -707,14 +708,35 @@ pub fn tropical_suffix(band: &Band) -> Vec<Vec<u32>> {
     // OUTPUT axes, so no exclusion tables are needed — exact min-plus
     // via the A/B/C/D class trick per rest-state.
     for c in (0..n).rev() {
-        let mut h: Vec<u32> = suffix[c + 1].clone(); // H_k: no s axis
+        let fc = band.frontier.as_ref().map_or(NONE_COLOR, |f| f[c]);
+        suffix[c] = trop_col_step(band, &cands, c, &suffix[c + 1], fc);
+    }
+    suffix
+}
+
+/// One backward column step of the tropical suffix: given the table
+/// for columns c+1.. (`nxt`, indexed by the east colors entering
+/// column c+1), produce the table for columns c.. with the first
+/// band row's N edge charged against `frontier_c` (NONE_COLOR =
+/// free). The reusable core of [`tropical_suffix`] and of the
+/// fb-suffix-incremental what-if asks.
+fn trop_col_step(
+    band: &Band,
+    cands: &[Vec<Cand>],
+    c: usize,
+    nxt: &[u32],
+    frontier_c: u8,
+) -> Vec<u32> {
+    let m = band.mini;
+    let nc = m.nc;
+    let k = band.k;
+    let ek: usize = nc.pow(k as u32);
+    let estr: Vec<usize> = (0..k).map(|j| nc.pow((k - 1 - j) as u32)).collect();
+    {
+        let mut h: Vec<u32> = nxt.to_vec(); // H_k: no s axis
         for i in (0..k).rev() {
             let d = c * k + i;
-            let tn_frontier = if i == 0 {
-                band.frontier.as_ref().map_or(NONE_COLOR, |f| f[c])
-            } else {
-                NONE_COLOR
-            };
+            let tn_frontier = if i == 0 { frontier_c } else { NONE_COLOR };
             let mut groups: HashMap<(u8, u8, u8, u8), ()> = HashMap::new();
             for cd in &cands[d] {
                 groups.entry((cd.n, cd.w, cd.e, cd.s)).or_insert(());
@@ -813,9 +835,230 @@ pub fn tropical_suffix(band: &Band) -> Vec<Vec<u32>> {
             }
             h = out;
         }
-        suffix[c] = h;
+        h
     }
-    suffix
+}
+
+/// One FORWARD column step: given `prev` = table for columns 0..c
+/// (indexed by the east colors EXPOSED by column c-1, with the
+/// boundary (c-1,c) edge NOT yet charged), produce the table for
+/// columns 0..=c (indexed by column c's exposed east colors,
+/// boundary (c,c+1) not yet charged). Charges: column c's W edges
+/// against `prev`'s axes (exclusion mins — exact via row min/argmin/
+/// second-min), within-column N chaining, and the first band row's
+/// N edge against `frontier_c` (NONE_COLOR = free).
+fn trop_forward_step(
+    band: &Band,
+    cands: &[Vec<Cand>],
+    c: usize,
+    prev: &[u32],
+    frontier_c: u8,
+) -> Vec<u32> {
+    let m = band.mini;
+    let nc = m.nc;
+    let k = band.k;
+    let ek: usize = nc.pow(k as u32);
+    let estr: Vec<usize> = (0..k).map(|j| nc.pow((k - 1 - j) as u32)).collect();
+    let charge_w = c > 0;
+
+    // G_i = min cost of rows 0..i-1 of column c (plus columns < c),
+    // as a function of:
+    //   s axis (iff i > 0): the south exposed to row i;
+    //   a_j, j < i : column c's OUTGOING e_j (already placed);
+    //   a_j, j >= i: column c-1's exposed e_j (not yet consumed).
+    // Start: G_0 = prev (no s axis). Step: place row i's candidate —
+    // consume a_i (W charge, exclusion over the axis), set a_i :=
+    // cand.e, require cand.n vs s axis (exclusion, i>0) or charge vs
+    // frontier (i==0), expose new s = cand.s (i < k-1).
+    let mut g: Vec<u32> = prev.to_vec();
+    for i in 0..k {
+        let d = c * k + i;
+        let mut groups: HashMap<(u8, u8, u8, u8), ()> = HashMap::new();
+        for cd in &cands[d] {
+            groups.entry((cd.n, cd.w, cd.e, cd.s)).or_insert(());
+        }
+        let in_has_s = i > 0;
+        let out_has_s = i < k - 1;
+        let out_sz = if out_has_s { nc * ek } else { ek };
+        let mut out = vec![INF; out_sz];
+        let ei = estr[i];
+        let rest: usize = ek / nc;
+        let oth: Vec<usize> = (0..k).filter(|&j| j != i).map(|j| estr[j]).collect();
+        let mut qoff = vec![0usize; rest];
+        for (q, slot) in qoff.iter_mut().enumerate() {
+            let mut rem = q;
+            let mut off = 0usize;
+            for &st in oth.iter().rev() {
+                off += (rem % nc) * st;
+                rem /= nc;
+            }
+            *slot = off;
+        }
+        for q in 0..rest {
+            let bq = qoff[q];
+            // Exact contraction tables over the input (s, a_i) plane:
+            // m_sx[s][x], row mins over x per s (m1/arg/m2), col mins
+            // over s per x, global min structure for double exclusion.
+            // Input value read: in_has_s ? g[s*ek + x*ei + bq] : g[x*ei + bq].
+            // For each group (gn, gw, ge, gs): cost contribution =
+            //   W: (x == gw ? 0 : 1) if charge_w else 0  [consume a_i]
+            //   N: i==0 -> (gn vs frontier); i>0 -> (s == gn ? 0 : 1)
+            // Output slot: s_out = gs (if out_has_s), a_i := ge.
+            // We need, per group: min over (s, x) of g[s][x] + charges.
+            // = min( g[gn][gw],            both match
+            //        rowminex_x(gn, gw)+1, n match, w mismatch
+            //        colminex_s(gw, gn)+1, w match, n mismatch
+            //        minex_both(gn, gw)+2 )
+            // (i==0 / no-W cases degenerate accordingly.)
+            let sdim = if in_has_s { nc } else { 1 };
+            // row stats per s: min, argmin(x), second
+            let mut rm1 = vec![INF; sdim];
+            let mut ra1 = vec![usize::MAX; sdim];
+            let mut rm2 = vec![INF; sdim];
+            for s in 0..sdim {
+                for x in 0..nc {
+                    let v = if in_has_s {
+                        g[s * ek + x * ei + bq]
+                    } else {
+                        g[x * ei + bq]
+                    };
+                    if v < rm1[s] {
+                        rm2[s] = rm1[s];
+                        rm1[s] = v;
+                        ra1[s] = x;
+                    } else if v < rm2[s] {
+                        rm2[s] = v;
+                    }
+                }
+            }
+            // col stats per x over s (only needed when in_has_s)
+            let (mut cm1, mut ca1, mut cm2) =
+                (vec![INF; nc], vec![usize::MAX; nc], vec![INF; nc]);
+            if in_has_s {
+                for x in 0..nc {
+                    for s in 0..nc {
+                        let v = g[s * ek + x * ei + bq];
+                        if v < cm1[x] {
+                            cm2[x] = cm1[x];
+                            cm1[x] = v;
+                            ca1[x] = s;
+                        } else if v < cm2[x] {
+                            cm2[x] = v;
+                        }
+                    }
+                }
+            }
+            for (&(gn, gw, ge, gs), ()) in &groups {
+                let frontier_cost = if i == 0 && frontier_c != NONE_COLOR {
+                    u32::from(gn != frontier_c)
+                } else {
+                    0
+                };
+                let (ni, wi) = (gn as usize, gw as usize);
+                let prev_min = if !charge_w {
+                    // a_i is consumed without charge: min over x
+                    // (and the N contraction over s if present)
+                    if in_has_s {
+                        // min over x of (min over s of g + (s != gn))
+                        // = min( rowmin over x at s=gn,
+                        //        global min excluding row gn + 1 )
+                        let row_gn = rm1[ni];
+                        let mut other = INF;
+                        for s in 0..nc {
+                            if s != ni {
+                                other = other.min(rm1[s]);
+                            }
+                        }
+                        row_gn.min(other.saturating_add(1))
+                    } else {
+                        rm1[0]
+                    }
+                } else if in_has_s {
+                    // both contractions with exact double exclusion
+                    let both = g[ni * ek + wi * ei + bq];
+                    let n_only = if ra1[ni] == wi { rm2[ni] } else { rm1[ni] };
+                    let w_only = if ca1[wi] == ni { cm2[wi] } else { cm1[wi] };
+                    // min over s != gn, x != gw: scan columns x != gw
+                    // using col-min-excluding-row-gn
+                    let mut neither = INF;
+                    for x in 0..nc {
+                        if x == wi {
+                            continue;
+                        }
+                        let v = if ca1[x] == ni { cm2[x] } else { cm1[x] };
+                        if v < neither {
+                            neither = v;
+                        }
+                    }
+                    both.min(n_only.saturating_add(1))
+                        .min(w_only.saturating_add(1))
+                        .min(neither.saturating_add(2))
+                } else {
+                    // i == 0 with W charge, no s axis
+                    let exact = g[wi * ei + bq];
+                    let excl = if ra1[0] == wi { rm2[0] } else { rm1[0] };
+                    exact.min(excl.saturating_add(1))
+                };
+                if prev_min >= INF {
+                    continue;
+                }
+                let total = prev_min + frontier_cost;
+                let oe = ge as usize * ei + bq;
+                let oi = if out_has_s {
+                    gs as usize * ek + oe
+                } else {
+                    oe
+                };
+                if total < out[oi] {
+                    out[oi] = total;
+                }
+            }
+        }
+        g = out;
+    }
+    g
+}
+
+/// Forward prefix tables: prefix[c] = min cost of columns 0..c-1
+/// (boundary (c-1,c) NOT charged), indexed by column c-1's exposed
+/// east colors. prefix[0] = all-zero. Identity (validated in tests):
+/// for every c, min over states of prefix[c][x] + suffix[c][x] =
+/// the band floor.
+#[must_use]
+pub fn tropical_prefix(band: &Band) -> Vec<Vec<u32>> {
+    let m = band.mini;
+    let n = m.n;
+    let nc = m.nc;
+    let ek: usize = nc.pow(band.k as u32);
+    let cands = band.cand_table();
+    let mut prefix: Vec<Vec<u32>> = vec![Vec::new(); n + 1];
+    prefix[0] = vec![0; ek];
+    for c in 0..n {
+        let fc = band.frontier.as_ref().map_or(NONE_COLOR, |f| f[c]);
+        prefix[c + 1] = trop_forward_step(band, &cands, c, &prefix[c], fc);
+    }
+    prefix
+}
+
+/// fb-suffix-incremental: what-if floor when ONE frontier column is
+/// recolored (Mode A: full frontier known — re-rank/steer the row
+/// above a banked band). One column-step + a min-dot: ~ms at k=3.
+#[must_use]
+pub fn whatif_floor(
+    band: &Band,
+    cands: &[Vec<Cand>],
+    prefix: &[Vec<u32>],
+    suffix: &[Vec<u32>],
+    c: usize,
+    new_color: u8,
+) -> u32 {
+    let g = trop_col_step(band, cands, c, &suffix[c + 1], new_color);
+    prefix[c]
+        .iter()
+        .zip(g.iter())
+        .map(|(&p, &s)| p.saturating_add(s))
+        .min()
+        .unwrap()
 }
 
 // ---------------- exhaustive B&B (ground truth) ----------------
@@ -886,25 +1129,26 @@ pub fn bb_min_break(
         };
         let tw = if c == 0 { NONE_COLOR } else { east[d - band.k] };
         let list = &cands[d];
-        let mut buckets: [Vec<u16>; 3] = [Vec::new(), Vec::new(), Vec::new()];
-        for (ci, cd) in list.iter().enumerate() {
-            if used[cd.pi as usize] {
-                continue;
-            }
-            let mut cost = 0u8;
-            if tn != NONE_COLOR {
-                cost += u8::from(cd.n != tn);
-            }
-            if tw != NONE_COLOR {
-                cost += u8::from(cd.w != tw);
-            }
-            buckets[cost as usize].push(u16::try_from(ci).unwrap());
-        }
+        // three cost passes straight into the retained-capacity order
+        // buffer — per-entry Vec allocation here dominated the whole
+        // solver (malloc/free ≈ half the vol-218 hot-zone samples)
         let o = &mut order[d];
         o.clear();
-        for (cost, bucket) in buckets.iter().enumerate() {
-            for &ci in bucket {
-                o.push((ci, u8::try_from(cost).unwrap()));
+        for want in 0u8..3 {
+            for (ci, cd) in list.iter().enumerate() {
+                if used[cd.pi as usize] {
+                    continue;
+                }
+                let mut cost = 0u8;
+                if tn != NONE_COLOR {
+                    cost += u8::from(cd.n != tn);
+                }
+                if tw != NONE_COLOR {
+                    cost += u8::from(cd.w != tw);
+                }
+                if cost == want {
+                    o.push((u16::try_from(ci).unwrap(), cost));
+                }
             }
         }
         cursor[d] = 0;
@@ -1598,6 +1842,54 @@ mod tests {
                 let b = exact_count_pruned(&band, 3, u64::MAX, Some(&sfx));
                 assert_eq!(a.by_b, b.by_b, "prune changed counts (seed {seed} r0 {r0})");
                 assert!(b.nodes <= a.nodes, "prune must not add nodes");
+            }
+        }
+    }
+
+    #[test]
+    fn m0_prefix_suffix_identity_and_whatif() {
+        for seed in [11u64, 12, 13] {
+            let m = Mini::from_seed(5, 4, seed, &[]);
+            for r0 in [3usize, 2] {
+                let placement = canonical_prefix(&m, r0);
+                let mut band = endgame_band(&m, &placement, r0);
+                let mut f = band.frontier.clone().unwrap();
+                f[1] = if f[1] == 1 { 2 } else { 1 }; // non-trivial floor
+                band.frontier = Some(f);
+                let cands = band.cand_table();
+                let sfx = tropical_suffix(&band);
+                let pfx = tropical_prefix(&band);
+                let floor = *sfx[0].iter().min().unwrap();
+                for c in 0..m.n {
+                    let v = pfx[c]
+                        .iter()
+                        .zip(sfx[c].iter())
+                        .map(|(&p, &s)| p.saturating_add(s))
+                        .min()
+                        .unwrap();
+                    assert_eq!(v, floor, "identity broken at c {c} (seed {seed} r0 {r0})");
+                }
+                assert_eq!(*pfx[m.n].iter().min().unwrap(), floor, "prefix[n] != floor");
+                for c in 0..m.n {
+                    for color in 0..u8::try_from(m.nc).unwrap() {
+                        let w = whatif_floor(&band, &cands, &pfx, &sfx, c, color);
+                        let mut f2 = band.frontier.clone().unwrap();
+                        f2[c] = color;
+                        let band2 = Band {
+                            mini: band.mini,
+                            r0: band.r0,
+                            k: band.k,
+                            frontier: Some(f2),
+                            pool: band.pool.clone(),
+                            forced: band.forced.clone(),
+                        };
+                        let full = *tropical_suffix(&band2)[0].iter().min().unwrap();
+                        assert_eq!(
+                            w, full,
+                            "whatif != full (seed {seed} r0 {r0} c {c} color {color})"
+                        );
+                    }
+                }
             }
         }
     }
