@@ -560,6 +560,389 @@ fn ask(
     }
 }
 
+/// Tropical fast path: floor only (k=3 bands), capped. Returns -1 if
+/// no filling within cap.
+fn ask_floor(
+    ctx: &Ctx,
+    placed: &HashMap<(usize, usize), (u16, u8)>,
+    rows: &[usize],
+    cap: i32,
+) -> i32 {
+    let r0 = rows[0];
+    let mut t_n = [0u8; 16];
+    for c in 0..16 {
+        let &(p, rt) = placed
+            .get(&(r0 - 1, c))
+            .unwrap_or_else(|| panic!("row {} incomplete at col {c}", r0 - 1));
+        t_n[c] = ctx.rot[p as usize][rt as usize][2];
+    }
+    let mut used = vec![false; 256];
+    for &(p, _) in placed.values() {
+        used[p as usize] = true;
+    }
+    let mut forced: HashMap<(usize, usize), (u16, u8)> = HashMap::new();
+    for (&(r, c), &pr) in placed {
+        if rows.contains(&r) {
+            forced.insert((r, c), pr);
+        }
+    }
+    for &(pos, pid, rot) in &ctx.hints {
+        let (r, c) = (pos / 16, pos % 16);
+        if placed.contains_key(&(r, c)) {
+            continue;
+        }
+        used[pid as usize] = true;
+        if rows.contains(&r) {
+            forced.insert((r, c), (pid, rot));
+        }
+    }
+    let mut pools: [Vec<u16>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+    for p in 0..256u16 {
+        if !used[p as usize] {
+            pools[ctx.kind[p as usize] as usize].push(p);
+        }
+    }
+    let f = band_floor_k3(ctx, rows, &t_n, &forced, &pools, cap, 16);
+    if f >= INF { -1 } else { f }
+}
+
+// ---------------- tropical (min-plus) floor-only DP ----------------
+// H6: the filter rung. State value = min breaks over fillings reaching
+// that boundary profile. ~10-15x less state than counting (no b axis),
+// integer ops. Exclusion ("best over w != w0") cannot use linearity;
+// we keep per-row minima with arg + runner-up.
+//
+// Layout: between columns V[e0][e1][e2] (i32, INF=i32::MAX/4);
+// mid-column with leading s axis. k=3 fixed (the only band size used
+// for filtering); counting mode remains fully general.
+
+const INF: i32 = i32::MAX / 4;
+
+#[allow(clippy::too_many_arguments)]
+fn band_floor_k3(
+    ctx: &Ctx,
+    rows: &[usize],
+    t_n: &[u8; 16],
+    forced: &HashMap<(usize, usize), (u16, u8)>,
+    pools: &[Vec<u16>; 3],
+    cap: i32,
+    ncols: usize,
+) -> i32 {
+    assert_eq!(rows.len(), 3);
+    let nc = NC;
+    let sz3 = nc * nc * nc;
+    let sz4 = nc * sz3;
+    let mut v: Vec<i32> = Vec::new(); // between-column (sz3) or mid (sz4)
+    let mut has_s = false;
+    let mut started = false;
+
+    for c in 0..ncols {
+        let first_col = c == 0;
+        for (i, &r) in rows.iter().enumerate() {
+            let last_row = i == 2;
+            let cands: Vec<(u16, u8)> = match forced.get(&(r, c)) {
+                Some(&f) => vec![f],
+                None => cell_cands(ctx, r, c, pools),
+            };
+            // group candidates: key (cb, n?, w?, e, s?)
+            let mut groups: HashMap<GKey, ()> = HashMap::new();
+            for (p, rt) in cands {
+                let o = ctx.rot[p as usize][rt as usize];
+                let mut cb = 0u8;
+                let kn;
+                if i == 0 {
+                    cb += u8::from(o[0] != t_n[c]);
+                    kn = NONE;
+                } else {
+                    kn = o[0];
+                }
+                let kw = if first_col { NONE } else { o[3] };
+                let ks = if last_row { NONE } else { o[2] };
+                groups.entry((cb, kn, kw, o[1], ks)).or_insert(());
+            }
+            let osz = if last_row { sz3 } else { sz4 };
+            let mut out = vec![INF; osz];
+            // index helpers: state (e0,e1,e2) -> ((e0*nc)+e1)*nc+e2;
+            // mid state (s,e0,e1,e2) -> s*sz3 + that.
+            if !started {
+                for (&(cb, _kn, _kw, e, s), _) in &groups {
+                    let idx = (s as usize) * sz3 + (e as usize) * nc * nc;
+                    let val = cb as i32;
+                    if val < out[idx] {
+                        out[idx] = val;
+                    }
+                }
+                started = true;
+            } else if first_col {
+                // i>0: contract n via s axis; e_i axis is dummy (sum out
+                // == min out). v is mid (sz4) with s leading.
+                // reduce dummy e_i: positions of e_i in state: axis i.
+                // build red[s][rest] = min over e_i of v
+                let (red, rest_n) = trop_reduce_axis(&v, true, i, nc);
+                // per rest position: min over s + arg + second
+                let mut m1 = vec![INF; rest_n];
+                let mut a1 = vec![255u8; rest_n];
+                let mut m2 = vec![INF; rest_n];
+                for s in 0..nc {
+                    for q in 0..rest_n {
+                        let val = red[s * rest_n + q];
+                        if val < m1[q] {
+                            m2[q] = m1[q];
+                            m1[q] = val;
+                            a1[q] = s as u8;
+                        } else if val < m2[q] {
+                            m2[q] = val;
+                        }
+                    }
+                }
+                for (&(cb, kn, _kw, e, s), _) in &groups {
+                    for q in 0..rest_n {
+                        let vm = red[kn as usize * rest_n + q]; // n matches s_top
+                        let vx = if a1[q] == kn { m2[q] } else { m1[q] };
+                        let best = (vm + cb as i32).min(vx + cb as i32 + 1);
+                        if best > cap {
+                            continue;
+                        }
+                        // write into out at (s, e at axis i, rest q)
+                        let idx = trop_out_idx(s, e, i, q, last_row, nc);
+                        if best < out[idx] {
+                            out[idx] = best;
+                        }
+                    }
+                }
+            } else {
+                let s_in = has_s;
+                if s_in {
+                    // contract s (n) and e_i (w) jointly with exclusion
+                    // rest axes: the two e_j (j != i); rest_n = nc*nc
+                    let rest_n = nc * nc;
+                    // gather: g[s][w][rest] = v at (s, e_i=w, rest)
+                    // then per rest: row minima over w per s, and over s.
+                    let mut best =
+                        |kn: u8, kw: u8, q: usize, tabs: &TropTabs| -> i32 {
+                            let n0 = kn as usize;
+                            let w0 = kw as usize;
+                            let mm = tabs.val[(n0 * nc + w0) * rest_n + q];
+                            let mx = {
+                                let base = n0 * rest_n + q;
+                                if tabs.row_a1[base] == kw {
+                                    tabs.row_m2[base]
+                                } else {
+                                    tabs.row_m1[base]
+                                }
+                            };
+                            let xm = {
+                                let base = w0 * rest_n + q;
+                                if tabs.col_a1[base] == kn {
+                                    tabs.col_m2[base]
+                                } else {
+                                    tabs.col_m1[base]
+                                }
+                            };
+                            let xb = q * nc + w0;
+                            let xx = if tabs.xq_a1[xb] == kn {
+                                tabs.xq_m2[xb]
+                            } else {
+                                tabs.xq_m1[xb]
+                            };
+                            mm.min(mx + 1).min(xm + 1).min(xx + 2)
+                        };
+                    let tabs = trop_tabs(&v, i, nc);
+                    for (&(cb, kn, kw, e, s), _) in &groups {
+                        for q in 0..rest_n {
+                            let b = best(kn, kw, q, &tabs) + cb as i32;
+                            if b > cap {
+                                continue;
+                            }
+                            let idx = trop_out_idx(s, e, i, q, last_row, nc);
+                            if b < out[idx] {
+                                out[idx] = b;
+                            }
+                        }
+                    }
+                } else {
+                    // i==0: contract w on axis 0 of between-column state
+                    let rest_n = nc * nc;
+                    let mut m1 = vec![INF; rest_n];
+                    let mut a1 = vec![255u8; rest_n];
+                    let mut m2 = vec![INF; rest_n];
+                    for w in 0..nc {
+                        for q in 0..rest_n {
+                            let val = v[w * rest_n + q];
+                            if val < m1[q] {
+                                m2[q] = m1[q];
+                                m1[q] = val;
+                                a1[q] = w as u8;
+                            } else if val < m2[q] {
+                                m2[q] = val;
+                            }
+                        }
+                    }
+                    for (&(cb, _kn, kw, e, s), _) in &groups {
+                        for q in 0..rest_n {
+                            let vm = v[kw as usize * rest_n + q];
+                            let vx = if a1[q] == kw { m2[q] } else { m1[q] };
+                            let b = (vm.min(vx + 1)) + cb as i32;
+                            if b > cap {
+                                continue;
+                            }
+                            let idx = trop_out_idx(s, e, 0, q, last_row, nc);
+                            if b < out[idx] {
+                                out[idx] = b;
+                            }
+                        }
+                    }
+                }
+                let _ = s_in;
+            }
+            has_s = !last_row;
+            v = out;
+        }
+    }
+    v.iter().copied().min().unwrap_or(INF)
+}
+
+struct TropTabs {
+    val: Vec<i32>,    // [s][w][rest]
+    row_m1: Vec<i32>, // per (s, rest): min over w
+    row_a1: Vec<u8>,
+    row_m2: Vec<i32>,
+    col_m1: Vec<i32>, // per (w, rest): min over s
+    col_a1: Vec<u8>,
+    col_m2: Vec<i32>,
+    // exact O(1) both-mismatch queries: per (rest q, excluded col w0),
+    // the min/arg/second over rows s of rowmin_excluding_w0(s).
+    // xx(n0,w0,q) = m1 if a1 != n0 else m2. (A greedy top-k skyline is
+    // NOT exact here — adversarial entries sharing e1's column escape it.)
+    xq_m1: Vec<i32>,
+    xq_a1: Vec<u8>,
+    xq_m2: Vec<i32>,
+}
+
+/// v is the mid-column state (s, e0, e1, e2) flattened; the contracted
+/// w axis is e_i (i in 1..=2 when called). Returns gathered tables with
+/// rest = the two e_j (j != i) in ascending j order.
+fn trop_tabs(v: &[i32], i: usize, nc: usize) -> TropTabs {
+    let rest_n = nc * nc;
+    let mut val = vec![INF; nc * nc * rest_n];
+    // axes of v: (s, e0, e1, e2) strides: s: nc^3, e0: nc^2, e1: nc, e2: 1
+    let st = [nc * nc * nc, nc * nc, nc, 1];
+    let w_stride = st[1 + i];
+    let rest_axes: Vec<usize> = (0..3).filter(|&j| j != i).map(|j| st[1 + j]).collect();
+    for s in 0..nc {
+        for w in 0..nc {
+            let base_in = s * st[0] + w * w_stride;
+            let base_out = (s * nc + w) * rest_n;
+            for qa in 0..nc {
+                let off_a = base_in + qa * rest_axes[0];
+                let out_a = base_out + qa * nc;
+                for qb in 0..nc {
+                    val[out_a + qb] = v[off_a + qb * rest_axes[1]];
+                }
+            }
+        }
+    }
+    let mut row_m1 = vec![INF; nc * rest_n];
+    let mut row_a1 = vec![255u8; nc * rest_n];
+    let mut row_m2 = vec![INF; nc * rest_n];
+    let mut col_m1 = vec![INF; nc * rest_n];
+    let mut col_a1 = vec![255u8; nc * rest_n];
+    let mut col_m2 = vec![INF; nc * rest_n];
+    for s in 0..nc {
+        for w in 0..nc {
+            let base = (s * nc + w) * rest_n;
+            for q in 0..rest_n {
+                let x = val[base + q];
+                let rb = s * rest_n + q;
+                if x < row_m1[rb] {
+                    row_m2[rb] = row_m1[rb];
+                    row_m1[rb] = x;
+                    row_a1[rb] = w as u8;
+                } else if x < row_m2[rb] {
+                    row_m2[rb] = x;
+                }
+                let cb = w * rest_n + q;
+                if x < col_m1[cb] {
+                    col_m2[cb] = col_m1[cb];
+                    col_m1[cb] = x;
+                    col_a1[cb] = s as u8;
+                } else if x < col_m2[cb] {
+                    col_m2[cb] = x;
+                }
+            }
+        }
+    }
+    let mut xq_m1 = vec![INF; rest_n * nc];
+    let mut xq_a1 = vec![255u8; rest_n * nc];
+    let mut xq_m2 = vec![INF; rest_n * nc];
+    for s in 0..nc {
+        for q in 0..rest_n {
+            let rb = s * rest_n + q;
+            for w0 in 0..nc {
+                let rm = if row_a1[rb] == w0 as u8 { row_m2[rb] } else { row_m1[rb] };
+                let xb = q * nc + w0;
+                if rm < xq_m1[xb] {
+                    xq_m2[xb] = xq_m1[xb];
+                    xq_m1[xb] = rm;
+                    xq_a1[xb] = s as u8;
+                } else if rm < xq_m2[xb] {
+                    xq_m2[xb] = rm;
+                }
+            }
+        }
+    }
+    TropTabs {
+        val, row_m1, row_a1, row_m2, col_m1, col_a1, col_m2,
+        xq_m1, xq_a1, xq_m2,
+    }
+}
+
+/// Reduce (min) the dummy e_i axis of the mid state (s,e0,e1,e2).
+/// Returns (red[s][rest], rest_n).
+fn trop_reduce_axis(v: &[i32], _has_s: bool, i: usize, nc: usize) -> (Vec<i32>, usize) {
+    let rest_n = nc * nc;
+    let st = [nc * nc * nc, nc * nc, nc, 1];
+    let i_stride = st[1 + i];
+    let rest_axes: Vec<usize> = (0..3).filter(|&j| j != i).map(|j| st[1 + j]).collect();
+    let mut red = vec![INF; nc * rest_n];
+    for s in 0..nc {
+        for qa in 0..nc {
+            for qb in 0..nc {
+                let q = qa * nc + qb;
+                let base = s * st[0] + qa * rest_axes[0] + qb * rest_axes[1];
+                let mut m = INF;
+                for x in 0..nc {
+                    let val = v[base + x * i_stride];
+                    if val < m {
+                        m = val;
+                    }
+                }
+                red[s * rest_n + q] = m;
+            }
+        }
+    }
+    (red, rest_n)
+}
+
+/// Output index for the tropical DP. Output axes: mid (s,e0,e1,e2) or
+/// final-row (e0,e1,e2); e_i = e, the rest q = (qa,qb) over j != i asc.
+fn trop_out_idx(s: u8, e: u8, i: usize, q: usize, last_row: bool, nc: usize) -> usize {
+    let (qa, qb) = (q / nc, q % nc);
+    let mut coord = [0usize; 3];
+    let mut others = (0..3).filter(|&j| j != i);
+    let ja = others.next().unwrap();
+    let jb = others.next().unwrap();
+    coord[i] = e as usize;
+    coord[ja] = qa;
+    coord[jb] = qb;
+    let base = (coord[0] * nc + coord[1]) * nc + coord[2];
+    if last_row {
+        base
+    } else {
+        (s as usize) * nc * nc * nc + base
+    }
+}
+
 /// H5 (vol-217): bottom-row 1D chain profile — count row-15 fillings
 /// (corner + 14 bottom edges + corner, S sides structural) paying b
 /// mismatches on the 15 horizontal edges, over the REMAINING border
@@ -683,10 +1066,20 @@ fn selftest(puzzle: &PathBuf) -> i32 {
         .iter()
         .zip(bf.iter())
         .all(|(&x, &y)| (x - y).abs() <= 1e-6 * y.max(1.0));
-    println!("selftest {}", if ok { "PASS" } else { "FAIL" });
+    // tropical floor must equal the counting bmin on the same instance
+    let trop = band_floor_k3(&ctx, &rows, &t_n, &forced, &pools, bmax as i32, 2);
+    let bmin_count = dp.iter().position(|&x| x > 0.5).map(|i| i as i32).unwrap_or(-1);
+    let trop_ok = trop == bmin_count;
+    println!(
+        "selftest {} (tropical {}: floor {} vs bmin {})",
+        if ok && trop_ok { "PASS" } else { "FAIL" },
+        if trop_ok { "ok" } else { "MISMATCH" },
+        trop,
+        bmin_count
+    );
     println!("dp: {:?}", dp.iter().map(|&x| x.round() as i64).collect::<Vec<_>>());
     println!("bf: {:?}", bf.iter().map(|&x| x.round() as i64).collect::<Vec<_>>());
-    i32::from(!ok)
+    i32::from(!(ok && trop_ok))
 }
 
 // ---------------- main ----------------
@@ -703,6 +1096,8 @@ fn main() {
     let mut out_path: Option<PathBuf> = None;
     let mut threads: usize = 1;
     let mut want_bc = false;
+    let mut floor_only = false;
+    let mut cap: i32 = 6;
     let mut want_selftest = false;
     let mut boards: Vec<PathBuf> = Vec::new();
     let mut i = 0;
@@ -718,6 +1113,8 @@ fn main() {
             "--out" => { out_path = Some(PathBuf::from(&raw[i + 1])); i += 2; }
             "--threads" => { threads = raw[i + 1].parse().unwrap(); i += 2; }
             "--bottom-chain" => { want_bc = true; i += 1; }
+            "--floor-only" => { floor_only = true; i += 1; }
+            "--cap" => { cap = raw[i + 1].parse().unwrap(); i += 2; }
             "--selftest" => { want_selftest = true; i += 1; }
             other => { boards.push(PathBuf::from(other)); i += 1; }
         }
@@ -743,6 +1140,38 @@ fn main() {
         .num_threads(threads)
         .build_global()
         .ok();
+
+    if floor_only {
+        let results: Vec<String> = inputs
+            .par_iter()
+            .map(|bpath| {
+                let t0 = Instant::now();
+                let placed =
+                    load_board(std::slice::from_ref(bpath), truncate, frame.as_ref());
+                let f = ask_floor(&ctx, &placed, &rows, cap);
+                let ms = t0.elapsed().as_micros() as f64 / 1000.0;
+                let tag = bpath.file_stem().unwrap().to_string_lossy().to_string();
+                format!("{tag}\t{}..{}\t{f}\t{ms:.1}", rows[0], rows[k - 1])
+            })
+            .collect();
+        let header = "tag\trows\tfloor\tms";
+        match out_path {
+            Some(p) => {
+                let mut f = std::fs::File::create(p).expect("out");
+                writeln!(f, "{header}").unwrap();
+                for line in results {
+                    writeln!(f, "{line}").unwrap();
+                }
+            }
+            None => {
+                println!("{header}");
+                for line in results {
+                    println!("{line}");
+                }
+            }
+        }
+        return;
+    }
 
     let results: Vec<String> = inputs
         .par_iter()
