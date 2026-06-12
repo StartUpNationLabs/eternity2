@@ -15,6 +15,7 @@
 pub mod border_ub;
 pub mod border_ub_lifted;
 pub mod cluster_repair;
+pub mod mini;
 
 use std::io::Write;
 use std::path::Path;
