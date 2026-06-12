@@ -37,12 +37,36 @@ from the lottery (~6 decades for et14→et20).
 Exactness preserved: brute-force equality tests at k=4 (legacy) and
 k=6 (new), perfect-completion smoke at k=20.
 
+## A/B result (vol-216, day 1): in-DFS growth is NET NEGATIVE at this scale
+
+d146-seed63 finish config, 120 s × 4 seeds, gates clipped to each
+frontier:
+
+| et | finals | epochs/seed |
+|---|---|---|
+| 14 | 449, 449, **451, 451** | 12-24 |
+| 18 | 448, 448, 448, 449 | 3-12 |
+| 20 | 447, 448, 448, 449 | 3-15 |
+
+Mechanism (config-specific result, but the mechanism generalizes):
+per arrival, exact-20 weakly dominates walk+exact-14 IN THEORY. In
+practice (a) **cap-hit**: the k=20 B&B exceeds the 100M node cap on
+hard instances and degrades to greedy exactly where optimality
+matters (the loud warn fired — the TAIL_CAP discipline works);
+(b) each et20 call costs orders of magnitude more than et14,
+collapsing epoch diversity (3-15 vs 12-24 epochs/seed) — the walk's
+176→182 segment wasn't waste, it was cheap retry diversity.
+Conclusion: value-LB + root-Hungarian is NOT yet strong enough to
+make k≥18 pay in-DFS. Needs the next bound rung, or use big exact
+regions post-hoc only (tail2polish at giant cap on record boards —
+a 2-row rigidity probe extending the vol-207 exactness program).
+
 ## What's open
 
-- Wall-clock A/B: et14 vs et18/et20/et24 on the d146-seed63 finish
-  config — does the bigger exact region lift finals at equal budget?
-  (Queued behind the ACTUARY calibration runs.)
-- In-descent Hungarian at shallow B&B levels (root-only now).
+- Next bound rung: in-descent Hungarian on reduced costs at shallow
+  B&B levels (root-only now); only then retry k≥18 in-DFS.
+- Post-hoc 2-row exact polish of the 452 board (exact_tail2 needs the
+  vol-216 bound upgrades first).
 - LP-with-edge-terms as the next bound rung
   ([[assignment-lp-prefix-scoring]] has the machinery; ~ms via IPM is
   still too slow per et call — needs a cheap surrogate or caching).

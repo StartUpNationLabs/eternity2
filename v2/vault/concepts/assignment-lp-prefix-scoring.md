@@ -76,10 +76,20 @@ pre-rank the banked pool (≈1 s/prefix), then race the top-k
 empirically. Racing stays the promoter; LP buys a cheaper, wider
 funnel. NOT valid as sole promoter.
 
+## Dual-price anatomy of the gap (vol-216, same day)
+
+Piece-constraint duals (max convention) on the d146 trio: seed63
+median piece value 2.18 vs seed24 1.91 / seed36 1.65 — the
+451-producer's advantage is a **broad-based shift of the whole
+remaining pool's marginal match value**, not a few outlier pieces.
+Distributed pool health is exactly the kind of signal aggregate
+counts and local probes integrate away — third independent
+confirmation of the global-property picture.
+
 ## Open
 
 - Sharper features from the same LP: per-cell margins, fractionality
-  mass, dual prices on piece constraints (starved pieces?).
+  mass (dual prices measured: broad shift, see above).
 - LP-guided probe steering (maximize LP of the NEXT placement) — a
   global value-order; cost per node is the obstacle (0.7 s).
 - Tail-region LP as admissible bound inside exact endgames — see

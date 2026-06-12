@@ -34,6 +34,41 @@ afternoon against the 35+ prefixes with measured finishes: the
 451-producer (d146-seed63) must outrank its 446-twins (d146-seed24/36)
 or it's a quadruple-null. If it ranks: LADDER promotion adopts it.
 
+### `fast-probe-generator` — status: `unbuilt` — since: vol-216 (user question)
+Port the perfect-walk probe mode (frame + hints + bank-deepest-prefix
++ abort-below) to a blackwood-fast-class engine. cloister2 probes run
+~15M nodes/s/thread; blackwood-fast does 79M nps single-thread (PGO),
+vanilla_fast 125M pp/s — a specialized generator buys ~5-8× probe
+volume. NOT worth it under the old pipeline (rung-2 races dominated
+cost; flat lottery refuted at scale). BECOMES the cost driver once
+LP rung-0 replaces empirical rung-2 racing (LP = 0.9 s/prefix absorbs
+any probe rate). Pairs with `strip-oracle-sat` as the second filter.
+
+### `strip-oracle-sat` — status: `unbuilt` — since: vol-216 (user question)
+Mid-size exact certifier between LP (instant, loose) and the 300 s
+race (exact-ish, slow): SAT/DLX min-break decision on the last 3
+interior rows (42 cells) per candidate prefix, "min breaks ≥ B?".
+Vol-55 cluster-MIP precedent suggests minutes/instance. Growing-proofs
+class. Caution: graph/counting necessary conditions are vacuous on
+realistic pools (LEDGER lesson) — must be real combinatorial search.
+
+### `transfer-profile-features` — status: `unbuilt` — since: vol-216 (user Q&A, live demo)
+Pool-conditioned transfer-matrix DP features, microseconds each:
+(a) row break-profiles — count of row-r completions paying exactly b
+mismatches given the prefix's remaining pool + actual rim targets
+(state = (color, b), 17×B). Live demo on the d146 trio: PERFECT
+bottom row infeasible for ALL pools (count 0 — why finishes pay
+breaks there); break-tolerant profile ranks seed63 (451) TOP: 2× the
+b=3 closure supply of seed24, a full break-level better floor than
+seed36 (min-b 3 vs 4). First microsecond-scale feature to rank the
+star correctly (LP needs 0.9 s). (b) λ1 pool chain-entropy
+ANTI-correlates on the trio (good pool = lower entropy = specificity
+over abundance? n=3). Next: 2-row coupled profiles (17²·b states);
+piece-criticality ∂log-count/∂piece → principled QUOTA classes;
+validate vs the 75-prefix ≥300s label set like the LP was. Known
+limits: repeats-allowed (relaxation), single-row slices (SEMAPHORE
+pool-coupling caution), don't scale to full 2D (vol-209/210 χ-walls).
+
 ### `exact-region-growth` — status: `in-progress` — vol-216 binding 3
 Grow et14 → et20+/et28-class: last-two-rows exact B&B with stronger
 admissible bounds (assignment-LP bound per node). The only

@@ -102,10 +102,42 @@ Mechanisms found on the way (each verified by flow audits):
    same s; then more-spent same-d): depth-marginals hand healthy
    branching to lanes whose true dynamic is death at the wall.
 
+## Race 1 (vol-216): honest negative — model does NOT extrapolate yet
+
+Computed schedule `134,138,147,153,155,158,164,167,169,170,173,177,
+179,182` raced 300 s × 8 on the d146 finish config vs the hand recipe
+(pre-registered: ≥5× completes/sec; finals ~451-class):
+
+| | hand gates | ACTUARY-1 |
+|---|---|---|
+| completes/s/seed | 1.41 | **0.72 (2× SLOWER)** |
+| finals | 450/451/451 | **449×7, 448×1** (breaks 31 vs 29-30) |
+| nodes/epoch | 4.6e7 | 3.6e6 (DP predicted 32!) |
+
+Diagnosis: out-of-trust-region the lane-coherent fallback assigned
+dying rates to lanes that in reality survive (the DP thought the root
+subtree would exhaust in 32 nodes; it runs to the 5 s restart cap).
+The coverage metric (V-mass-weighted under the model's own flow) was
+blind to this: lanes the model wrongly kills contribute no mass to
+the denominator. TWO structural lessons:
+
+1. **Coverage must be weighted by what reality visits, not what the
+   model predicts it visits** — or stricter: only trust candidates
+   whose corridors the pooled calibration ACTUALLY measured.
+2. **Arrivals/node is the wrong objective in the saturated regime**:
+   both schedules produce hundreds of completions per seed-run; the
+   basin ceiling (451) binds, and what differs is arrival QUALITY
+   (final = 480 − spent − tail_mis; the tail pays ~17 and depends on
+   WHERE breaks were spent, which the DP does not model). Needed
+   instrument: per-arrival (spent, tail_mis) histogram.
+
+Iteration 2 ingredients (the loop working as designed): pool race-1's
+fitstats2 (it measured the new corridors), refit, restrict moves to
+measured corridors, add the quality histogram.
+
 ## Open
-- Optimize + race vs hand gates on d146 finish config (≥8 seeds,
-  300 s, min/med/max) and on from-scratch hinted.
-- Pool calibrations across schedules (A + C + jittered) for coverage.
+- Iteration 2: pooled refit + quality-aware objective
+  ((spent, tail_mis) histogram instrumentation).
 - Scan-order axis: per-scan fitstats2 → joint (order, gates) search.
 
 ## Linked
