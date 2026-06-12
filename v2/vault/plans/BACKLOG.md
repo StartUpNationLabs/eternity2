@@ -822,3 +822,15 @@ See `concepts/` for the durable knowledge:
 - `v179-large-k-destroy.md` (NEW vol-185)
 - `v182-engrave-csp-fill.md` (NEW vol-185)
 - `lighthouse-bidirectional-row.md` (NEW vol-185)
+
+### `sota-mirrored-stage1` (MIRROR) — status: `built; penetration null at 60 s/top` — vol-218 binding 1
+Broken-top generator (`mirror_gen`, SOTA-cell-mapped masks with
+clue-compat pre-filter) + pre-registered 5-arm race (56 tops/arm,
+matched 60 s × 1 thread). P-M1 FLAT (median deltas −1..0 vs ±8 bar);
+deep tail mildly favors control; zero completions. Two compute points
+(2 s effective pilot + 60 s registered), same null. NOT marked
+refuted (rule 3: single compute scale; SOTA shape exists via
+weeks-scale pipelines). Revisit only with a fundamentally different
+descent engine or ≥100× compute per top. Prereg:
+`plans/archive/vol-218-prereg-mirror.md`; data
+`output/vol-218/mirror_race2_20260612T142831/`.
