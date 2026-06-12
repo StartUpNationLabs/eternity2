@@ -22,8 +22,8 @@ use std::io::Write as _;
 use std::path::PathBuf;
 
 use eternity2_bench_audit::mini::{
-    bandsaw, bb_min_break, endgame_band, exact_count, hint_cells, relax_floor, relax_profile,
-    Band, Mini,
+    bandsaw, bb_min_break, endgame_band, exact_count, exact_count_pruned, hint_cells,
+    relax_floor, relax_profile, tropical_suffix, Band, Mini,
 };
 
 const NODE_CAP: u64 = 4_000_000_000;
@@ -68,7 +68,12 @@ fn sub_band<'a>(full: &Band<'a>, k: usize) -> Band<'a> {
 /// the pre-completion tree explode — measured 600 s+ at 10×10 even
 /// for near-canonical entries). Never seeded by BANDSAW's answer.
 /// budget_ms bounds the TOTAL across rounds.
-fn bb_ground_truth(band: &Band, start: u32, budget_ms: u64) -> (Option<u32>, u64, u128, bool) {
+fn bb_ground_truth(
+    band: &Band,
+    start: u32,
+    budget_ms: u64,
+    suffix: &[Vec<u32>],
+) -> (Option<u32>, u64, u128, bool) {
     let mut ceil = start;
     let mut nodes = 0u64;
     let mut ms = 0u128;
@@ -77,7 +82,7 @@ fn bb_ground_truth(band: &Band, start: u32, budget_ms: u64) -> (Option<u32>, u64
         if remaining == 0 {
             return (None, nodes, ms, true);
         }
-        let r = bb_min_break(band, ceil, remaining, NODE_CAP);
+        let r = bb_min_break(band, ceil, remaining, NODE_CAP, Some(suffix));
         nodes += r.nodes;
         ms += r.elapsed_ms;
         if r.capped {
@@ -118,10 +123,57 @@ fn main() {
         }
     }
     let m = Mini::from_seed(size, colors, seed, &hint_cells(size));
-    let entries = load_entries(&entries_path, m.n);
+    let entries = if mode == "m2ladder" {
+        Vec::new()
+    } else {
+        load_entries(&entries_path, m.n)
+    };
     eprintln!("[mini_lab] seed={seed} mode={mode} entries={}", entries.len());
 
     match mode.as_str() {
+        "m2ladder" => {
+            // M2 exactness gate on a CONTROLLED b*-graded family:
+            // canonical prefix with j frontier columns corrupted
+            // (j = 0..6) — bandsaw must equal the independent
+            // iterative-deepening B&B on every rung, every instance.
+            const COLS: [usize; 6] = [1, 4, 7, 2, 5, 8];
+            println!("seed\tncorrupt\tfloor\tsaw_best\tbb_best\tmatch\tsaw_ms\tbb_ms\tsaw_capped\tbb_capped");
+            for ncorrupt in 0..=6usize {
+                let n = m.n;
+                let mut grid: Vec<Option<(u16, u8)>> = vec![None; n * n];
+                for pos in 0..rows * n {
+                    grid[pos] = Some(m.solution[pos]);
+                }
+                let mut band = endgame_band(&m, &grid, rows);
+                let mut f = band.frontier.clone().unwrap();
+                for &col in COLS.iter().take(ncorrupt) {
+                    f[col] = if f[col] == 1 { 2 } else { 1 };
+                }
+                band.frontier = Some(f);
+                let sfx = tropical_suffix(&band);
+                let floor = relax_floor(&band, 8);
+                let saw = bandsaw(&band, floor, NODE_CAP);
+                let (bb_best, _bn, bb_ms2, bb_capped) =
+                    bb_ground_truth(&band, floor, bb_budget_ms, &sfx);
+                let matched = match (saw.best, bb_best) {
+                    (Some(a), Some(b)) => u8::from(a == b),
+                    _ => 0,
+                };
+                println!(
+                    "{seed}\t{ncorrupt}\t{floor}\t{}\t{}\t{matched}\t{}\t{bb_ms2}\t{}\t{}",
+                    saw.best.map_or(-1, |x| i64::from(x)),
+                    bb_best.map_or(-1, |x| i64::from(x)),
+                    saw.elapsed_ms,
+                    u8::from(saw.capped),
+                    u8::from(bb_capped),
+                );
+                std::io::stdout().flush().unwrap();
+                eprintln!(
+                    "[m2ladder] ncorrupt {ncorrupt}: floor {floor} saw {:?} bb {bb_best:?}",
+                    saw.best
+                );
+            }
+        }
         "m1" => {
             println!("seed\tidx\tk\tb\trelax_cum\texact_cum\texact_capped");
             for (idx, grid) in entries.iter().take(grid_n).enumerate() {
@@ -146,13 +198,20 @@ fn main() {
             }
         }
         "m23" => {
-            println!("seed\tidx\tfloor\tsaw_best\tsaw_budget\tsaw_capped\tbb_best\tbb_capped\tmatch\ttop_raw\tbottom_raw\ttop_keys\tbottom_keys\tmask_groups\tjoin_pairs\tsaw_ms\tbb_nodes\tbb_ms\texact_at_bstar\texact_capped\trelax_at_bstar");
+            println!("seed\tidx\tfloor\tsaw_best\tsaw_ub\tsaw_lb\tsaw_budget\tsaw_capped\tbb_best\tbb_capped\tmatch\ttop_raw\tbottom_raw\ttop_keys\tbottom_keys\tmask_groups\tjoin_pairs\tsaw_ms\tbb_nodes\tbb_ms\texact_at_bstar\texact_capped\trelax_at_bstar");
             for (idx, grid) in entries.iter().take(grid_n).enumerate() {
                 let band = endgame_band(&m, grid, rows);
+                let sfx = tropical_suffix(&band);
                 let floor = relax_floor(&band, 8);
+                assert_eq!(*sfx[0].iter().min().unwrap(), floor, "suffix floor != relax floor");
+                eprintln!("[m23] idx {idx}: floor {floor}, saw...");
                 let saw = bandsaw(&band, floor, NODE_CAP);
+                eprintln!(
+                    "[m23] idx {idx}: saw {:?} (B={}, {} ms), bb...",
+                    saw.best, saw.final_budget, saw.elapsed_ms
+                );
                 let (bb_best, bb_nodes, bb_ms, bb_capped) =
-                    bb_ground_truth(&band, floor, bb_budget_ms);
+                    bb_ground_truth(&band, floor, bb_budget_ms, &sfx);
                 let matched = match (saw.best, bb_best) {
                     (Some(a), Some(b)) => u8::from(a == b),
                     _ => 0,
@@ -160,14 +219,16 @@ fn main() {
                 // relaxation gap at the achievable frontier b*
                 let (mut exact_b, mut exact_capped, mut relax_b) = (0u64, 0u8, 0.0f64);
                 if let Some(bstar) = saw.best {
-                    let ec = exact_count(&band, bstar, NODE_CAP);
+                    let ec = exact_count_pruned(&band, bstar, NODE_CAP, Some(&sfx));
                     exact_b = ec.by_b.iter().sum();
                     exact_capped = u8::from(ec.capped);
                     relax_b = relax_profile(&band, bstar).iter().sum();
                 }
                 println!(
-                    "{seed}\t{idx}\t{floor}\t{}\t{}\t{}\t{}\t{}\t{matched}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{bb_nodes}\t{bb_ms}\t{exact_b}\t{exact_capped}\t{relax_b:.6e}",
+                    "{seed}\t{idx}\t{floor}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{matched}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{bb_nodes}\t{bb_ms}\t{exact_b}\t{exact_capped}\t{relax_b:.6e}",
                     saw.best.map_or(-1, |x| i64::from(x)),
+                    saw.upper.map_or(-1, |x| i64::from(x)),
+                    saw.lb,
                     saw.final_budget,
                     u8::from(saw.capped),
                     bb_best.map_or(-1, |x| i64::from(x)),
@@ -188,16 +249,19 @@ fn main() {
             }
         }
         "m4" => {
-            println!("seed\tidx\tfloor\tgreedy\texact\tsaw_capped");
+            println!("seed\tidx\tfloor\tgreedy\texact\tsaw_ub\tsaw_lb\tsaw_capped");
             for (idx, grid) in entries.iter().enumerate() {
                 let band = endgame_band(&m, grid, rows);
+                let sfx = tropical_suffix(&band);
                 let floor = relax_floor(&band, 8);
-                let greedy = bb_min_break(&band, 64, 100, NODE_CAP);
+                let greedy = bb_min_break(&band, 64, 100, NODE_CAP, Some(&sfx));
                 let saw = bandsaw(&band, floor, NODE_CAP);
                 println!(
-                    "{seed}\t{idx}\t{floor}\t{}\t{}\t{}",
+                    "{seed}\t{idx}\t{floor}\t{}\t{}\t{}\t{}\t{}",
                     greedy.best.map_or(-1, |x| i64::from(x)),
                     saw.best.map_or(-1, |x| i64::from(x)),
+                    saw.upper.map_or(-1, |x| i64::from(x)),
+                    saw.lb,
                     u8::from(saw.capped)
                 );
                 std::io::stdout().flush().unwrap();

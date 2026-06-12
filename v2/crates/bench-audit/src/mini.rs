@@ -181,6 +181,17 @@ pub struct Band<'a> {
 }
 
 impl Band<'_> {
+    /// Mixed-radix state index of the east colors entering column c
+    /// (east[] is the per-cell DFS array, column-major).
+    fn col_state(&self, east: &[u8], c: usize) -> usize {
+        let nc = self.mini.nc;
+        let mut st = 0usize;
+        for j in 0..self.k {
+            st = st * nc + east[(c - 1) * self.k + j] as usize;
+        }
+        st
+    }
+
     /// Column-major cell sequence: (idx within band, r, c).
     fn cells(&self) -> Vec<(usize, usize)> {
         let mut v = Vec::with_capacity(self.k * self.mini.n);
@@ -245,9 +256,20 @@ pub struct ExactCounts {
 }
 
 /// DFS count of distinct-piece band fillings by exact total cost.
-/// Column-major. Budget prune at bmax. Loud cap.
+/// Column-major. Budget prune at bmax + optional tropical-suffix
+/// prune at column entries. Loud cap.
 #[must_use]
 pub fn exact_count(band: &Band, bmax: u32, node_cap: u64) -> ExactCounts {
+    exact_count_pruned(band, bmax, node_cap, None)
+}
+
+#[must_use]
+pub fn exact_count_pruned(
+    band: &Band,
+    bmax: u32,
+    node_cap: u64,
+    suffix: Option<&[Vec<u32>]>,
+) -> ExactCounts {
     let m = band.mini;
     let n = m.n;
     let cells = band.cells();
@@ -260,6 +282,7 @@ pub fn exact_count(band: &Band, bmax: u32, node_cap: u64) -> ExactCounts {
     let mut nodes = 0u64;
     let mut capped = false;
 
+    #[allow(clippy::too_many_arguments)]
     fn rec(
         d: usize,
         spent: u32,
@@ -274,6 +297,7 @@ pub fn exact_count(band: &Band, bmax: u32, node_cap: u64) -> ExactCounts {
         capped: &mut bool,
         bmax: u32,
         node_cap: u64,
+        suffix: Option<&[Vec<u32>]>,
     ) {
         if *capped {
             return;
@@ -281,6 +305,14 @@ pub fn exact_count(band: &Band, bmax: u32, node_cap: u64) -> ExactCounts {
         if d == cells.len() {
             by_b[spent as usize] += 1;
             return;
+        }
+        if d > 0 && d % band.k == 0 {
+            if let Some(sfx) = suffix {
+                let c = d / band.k;
+                if spent + sfx[c][band.col_state(east, c)] > bmax {
+                    return;
+                }
+            }
         }
         let (r, c) = cells[d];
         let i = r - band.r0;
@@ -312,11 +344,11 @@ pub fn exact_count(band: &Band, bmax: u32, node_cap: u64) -> ExactCounts {
             used[cd.pi as usize] = true;
             south[i][c] = cd.s;
             east[d] = cd.e;
-            rec(d + 1, cost, cells, cands, band, used, south, east, by_b, nodes, capped, bmax, node_cap);
+            rec(d + 1, cost, cells, cands, band, used, south, east, by_b, nodes, capped, bmax, node_cap, suffix);
             used[cd.pi as usize] = false;
         }
     }
-    rec(0, 0, &cells, &cands, band, &mut used, &mut south, &mut east, &mut by_b, &mut nodes, &mut capped, bmax, node_cap);
+    rec(0, 0, &cells, &cands, band, &mut used, &mut south, &mut east, &mut by_b, &mut nodes, &mut capped, bmax, node_cap, suffix);
     ExactCounts { by_b, nodes, capped }
 }
 
@@ -561,6 +593,151 @@ pub fn relax_floor(band: &Band, bmax0: u32) -> u32 {
     }
 }
 
+const INF: u32 = u32::MAX / 4;
+
+/// Backward tropical (min-plus) suffix table: `suffix[c][state]` =
+/// minimum repeats-allowed cost of filling columns c..n-1 given the
+/// east colors of the k band rows entering column c (mixed-radix
+/// NC^k state; column 0 state is all-don't-care so suffix[0] is the
+/// band's tropical floor at every reachable state). Admissible lower
+/// bound for distinct-piece search (relaxation: piece reuse allowed,
+/// pool ignored). Used as a column-entry prune in enumerate/bb.
+#[must_use]
+pub fn tropical_suffix(band: &Band) -> Vec<Vec<u32>> {
+    let m = band.mini;
+    let n = m.n;
+    let nc = m.nc;
+    let k = band.k;
+    let cands = band.cand_table();
+    let ek: usize = nc.pow(k as u32);
+    let estr: Vec<usize> = (0..k).map(|j| nc.pow((k - 1 - j) as u32)).collect();
+
+    // suffix[n] = 0
+    let mut suffix: Vec<Vec<u32>> = vec![Vec::new(); n + 1];
+    suffix[n] = vec![0; ek];
+
+    // Backward over columns AND backward over rows within a column.
+    // H_{i} = min over fillings of rows i..k-1 of column c (plus all
+    // of columns c+1..) as a function of:
+    //   s axis (iff i > 0): the south color row i's N edge will see;
+    //   a_j axes, j < i : OUTGOING e_j (parameters consumed by nxt);
+    //   a_j axes, j >= i: ENTERING w_j (already introduced).
+    // Transition reads point values H_{i+1}[cand.s][a_i := cand.e];
+    // the mismatch charges (cand.n vs s, cand.w vs w_i) attach to the
+    // OUTPUT axes, so no exclusion tables are needed — exact min-plus
+    // via the A/B/C/D class trick per rest-state.
+    for c in (0..n).rev() {
+        let mut h: Vec<u32> = suffix[c + 1].clone(); // H_k: no s axis
+        for i in (0..k).rev() {
+            let d = c * k + i;
+            let tn_frontier = if i == 0 {
+                band.frontier.as_ref().map_or(NONE_COLOR, |f| f[c])
+            } else {
+                NONE_COLOR
+            };
+            let mut groups: HashMap<(u8, u8, u8, u8), ()> = HashMap::new();
+            for cd in &cands[d] {
+                groups.entry((cd.n, cd.w, cd.e, cd.s)).or_insert(());
+            }
+            let in_has_s = i < k - 1;
+            let out_has_s = i > 0;
+            let out_sz = if out_has_s { nc * ek } else { ek };
+            let mut out = vec![INF; out_sz];
+            let ei = estr[i];
+            let rest: usize = ek / nc;
+            let oth: Vec<usize> = (0..k).filter(|&j| j != i).map(|j| estr[j]).collect();
+            let mut qoff = vec![0usize; rest];
+            for (q, slot) in qoff.iter_mut().enumerate() {
+                let mut rem = q;
+                let mut off = 0usize;
+                for &st in oth.iter().rev() {
+                    off += (rem % nc) * st;
+                    rem /= nc;
+                }
+                *slot = off;
+            }
+            let charge_w = c > 0;
+            for q in 0..rest {
+                let bq = qoff[q];
+                // per-group scalar v_g = H_{i+1}[g.s][a_i := g.e, q]
+                // class tables over the OUTPUT (s, w) axes:
+                // a[n][w] exact, bn[n] any-w, cw[w] any-n, dd any-any
+                let mut a = vec![INF; nc * nc];
+                let mut bn = vec![INF; nc];
+                let mut cw = vec![INF; nc];
+                let mut dd = INF;
+                for (&(gn, gw, ge, gs), ()) in &groups {
+                    let read = ge as usize * ei + bq;
+                    let v = if in_has_s {
+                        h[gs as usize * ek + read]
+                    } else {
+                        h[read]
+                    };
+                    if v >= INF {
+                        continue;
+                    }
+                    let v = v
+                        + if tn_frontier == NONE_COLOR {
+                            0
+                        } else {
+                            u32::from(gn != tn_frontier)
+                        };
+                    let (ni, wi) = (gn as usize, gw as usize);
+                    if v < a[ni * nc + wi] {
+                        a[ni * nc + wi] = v;
+                    }
+                    if v < bn[ni] {
+                        bn[ni] = v;
+                    }
+                    if v < cw[wi] {
+                        cw[wi] = v;
+                    }
+                    if v < dd {
+                        dd = v;
+                    }
+                }
+                // fill output over (s_out, w_out)
+                if out_has_s {
+                    for s in 0..nc {
+                        for w in 0..nc {
+                            let val = if charge_w {
+                                a[s * nc + w]
+                                    .min(bn[s].saturating_add(1))
+                                    .min(cw[w].saturating_add(1))
+                                    .min(dd.saturating_add(2))
+                            } else {
+                                // no W charge: min over groups of
+                                // v + (n != s) — w axis is dummy
+                                bn[s].min(dd.saturating_add(1))
+                            };
+                            let oi = s * ek + w * ei + bq;
+                            if val < out[oi] {
+                                out[oi] = val;
+                            }
+                        }
+                    }
+                } else {
+                    // i == 0: frontier charge already inside v
+                    for w in 0..nc {
+                        let val = if charge_w {
+                            cw[w].min(dd.saturating_add(1))
+                        } else {
+                            dd
+                        };
+                        let oi = w * ei + bq;
+                        if val < out[oi] {
+                            out[oi] = val;
+                        }
+                    }
+                }
+            }
+            h = out;
+        }
+        suffix[c] = h;
+    }
+    suffix
+}
+
 // ---------------- exhaustive B&B (ground truth) ----------------
 
 pub struct BbResult {
@@ -573,9 +750,16 @@ pub struct BbResult {
 
 /// Anytime branch-and-bound min-break fill of a band; exhaustive when
 /// budget/node caps are not hit (capped=false ⇒ best is EXACT).
-/// Column-major, cost-bucketed candidate order (greedy leftmost).
+/// Column-major, cost-bucketed candidate order (greedy leftmost),
+/// optional tropical-suffix prune at column entries.
 #[must_use]
-pub fn bb_min_break(band: &Band, max_breaks: u32, budget_ms: u64, node_cap: u64) -> BbResult {
+pub fn bb_min_break(
+    band: &Band,
+    max_breaks: u32,
+    budget_ms: u64,
+    node_cap: u64,
+    suffix: Option<&[Vec<u32>]>,
+) -> BbResult {
     let m = band.mini;
     let n = m.n;
     let cells = band.cells();
@@ -596,11 +780,23 @@ pub fn bb_min_break(band: &Band, max_breaks: u32, budget_ms: u64, node_cap: u64)
     let mut capped = false;
 
     let enter = |d: usize,
+                 spent_here: u32,
+                 budget_now: u32,
                  used: &[bool],
                  south: &[Vec<u8>],
                  east: &[u8],
                  order: &mut Vec<Vec<(u16, u8)>>,
                  cursor: &mut Vec<usize>| {
+        if d > 0 && d % band.k == 0 {
+            if let Some(sfx) = suffix {
+                let cc = d / band.k;
+                if spent_here + sfx[cc][band.col_state(east, cc)] > budget_now {
+                    order[d].clear();
+                    cursor[d] = 0;
+                    return;
+                }
+            }
+        }
         let (r, c) = cells[d];
         let i = r - band.r0;
         let tn = if i == 0 {
@@ -635,7 +831,7 @@ pub fn bb_min_break(band: &Band, max_breaks: u32, budget_ms: u64, node_cap: u64)
     };
 
     let mut depth = 0usize;
-    enter(0, &used, &south, &east, &mut order, &mut cursor);
+    enter(0, 0, max_breaks, &used, &south, &east, &mut order, &mut cursor);
     loop {
         if (nodes & 0x3FFF) == 0
             && (t0.elapsed().as_millis() as u64 >= budget_ms || nodes >= node_cap)
@@ -696,7 +892,7 @@ pub fn bb_min_break(band: &Band, max_breaks: u32, budget_ms: u64, node_cap: u64)
                 used[cd.pi as usize] = false;
                 cursor[depth] = chosen[depth] + 1;
             } else {
-                enter(depth, &used, &south, &east, &mut order, &mut cursor);
+                enter(depth, spent[depth], best.map_or(max_breaks, |bv| bv.saturating_sub(1).min(max_breaks)), &used, &south, &east, &mut order, &mut cursor);
             }
         } else {
             if depth == 0 {
@@ -714,7 +910,14 @@ pub fn bb_min_break(band: &Band, max_breaks: u32, budget_ms: u64, node_cap: u64)
 // ---------------- BANDSAW: meet-in-the-middle exact solve ----------------
 
 pub struct BandsawResult {
+    /// Proven-optimal min-break (None if not proven within caps).
     pub best: Option<u32>,
+    /// Best completion found even if not proven optimal (valid UB).
+    pub upper: Option<u32>,
+    /// Exact certified lower bound: every budget round ≤ lb-1
+    /// completed without a join, so b* >= lb. Distinctness-aware
+    /// (unlike the relax floor).
+    pub lb: u32,
     pub final_budget: u32,
     pub top_raw: u64,
     pub bottom_raw: u64,
@@ -754,6 +957,7 @@ fn enumerate_band(
     charge_first_row_n: bool,
     interface_top: bool,
     node_cap: u64,
+    suffix: Option<&[Vec<u32>]>,
     mut leaf: impl FnMut(u64, u128, u32),
 ) -> (u64, u64, bool) {
     let m = band.mini;
@@ -789,10 +993,19 @@ fn enumerate_band(
         nodes: &mut u64,
         capped: &mut bool,
         node_cap: u64,
+        suffix: Option<&[Vec<u32>]>,
         leaf: &mut impl FnMut(u64, u128, u32),
     ) {
         if *capped {
             return;
+        }
+        if d > 0 && d % band.k == 0 {
+            if let Some(sfx) = suffix {
+                let c = d / band.k;
+                if spent + sfx[c][band.col_state(east, c)] > budget {
+                    return;
+                }
+            }
         }
         if d == cells.len() {
             *raw += 1;
@@ -842,12 +1055,12 @@ fn enumerate_band(
                 north0[c] = cd.n;
             }
             east[d] = cd.e;
-            rec(d + 1, cost, budget, charge_first, iface_top, cells, cands, band, used, used_mask, south, north0, east, raw, nodes, capped, node_cap, leaf);
+            rec(d + 1, cost, budget, charge_first, iface_top, cells, cands, band, used, used_mask, south, north0, east, raw, nodes, capped, node_cap, suffix, leaf);
             used[cd.pi as usize] = false;
             *used_mask &= !(1u64 << cd.pi);
         }
     }
-    rec(0, 0, budget, charge_first_row_n, interface_top, &cells, &cands, band, &mut used, &mut used_mask, &mut south, &mut north0, &mut east, &mut raw, &mut nodes, &mut capped, node_cap, &mut leaf);
+    rec(0, 0, budget, charge_first_row_n, interface_top, &cells, &cands, band, &mut used, &mut used_mask, &mut south, &mut north0, &mut east, &mut raw, &mut nodes, &mut capped, node_cap, suffix, &mut leaf);
     (raw, nodes, capped)
 }
 
@@ -874,16 +1087,59 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
         pool: band.pool.clone(),
         forced: band.forced.clone(),
     };
+    // full-pool bottom band: its tropical suffix is admissible for
+    // every complement-pool group (superset pool ⇒ weaker relaxation)
+    let bot_full = Band {
+        mini: m,
+        r0: band.r0 + h,
+        k: h,
+        frontier: None,
+        pool: band.pool.clone(),
+        forced: band.forced.clone(),
+    };
+    let top_sfx = tropical_suffix(&top_band);
+    let bot_sfx = tropical_suffix(&bot_full);
+    let top_floor = *top_sfx[0].iter().min().unwrap();
+    let bot_floor = *bot_sfx[0].iter().min().unwrap();
 
-    let mut budget = lb;
+    // the optimum splits b* = ct + cb + H with cb >= bot_floor and
+    // ct >= top_floor, so tops need enumeration only to B - bot_floor
+    // and the ID can start at the split lower bound.
+    let mut budget = lb.max(top_floor + bot_floor);
+    let mut global_upper: Option<u32> = None;
     loop {
+        if global_upper.is_some_and(|u| u <= budget) {
+            // rounds < budget all completed joinless ⇒ b* = u
+            return BandsawResult {
+                best: global_upper,
+                upper: global_upper,
+                lb: global_upper.unwrap(),
+                final_budget: budget,
+                top_raw: 0,
+                bottom_raw: 0,
+                top_keys: 0,
+                bottom_keys: 0,
+                bottom_mask_groups: 0,
+                join_pairs: 0,
+                elapsed_ms: t0.elapsed().as_millis(),
+                capped: false,
+            };
+        }
         let mut top: HashMap<(u64, u128), u32> = HashMap::new();
-        let (top_raw, _tn, tcap) =
-            enumerate_band(&top_band, budget, true, true, node_cap, |mask, v, cost| {
+        let top_budget = budget - bot_floor;
+        let (top_raw, _tn, tcap) = enumerate_band(
+            &top_band,
+            top_budget,
+            true,
+            true,
+            node_cap,
+            Some(&top_sfx),
+            |mask, v, cost| {
                 top.entry((mask, v))
                     .and_modify(|e| *e = (*e).min(cost))
                     .or_insert(cost);
-            });
+            },
+        );
 
         // group tops by pool mask
         let mut groups: HashMap<u64, Vec<(u128, u32)>> = HashMap::new();
@@ -938,6 +1194,7 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
                 false,
                 false,
                 node_cap,
+                Some(&bot_sfx),
                 |_bmask, u, cb| {
                     bots.entry(u)
                         .and_modify(|e| *e = (*e).min(cb))
@@ -958,10 +1215,24 @@ pub fn bandsaw(band: &Band, lb: u32, node_cap: u64) -> BandsawResult {
             }
         }
 
-        let done = best.is_some_and(|bv| bv <= budget);
+        if let Some(b) = best {
+            if global_upper.is_none_or(|u| b < u) {
+                global_upper = Some(b);
+            }
+        }
+        let done = global_upper.is_some_and(|bv| bv <= budget);
         if done || capped || budget > 512 {
             return BandsawResult {
-                best,
+                best: if done { global_upper } else { None },
+                upper: global_upper,
+                // capped during round `budget` ⇒ rounds < budget done
+                lb: if done {
+                    global_upper.unwrap()
+                } else if capped {
+                    budget
+                } else {
+                    budget + 1
+                },
                 final_budget: budget,
                 top_raw,
                 bottom_raw,
@@ -1229,6 +1500,29 @@ mod tests {
     }
 
     #[test]
+    fn m0_tropical_suffix_floor_and_prune_exactness() {
+        for seed in [11u64, 12, 13] {
+            let m = Mini::from_seed(5, 4, seed, &[]);
+            for r0 in [3usize, 2] {
+                let placement = canonical_prefix(&m, r0);
+                let band = endgame_band(&m, &placement, r0);
+                let sfx = tropical_suffix(&band);
+                let fl = relax_floor(&band, 4);
+                assert_eq!(
+                    *sfx[0].iter().min().unwrap(),
+                    fl,
+                    "suffix floor != relax floor (seed {seed} r0 {r0})"
+                );
+                // the suffix prune must not change exact counts
+                let a = exact_count(&band, 3, u64::MAX);
+                let b = exact_count_pruned(&band, 3, u64::MAX, Some(&sfx));
+                assert_eq!(a.by_b, b.by_b, "prune changed counts (seed {seed} r0 {r0})");
+                assert!(b.nodes <= a.nodes, "prune must not add nodes");
+            }
+        }
+    }
+
+    #[test]
     fn m0_bb_and_bandsaw_match_brute_min() {
         for seed in [11u64, 12, 13, 14] {
             let m = Mini::from_seed(5, 4, seed, &[]);
@@ -1241,7 +1535,7 @@ mod tests {
                 .iter()
                 .position(|&x| x > 0)
                 .expect("some filling must exist") as u32;
-            let bb = bb_min_break(&band, 16, u64::MAX, u64::MAX);
+            let bb = bb_min_break(&band, 16, u64::MAX, u64::MAX, None);
             assert!(!bb.capped);
             assert_eq!(bb.best, Some(bstar), "bb seed {seed}");
             let lb = relax_floor(&band, 4);
@@ -1297,10 +1591,16 @@ mod tests {
             }
             band.frontier = Some(f);
             let lb = relax_floor(&band, 8);
+            let sfx = tropical_suffix(&band);
+            assert_eq!(
+                *sfx[0].iter().min().unwrap(),
+                lb,
+                "suffix floor must equal relax floor (seed {seed})"
+            );
             // iterative-deepening bb (a slack ceiling explodes: 600 s+)
             let mut ceil = lb;
             let bb_best = loop {
-                let bb = bb_min_break(&band, ceil, 600_000, u64::MAX);
+                let bb = bb_min_break(&band, ceil, 600_000, u64::MAX, Some(&sfx));
                 assert!(!bb.capped, "bb must exhaust (seed {seed} ceil {ceil})");
                 if bb.best.is_some() {
                     break bb.best;
