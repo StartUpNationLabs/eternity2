@@ -29,13 +29,30 @@ separate decisively below banked prefixes on crossing floor
 (prediction: 3-4 vs 8-11); secondary ρ vs ≥300s labels > 0.335.
 Files: `scripts/v217_crossing/crossing_oracle.py`.
 
-### `crossing-guided-construction` — status: `unbuilt` — since: vol-217 (binding 3)
-Invert the build target: construct rows 8-10 to optimize the frontier
-presented to the crossing; oracle steers DURING construction at band
-granularity; spend MIDDEN dispersed damage + ACTUARY gates INSIDE
-rows 10-12 (witness double-break cells at depths 171-195). Pipeline:
-probes bank (prefix, frontier) → crossing oracle scores → promote →
-finish with tight gates + et14.
+### `crossing-guided-construction` — status: `in-progress` — vol-217 binding 3, USER-UPGRADED to staged FULL-BOARD
+Original form: construct rows 8-10 to optimize the frontier presented
+to the crossing. **User-directed upgrade (mid-vol 217, binding)**: run
+the staged build on the REAL 16×16 with all 256 pieces, FRAME-FREE —
+four 4×16 bands; the border ring EMERGES (top edge in stage 1, W/E
+flanks per band, bottom edge chosen LAST against the surviving pool).
+Witness anatomy in this staging: stages 1-3 PERFECT, all 20 breaks in
+stage 4. Components: `fb_oracle` (16-wide mixed-pool N-row profile),
+frame-free stage-1/2 generator, stage-3 population builder (no
+first-found commits — SEMAPHORE/CLIMB), stage-4 min-break endgame.
+Graveyard guards + triple-null (only pool-global scores rank) apply.
+
+### `endgame-friendly-frame-design` — status: `unbuilt` — since: vol-217 (user frame Q&A)
+Nobody ever chose a frame ON MERIT: framegen checks hint-compatibility
++ chain feasibility, then we raced blind (444-450 band, n=55). The
+frame's real influence concentrates exactly where the problem lives:
+bottom rim targets face the endgame pool, W/E flank colors feed the
+crossing. With band+crossing oracles at ~1 s, THOUSANDS of framegen
+rings can be scored for bottom-band friendliness (uniform-pool
+profile) before any racing. If frame choice moves the crossing/band
+floor by even 1-2, it is the cheapest break-budget purchase found yet.
+Largely subsumed by the staged-fullboard track (ring emerges there),
+but standalone valuable for the cloister/ladder track which stays
+frame-conditioned. USER DIRECTIVE: no new material on witness frames.
 
 ---
 

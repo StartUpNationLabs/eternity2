@@ -32,15 +32,22 @@ existing boards are reconnaissance, never material.
    wire as LADDER rung-0 (band oracle + LP as secondary lenses). If
    any banked prefix has a witness-grade crossing, this alone may
    break 452.
-3. **CROSSING-GUIDED CONSTRUCTION** (the capability jump; multi-day,
-   aim here). Invert the build target: construct rows 8-10 to
-   optimize the frontier presented to the crossing (oracle is
-   frontier-conditioned ⇒ steers DURING construction at band
-   granularity). Spend MIDDEN dispersed damage + ACTUARY computed
-   gates INSIDE the crossing (witness double-break cells at depths
-   171-195 are exactly this). Compose: probes bank (prefix,
-   frontier); crossing oracle scores; promote; finish with tight
-   gates + et14.
+3. **CROSSING-GUIDED CONSTRUCTION — STAGED FULL-BOARD** (the
+   capability jump; multi-day, aim here). USER-DIRECTED upgrade
+   (2026-06-12 mid-vol, binding): the staged build runs on the REAL
+   16×16 with all 256 pieces, frame-free — four 4×16 bands (rows
+   0-3 / 4-7 / 8-11 / 12-15), border ring EMERGES (top edge in
+   stage 1, W/E flanks per band, bottom edge chosen LAST when the
+   pool is known). Witness anatomy in this staging: stages 1-3
+   PERFECT, all 20 breaks in stage 4 ⇒ build three perfect stages
+   presenting the best stage-4 entry; stage 4 = min-break endgame
+   (64 cells) with budget spent inside rows 11-13. Components:
+   fb_oracle (16-wide mixed-pool N-row profile), stage-1/2
+   generator (frame-free), stage-3 population builder (never commit
+   first-found — SEMAPHORE/CLIMB lesson), stage-4 DFS+et14.
+   USER FRAME DIRECTIVE (binding): no new material on witness
+   frames; banked witness-frame prefixes are reconnaissance only;
+   fresh generation frame-free or framegen-original.
 
 Pre-stated risk: crossing cost may be as emergent-global as
 everything else (unsteerable mid-construction). Binding 1's gate
