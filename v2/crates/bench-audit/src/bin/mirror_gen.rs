@@ -49,7 +49,7 @@ fn arm_mask(arm: &str) -> (HashMap<usize, u32>, u32, bool) {
         ),
         "dispersed" => (
             cells(&[
-                (1, 4, 1), (1, 10, 1), (1, 15, 1), (2, 7, 1), (2, 13, 1),
+                (1, 4, 1), (1, 10, 1), (1, 15, 1), (2, 7, 1), (2, 12, 1),
                 (3, 4, 1), (3, 10, 1), (3, 15, 1), (4, 7, 1), (4, 13, 1),
             ]),
             10,
@@ -107,12 +107,36 @@ fn main() {
     for &(_, p, _) in &m.hints {
         avail0[p as usize] = false;
     }
+    // Clue-compat pre-filter: a cell directly N or W of a forced clue
+    // must expose the matching color toward it (unless the clue cell
+    // itself is allowed to pay — it isn't: clue cells are never in the
+    // mask). Kills the deterministic clue wall (measured: d34 stall).
+    let clue_s_demand: HashMap<usize, u8> = m
+        .hints
+        .iter()
+        .filter(|&&(hp, _, _)| hp < prefix_len && hp >= n)
+        .map(|&(hp, p, rt)| (hp - n, m.rot[p as usize][rt as usize][0]))
+        .collect();
+    let clue_e_demand: HashMap<usize, u8> = m
+        .hints
+        .iter()
+        .filter(|&&(hp, _, _)| hp < prefix_len && hp % n > 0)
+        .map(|&(hp, p, rt)| (hp - 1, m.rot[p as usize][rt as usize][3]))
+        .collect();
     let base_cands: Vec<Vec<(u16, u8)>> = (0..prefix_len)
         .map(|pos| {
             let (r, c) = (pos / n, pos % n);
             match m.hints.iter().find(|&&(hp, _, _)| hp == pos) {
                 Some(&(_, p, rt)) => vec![(p, rt)],
-                None => m.cands_at(r, c, &avail0),
+                None => m
+                    .cands_at(r, c, &avail0)
+                    .into_iter()
+                    .filter(|&(p, rt)| {
+                        let o = m.rot[p as usize][rt as usize];
+                        clue_s_demand.get(&pos).is_none_or(|&d| o[2] == d)
+                            && clue_e_demand.get(&pos).is_none_or(|&d| o[1] == d)
+                    })
+                    .collect(),
             }
         })
         .collect();
@@ -144,6 +168,7 @@ fn main() {
         let mut cursor = vec![0usize; prefix_len + 1];
         let mut spent = vec![0u32; prefix_len + 1];
         let mut depth = 0usize;
+        let mut restart_max_depth = 0usize;
         let mut tick = 0u64;
         loop {
             tick += 1;
@@ -183,6 +208,7 @@ fn main() {
                 grid[depth] = Some((p, rt));
                 spent[depth + 1] = spent[depth] + cost;
                 depth += 1;
+                restart_max_depth = restart_max_depth.max(depth);
                 advanced = true;
                 break;
             }
@@ -250,6 +276,7 @@ fn main() {
                 grid[depth] = None;
             }
         }
+        eprintln!("[restart {restarts}] max_depth {restart_max_depth}");
     }
 
     let mut f = std::fs::File::create(out.join(format!("tops_{arm}.tsv"))).expect("meta");
