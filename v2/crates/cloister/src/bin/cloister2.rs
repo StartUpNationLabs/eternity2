@@ -46,6 +46,8 @@ struct JobOut {
     best_prefix: Vec<(u16, u8)>,
     /// (visits, yields, deaths, y0, y1, starts, starts_open) per depth
     fitstats: (Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>),
+    /// ACTUARY (d, spent)-conditional block, dfs::FIT2_S layout
+    fit2: Vec<u64>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -428,6 +430,7 @@ fn main() {
                     fitstats: (r.fit_visits, r.fit_yields, r.fit_deaths,
                                r.fit_y0, r.fit_y1, r.fit_starts,
                                r.fit_starts_open),
+                    fit2: r.fit2,
                 }
             }
             "sa" | "hybrid" => {
@@ -495,6 +498,7 @@ fn main() {
                     best_prefix: Vec::new(),
                     fitstats: (Vec::new(), Vec::new(), Vec::new(), Vec::new(),
                                Vec::new(), Vec::new(), Vec::new()),
+                    fit2: Vec::new(),
                 }
             }
             m => panic!("unknown mode {m}"),
@@ -579,6 +583,7 @@ fn main() {
             best_prefix: Vec::new(),
             fitstats: (Vec::new(), Vec::new(), Vec::new(), Vec::new(),
                        Vec::new(), Vec::new(), Vec::new()),
+            fit2: Vec::new(),
         }]
     } else {
         jobs.par_iter().map(run_job).collect()
@@ -758,6 +763,43 @@ fn main() {
                         v[0], v[1], v[2], v[3], v[4], v[5], v[6]
                     )
                     .expect("row");
+                }
+            }
+        }
+    }
+    // ACTUARY fitstats2: (depth, spent)-conditional, per frame
+    {
+        use eternity2_cloister::dfs::FIT2_S;
+        let mut agg2: Vec<(String, Vec<u64>)> = Vec::new();
+        for r in &results {
+            if r.fit2.is_empty() {
+                continue;
+            }
+            let e = if let Some(i) = agg2.iter().position(|(l, _)| *l == r.frame_label) {
+                &mut agg2[i].1
+            } else {
+                agg2.push((r.frame_label.clone(), vec![0; r.fit2.len()]));
+                &mut agg2.last_mut().expect("pushed").1
+            };
+            for (i, &v) in r.fit2.iter().enumerate() {
+                e[i] += v;
+            }
+        }
+        for (label, rows) in agg2 {
+            let mut f = std::fs::File::create(dir.join(format!("fitstats2_{label}.tsv")))
+                .expect("fitstats2 tsv");
+            writeln!(f, "depth	spent	starts	starts_open	y0	y1	y2").expect("hdr");
+            for di in 0..rows.len() / (FIT2_S * 5) {
+                for s in 0..FIT2_S {
+                    let b = (di * FIT2_S + s) * 5;
+                    if rows[b] > 0 || rows[b + 2] > 0 || rows[b + 3] > 0 || rows[b + 4] > 0 {
+                        writeln!(
+                            f,
+                            "{di}	{s}	{}	{}	{}	{}	{}",
+                            rows[b], rows[b + 1], rows[b + 2], rows[b + 3], rows[b + 4]
+                        )
+                        .expect("row");
+                    }
                 }
             }
         }

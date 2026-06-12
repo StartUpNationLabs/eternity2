@@ -668,7 +668,18 @@ pub struct DfsResult {
     pub fit_y1: Vec<u64>,
     pub fit_starts: Vec<u64>,
     pub fit_starts_open: Vec<u64>,
+    /// ACTUARY state-conditional counters, layout
+    /// `[(d * FIT2_S + min(spent, FIT2_S-1)) * 5 + f]` with
+    /// f ∈ {0: starts, 1: starts_open, 2: y0, 3: y1, 4: y2+}.
+    /// Placements attribute to the PRE-placement spent (forced hint
+    /// cells can pay 2 — the y2 lane keeps flow conservation exact).
+    /// Depth-marginal rates telescope into an identity (no schedule
+    /// signal); the (d, s) split is what transfers across schedules.
+    pub fit2: Vec<u64>,
 }
+
+/// spent-axis size of the `fit2` state-conditional FITSTAT block
+pub const FIT2_S: usize = 32;
 
 #[allow(clippy::too_many_lines)]
 pub fn dfs_run(
@@ -780,6 +791,9 @@ pub fn dfs_run(
     let mut fit_y1 = vec![0u64; cells + 1];
     let mut fit_starts = vec![0u64; cells + 1];
     let mut fit_starts_open = vec![0u64; cells + 1];
+    let mut fit2 = vec![0u64; (cells + 1) * FIT2_S * 5];
+    let fit2_at =
+        |d: usize, s: u32, f: usize| (d * FIT2_S + (s as usize).min(FIT2_S - 1)) * 5 + f;
     let mut ms_at_max: u128 = 0;
     let mut best_prefix: Vec<(u16, u8)> = Vec::new();
     let mut best_complete: Option<(Vec<(u16, u8)>, u32)> = None;
@@ -897,6 +911,7 @@ pub fn dfs_run(
                                 fit_y1,
                                 fit_starts,
                                 fit_starts_open,
+                                fit2,
                             };
                         }
                     }
@@ -928,6 +943,7 @@ pub fn dfs_run(
                         fit_y1,
                         fit_starts,
                         fit_starts_open,
+                        fit2,
                     };
                 }
                 backtrack_now = true;
@@ -958,6 +974,7 @@ pub fn dfs_run(
                         fit_y1,
                         fit_starts,
                         fit_starts_open,
+                        fit2,
                     };
                 }
                 if epoch_t0.elapsed().as_millis() as u64 >= p.restart_ms {
@@ -981,6 +998,7 @@ pub fn dfs_run(
                     if !cursors[d].started && mask_get(&avail, fp) {
                         cursors[d].started = true;
                         fit_starts[d] += 1;
+                        fit2[fit2_at(d, spent, 0)] += 1;
                         let e = tables.rot_edges[fp as usize][fr as usize];
                         let fcol = ccol_of(&tables, plan, &grid);
                         let mut cost = 0u32;
@@ -1002,6 +1020,7 @@ pub fn dfs_run(
                             } else {
                                 fit_y1[d] += 1;
                             }
+                            fit2[fit2_at(d, spent - cost, (2 + cost.min(2)) as usize)] += 1;
                             if p.ledger {
                                 led.place(&tables, plan, &fcol, fp, fr);
                             }
@@ -1052,6 +1071,8 @@ pub fn dfs_run(
                     if !cursors[d].started {
                         fit_starts[d] += 1;
                         fit_starts_open[d] += u64::from(break1_open);
+                        fit2[fit2_at(d, spent, 0)] += 1;
+                        fit2[fit2_at(d, spent, 1)] += u64::from(break1_open);
                     }
                     // CAIRN probe at instance start: a recorded nogood with
                     // ≤ spent kills the whole instance before enumeration
@@ -1191,6 +1212,7 @@ pub fn dfs_run(
                                 } else {
                                     fit_y1[d] += 1;
                                 }
+                                fit2[fit2_at(d, spent - cost, (2 + cost.min(2)) as usize)] += 1;
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }
@@ -1281,6 +1303,7 @@ pub fn dfs_run(
                                 } else {
                                     fit_y1[d] += 1;
                                 }
+                                fit2[fit2_at(d, spent - cost, (2 + cost.min(2)) as usize)] += 1;
                                 if p.ledger {
                                     led.place(&tables, plan, &ccol, pid, rot);
                                 }
